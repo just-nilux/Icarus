@@ -2,8 +2,13 @@ import backtrader as bt
 import datetime
 import pandas as pd
 from backtesting.ws_backtrader.strategies import *
+import logging
+
+# Configure logger for the current file
+logger = logging.getLogger('app.{}'.format(__name__))
 
 async def algorithm(periodic_feed):
+
     print(periodic_feed)
     decision = {'operation': None}
 
@@ -34,6 +39,8 @@ async def algorithm(periodic_feed):
 
     return decision
 
-async def empty_algorithm(periodic_feed):
+async def empty_algorithm(pairlist, periodic_feed):
+    logger.debug('empty_algorithm started')
     decision = {'operation': None}
+    logger.debug('empty_algorithm completed')
     return decision

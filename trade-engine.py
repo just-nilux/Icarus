@@ -3,13 +3,49 @@ from binance import Client, AsyncClient, BinanceSocketManager
 from datetime import datetime, timedelta
 import json
 from Ikarus import Ikarus, Algorithms, Notification
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 
 credential_file = r'./test_credentials.json'
 with open(credential_file, 'r') as cred_file:
     cred_info = json.load(cred_file)
 
+# Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
+
+
+def setup_logger():
+    # create logger with 'spam_application'
+    log_filename = 'log/ikarus-app.log'
+    logger = logging.getLogger('app')
+    logger.setLevel(logging.DEBUG)
+    # create file handler which logs even debug messages
+    #fh = logging.FileHandler(log_filename)
+    rfh = TimedRotatingFileHandler(filename=log_filename,
+                                   when='m',
+                                   interval=1,
+                                   backupCount=5)
+
+    #rfh.rotation_filename = filer
+    rfh.setLevel(logging.DEBUG)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    rfh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(rfh)
+    logger.addHandler(ch)
+
+    logger.info('logger has been set')
+
+    logger = logging.getLogger()
+
+
 
 async def wait_until(dt):
     now = int(datetime.timestamp(datetime.now()))
@@ -32,10 +68,11 @@ async def application(ikarus, client, telbot):
     now_time = int(datetime.timestamp(datetime.now())) * 1000
 
     # Get multiple klines
-    klines = await ikarus.get_all_klines(client, ["BTCUSDT","XRPUSDT"], prev_time, now_time)
+    pair_list = ["BTCUSDT","XRPUSDT"]
+    klines = await ikarus.get_all_klines(client, pair_list, prev_time, now_time)
     print(len(klines), len(klines[0]), len(klines[1]))
 
-    decision = await asyncio.create_task(Algorithms.empty_algorithm(klines[0]))
+    decision = await asyncio.create_task(Algorithms.empty_algorithm(pair_list, klines[0]))
     if decision['operation'] is not None:
         exec_status = await asyncio.create_task(ikarus.exec_decision(decision))
     tasks = ikarus.update_db(), ikarus.monitor_account()
@@ -50,11 +87,13 @@ async def application(ikarus, client, telbot):
 
 async def main(period):
     global SYSTEM_STATUS, STATUS_TIMEOUT
+
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
     bm = BinanceSocketManager(client)
     ikarus = Ikarus.Ikarus()
+    await ikarus.logger_test()
 
     telbot = Notification.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
     balance = await ikarus.get_current_balance(client)
@@ -96,6 +135,7 @@ async def main(period):
     await client.close_connection()
 
 if __name__ == "__main__":
+    setup_logger()
     period = 60
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(period))

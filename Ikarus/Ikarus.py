@@ -1,17 +1,25 @@
-import time
-import json
-from binance import Client, AsyncClient, BinanceSocketManager
-from datetime import datetime, timedelta
-import timeit
+from binance import Client
 import asyncio
 import pandas as pd
+import logging
 
 
 class Ikarus():
     def __init__(self):
+        self.logger = logging.getLogger('app.{}'.format(__name__))
+        self.logger.info('creating an instance of {}'.format(__name__))
+
         self.ref_currency = 'USDT'
         self.base_currency = 'TRY'
         pass
+
+    async def logger_test(self):
+        self.logger.debug('logger_test')
+        self.logger.info('logger_test')
+        self.logger.warning('logger_test')
+        self.logger.error('logger_test')
+        self.logger.critical('logger_test')
+
 
     async def get_info(self, client):
         info = await client.get_account()
