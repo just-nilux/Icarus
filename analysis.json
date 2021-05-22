@@ -1,11 +1,10 @@
 {
+  "pair": "",
   "weekly": {
     "trend": {
-      "direction": ""
-      //Up,Down
+      "direction": "",
       "strength": ""
-      //High,Moderate, Low
-    }
+    },
     "Volatility": "",
     "Volume": "",
     "BolBand": "",

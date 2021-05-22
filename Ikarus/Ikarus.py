@@ -5,12 +5,16 @@ import logging
 
 
 class Ikarus():
-    def __init__(self):
+
+    def __init__(self, _client):
+        self.client = _client
+
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
         self.ref_currency = 'USDT'
         self.base_currency = 'TRY'
+
         pass
 
     async def logger_test(self):
@@ -20,9 +24,8 @@ class Ikarus():
         self.logger.error('logger_test')
         self.logger.critical('logger_test')
 
-
-    async def get_info(self, client):
-        info = await client.get_account()
+    async def get_info(self):
+        info = await self.client.get_account()
         print(info)
         balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
                    for b in info['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
@@ -42,18 +45,17 @@ class Ikarus():
         df_balance['pair'] = pairs
         return df_balance
 
-    @staticmethod
-    async def get_all_tickers(client):
-        df = pd.DataFrame(await client.get_all_tickers())
+    async def get_all_tickers(self):
+        df = pd.DataFrame(await self.client.get_all_tickers())
         df.set_index('symbol', inplace=True)
         df.astype(float)
         return df
 
-    async def get_current_balance(self, client):
+    async def get_current_balance(self):
 
         df_balance, df_tickers = await asyncio.gather(
-            self.get_info(client),
-            self.get_all_tickers(client)
+            self.get_info(),
+            self.get_all_tickers()
         )
 
         price = [float(df_tickers.loc[pair]['price'])
@@ -66,15 +68,14 @@ class Ikarus():
 
         return df_balance
 
-    @staticmethod
-    async def get_all_klines(client, pairs, start_ts, end_ts):
+    async def get_all_klines(self, pairs, start_ts, end_ts):
         # Return multiple klines
 
         tasks = []
         for pair in pairs:
-            task_kline = asyncio.create_task(client.get_historical_klines(pair, Client.KLINE_INTERVAL_1MINUTE,
-                                                                          start_str=start_ts,
-                                                                          end_str=end_ts))
+            task_kline = asyncio.create_task(self.client.get_historical_klines(pair, Client.KLINE_INTERVAL_1MINUTE,
+                                                                               start_str=start_ts,
+                                                                               end_str=end_ts))
             tasks.append(task_kline)
         return await asyncio.gather(*tasks)
 
@@ -85,8 +86,9 @@ class Ikarus():
     async def update_db(self):
         return True
 
-    async def exec_decision(self, client, symbol):
-        status = await client.get_order_book(symbol=symbol)
-        return status
+
+    async def execute_decision(self, trade_objs):
+        return True
+
 
 
