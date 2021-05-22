@@ -1,0 +1,25 @@
+{
+  "weekly": {
+    "trend": {
+      "direction": ""
+      //Up,Down
+      "strength": ""
+      //High,Moderate, Low
+    }
+    "Volatility": "",
+    "Volume": "",
+    "BolBand": "",
+    "ATR": "",
+    "SupportResistance": [],
+    "Range": {
+      "isRange": false,
+      "top": "",
+      "bot": ""
+    }
+  },
+  "daily": {},
+  "hourly": {},
+  "15min": {},
+  "1min": {},
+  "IsDrawDown": ""
+}

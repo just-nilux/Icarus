@@ -1,0 +1,51 @@
+{
+  "Status": "",
+  /*
+  NoExec: LimitBuy is not filled at all
+  InPosition: LimitBuy at least partially filled
+  Completed: Either LimitSell or StopLimit completely executed
+  */
+  "Enter": {
+    "IsProcessed": ""
+    //Full/Half/Empty
+    "LimitBuy": "",
+    "Expire": "",
+    "EnterTime": ""
+  },
+  "Exit": {
+    "OCO": {
+      "IsProcessed": "",
+      //Full/Half/Empty
+      "LimitSell": "",
+      "StopPrice": "",
+      "StopLimit": "",
+      "Amount": ""
+    },
+    "Expire": "",
+    "ExitTime": ""
+  },
+  //Result will be created in case of Cancel or Closed and the obj will be saved to DB
+  "Result": {
+    /*
+    If an Limit Order is partially filled than the rest is canceled. For the sake of simlicity(for now)
+    In other words, both Canceled and Closed exist at the same time
+    */
+    "Canceled": {
+      "Time": "",
+      "Reason": ""
+      //Expire,Manual
+    },
+    "Closed": {
+      "Reason": "",
+      //LimitSell,StopLimit
+      "BuyAmount": "",
+      "BuyPrice": "",
+      "SellAmount": "",
+      "SellPrice": "",
+      "Profit": "",
+      "Perc": "",
+      "TotalTime": ""
+      //ExitTime-EnterTime
+    }
+  }
+}
