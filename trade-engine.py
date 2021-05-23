@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient, BinanceSocketManager
 from datetime import datetime, timedelta
 import json
-from Ikarus import Ikarus, Algorithms, Notification, Analyzer
+from Ikarus import Ikarus, Algorithm, Notification, Analyzer, Observer
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
@@ -58,24 +58,36 @@ async def run_at(dt, coro):
 
 
 async def application(ikarus, telbot):
-    logger.debug('Application started: {}'.format(str(datetime.now())))
+    logger.debug('Application started')
+    pair_list = ["BTCUSDT"]
+
+    # Phase 1: Perform pre-calculation tasks
+    logger.info('pre-calculation phase started')
     prev_time = int(datetime.timestamp(datetime.now() - timedelta(minutes=60))) * 1000
     now_time = int(datetime.timestamp(datetime.now())) * 1000
-
-    # Get multiple klines
-    pair_list = ["BTCUSDT"]
-    klines = await ikarus.get_all_klines(pair_list, prev_time, now_time)
+    tasks_pre_calc = ikarus.get_current_balance(), ikarus.get_all_klines(pair_list, prev_time, now_time)
+    balance, klines = await asyncio.gather(*tasks_pre_calc)
+    logger.info("Balance: $ {}".format(balance['ref_balance'].sum()))
     logger.debug('Klines obtained with length: {}'.format(len(klines)))
 
-    analysis_objs = await asyncio.create_task(Analyzer.default_analyzer(pair_list))
-    trade_objs = await asyncio.create_task(Algorithms.default_algorithm(analysis_objs))
+    # Phase 2: Perform calculation tasks
+    logger.info('calculation phase started')
+    analyzer, algorithm = Analyzer.Analyzer(), Algorithm.Algorithm()
+    analysis_objs = await asyncio.create_task(analyzer.default_analyzer(pair_list))
+    trade_objs = await asyncio.create_task(algorithm.default_algorithm(analysis_objs))
     exec_status = await asyncio.create_task(ikarus.execute_decision(trade_objs))
-    #tasks = ikarus.update_db(), ikarus.monitor_account()
-    #a, b = await asyncio.gather(*tasks)
-    #if not b:
-    #    await asyncio.create_task(telbot(b))
+    
+    # Phase 3: Perform post-calculation tasks
+        
+    # TODO: exec_status needs to be checked and required actions needs to be taken
+    logger.info('post-calculation phase started')
+    observer = Observer.Observer()
+    observation_obj = await observer.default_observer(balance,analysis_objs)
+    tasks_post_calc = ikarus.update_db({"trade":trade_objs, "observation": observation_obj}), ikarus.monitor_account()
 
-    logger.debug('Application ended: {}'.format(str(datetime.now())))
+    a, b = await asyncio.gather(*tasks_post_calc)
+
+    logger.debug('Application ended')
     return True
 
 
@@ -89,9 +101,6 @@ async def main(period):
     ikarus = Ikarus.Ikarus(client)
 
     telbot = Notification.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
-    balance = await ikarus.get_current_balance()
-    print(balance)
-    print(balance['ref_balance'].sum())
     while True:
         try:
             sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=5)
@@ -121,9 +130,9 @@ async def main(period):
                 application(ikarus, telbot),
             )
 
-        except:
+        except Exception as e:
             if STATUS_TIMEOUT != 1:
-                logger.error('Exception occured: STATUS_TIMEOUT 1')
+                logger.error(str(e))
                 STATUS_TIMEOUT = 1
                 #telbot.send('Exception: STATUS_TIMEOUT')
 

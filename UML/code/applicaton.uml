@@ -1,0 +1,17 @@
+@startuml
+start
+
+repeat
+  :Get Klines;
+  :Generate Analysis Objects(AO);
+  :Generate Trade Objects(TO);
+  :Execute TO;
+  note left: TO should be executed asap,\n the rest can be performed afterwards
+  fork
+    :Monitor Account;
+  fork again
+    :UpdateDB;
+  end fork
+
+repeat while (Wait until new period)
+@enduml

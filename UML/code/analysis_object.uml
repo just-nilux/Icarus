@@ -1,0 +1,26 @@
+@startjson
+{
+  "pair": "",
+  "weekly": {
+    "trend": {
+      "direction": "up",
+      "strength": "high"
+    },
+    "volatility": "",
+    "volume": "",
+    "bband": 3.4,
+    "atr": 2.3,
+    "support_resistance": [5.4, 5.555, 5.678, 5.9],
+    "range": {
+      "isRange": true,
+      "top": 5.678,
+      "bot": 5.555
+    }
+  },
+  "daily": "",
+  "hourly": "",
+  "15min": "",
+  "1min": "",
+  "IsDrawDown": ""
+}
+@endjson

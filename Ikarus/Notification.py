@@ -14,8 +14,3 @@ class TelegramBot():
 
     def send(self, msg='Default Message') -> None:
         self.updater.bot.send_message(self.chatId, text=msg)
-
-
-if __name__ == '__main__':
-    tb = TelegramBot('1784165564:AAESd5bqPyoeVLO_ooHRHvx7Sq18jxjwraA', -518221191)
-    tb.send("TelegramBot Main")

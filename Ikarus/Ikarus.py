@@ -26,7 +26,6 @@ class Ikarus():
 
     async def get_info(self):
         info = await self.client.get_account()
-        print(info)
         balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
                    for b in info['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
 
@@ -69,7 +68,16 @@ class Ikarus():
         return df_balance
 
     async def get_all_klines(self, pairs, start_ts, end_ts):
-        # Return multiple klines
+        """[This function returns all of the klines]
+
+        Args:
+            pairs ([list]): [List of pairs]
+            start_ts ([timestamp]): [description]
+            end_ts ([tytimestamppe]): [description]
+
+        Returns:
+            [type]: [description]
+        """        
 
         tasks = []
         for pair in pairs:
@@ -80,10 +88,11 @@ class Ikarus():
         return await asyncio.gather(*tasks)
 
     async def monitor_account(self):
+
         return True
 
 
-    async def update_db(self):
+    async def update_db(self,trade_objs):
         return True
 
 

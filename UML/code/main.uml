@@ -1,0 +1,15 @@
+@startuml
+start
+
+:Initialize Ikarus, TelegramBot, Binance Client;
+repeat
+  :Check Binance System Status;
+  fork
+    :application(ikarus,telbot);
+    note left: It is guarantee that the app\nwill be done before the period
+  fork again
+    :asyncio.sleep(period);
+  end fork
+
+repeat while (Wait until new period)
+@enduml

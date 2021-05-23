@@ -1,0 +1,9 @@
+@startuml
+title Ikarus Structure
+class Ikarus
+Ikarus <-- Algorithm
+Ikarus <-- Notification
+Ikarus <-- Analyzer
+Ikarus <-- Observer
+
+@enduml
