@@ -16,6 +16,10 @@ SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 logger = logging.getLogger('app')
 
+class MyFormatter(logging.Formatter):
+    def format(self, record):
+        record.message2 = record.args.get("message2")
+        return super().format(record)
 
 def setup_logger():
     global logger
@@ -35,7 +39,8 @@ def setup_logger():
     ch.setLevel(logging.ERROR)
 
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)20s','%(levelname)8s', '%(message)s'))
+    
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
 
@@ -59,21 +64,18 @@ async def run_at(dt, coro):
 
 async def application(ikarus, telbot):
     logger.debug('Application started')
-    pair_list = ["BTCUSDT"]
+    pair_list = ["BTCUSDT","XRPUSDT","BTTUSDT"]
 
     # Phase 1: Perform pre-calculation tasks
     logger.info('pre-calculation phase started')
-    prev_time = int(datetime.timestamp(datetime.now() - timedelta(minutes=60))) * 1000
-    now_time = int(datetime.timestamp(datetime.now())) * 1000
-    tasks_pre_calc = ikarus.get_current_balance(), ikarus.get_all_klines(pair_list, prev_time, now_time)
-    balance, klines = await asyncio.gather(*tasks_pre_calc)
+    tasks_pre_calc = ikarus.get_current_balance(), ikarus.get_data_dict(pair_list)
+    balance, data_dict = await asyncio.gather(*tasks_pre_calc)
     logger.info("Balance: $ {}".format(balance['ref_balance'].sum()))
-    logger.debug('Klines obtained with length: {}'.format(len(klines)))
 
     # Phase 2: Perform calculation tasks
     logger.info('calculation phase started')
     analyzer, algorithm = Analyzer.Analyzer(), Algorithm.Algorithm()
-    analysis_objs = await asyncio.create_task(analyzer.default_analyzer(pair_list))
+    analysis_objs = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
     trade_objs = await asyncio.create_task(algorithm.default_algorithm(analysis_objs))
     exec_status = await asyncio.create_task(ikarus.execute_decision(trade_objs))
     
@@ -140,7 +142,9 @@ async def main(period):
 
 if __name__ == "__main__":
     setup_logger()
+    logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")
+    logger.info("---------------------------------------------------------")
     period = 5
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(period))

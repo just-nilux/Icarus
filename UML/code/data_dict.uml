@@ -1,0 +1,12 @@
+@startjson
+{
+  "pair": {
+    "1m": ["pd.DataFrame"],
+    "15m": ["pd.DataFrame"],
+    "1h": ["pd.DataFrame"],
+    "1d": ["pd.DataFrame"],
+    "1w": ["pd.DataFrame"],
+    "1M": ["pd.DataFrame"]
+  }
+}
+@endjson

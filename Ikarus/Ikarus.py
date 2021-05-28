@@ -2,9 +2,41 @@ from binance import Client
 import asyncio
 import pandas as pd
 import logging
-
-
+from datetime import datetime, timedelta
+import json
+'''
+[
+  [
+    1499040000000,      // Open time
+    "0.01634790",       // Open
+    "0.80000000",       // High
+    "0.01575800",       // Low
+    "0.01577100",       // Close
+    "148976.11427815",  // Volume
+    1499644799999,      // Close time
+    "2434.19055334",    // Quote asset volume
+    308,                // Number of trades
+    "1756.87402397",    // Taker buy base asset volume
+    "28.46694368",      // Taker buy quote asset volume
+    "17928899.62484339" // Ignore.
+  ]
+]
+'''
 class Ikarus():
+
+    def_time_scales = [Client.KLINE_INTERVAL_1MINUTE, 
+                            Client.KLINE_INTERVAL_15MINUTE, 
+                            Client.KLINE_INTERVAL_1HOUR, 
+                            Client.KLINE_INTERVAL_1DAY, 
+                            Client.KLINE_INTERVAL_1WEEK, 
+                            Client.KLINE_INTERVAL_1MONTH]
+    def_time_lengths_str = ["1 hour", "1 day", "1 week", "1 month", "6 months", "12 months"]
+
+    kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
+                        "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
+
+    # def_time_df stores the time scale and length for klines
+    def_time_df = pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
 
     def __init__(self, _client):
         self.client = _client
@@ -15,6 +47,10 @@ class Ikarus():
         self.ref_currency = 'USDT'
         self.base_currency = 'TRY'
 
+        # Default Parameters
+        
+
+        print(Ikarus.def_time_df)
         pass
 
     async def logger_test(self):
@@ -67,28 +103,18 @@ class Ikarus():
 
         return df_balance
 
-    async def get_all_klines(self, pairs, start_ts, end_ts):
-        """[This function returns all of the klines]
-
-        Args:
-            pairs ([list]): [List of pairs]
-            start_ts ([timestamp]): [description]
-            end_ts ([tytimestamppe]): [description]
-
-        Returns:
-            [type]: [description]
-        """        
-
-        tasks = []
+    async def get_data_dict(self, pairs):
+        time_df = Ikarus.def_time_df
+        tasks_klines_scales = []
         for pair in pairs:
-            task_kline = asyncio.create_task(self.client.get_historical_klines(pair, Client.KLINE_INTERVAL_1MINUTE,
-                                                                               start_str=start_ts,
-                                                                               end_str=end_ts))
-            tasks.append(task_kline)
-        return await asyncio.gather(*tasks)
+            for index, row in time_df.iterrows():
+                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length"]))))
+            
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales))
+        data_dict = await self.decompose(pairs, time_df, composit_klines)
+        return data_dict
 
     async def monitor_account(self):
-
         return True
 
 
@@ -100,4 +126,41 @@ class Ikarus():
         return True
 
 
+    async def pprint_klines(self, list_klines):
+        self.logger.debug("Length of klines: {}".format(len(list_klines)))
+        for idx,kline in enumerate(list_klines):
+            self.logger.debug("-->Lenth of kline {}: {}".format(idx, len(kline)))
+            self.logger.debug("----> 0:[{}] 1:[{}] ... {}:[{}]".format(kline[0][0],kline[1][0],len(kline)-1,kline[-1][0]))
+
+    async def decompose(self, pairs, time_df, list_klines):
+        """
+        decompose is the function that splits the asyncio.gather()
+
+        Args:
+            pairs (list): ["BTCUSDT","XRPUSDT","BTTUSDT"]
+            time_df (pd.DataFrame): pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
+            list_klines (list): output of asyncio.gather()
+
+        Returns:
+            dict: decomposed list_klines
+        """        
+        self.logger.debug("decompose started")
+
+        kline_dict = dict()
+        num_of_scale = len(time_df.index)
+        for idx_pair,pair in enumerate(pairs):
+            self.logger.debug("decompose started: [{}]".format(pair))
+            kline_dict_pair={}
+            for idx_row, row in time_df.iterrows():
+                self.logger.debug("decomposing [{}]: [{}]".format(pair,row["scale"]))
+                df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
+                df.columns = Ikarus.kline_column_names
+                kline_dict_pair[row["scale"]] = df
+                
+            kline_dict[pair] = kline_dict_pair
+            self.logger.debug("decompose ended [{}]:".format(pair))
+            #self.logger.debug("{}-{}".format(pair,type(kline_dict[pair][row["scale"]])))
+
+        self.logger.debug("decompose ended")
+        return kline_dict
 

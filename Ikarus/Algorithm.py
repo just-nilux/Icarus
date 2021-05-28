@@ -35,6 +35,45 @@ class Algorithm():
         return trade_objs
 
 
+    async def sample_algorithm(self, analysis_obj):
+        """
+        sample_algorithm
+
+        Args:
+            analysis_objs (dict): analysis.json
+
+        Returns:
+            dict: trade.json
+        """
+        self.logger.debug('sample_algorithm started')
+
+        for pair, time_dict in analysis_obj.items():
+            
+            # Since all parameters are handled in a different way, 
+            # there needs to be different handlers for each type of indicator
+            # TODO: Create a list of indicator handlers: [atr_handler()]
+            
+            for time_scale, stat_obj in time_dict.items():
+                # TODO: Create a list of indicator handlers: 
+                # [atr_handler(time_scale,stat_objne)]
+
+                # Perform calculation
+                pass
+
+        trade_objs = []
+        for pair, time_obj in analysis_obj:
+            # Create result
+            trade_obj = dict()
+            trade_obj["status"] = "open"
+            trade_obj["enter"] = {}
+            trade_obj["exit"] = {}
+            trade_obj["result"] = {}
+            trade_objs.append(trade_obj)
+        self.logger.debug('sample_algorithm completed')
+
+        return trade_objs
+
+
     async def algorithm(self, pairlist, periodic_feed):
         self.logger.debug("func algorithm started")
 
