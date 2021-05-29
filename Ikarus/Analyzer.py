@@ -15,7 +15,7 @@ class Analyzer():
     """
     def __init__(self, _time_scale=None, _indicators=None):
         self.logger = logging.getLogger('app.{}'.format(__name__))
-
+        
         return
 
 
@@ -63,13 +63,14 @@ class Analyzer():
                 # TODO: decomposer for each task
 
                 # Evaluate the parameters
-                atr = ta.NATR(time_df['high'], time_df['low'], time_df['close'], timeperiod=5)
+                # TODO: Some indicator can be just specific to a time_scale, thus there needs to be an config.json obj
+                trange = ta.TRANGE(time_df['high'], time_df['low'], time_df['close'])
                 obv = ta.OBV(time_df['close'], time_df['volume'])
                 lowest_low, highest_high = time_df['low'].min(), time_df['high'].max()
 
                 # Fill the dict with the statistics
                 stats = dict()
-                stats['atr'] = list(atr)
+                stats['trange'] = list(trange)
                 stats['obv'] = list(obv)
                 stats['llow'] = lowest_low
                 stats['hhigh'] = highest_high
@@ -97,7 +98,7 @@ class Analyzer():
         """    
 
         self.logger.debug("analysis.json file created")
-        js_file = open("analysis.json", "w")
+        js_file = open("run-time-objs/analysis.json", "w")
         json.dump(js_obj, js_file, indent=4)
         js_file.close()
 

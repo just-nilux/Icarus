@@ -2,10 +2,10 @@ import asyncio
 from binance import Client, AsyncClient, BinanceSocketManager
 from datetime import datetime, timedelta
 import json
-from Ikarus import Ikarus, Algorithm, Notification, Analyzer, Observer
+from Ikarus import Ikarus, Algorithm, Notification, Analyzer, Observer, MongoUtils
 import logging
 from logging.handlers import TimedRotatingFileHandler
-
+import pandas as pd
 
 credential_file = r'./test_credentials.json'
 with open(credential_file, 'r') as cred_file:
@@ -14,7 +14,13 @@ with open(credential_file, 'r') as cred_file:
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
+test_time_scales = [Client.KLINE_INTERVAL_15MINUTE, Client.KLINE_INTERVAL_1HOUR]
+test_time_lengths_str = ["1 day", "1 week"]
+test_time_df = pd.DataFrame({"scale":test_time_scales, "length":test_time_lengths_str})
+
 logger = logging.getLogger('app')
+
+mongocli = MongoUtils.MongoClient("localhost", 27017)
 
 class MyFormatter(logging.Formatter):
     def format(self, record):
@@ -39,7 +45,7 @@ def setup_logger():
     ch.setLevel(logging.ERROR)
 
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)20s','%(levelname)8s', '%(message)s'))
+    formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)21s','%(levelname)8s', '%(message)s'))
     
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
@@ -68,26 +74,25 @@ async def application(ikarus, telbot):
 
     # Phase 1: Perform pre-calculation tasks
     logger.info('pre-calculation phase started')
-    tasks_pre_calc = ikarus.get_current_balance(), ikarus.get_data_dict(pair_list)
+    tasks_pre_calc = ikarus.get_current_balance(), ikarus.get_data_dict(pair_list,test_time_df)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
     logger.info("Balance: $ {}".format(balance['ref_balance'].sum()))
 
     # Phase 2: Perform calculation tasks
     logger.info('calculation phase started')
     analyzer, algorithm = Analyzer.Analyzer(), Algorithm.Algorithm()
-    analysis_objs = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
-    trade_objs = await asyncio.create_task(algorithm.default_algorithm(analysis_objs))
-    exec_status = await asyncio.create_task(ikarus.execute_decision(trade_objs))
+    analysis_obj = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
+    trade_obj = await asyncio.create_task(algorithm.sample_algorithm(analysis_obj))
+    if len(trade_obj):
+        exec_status = await asyncio.create_task(ikarus.execute_decision(trade_obj))
+        # TODO: Handle exec_status to do sth in case of failure (like sending notification)
+        await mongocli.insert_many("live-trades",trade_obj)
+
     
     # Phase 3: Perform post-calculation tasks
-        
-    # TODO: exec_status needs to be checked and required actions needs to be taken
     logger.info('post-calculation phase started')
-    observer = Observer.Observer()
-    observation_obj = await observer.default_observer(balance,analysis_objs)
-    tasks_post_calc = ikarus.update_db({"trade":trade_objs, "observation": observation_obj}), ikarus.monitor_account()
-
-    a, b = await asyncio.gather(*tasks_post_calc)
+    observation_obj = await observer.default_observer(balance,analysis_obj)
+    await mongocli.insert("observations",observation_obj)   
 
     logger.debug('Application ended')
     return True
@@ -142,6 +147,8 @@ async def main(period):
 
 if __name__ == "__main__":
     setup_logger()
+    observer = Observer.Observer()
+
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")
     logger.info("---------------------------------------------------------")

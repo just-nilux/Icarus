@@ -103,8 +103,17 @@ class Ikarus():
 
         return df_balance
 
-    async def get_data_dict(self, pairs):
-        time_df = Ikarus.def_time_df
+    async def get_data_dict(self, pairs, time_df):
+        """
+        This functions returns the historical kline values in the data_dict format.
+
+        Args:
+            pairs (list): [description]
+            time_df (pd.DataFrame): [description]
+
+        Returns:
+            dict: [description]
+        """
         tasks_klines_scales = []
         for pair in pairs:
             for index, row in time_df.iterrows():
@@ -164,3 +173,26 @@ class Ikarus():
         self.logger.debug("decompose ended")
         return kline_dict
 
+    # Ikaus Test Methods
+    async def get_test_data_dict(self, pairs, time_df):
+        """
+        This functions returns the TEST historical kline values in the data_dict format.
+
+        Args:
+            pairs (list): [description]
+            time_df (pd.DataFrame): [description]
+
+        Returns:
+            dict: [description]
+        """
+        # TODO: create test-data folder and gather sample to test each scenario such as:
+        #       Enter: [ succesful | expire ]
+        #       Enter: [ limit | oco-limit | oco-stop-loss | expire ]
+        tasks_klines_scales = []
+        for pair in pairs:
+            for index, row in time_df.iterrows():
+                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length"]))))
+            
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales))
+        data_dict = await self.decompose(pairs, time_df, composit_klines)
+        return data_dict

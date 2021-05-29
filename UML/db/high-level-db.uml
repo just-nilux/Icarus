@@ -1,0 +1,18 @@
+@startuml
+
+
+database "MongoDB" {
+    frame "trade-bot-db" {
+        folder "live-trades" {
+            [{"tradeId":456, trade_obj}]
+        }
+        folder "historical-trades" {
+            [{"tradeId":123, trade_obj}]
+        }
+        folder "observations" {
+            [observer_obj]
+        }
+    }
+}
+
+@enduml

@@ -2,7 +2,8 @@ import backtrader as bt
 import pandas as pd
 from backtesting.ws_backtrader.strategies import *
 import logging
-
+import statistics as st
+import json
 
 class Algorithm():
 
@@ -53,25 +54,35 @@ class Algorithm():
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]
             
+
+            mean5 = st.mean(time_dict['15m']['trange'][-5:])
+            mean20 = st.mean(time_dict['15m']['trange'][-5:])
+            if mean5 < mean20:
+                self.logger.info(f"{pair}: BUY SIGNAL")
+            else:
+                self.logger.info(f"{pair}: NO SIGNAL")
+            '''  
             for time_scale, stat_obj in time_dict.items():
                 # TODO: Create a list of indicator handlers: 
                 # [atr_handler(time_scale,stat_objne)]
-
                 # Perform calculation
                 pass
-
-        trade_objs = []
-        for pair, time_obj in analysis_obj:
+            '''
+        
+        trade_obj = dict()
+        for pair, time_obj in analysis_obj.items():
             # Create result
-            trade_obj = dict()
-            trade_obj["status"] = "open"
-            trade_obj["enter"] = {}
-            trade_obj["exit"] = {}
-            trade_obj["result"] = {}
-            trade_objs.append(trade_obj)
-        self.logger.debug('sample_algorithm completed')
+            trade_pair = dict()
+            trade_pair["status"] = "open"
+            trade_pair["enter"] = {}
+            trade_pair["exit"] = {}
+            trade_pair["result"] = {}
+            trade_obj[pair] = trade_pair
 
-        return trade_objs
+        
+        self.logger.debug('sample_algorithm completed')
+        await self.dump(trade_obj)
+        return trade_obj
 
 
     async def algorithm(self, pairlist, periodic_feed):
@@ -113,3 +124,22 @@ class Algorithm():
         cerebro.plot(style='candlestick',barup='green', bardown='red')
         self.logger.debug("func algorithm ended")
         return decision
+
+
+    async def dump(self, js_obj):
+        """
+        This functions dumps json objects to files for debug purposes
+
+        Args:
+            js_obj (dict): dict to be dumped
+
+        Returns:
+            True:
+        """    
+
+        self.logger.debug("trade.json file created")
+        js_file = open("run-time-objs/trade.json", "w")
+        json.dump(js_obj, js_file, indent=4)
+        js_file.close()
+
+        return True

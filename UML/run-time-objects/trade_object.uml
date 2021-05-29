@@ -1,0 +1,61 @@
+@startjson
+{
+  "pair1":{
+    "Status": "",
+    "Enter": {
+      "IsProcessed": "",
+      "LimitBuy": "",
+      "Expire": "",
+      "EnterTime": ""
+    },
+    "Exit": {
+      "OCO": {
+        "IsProcessed": "",
+        "LimitSell": "",
+        "StopPrice": "",
+        "StopLimit": "",
+        "Amount": ""
+      },
+      "Expire": "",
+      "ExitTime": ""
+    },
+    "Result": {
+      "Canceled": {
+        "Time": "",
+        "Reason": ""
+      },
+      "Closed": {
+        "Reason": "",
+        "BuyAmount": "",
+        "BuyPrice": "",
+        "SellAmount": "",
+        "SellPrice": "",
+        "Profit": "",
+        "Perc": "",
+        "TotalTime": ""
+      }
+    }
+  },
+  "pair2":{}
+}
+@endjson
+
+1. This object is created once when the "ENTER" decision is made with certain conditions.
+  1.1 If no enter decision is made, then the [pair1] object will not be created at all
+  1.2 If an [pair] object is created for the first time then the status is "created".
+
+2. It is sent to the Broker to place the order. 
+3. It is saved to the "Live Trade DB" to keep track.
+  3.1 If the status is "created" and oder is placed successfully(verified from broker)
+4. In each cycle, the status of the [pair1] is updated by sync'ing with the Broker.
+5. When the status is updated as "Closed", it is moved from "LTDB" to "HTDB" (Historical Trade DB)
+
+Status
+	created: No actions will be done
+	open: LimitBuy is not filled at all (waiting to be executed by the broker)
+	inPosition: LimitBuy at least partially filled
+  closed: Either LimitSell or StopLimit completely executed
+
+Canceled
+  If an Limit Order is partially filled than the rest is canceled. For the sake of simlicity(for now)
+  In other words, both Canceled and Closed exist at the same time

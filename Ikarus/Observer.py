@@ -14,7 +14,7 @@ class Observer():
         self.equity = None
 
 
-    async def default_observer(self,balance=pd.DataFrame(),trade_objs={}):
+    async def default_observer(self,balance=pd.DataFrame(),trade_obj={}):
         """This function returns the default observer object which observes the equity (observe.json)
 
         Returns:
