@@ -48,9 +48,9 @@ class MongoClient():
             col (str): Name of the collection: [live-trade | hist-trade | observer]
             item (dict): Dictionary item
         """        
-        for pair, pair_dict in item_dict.items():
-            pair_dict['pair'] = pair
-            await self.insert(col, pair_dict)
+        for pair, obj in item_dict.items():
+            obj.load('pair',pair)
+            await self.insert(col, obj)
 
         return True
 

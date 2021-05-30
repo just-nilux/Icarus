@@ -3,6 +3,7 @@ import asyncio
 import pandas as pd
 import logging
 from datetime import datetime, timedelta
+from Ikarus.objects import GenericObject
 import json
 '''
 [
@@ -155,23 +156,23 @@ class BinanceWrapper():
         """        
         self.logger.debug("decompose started")
 
-        kline_dict = dict()
+        do_dict = dict()
         num_of_scale = len(time_df.index)
         for idx_pair,pair in enumerate(pairs):
             self.logger.debug("decompose started: [{}]".format(pair))
-            kline_dict_pair={}
+            do = GenericObject()
             for idx_row, row in time_df.iterrows():
                 self.logger.debug("decomposing [{}]: [{}]".format(pair,row["scale"]))
                 df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
                 df.columns = BinanceWrapper.kline_column_names
-                kline_dict_pair[row["scale"]] = df
+                do.load(row["scale"],df)
                 
-            kline_dict[pair] = kline_dict_pair
+            do_dict[pair] = do
             self.logger.debug("decompose ended [{}]:".format(pair))
-            #self.logger.debug("{}-{}".format(pair,type(kline_dict[pair][row["scale"]])))
+            #self.logger.debug("{}-{}".format(pair,type(do_dict[pair][row["scale"]])))
 
         self.logger.debug("decompose ended")
-        return kline_dict
+        return do_dict
 
     # Ikaus Test Methods
     async def get_test_data_dict(self, pairs, time_df):
