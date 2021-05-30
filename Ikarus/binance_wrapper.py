@@ -22,7 +22,7 @@ import json
   ]
 ]
 '''
-class Ikarus():
+class BinanceWrapper():
 
     def_time_scales = [Client.KLINE_INTERVAL_1MINUTE, 
                             Client.KLINE_INTERVAL_15MINUTE, 
@@ -50,7 +50,7 @@ class Ikarus():
         # Default Parameters
         
 
-        print(Ikarus.def_time_df)
+        print(BinanceWrapper.def_time_df)
         pass
 
     async def logger_test(self):
@@ -163,7 +163,7 @@ class Ikarus():
             for idx_row, row in time_df.iterrows():
                 self.logger.debug("decomposing [{}]: [{}]".format(pair,row["scale"]))
                 df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
-                df.columns = Ikarus.kline_column_names
+                df.columns = BinanceWrapper.kline_column_names
                 kline_dict_pair[row["scale"]] = df
                 
             kline_dict[pair] = kline_dict_pair
