@@ -19,7 +19,6 @@ test_time_lengths_str = ["1 day", "1 week"]
 test_time_df = pd.DataFrame({"scale":test_time_scales, "length":test_time_lengths_str})
 
 logger = logging.getLogger('app')
-mongocli = mongo_utils.MongoClient("localhost", 27017)
 
 def setup_logger():
     global logger
@@ -75,18 +74,19 @@ async def application(bwrapper, telbot):
     # Phase 2: Perform calculation tasks
     logger.info('calculation phase started')
     analyzer, algorithm = analyzers.Analyzer(), algorithms.Algorithm()
-    analysis_obj = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
-    trade_obj = await asyncio.create_task(algorithm.sample_algorithm(analysis_obj))
-    if len(trade_obj):
-        exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_obj))
+    analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
+    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict))
+
+    if len(trade_dict):
+        exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-        await mongocli.insert_many("live-trades",trade_obj)
+        # await mongocli.insert_many("live-trades",trade_dict)
 
     
     # Phase 3: Perform post-calculation tasks
     logger.info('post-calculation phase started')
-    observation_obj = await observer.default_observer(balance,analysis_obj)
-    await mongocli.insert("observations",observation_obj)   
+    observation_obj = await observer.sample_observer(balance)
+    await mongocli.do_insert("observer",observation_obj.get())   
 
     logger.debug('Application ended')
     return True
@@ -144,13 +144,15 @@ if __name__ == "__main__":
     # TODO: List the proper configurations
     # python trade-engine.py --log-level debug --credentials ./credentials.json --config-file ./run-config.json --run-time-objs
 
+    # Initialize and configure objects
     setup_logger()
     observer = observers.Observer()
+    mongocli = mongo_utils.MongoClient("localhost", 27017)
+    period = 5
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")
     logger.info("---------------------------------------------------------")
-    period = 5
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(period))
     print("Completed")

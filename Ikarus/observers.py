@@ -3,7 +3,7 @@ Observers are the configurable read-only units. They simply collect data at the 
 '''
 import logging
 import pandas as pd
-
+from Ikarus.objects import GenericObject
 logger = logging.getLogger('app.{}'.format(__name__))
 
 class Observer():
@@ -28,3 +28,11 @@ class Observer():
 
         self.logger.debug('default_observer ended')
         return observation
+
+    async def sample_observer(self,balance):
+        self.logger.debug('sample_observer started')
+        print(balance['ref_balance'].sum())
+        observation_obj = GenericObject('observation')
+        observation_obj.load('equity',balance['ref_balance'].sum())
+        self.logger.debug('default_observer ended')
+        return observation_obj

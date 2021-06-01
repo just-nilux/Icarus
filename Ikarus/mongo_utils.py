@@ -1,12 +1,23 @@
 import re
 import pymongo
 import logging
+import asyncio
+from datetime import datetime
+import motor.motor_asyncio
 
 class MongoClient():
     def __init__(self, _host, _port) -> None:
-        self.client = pymongo.MongoClient(host=_host, port=_port)
+        #self.client = pymongo.MongoClient(host=_host, port=_port)
+        self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
         self.logger = logging.getLogger('app.{}'.format(__name__))
 
+        # get the "bot" database
+        self.db_bot = self.client['bot']
+
+        # get the collections
+        self.col_observer = self.db_bot['observer']
+        self.col_live_trade = self.db_bot['live-trade']
+        self.col_hist_trade = self.db_bot['hist-trade']
 
     async def find(self, col, item) -> None:
         """
@@ -19,7 +30,7 @@ class MongoClient():
         pass
 
 
-    async def insert(self, col, item) -> None:
+    async def do_insert(self, col, item) -> None:
         """
         This function writes the selected item into the collection 
 
@@ -28,9 +39,13 @@ class MongoClient():
             item (dict): Dictionary item
         """        
         self.logger.info(f"Item written to [{col}]")
-        return True
 
-    async def update(self, col, item) -> None:
+        # Add timestamp as the "_id" of the document
+        item['_id'] = int(datetime.now().timestamp())
+        result = await self.db_bot[col].insert_one(item)
+        return result
+
+    async def do_update(self, col, item) -> None:
         """
         This function updates the selected item in the given collection
 
@@ -40,7 +55,7 @@ class MongoClient():
         """        
         pass
 
-    async def insert_many(self, col, item_dict) -> None:
+    async def do_insert_many(self, col, item_dict) -> None:
         """
         This function writes the selected item into the collection 
 
@@ -54,5 +69,12 @@ class MongoClient():
 
         return True
 
+async def test_db():      
+    result = await mongocli.do_insert('observer',{"key":"value"})
+    print('Result:',result)
+    return True
+
 if __name__ == "__main__":
-    pass
+    mongocli = MongoClient("localhost", 27017)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(test_db())

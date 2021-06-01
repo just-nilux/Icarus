@@ -132,3 +132,4 @@ dmypy.json
 test_credentials.json
 log/
 run-time-objs/
+test/data/*

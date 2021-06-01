@@ -15,44 +15,50 @@ class ObjectEncoder(JSONEncoder):
 class GenericObject():
 
     templates = dict()
+    
     templates['trade'] = {
-                            "status": "",
-                            "enter": {
-                                "isProcessed": "",
-                                "limitBuy": "",
-                                "expire": "",
-                                "enterTime": ""
-                            },
-                            "exit": {
-                                "oco": {
-                                    "isProcessed": "",
-                                    "limitSell": "",
-                                    "stopPrice": "",
-                                    "stopLimit": "",
-                                    "amount": ""
-                                },
-                                "expire": "",
-                                "exitTime": ""
-                            },
-                            "result": {
-                                "canceled": {
-                                    "time": "",
-                                    "reason": ""
-                                },
-                                "closed": {
-                                    "reason": "",
-                                    "buyAmount": "",
-                                    "uyPrice": "",
-                                    "sellAmount": "",
-                                    "sellPrice": "",
-                                    "profit": "",
-                                    "perc": "",
-                                    "totalTime": ""
-                                }
-                            }
-                        }
-    templates['observation'] = {}
+        "status": "",
+        "enter": {
+            "isProcessed": "",
+            "limitBuy": "",
+            "expire": "",
+            "enterTime": ""
+        },
+        "exit": {
+            "oco": {
+                "isProcessed": "",
+                "limitSell": "",
+                "stopPrice": "",
+                "stopLimit": "",
+                "amount": ""
+            },
+            "expire": "",
+            "exitTime": ""
+        },
+        "result": {
+            "canceled": {
+                "time": "",
+                "reason": ""
+            },
+            "closed": {
+                "reason": "",
+                "buyAmount": "",
+                "uyPrice": "",
+                "sellAmount": "",
+                "sellPrice": "",
+                "profit": "",
+                "perc": "",
+                "totalTime": ""
+            }
+        }
+    }
+
+    templates['observation'] = {
+        "equity": 0
+    }
+
     templates['analysis'] = {}
+    
     templates['data'] = {}
 
 

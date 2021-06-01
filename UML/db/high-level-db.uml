@@ -6,10 +6,10 @@ database "MongoDB" {
         folder "live-trades" {
             [{"tradeId":456, trade_obj}]
         }
-        folder "historical-trades" {
+        folder "hist-trades" {
             [{"tradeId":123, trade_obj}]
         }
-        folder "observations" {
+        folder "observer" {
             [observer_obj]
         }
     }
