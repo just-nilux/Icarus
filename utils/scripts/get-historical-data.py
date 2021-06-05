@@ -6,6 +6,7 @@ import json
 import argparse
 import pandas as pd
 import backtrader as bt
+import finplot as fplt
 '''
 [
   [
@@ -25,15 +26,15 @@ import backtrader as bt
 ]
 '''
 
-credential_file = r'./test_credentials.json'
-with open(credential_file, 'r') as cred_file:
-    cred_info = json.load(cred_file)
+#credential_file = r'./test_credentials.json'
+#with open(credential_file, 'r') as cred_file:
+#    cred_info = json.load(cred_file)
 
 kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
                     "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
 
-async def plot(filename, kline):
+def plot(filename, kline):
     '''
         (Ticks, MicroSeconds, Seconds, Minutes,
      Days, Weeks, Months, Years, NoTimeFrame) = range(1, 10)
@@ -59,27 +60,35 @@ async def plot(filename, kline):
 
     cerebro.plot(style='candlestick',barup='green', bardown='red')
 
-async def get_kline(pair, kline, start, end):
+def fplot(filename):
+    df = pd.read_csv(filename)
+    df = df.set_index(['open_time'])
+    fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']])
+    fplt.show()
+    pass
 
-    start_dt = datetime.strptime(start, '%Y-%m-%d %H:%M:%S')
-    end_dt = datetime.strptime(end, '%Y-%m-%d %H:%M:%S')
+def get_kline():
+
+    start_dt = datetime.strptime(args.start, '%Y-%m-%d %H:%M:%S')
+    end_dt = datetime.strptime(args.end, '%Y-%m-%d %H:%M:%S')
 
     start_ts = int(datetime.timestamp(start_dt)) * 1000
     end_ts = int(datetime.timestamp(end_dt)) * 1000
 
-    client = await AsyncClient.create()
-    klines = await client.get_historical_klines(pair, kline, start_ts, end_ts)
+    client = Client()
+    klines = client.get_historical_klines(args.pair, args.kline, start_ts, end_ts)
     df = pd.DataFrame(klines)
     df.columns = kline_column_names
     #df = df.astype(float)
-    df['open_time'] = df['open_time']/1000
-    filename = './test/data/{}-{}-{}.csv'.format(pair.lower(), start_dt.strftime("%Y%m%d%H%M"), end_dt.strftime("%Y%m%d%H%M"))
+    #df['open_time'] = df['open_time']/1000
+    filename = '{}/{}_{}_{}_{}.csv'.format(args.folder,args.pair.lower(), args.kline, start_dt.strftime("%Y%m%d%H%M"), end_dt.strftime("%Y%m%d%H%M"))
     df.to_csv(filename, index = False, header=True)
 
     if args.plot:
-        await plot(filename,kline)
+        fplot(filename)
+        #plot(filename,kline)
 
-    await client.close_connection()
+    client.close_connection()
 
 if __name__ == '__main__':
 
@@ -90,12 +99,12 @@ if __name__ == '__main__':
     parser.add_argument('--kline', type=str)
     parser.add_argument('--start', type=str,)
     parser.add_argument('--end', type=str)
+    parser.add_argument('--folder', type=str)
     parser.add_argument('--plot', action='store_true')
     args = parser.parse_args()
 
     print(args.plot)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(get_kline(args.pair,args.kline,args.start,args.end))
+    get_kline()
 
 
 

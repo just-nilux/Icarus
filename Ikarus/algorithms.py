@@ -1,6 +1,6 @@
 import backtrader as bt
 import pandas as pd
-from backtesting.ws_backtrader.strategies import *
+#from backtesting.ws_backtrader.strategies import *
 import logging
 import statistics as st
 import json
