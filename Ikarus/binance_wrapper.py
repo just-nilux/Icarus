@@ -3,7 +3,7 @@ import asyncio
 import pandas as pd
 import logging
 from datetime import datetime, timedelta
-from Ikarus.objects import GenericObject
+from Ikarus.objects import GenericObject, ObjectEncoder
 import json
 '''
 [
@@ -122,6 +122,10 @@ class BinanceWrapper():
             
         composit_klines = list(await asyncio.gather(*tasks_klines_scales))
         data_dict = await self.decompose(pairs, time_df, composit_klines)
+
+        await self.dump_data_obj(data_dict)
+
+        # data_dict
         return data_dict
 
     async def monitor_account(self):
@@ -166,7 +170,8 @@ class BinanceWrapper():
                 df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
                 df.columns = BinanceWrapper.kline_column_names
                 do.load(row["scale"],df)
-                
+                print(row["scale"])
+                print(df)
             do_dict[pair] = do
             self.logger.debug("decompose ended [{}]:".format(pair))
             #self.logger.debug("{}-{}".format(pair,type(do_dict[pair][row["scale"]])))
@@ -174,26 +179,100 @@ class BinanceWrapper():
         self.logger.debug("decompose ended")
         return do_dict
 
-    # Ikaus Test Methods
-    async def get_test_data_dict(self, pairs, time_df):
-        """
-        This functions returns the TEST historical kline values in the data_dict format.
 
-        Args:
-            pairs (list): [description]
-            time_df (pd.DataFrame): [description]
+    async def dump_data_obj(self, js_obj):
 
-        Returns:
-            dict: [description]
-        """
-        # TODO: create test-data folder and gather sample to test each scenario such as:
-        #       Enter: [ succesful | expire ]
-        #       Enter: [ limit | oco-limit | oco-stop-loss | expire ]
-        tasks_klines_scales = []
-        for pair in pairs:
-            for index, row in time_df.iterrows():
-                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length"]))))
+        copy_obj = dict()
+        for pair,do in js_obj.items():
+            pair_obj = dict()
+            for k,v in do.get().items():
+                pair_obj[k] = v.to_string()
+            copy_obj[pair] = pair_obj
+
+
+        self.logger.debug("data.json file created")
+        js_file = open("run-time-objs/data.json", "w")
+        json.dump(copy_obj, js_file, indent=4)
+        js_file.close()
+
+        return True
+
+
+
+class TestBinanceWrapper():
+
+    def_time_scales = [Client.KLINE_INTERVAL_1MINUTE, 
+                            Client.KLINE_INTERVAL_15MINUTE, 
+                            Client.KLINE_INTERVAL_1HOUR, 
+                            Client.KLINE_INTERVAL_1DAY, 
+                            Client.KLINE_INTERVAL_1WEEK, 
+                            Client.KLINE_INTERVAL_1MONTH]
+    def_time_lengths_str = ["1 hour", "1 day", "1 week", "1 month", "6 months", "12 months"]
+
+    kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
+                        "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
+
+    # def_time_df stores the time scale and length for klines
+    def_time_df = pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
+
+    def __init__(self, _cash, _commission):
+
+        self.cash = _cash
+        self.comission = _commission
+
+        self.logger = logging.getLogger('app.{}'.format(__name__))
+        self.logger.info('creating an instance of {}'.format(__name__))
+
+        self.ref_currency = 'USDT'
+        self.base_currency = 'TRY'
+
+        # Default Parameters
+        
+
+        print(TestBinanceWrapper.def_time_df)
+        pass
+
+    async def get_current_balance(self):
+        df = pd.DataFrame([self.cash],columns=['ref_balance'])
+        return df
+
+    async def get_data_dict(self, pairs, time_df, df_list):
+        '''
+        time_df:
+        -------------------------
+            scale   length
+        0   15m     96/"1 day" 
+        1   1h      168/"1 week"
+        -------------------------
+        '''
+
+        do_dict = dict()
+        for idx_pair,pair in enumerate(pairs):
+            do = GenericObject()
+            # This only works if only 1 time scale(i.e. 15m) is given for each pair and they are the same
+            for idx_row, row in time_df.iterrows():
+                do.load(row["scale"],df_list[idx_pair])
+
+            do_dict[pair] = do
             
-        composit_klines = list(await asyncio.gather(*tasks_klines_scales))
-        data_dict = await self.decompose(pairs, time_df, composit_klines)
-        return data_dict
+        await self.dump_data_obj(do_dict)
+        return do_dict    
+
+
+    async def dump_data_obj(self, js_obj):
+
+            copy_obj = dict()
+            for pair,do in js_obj.items():
+                pair_obj = dict()
+                for k,v in do.get().items():
+                    pair_obj[k] = v.to_string()
+                copy_obj[pair] = pair_obj
+
+            js_file = open("run-time-objs/test-data_obj.json", "w")
+            json.dump(copy_obj, js_file, indent=4)
+            js_file.close()
+
+            return True
+
+    async def execute_decision(self, trade_objs):
+        return True

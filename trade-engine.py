@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient, BinanceSocketManager
 from datetime import datetime, timedelta
 import json
-from Ikarus import binance_wrapper, algorithms, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, algorithms, notifications, analyzers, observers, mongo_utils, objects
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -14,8 +14,8 @@ with open(credential_file, 'r') as cred_file:
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
-test_time_scales = [Client.KLINE_INTERVAL_15MINUTE, Client.KLINE_INTERVAL_1HOUR]
-test_time_lengths_str = ["1 day", "1 week"]
+test_time_scales = [Client.KLINE_INTERVAL_15MINUTE]
+test_time_lengths_str = ["1 week"]
 test_time_df = pd.DataFrame({"scale":test_time_scales, "length":test_time_lengths_str})
 
 logger = logging.getLogger('app')
@@ -63,13 +63,12 @@ async def run_at(dt, coro):
 
 async def application(bwrapper, telbot):
     logger.debug('Application started')
-    pair_list = ["BTCUSDT","XRPUSDT","BTTUSDT"]
-
+    #pair_list = ["BTCUSDT","XRPUSDT","BTTUSDT"]
+    pair_list = ["BTCUSDT"] 
     # Phase 1: Perform pre-calculation tasks
     logger.info('pre-calculation phase started')
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list,test_time_df)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
-    logger.info("Balance: $ {}".format(balance['ref_balance'].sum()))
 
     # Phase 2: Perform calculation tasks
     logger.info('calculation phase started')

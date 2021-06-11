@@ -119,7 +119,7 @@ def fplot(filename=None):
 if __name__ == '__main__':
 
     # Instantiate the parser
-    # python .\Ikarus\utils\scripts\fplot.py --filename Ikarus\utils\data\btcusdt_15m_202005151212_202005161313.csv
+    # python .\scripts\fplot.py --filename .\test\data\btcusdt_15m_202005121212_202005131213.csv
     parser = argparse.ArgumentParser(description='Optional app description')
     parser.add_argument('--filename', type=str,)
     args = parser.parse_args()

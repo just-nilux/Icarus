@@ -30,9 +30,6 @@ class Observer():
         return observation
 
     async def sample_observer(self,balance):
-        self.logger.debug('sample_observer started')
-        print(balance['ref_balance'].sum())
         observation_obj = GenericObject('observation')
         observation_obj.load('equity',balance['ref_balance'].sum())
-        self.logger.debug('default_observer ended')
         return observation_obj

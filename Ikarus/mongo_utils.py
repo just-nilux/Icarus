@@ -6,6 +6,8 @@ from datetime import datetime
 import motor.motor_asyncio
 
 class MongoClient():
+
+    
     def __init__(self, _host, _port) -> None:
         #self.client = pymongo.MongoClient(host=_host, port=_port)
         self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
@@ -39,10 +41,13 @@ class MongoClient():
             item (dict): Dictionary item
         """        
         self.logger.info(f"Item written to [{col}]")
-
+        print(item)
         # Add timestamp as the "_id" of the document
         item['_id'] = int(datetime.now().timestamp())
-        result = await self.db_bot[col].insert_one(item)
+        testitem = dict({"keytest":"value"})
+        testitem['_id'] = int(datetime.now().timestamp())
+        result = await self.db_bot[col].insert_one(testitem)
+        print(result)
         return result
 
     async def do_update(self, col, item) -> None:
@@ -69,8 +74,10 @@ class MongoClient():
 
         return True
 
-async def test_db():      
-    result = await mongocli.do_insert('observer',{"key":"value"})
+async def test_db():
+    item = dict({"key":"value"})
+    item['_id'] = int(datetime.now().timestamp())
+    result = await mongocli.do_insert('observer',item)
     print('Result:',result)
     return True
 
