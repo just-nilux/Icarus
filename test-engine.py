@@ -6,7 +6,7 @@ from Ikarus import binance_wrapper, algorithms, notifications, analyzers, observ
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
-import argparse
+import sys
 
 credential_file = r'./test_credentials.json'
 with open(credential_file, 'r') as cred_file:
@@ -20,8 +20,7 @@ test_time_lengths_str = [96]
 test_time_df = pd.DataFrame({"scale":test_time_scales, "length":test_time_lengths_str})
 time_scale_mapping = dict(zip(test_time_scales, test_time_lengths_str))
 
-logger = logging.getLogger('app')
-mongocli = mongo_utils.MongoClient("localhost", 27017)
+
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
@@ -44,7 +43,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     if iteration == total: 
         print()
 
-def setup_logger():
+def setup_logger(_log_lvl):
     global logger
     log_filename = 'log/test-ikarus-app.log'
     logger = logging.getLogger('app')
@@ -55,7 +54,7 @@ def setup_logger():
                                    interval=1,
                                    backupCount=5)
 
-    rfh.setLevel(logging.DEBUG)
+    rfh.setLevel(_log_lvl)
 
     # create console handler with a higher log level
     ch = logging.StreamHandler()
@@ -134,15 +133,13 @@ async def application(bwrapper, pair_list, df_list):
     observation_obj = await observer.sample_observer(balance)
 
 
-    #await mongocli.do_insert("observer",observation_obj.get())   
-
-    logger.debug('Application ended')
+    await mongocli.do_insert("observer",observation_obj.get())   
     return True
 
 
 async def main():
 
-    bwrapper = binance_wrapper.TestBinanceWrapper(args.cash, args.com)
+    bwrapper = binance_wrapper.TestBinanceWrapper(config['cash'], config['commission'])
 
     # Get the pair_list
     pair_list = []
@@ -150,7 +147,7 @@ async def main():
     # Get the df_csv_list to aggregate
     df_csv_list = []
 
-    for file in args.files:
+    for file in config['files']:
         filename = file.split('\\')[-1]
         pair_list.append(filename.split('_')[0].upper())
         df = pd.read_csv(file)
@@ -173,21 +170,22 @@ async def main():
         
         await application(bwrapper, pair_list, df_list)
 
-if __name__ == "__main__":
-    #python.exe .\test-engine.py --files .\test\data\btcusdt_15m_202005121212_202005191213.csv --cash 10000 --com 0.075
+    # Statistics
     
-    # Parameters:
-    # - cash:
-    # - comission rate:
-    # - files:
-    parser = argparse.ArgumentParser(description='Optional app description')
-    parser.add_argument('--cash')
-    parser.add_argument('--com')
-    parser.add_argument('--files', nargs="*")
-    args = parser.parse_args()
+    count_obs = await mongocli.count("observer")
+    logger.info(f'Total observer item: {count_obs}') 
+
+if __name__ == '__main__':
+    
+    print(str(sys.argv[1]))
+    f = open(str(sys.argv[1]),'r')
+    config = json.load(f)
+    
+    logger = logging.getLogger('app')
+    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], config['mongodb']['port'], config['tag'])
 
     # Initialize and configure objects
-    setup_logger()
+    setup_logger(config['log-level'])
     observer = observers.Observer()
 
     logger.info("---------------------------------------------------------")
@@ -195,4 +193,5 @@ if __name__ == "__main__":
     logger.info("---------------------------------------------------------")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-    print("Completed")
+
+    print(f"Test Session <{config['tag']}> completed")

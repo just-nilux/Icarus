@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta
 from Ikarus.objects import GenericObject, ObjectEncoder
 import json
+import numpy as np
 '''
 [
   [
@@ -217,8 +218,8 @@ class TestBinanceWrapper():
 
     def __init__(self, _cash, _commission):
 
-        self.cash = _cash
-        self.comission = _commission
+        self.cash = int(_cash)
+        self.comission = float(_commission)
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))

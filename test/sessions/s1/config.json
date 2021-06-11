@@ -1,0 +1,11 @@
+{
+    "tag": "test-bot",
+    "log-level": "INFO",
+    "cash": 10000,
+    "commission": 0.075,
+    "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017
+    }
+}

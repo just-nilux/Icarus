@@ -4,22 +4,19 @@ import logging
 import asyncio
 from datetime import datetime
 import motor.motor_asyncio
+from time import time
 
 class MongoClient():
 
     
-    def __init__(self, _host, _port) -> None:
-        #self.client = pymongo.MongoClient(host=_host, port=_port)
+    def __init__(self, _host, _port, _db='bot') -> None:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
         self.logger = logging.getLogger('app.{}'.format(__name__))
+        self.client.drop_database(_db)
+        self.db_bot = self.client[_db]
 
-        # get the "bot" database
-        self.db_bot = self.client['bot']
-
-        # get the collections
-        self.col_observer = self.db_bot['observer']
-        self.col_live_trade = self.db_bot['live-trade']
-        self.col_hist_trade = self.db_bot['hist-trade']
+    async def count(self, col, query={}) -> None:
+        return await self.db_bot[col].count_documents(query)
 
     async def find(self, col, item) -> None:
         """
@@ -40,14 +37,9 @@ class MongoClient():
             col (str): Name of the collection: [live-trade | hist-trade | observer]
             item (dict): Dictionary item
         """        
-        self.logger.info(f"Item written to [{col}]")
-        print(item)
         # Add timestamp as the "_id" of the document
-        item['_id'] = int(datetime.now().timestamp())
-        testitem = dict({"keytest":"value"})
-        testitem['_id'] = int(datetime.now().timestamp())
-        result = await self.db_bot[col].insert_one(testitem)
-        print(result)
+        item['_id'] = int(time() * 1000)
+        result = await self.db_bot['observer'].insert_one(item)
         return result
 
     async def do_update(self, col, item) -> None:
@@ -76,7 +68,8 @@ class MongoClient():
 
 async def test_db():
     item = dict({"key":"value"})
-    item['_id'] = int(datetime.now().timestamp())
+    item['_id'] = int(time() * 1000)
+    print(item['_id'])
     result = await mongocli.do_insert('observer',item)
     print('Result:',result)
     return True

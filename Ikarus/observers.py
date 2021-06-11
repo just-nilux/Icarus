@@ -31,5 +31,5 @@ class Observer():
 
     async def sample_observer(self,balance):
         observation_obj = GenericObject('observation')
-        observation_obj.load('equity',balance['ref_balance'].sum())
+        observation_obj.load('equity',int(balance['ref_balance'].sum()))
         return observation_obj

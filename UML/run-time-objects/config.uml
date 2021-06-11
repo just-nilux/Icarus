@@ -1,0 +1,11 @@
+@startjson
+{
+    "tag": "test-session-tag",
+    "log-level": "info",
+    "cash": 10000,
+    "commission": 0.075,
+    "files": ["file_path1","file_path2","file_path3"] 
+}
+@endjson
+
+Note: it is expected from all files to have the same timescale such as 15m, 1h etc
