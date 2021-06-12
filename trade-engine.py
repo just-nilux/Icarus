@@ -64,9 +64,16 @@ async def run_at(dt, coro):
 async def application(bwrapper, telbot):
     logger.debug('Application started')
     #pair_list = ["BTCUSDT","XRPUSDT","BTTUSDT"]
-    pair_list = ["BTCUSDT"] 
+    pair_list = ["BTCUSDT"]
+    
     # Phase 1: Perform pre-calculation tasks
     logger.info('pre-calculation phase started')
+
+    # TODO: |trade_obj life cycle|2|: Read active trades from the database col: "live-trades"
+    # TODO: |trade_obj life cycle|3|: Check order status from broker
+    #       - Get the open trades from broker and keep them as they are (json)
+    # TODO: |trade_obj life cycle|4|: Update database based on the changes in order status
+    #       - Send closed orders to "hist-trades" from "live-trades"
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list,test_time_df)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
@@ -78,6 +85,7 @@ async def application(bwrapper, telbot):
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
+        # TODO: |trade_obj life cycle|1|: Write trade dict (write for the first time)
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
         # await mongocli.insert_many("live-trades",trade_dict)
 

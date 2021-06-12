@@ -109,9 +109,11 @@ async def run_at(dt, coro):
 
 async def application(bwrapper, pair_list, df_list):
 
-    logger.debug('Current time')
-
     # Phase 1: Perform pre-calculation tasks
+
+    # TODO: Read open trades from broker
+    #       For the test purposes there needs to be another kind of check to see if the trade is taken by the broker.
+    # TODO: Sync (update) open trades with the database (trade collection)
     logger.info('pre-calculation phase started')
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
@@ -124,6 +126,7 @@ async def application(bwrapper, pair_list, df_list):
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
+        # TODO: Write trade dict
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
         # await mongocli.insert_many("live-trades",trade_dict)
 
