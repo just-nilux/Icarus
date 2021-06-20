@@ -5,11 +5,11 @@ import logging
 import pandas as pd
 from multipledispatch import dispatch
 from json import JSONEncoder
-
+import collections.abc
 
 class ObjectEncoder(JSONEncoder):
-        def default(self, o):
-            return o.get()
+    def default(self, o):
+        return o.get()
 
 
 class GenericObject():
@@ -18,6 +18,7 @@ class GenericObject():
     
     templates['trade'] = {
         "status": "",
+        "tradeid": "",
         "enter": {
             "isProcessed": "",
             "limitBuy": "",
@@ -80,10 +81,24 @@ class GenericObject():
 
     @dispatch(list, object)
     def load(self, obj_path, item):
+        self._obj[obj_path[0]][obj_path[1]] = item
         pass
 
     def dump(self):
         pass
+
+    @staticmethod
+    def nested_update(obj, key, value):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if isinstance(v, (dict, list)):
+                    GenericObject.nested_update(v, key, value)
+                elif k == key:
+                    obj[k] = value
+        elif isinstance(obj, list):
+            for item in obj:
+                GenericObject.nested_update(item, key, value)
+        return obj
 
     @dispatch()
     def get(self):

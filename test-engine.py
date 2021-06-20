@@ -7,6 +7,8 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
 import sys
+import numpy as np
+from scripts import fplot as fp
 
 credential_file = r'./test_credentials.json'
 with open(credential_file, 'r') as cred_file:
@@ -115,18 +117,19 @@ async def application(bwrapper, pair_list, df_list):
     #       For the test purposes there needs to be another kind of check to see if the trade is taken by the broker.
     # TODO: Sync (update) open trades with the database (trade collection)
     logger.info('pre-calculation phase started')
+
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # Phase 2: Perform calculation tasks
     logger.info('calculation phase started')
-    analyzer, algorithm = analyzers.Analyzer(), algorithms.Algorithm()
+    analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
-    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict))
+    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict,df_list[0].index[-1])) # Send last timestamp index
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
-        # TODO: Write trade dict
+        # TODO: Write trade dict (write for the first time)
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
         # await mongocli.insert_many("live-trades",trade_dict)
 
@@ -137,7 +140,7 @@ async def application(bwrapper, pair_list, df_list):
 
 
     await mongocli.do_insert("observer",observation_obj.get())   
-    return True
+    return trade_dict
 
 
 async def main():
@@ -161,6 +164,9 @@ async def main():
     # so start iterating from the 96 until len(df)
     #print(time_scale_mapping["15m"],len(df))
 
+    df_csv_list[0]['buy'] = np.nan
+    df_csv_list[0]['sell'] = np.nan
+
     total_len = len(df_csv_list[0])-time_scale_mapping["15m"]
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
     for i in range(total_len):
@@ -171,12 +177,19 @@ async def main():
         for df in df_csv_list:
             df_list.append(df.iloc[i:i+time_scale_mapping["15m"]])
         
-        await application(bwrapper, pair_list, df_list)
+        trade_dict = await application(bwrapper, pair_list, df_list)
+
+        if len(trade_dict):
+            #print(trade_dict[pair_list[0]].get('tradeid'))
+            tradeid = float(trade_dict[pair_list[0]].get('tradeid'))
+            df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy']))
+            df_csv_list[0].loc[tradeid, 'sell'] = df_csv_list[0].loc[tradeid, 'close']
 
     # Statistics
-    
     count_obs = await mongocli.count("observer")
     logger.info(f'Total observer item: {count_obs}') 
+
+    fp.buy_sell(df_csv_list[0])
 
 if __name__ == '__main__':
     

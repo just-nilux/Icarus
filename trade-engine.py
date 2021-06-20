@@ -70,6 +70,7 @@ async def application(bwrapper, telbot):
     logger.info('pre-calculation phase started')
 
     # TODO: |trade_obj life cycle|2|: Read active trades from the database col: "live-trades"
+    #       - Check if the buy order is taken, then execute the sell order from the ["live-trades"]["Exit"]
     # TODO: |trade_obj life cycle|3|: Check order status from broker
     #       - Get the open trades from broker and keep them as they are (json)
     # TODO: |trade_obj life cycle|4|: Update database based on the changes in order status
@@ -85,7 +86,7 @@ async def application(bwrapper, telbot):
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
-        # TODO: |trade_obj life cycle|1|: Write trade dict (write for the first time)
+        # TODO: |trade_obj life cycle|1|: Write trade dict to the "live-trades" (write for the first time)
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
         # await mongocli.insert_many("live-trades",trade_dict)
 

@@ -76,6 +76,38 @@ def fplot_2row(filename=None):
     fplt.show()
 
 
+def fplot_2row_scatter(filename=None):
+
+    if filename == None:
+        filename=args.filename
+
+    df = pd.read_csv(filename)
+    df = df.set_index(['open_time'])
+    print(df)
+    ax, ax2 = fplt.create_plot('S&P 500 MACD', rows=2)
+
+    # plot macd with standard colors first
+    macd = df['close'].ewm(span=12).mean() - df['close'].ewm(span=26).mean()
+    signal = macd.ewm(span=9).mean()
+    df['macd_diff'] = macd - signal
+    fplt.volume_ocv(df[['open','close','macd_diff']], ax=ax2, colorfunc=fplt.strength_colorfilter)
+    fplt.plot(macd, ax=ax2, legend='MACD')
+    fplt.plot(signal, ax=ax2, legend='Signal')
+
+    fplt.candlestick_ochl(df[['open','close','high','low']], ax=ax, colorfunc=fplt.strength_colorfilter)
+    hover_label = fplt.add_legend('', ax=ax)
+    axo = ax.overlay()
+    fplt.volume_ocv(df[['open','close','volume']], ax=axo)
+    fplt.plot(df['volume'].ewm(span=24).mean(), ax=axo, color=1)
+
+
+
+    #dft.plot(kind='labels', ax=ax) #TODO: Add labels for buy and sell prices
+
+
+    fplt.show()
+
+
 def fplot_volume(filename=None):
 
     if filename == None:
@@ -114,6 +146,29 @@ def fplot(filename=None):
     fplt.show()
 
 
+def buy_sell(df):
+
+
+    ax = fplt.create_plot('Buy/Sell')
+    fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
+
+    # Add period separator lines
+    periods = pd.to_datetime(df.index, unit='ms').strftime('%H')
+    last_period = ''
+    for x,(period,price) in enumerate(zip(periods, df.close)):
+        if period != last_period:
+            fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
+        last_period = period
+
+    point_buy = df['buy']-10
+    point_buy.plot(kind='scatter', color=-2, width=2, ax=ax, zoomscale=False, style='^')
+
+    point_sell = df['sell']+10
+    point_sell.plot(kind='scatter', color=-1, width=2, ax=ax, zoomscale=False, style='v')
+    
+    fplt.show()
+
+
 # Helper Functions
 
 if __name__ == '__main__':
@@ -125,9 +180,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     #fplot()
+    buy_sell()
     #fplot_volume()
     #fplot_2row()
-    fplot_volume_profile()
+    #fplot_2row_scatter()
+    #fplot_volume_profile()
 
 
 

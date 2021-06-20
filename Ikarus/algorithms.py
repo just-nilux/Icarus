@@ -1,4 +1,5 @@
 import backtrader as bt
+from backtrader import trade
 import pandas as pd
 #from backtesting.ws_backtrader.strategies import *
 import logging
@@ -43,6 +44,7 @@ class Algorithm():
 
         Args:
             analysis_objs (dict): analysis.json
+            - analysis objects contains where to buy and and where to sell
 
         Returns:
             dict: trade.json
@@ -67,7 +69,7 @@ class Algorithm():
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = GenericObject('trade')
                 trade_obj.load('status','created')
-                #trade_obj["status"] = "created"
+                trade_obj.load('status','created')
                 trade_dict[pair] = trade_obj
 
             else:
@@ -124,6 +126,102 @@ class Algorithm():
         cerebro.plot(style='candlestick',barup='green', bardown='red')
         self.logger.debug("func algorithm ended")
         return decision
+
+
+    async def dump(self, js_obj):
+        """
+        This functions dumps json objects to files for debug purposes
+
+        Args:
+            js_obj (dict): dict to be dumped
+
+        Returns:
+            True:
+        """    
+
+        js_file = open("run-time-objs/trade.json", "w")
+        json.dump(js_obj, js_file, indent=4, cls=ObjectEncoder)
+        js_file.close()
+        self.logger.debug("trade.json file created")
+
+        return True
+
+class BackTestAlgorithm():
+
+    def __init__(self):
+        self.logger = logging.getLogger('app.{}'.format(__name__))
+
+        return
+
+
+    async def default_algorithm(self, analysis_objs):
+        """This function uses backtrader strategy class
+
+        Args:
+            analysis_objs (list): list of analysis.json
+
+        Returns:
+            list: list of trade.json
+        """
+        self.logger.debug('default_algorithm started')
+        trade_objs = []
+        for ao in analysis_objs:
+            trade_obj = dict()
+            trade_obj["status"] = "open"
+            trade_obj["enter"] = {}
+            trade_obj["exit"] = {}
+            trade_obj["result"] = {}
+            trade_objs.append(trade_obj)
+        self.logger.debug('default_algorithm completed')
+
+        return trade_objs
+
+
+    async def sample_algorithm(self, analysis_dict, dt_index=None):
+        """
+        sample_algorithm
+
+        Args:
+            analysis_objs (dict): analysis.json
+            - analysis objects contains where to buy and and where to sell
+
+        Returns:
+            dict: trade.json
+        """
+        trade_dict = dict()
+        for pair, time_dict in analysis_dict.items():
+            
+            # Since all parameters are handled in a different way, 
+            # there needs to be different handlers for each type of indicator
+            # TODO: Create a list of indicator handlers: [atr_handler()]
+            
+
+            #trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
+            trange_mean5 = st.mean(time_dict.get(['15m', 'trange'])[-5:])
+
+            #trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
+            trange_mean20 = st.mean(time_dict.get(['15m', 'trange'])[-20:])
+
+            if trange_mean5 < trange_mean20:
+                self.logger.info(f"{pair}: BUY SIGNAL")
+                trade_obj = GenericObject('trade')
+                trade_obj.load('status','created')
+                trade_obj.load('tradeid',str(dt_index))
+                #TODO: give proper values to limitBuy
+                trade_obj.load(['enter','limitBuy'],float(trange_mean5))
+
+                trade_dict[pair] = trade_obj
+
+            else:
+                self.logger.info(f"{pair}: NO SIGNAL")
+
+            #for time_scale, stat_obj in time_dict.items():
+                # TODO: Create a list of indicator handlers: 
+                # [atr_handler(time_scale,stat_objne)]
+                # Perform calculation
+                #pass
+        await self.dump(trade_dict)
+        return trade_dict
 
 
     async def dump(self, js_obj):
