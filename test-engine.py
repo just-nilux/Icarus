@@ -182,8 +182,8 @@ async def main():
         if len(trade_dict):
             #print(trade_dict[pair_list[0]].get('tradeid'))
             tradeid = float(trade_dict[pair_list[0]].get('tradeid'))
-            df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy']))
-            df_csv_list[0].loc[tradeid, 'sell'] = df_csv_list[0].loc[tradeid, 'close']
+            df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy','amount']))
+            df_csv_list[0].loc[tradeid, 'sell'] = float(trade_dict[pair_list[0]].get(['exit','limitSell','amount']))
 
     # Statistics
     count_obs = await mongocli.count("observer")

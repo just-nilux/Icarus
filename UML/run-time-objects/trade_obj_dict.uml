@@ -1,30 +1,36 @@
 @startjson
 {
   "pair1":{
-    "Status": "",
-    "Enter": {
-      "IsProcessed": "",
-      "LimitBuy": "",
-      "Expire": "",
-      "EnterTime": ""
-    },
-    "Exit": {
-      "OCO": {
-        "IsProcessed": "",
-        "LimitSell": "",
-        "StopPrice": "",
-        "StopLimit": "",
-        "Amount": ""
+    "status": "",
+    "tradeid": "[dt index of obj creation]",
+    "enter": {
+      "limitBuy": {
+        "price": "",
+        "amount": ""
       },
-      "Expire": "",
-      "ExitTime": ""
+      "expire": "",
+      "enterTime": ""
     },
-    "Result": {
+    "exit": {
+      "oco": {
+        "limitSellPrice": "",
+        "stopPrice": "",
+        "stopLimitPrice": "",
+        "amount": ""
+      },
+      "limitSell": {
+        "price": "",
+        "amount": ""
+      },
+      "expire": "",
+      "exitTime": ""
+    },
+    "result": {
       "Canceled": {
         "Time": "",
         "Reason": ""
       },
-      "Closed": {
+      "closed": {
         "Reason": "",
         "BuyAmount": "",
         "BuyPrice": "",
@@ -59,3 +65,9 @@ Status
 Canceled
   If an Limit Order is partially filled than the rest is canceled. For the sake of simlicity(for now)
   In other words, both Canceled and Closed exist at the same time
+
+Enter: Default enter type is "limit"
+
+Exit:
+  - It contains either "oco" or "limit"
+

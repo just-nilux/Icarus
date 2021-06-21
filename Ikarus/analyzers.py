@@ -71,12 +71,15 @@ class Analyzer():
                 lowest_low, highest_high = time_df['low'].min(), time_df['high'].max()
 
                 # Fill the dict with the statistics
+                # pd.Series needs to be casted to list
                 stats = dict()
                 stats['trange'] = list(trange)
                 stats['ma5'] = list(ma5)
                 stats['obv'] = list(obv)
                 stats['llow'] = lowest_low
                 stats['hhigh'] = highest_high
+                stats['low'] = list(time_df['low'])
+                stats['high'] = list(time_df['high'])
 
                 # Assign "stats" to each "time_scale"
                 analysis_obj.load(time_scale,stats)

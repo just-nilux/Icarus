@@ -6,9 +6,12 @@ import pandas as pd
 from multipledispatch import dispatch
 from json import JSONEncoder
 import collections.abc
+import numpy as np
 
 class ObjectEncoder(JSONEncoder):
     def default(self, o):
+        if type(o) == np.int64:
+            return int(o)
         return o.get()
 
 
@@ -20,17 +23,22 @@ class GenericObject():
         "status": "",
         "tradeid": "",
         "enter": {
-            "isProcessed": "",
-            "limitBuy": "",
+            "limitBuy": {
+                "price": "",
+                "amount": ""
+            },
             "expire": "",
             "enterTime": ""
         },
         "exit": {
             "oco": {
-                "isProcessed": "",
-                "limitSell": "",
+                "limitSellPrice": "",
                 "stopPrice": "",
-                "stopLimit": "",
+                "stopLimitPrice": "",
+                "amount": ""
+            },
+            "limitSell": {
+                "price":"",
                 "amount": ""
             },
             "expire": "",
@@ -81,7 +89,13 @@ class GenericObject():
 
     @dispatch(list, object)
     def load(self, obj_path, item):
-        self._obj[obj_path[0]][obj_path[1]] = item
+
+        #TODO: Generic solution needs to be added
+        # Temporary quick fix
+        if len(obj_path) == 2:
+            self._obj[obj_path[0]][obj_path[1]] = item
+        elif len(obj_path) == 3:
+            self._obj[obj_path[0]][obj_path[1]][obj_path[2]] = item
         pass
 
     def dump(self):
