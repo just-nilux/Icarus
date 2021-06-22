@@ -1,8 +1,8 @@
 @startjson
 {
   "pair1":{
-    "status": "",
     "tradeid": "[dt index of obj creation]",
+    "status": "",
     "enter": {
       "limitBuy": {
         "price": "",

@@ -206,8 +206,8 @@ class BackTestAlgorithm():
             if trange_mean5 < trange_mean20:
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = GenericObject('trade')
-                trade_obj.load('status','created')
-                trade_obj.load('tradeid',dt_index)
+                trade_obj.load('status','open') # Set initial status to 'open'
+                trade_obj.load('tradeid',int(dt_index)) # Set tradeid to timestamp
                 #TODO: give proper values to limitBuy
 
                 # Fill enter module
@@ -217,10 +217,9 @@ class BackTestAlgorithm():
                         "price": float(min(time_dict.get(['15m', 'low'])[-10:])),
                         "amount": "AllCash"
                         },
-                    "expire": dt_index + 3*15*60*1000 
+                    "expire": int(dt_index + 3*15*60*1000)
                     }
                 #enter_module["expire"] = dt_index - 3*15*60*1000 # 3 15min block later
-                #trade_obj.load(['enter','limitBuy','amount'],float(min(time_dict.get(['15m', 'low'])[-10:])))
                 trade_obj.load('enter', enter_module)
 
                 # Fill exit module
@@ -233,7 +232,6 @@ class BackTestAlgorithm():
                     "expire": ""
                     }
                 # expire of the exit_module is calculated after the trade entered
-                #trade_obj.load(['exit','limitSell','amount'],float(min(time_dict.get(['15m', 'high'])[-10:])))
                 trade_obj.load('exit', exit_module)
 
                 trade_dict[pair] = trade_obj

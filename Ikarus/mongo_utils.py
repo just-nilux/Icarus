@@ -12,21 +12,25 @@ class MongoClient():
     def __init__(self, _host, _port, _db='bot') -> None:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
         self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.client.drop_database(_db)
+
+        # Drop the db if it is no the main one
+        if _db != 'bot':
+            self.client.drop_database(_db)
         self.db_bot = self.client[_db]
 
     async def count(self, col, query={}) -> None:
         return await self.db_bot[col].count_documents(query)
 
-    async def find(self, col, item) -> None:
+    async def do_find(self, col, query) -> None:
         """
         This function reads the selected item from the given collection
 
         Args:
             col ([type]): [description]
             item ([type]): [description]
-        """        
-        pass
+        """
+        result = self.db_bot[col].find(query)
+        return result
 
 
     async def do_insert(self, col, item) -> None:
@@ -39,7 +43,7 @@ class MongoClient():
         """        
         # Add timestamp as the "_id" of the document
         item['_id'] = int(time() * 1000)
-        result = await self.db_bot['observer'].insert_one(item)
+        result = await self.db_bot[col].insert_one(item)
         return result
 
     async def do_update(self, col, item) -> None:
@@ -58,13 +62,17 @@ class MongoClient():
 
         Args:
             col (str): Name of the collection: [live-trade | hist-trade | observer]
-            item (dict): Dictionary item
+            item_dict (dict): Dictionary of GenericObject
         """        
+
+        insert_list = []
         for pair, obj in item_dict.items():
             obj.load('pair',pair)
-            await self.insert(col, obj)
-
-        return True
+            obj.load('_id',int(time() * 1000))
+            insert_list.append(obj.get())
+            
+        result = await self.db_bot[col].insert_many(insert_list)
+        return result
 
 async def test_db():
     item = dict({"key":"value"})

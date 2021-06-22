@@ -74,29 +74,6 @@ def setup_logger(_log_lvl):
     logger.info('logger has been set')
 
 
-def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
-	n_vars = 1 if type(data) is list else data.shape[1]
-	df = pd.DataFrame(data)
-	cols, names = list(), list()
-	# input sequence (t-n, ... t-1)
-	for i in range(n_in, 0, -1):
-		cols.append(df.shift(i))
-		names += [('var%d(t-%d)' % (j+1, i)) for j in range(n_vars)]
-	# forecast sequence (t, t+1, ... t+n)
-	for i in range(0, n_out):
-		cols.append(df.shift(-i))
-		if i == 0:
-			names += [('var%d(t)' % (j+1)) for j in range(n_vars)]
-		else:
-			names += [('var%d(t+%d)' % (j+1, i)) for j in range(n_vars)]
-	# put it all together
-	agg = pd.concat(cols, axis=1)
-	agg.columns = names
-	# drop rows with NaN values
-	if dropnan:
-		agg.dropna(inplace=True)
-	return agg
-
 async def wait_until(dt):
     now = int(datetime.timestamp(datetime.now()))
     sleep_time = dt - now
@@ -113,31 +90,43 @@ async def application(bwrapper, pair_list, df_list):
 
     # Phase 1: Perform pre-calculation tasks
 
-    # TODO: Read open trades from broker
-    #       For the test purposes there needs to be another kind of check to see if the trade is taken by the broker.
-    # TODO: Sync (update) open trades with the database (trade collection)
+    # 1.1 Get live trade objects (LTOs)
+    result = await mongocli.do_find('live-trades',{})
+    count_lit = await mongocli.count('live-trades')
+    logger.info(f'Total live-trades item: {count_lit}') 
+    logger.debug(str(result))
+
+    # TODO: 1.2: Query the status of LTOs from the Broker
+    #            - for testing purposes, a mock-broker can be used (checking if the order is fulfilled or not)
+    # TODO: 1.3: Update the LTOs
+    #            - check the expired ones
+    #            - add statistics to the results
+    # TODO: 1.4: Write the LTOs to [live-trades] and [hist-trades]
+
     logger.info('pre-calculation phase started')
 
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # Phase 2: Perform calculation tasks
-    logger.info('calculation phase started')
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
+
+    # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
+
+    # 2.2: Algorithm is the only authority to make decision
     trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict,df_list[0].index[-1])) # Send last timestamp index
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
-        # TODO: Write trade dict (write for the first time)
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-        # await mongocli.insert_many("live-trades",trade_dict)
 
-    
+        # Write trade_dict to [live-trades] (assume it is executed successfully)
+        result = await mongocli.do_insert_many("live-trades",trade_dict)
+
     # Phase 3: Perform post-calculation tasks
     logger.info('post-calculation phase started')
     observation_obj = await observer.sample_observer(balance)
-
 
     await mongocli.do_insert("observer",observation_obj.get())   
     return trade_dict
@@ -180,10 +169,13 @@ async def main():
         trade_dict = await application(bwrapper, pair_list, df_list)
 
         if len(trade_dict):
-            #print(trade_dict[pair_list[0]].get('tradeid'))
             tradeid = float(trade_dict[pair_list[0]].get('tradeid'))
-            df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy','amount']))
-            df_csv_list[0].loc[tradeid, 'sell'] = float(trade_dict[pair_list[0]].get(['exit','limitSell','amount']))
+
+            # Add buy and sell points to the DataFrame
+            df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy','price']))
+            df_csv_list[0].loc[tradeid, 'sell'] = float(trade_dict[pair_list[0]].get(['exit','limitSell','price']))
+
+
 
     # Statistics
     count_obs = await mongocli.count("observer")

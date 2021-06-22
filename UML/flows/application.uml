@@ -3,6 +3,13 @@ start
 
 repeat
   partition Pre-Calculation {
+    partition Synchronize {
+      :Get TOs from [live-trades];
+      :Query the status of the TOs;
+      :Update the info of the TOs in [live-trades];
+      note left: Fill "result" field of the\nclosed ones send to [hist-trades]
+
+    }
     partition Ikarus {
       :Generate Data Object(DO);
     }
@@ -15,9 +22,6 @@ repeat
     partition Algoritm {
       :Generate Trade Objects(TO);
     }
-    partition Ikarus {
-      :Generate Analysis Objects(AO);
-    }
   
   :Execute TO;
   note left: TO should be executed asap,\n the rest can be performed afterwards
@@ -26,8 +30,9 @@ repeat
   partition Post-Calculation {
     fork
       :Monitor Account;
+      :Write OOs\nto [observer];
     fork again
-      :UpdateDB;
+      :Write new TOs\nto [live-trades];
     end fork
   }
 repeat while (Wait until new period)
