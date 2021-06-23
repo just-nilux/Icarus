@@ -30,7 +30,9 @@ class MongoClient():
             item ([type]): [description]
         """
         result = self.db_bot[col].find(query)
-        return result
+        docs = await result.to_list(None)
+
+        return docs
 
 
     async def do_insert(self, col, item) -> None:

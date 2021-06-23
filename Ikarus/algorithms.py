@@ -177,24 +177,36 @@ class BackTestAlgorithm():
         return trade_objs
 
 
-    async def sample_algorithm(self, analysis_dict, dt_index=None):
+    async def sample_algorithm(self, analysis_dict, lto_dict, dt_index=None):
         """
         sample_algorithm
 
         Args:
-            analysis_objs (dict): analysis.json
+            analysis_dict (dict): analysis.json
             - analysis objects contains where to buy and and where to sell
 
+            lto_dict (dict): live-trade-objects coming from the [live-trades]
+
+            dt_index (int): timestamp in ms for trade_object identifier
+            
         Returns:
             dict: trade.json
         """
+        #Initialize trade_dict to be filled
         trade_dict = dict()
-        for pair, time_dict in analysis_dict.items():
-            
+
+        #for pair, time_dict in analysis_dict.items():
+        self.logger.info(f"lto_dict.keys(): {set(lto_dict.keys())}")
+        self.logger.info(f"analysis_dict.keys(): {set(analysis_dict.keys())}")
+        self.logger.info(f"diff.keys(): {(set(analysis_dict.keys()) - set(lto_dict.keys()))}")
+
+        # Only evaluate the analysis dict if there is no open trade belongs to a pair (1 trade at a time for 1 pair)
+        for pair in (set(analysis_dict.keys()) - set(lto_dict.keys())):
+            time_dict = analysis_dict[pair]
+
             # Since all parameters are handled in a different way, 
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]
-            
 
             #trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
             trange_mean5 = st.mean(time_dict.get(['15m', 'trange'])[-5:])

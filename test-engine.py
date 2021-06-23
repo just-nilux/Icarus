@@ -91,22 +91,51 @@ async def application(bwrapper, pair_list, df_list):
     # Phase 1: Perform pre-calculation tasks
 
     # 1.1 Get live trade objects (LTOs)
-    result = await mongocli.do_find('live-trades',{})
-    count_lit = await mongocli.count('live-trades')
-    logger.info(f'Total live-trades item: {count_lit}') 
-    logger.debug(str(result))
+    lto_list = await mongocli.do_find('live-trades',{})
+
+    # Create lto_dict to be updated and then to be processed in algorithm
+    lto_dict = dict()
+    for lto in lto_list:
+        lto_dict[lto['pair']] = lto
+
+    tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
+    balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # TODO: 1.2: Query the status of LTOs from the Broker
     #            - for testing purposes, a mock-broker can be used (checking if the order is fulfilled or not)
+    # !!! Only for testing purposes !!!
+    for pair in set(lto_dict.keys()) & set(data_dict.keys()):
+        current_kline = data_dict[pair].tail(-1)
+        current_lto = lto_dict[pair]
+
+        # There might be 2 group of open trades:
+        # enter: 
+        #       waiting for limitBuy to fill
+        # exit: 
+        #       waiting for limitSell to fill
+        #       waiting for stopLoss to fill
+
+        # 1.2.1: Check trades in the Enter phase
+        if current_lto['status'] == 'open_enter':
+            # Check if the open buy trade is filled
+            pass
+        elif current_lto['status'] == 'partially_closed_enter':
+            # Ignore for the tests
+            pass
+        elif current_lto['status'] == 'open_exit':
+            # Check if the open sell trade is filled or stoploss is taken
+            pass
+        elif current_lto['status'] == 'partially_closed_exit':
+            # Ignore for the tests
+            pass
+        else:
+            pass
+
+
     # TODO: 1.3: Update the LTOs
     #            - check the expired ones
     #            - add statistics to the results
     # TODO: 1.4: Write the LTOs to [live-trades] and [hist-trades]
-
-    logger.info('pre-calculation phase started')
-
-    tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
-    balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # Phase 2: Perform calculation tasks
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
@@ -115,7 +144,10 @@ async def application(bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
-    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict,df_list[0].index[-1])) # Send last timestamp index
+    # It requires to feed analysis_dict and lto_dict so that it may decide to:
+    # - not to enter a new trade if there is already an open trade
+    # - cancel the trade if an drawdown is detected
+    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_list[0].index[-1])) # Send last timestamp index
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
