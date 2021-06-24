@@ -98,6 +98,9 @@ async def application(bwrapper, pair_list, df_list):
     for lto in lto_list:
         lto_dict[lto['pair']] = lto
 
+    # original_lto_dict is required to check if the lto_dict is changed
+    original_lto_dict = lto_dict
+
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
@@ -105,8 +108,7 @@ async def application(bwrapper, pair_list, df_list):
     #            - for testing purposes, a mock-broker can be used (checking if the order is fulfilled or not)
     # !!! Only for testing purposes !!!
     for pair in set(lto_dict.keys()) & set(data_dict.keys()):
-        current_kline = data_dict[pair].tail(-1)
-        current_lto = lto_dict[pair]
+        pair_klines = data_dict[pair]
 
         # There might be 2 group of open trades:
         # enter: 
@@ -115,27 +117,62 @@ async def application(bwrapper, pair_list, df_list):
         #       waiting for limitSell to fill
         #       waiting for stopLoss to fill
 
-        # 1.2.1: Check trades in the Enter phase
-        if current_lto['status'] == 'open_enter':
+        # 1.2.1: Check trades and update status
+        last_kline = pair_klines['15m'].tail(1)
+
+        # TODO: check the expired ones
+        if lto_dict[pair]['status'] == 'open_enter':
+
             # Check if the open buy trade is filled
-            pass
-        elif current_lto['status'] == 'partially_closed_enter':
+            if last_kline['low'] < lto_dict[pair]['enter']['limitBuy']['price']:
+                lto_dict[pair]['status'] = 'open_exit'
+                lto_dict[pair]['enter']['enterTime'] =  int(df_list[0].index[-1])
+            
+
+        elif lto_dict[pair]['status'] == 'partially_closed_enter':
             # Ignore for the tests
             pass
-        elif current_lto['status'] == 'open_exit':
+        elif lto_dict[pair]['status'] == 'open_exit':
+
             # Check if the open sell trade is filled or stoploss is taken
-            pass
-        elif current_lto['status'] == 'partially_closed_exit':
+            if last_kline['high'] < lto_dict[pair]['exit']['limitSell']['price']:
+                lto_dict[pair]['status'] = 'closed'
+                lto_dict[pair]['exit']['exitTime'] =  int(df_list[0].index[-1])
+
+        elif lto_dict[pair]['status'] == 'partially_closed_exit':
             # Ignore for the tests
             pass
         else:
             pass
 
-
     # TODO: 1.3: Update the LTOs
-    #            - check the expired ones
     #            - add statistics to the results
     # TODO: 1.4: Write the LTOs to [live-trades] and [hist-trades]
+    # TODO: Move the function after the new trade object execution
+    for pair, lto in lto_dict.items():
+        
+        # If there is no change in the status, continue to iterate
+        if original_lto_dict[pair]['status'] == lto_dict[pair]['status']:
+            continue
+
+        if lto['status'] == 'closed':
+
+            # Send closed lto's to the [hist-trades]
+            result_insert = await mongocli.do_insert("hist-trades",lto)
+            result_remove = await mongocli.do_remove("live-trades",{"_id":lto['_id']})
+            del lto_dict['pair']
+
+        elif lto['status'] == 'open_exit':
+            # Check if the previous state is open exit. If so, update, otherwise continue
+            result_update = await mongocli.do_update("live-trades",lto)
+            pass
+        elif lto['status'] == 'partially_closed_enter':
+            pass
+        elif lto['status'] == 'partially_closed_exit':
+            pass
+        else:
+            pass
+
 
     # Phase 2: Perform calculation tasks
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
@@ -155,6 +192,8 @@ async def application(bwrapper, pair_list, df_list):
 
         # Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades",trade_dict)
+
+
 
     # Phase 3: Perform post-calculation tasks
     logger.info('post-calculation phase started')

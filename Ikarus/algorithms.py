@@ -218,7 +218,7 @@ class BackTestAlgorithm():
             if trange_mean5 < trange_mean20:
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = GenericObject('trade')
-                trade_obj.load('status','open') # Set initial status to 'open'
+                trade_obj.load('status','open_enter') # Set initial status to 'open'
                 trade_obj.load('tradeid',int(dt_index)) # Set tradeid to timestamp
                 #TODO: give proper values to limitBuy
 

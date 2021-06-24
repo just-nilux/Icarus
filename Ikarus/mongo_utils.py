@@ -48,15 +48,6 @@ class MongoClient():
         result = await self.db_bot[col].insert_one(item)
         return result
 
-    async def do_update(self, col, item) -> None:
-        """
-        This function updates the selected item in the given collection
-
-        Args:
-            col (str): [description]
-            item (dict): [description]
-        """        
-        pass
 
     async def do_insert_many(self, col, item_dict) -> None:
         """
@@ -74,6 +65,35 @@ class MongoClient():
             insert_list.append(obj.get())
             
         result = await self.db_bot[col].insert_many(insert_list)
+        return result
+
+
+    async def do_update(self, col, item) -> None:
+        """
+        This function updates the selected item in the given collection
+
+        Args:
+            col (str): [description]
+            item (dict): [description]
+        """
+        # TODO: Test needed
+        # TODO: Update an item in a deeper position in the hierarchy
+        result = await self.db_bot[col].update_one({'_id': item['_id']}, {'$set': {'status': item['status']}})
+        self.logger.info(f"do_update: {item['_id']} in the [{col}]")
+        return result
+
+
+    async def do_delete(self, col, query) -> None:
+        """
+        This function reads the selected item from the given collection
+
+        Args:
+            col (string): collection to delete document
+            query (dict): query to delete document
+        """
+        # TODO: Test needed
+        result = self.db_bot[col].delete_one(query)
+        self.logger.info(f"do_delete: {result.deleted_count} item from [{col}]")
         return result
 
 async def test_db():

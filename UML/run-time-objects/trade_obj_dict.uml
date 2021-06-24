@@ -57,11 +57,12 @@
 5. When the status is updated as "Closed", it is moved from "LTDB" to "HTDB" (Historical Trade DB)
 
 Status
-	created: No actions will be done
-	open: LimitBuy is not filled at all (waiting to be executed by the broker)
-	inPosition: LimitBuy at least partially filled
-  closed: Either LimitSell or StopLimit completely executed
-
+  open_enter:
+  partially_closed_enter:
+  open_exit:
+  partially_closed_exit:
+  closed:
+  
 Canceled
   If an Limit Order is partially filled than the rest is canceled. For the sake of simlicity(for now)
   In other words, both Canceled and Closed exist at the same time
