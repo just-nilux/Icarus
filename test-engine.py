@@ -164,7 +164,11 @@ async def application(bwrapper, pair_list, df_list):
 
         elif lto['status'] == 'open_exit':
             # Check if the previous state is open exit. If so, update, otherwise continue
-            result_update = await mongocli.do_update("live-trades",lto)
+            result_update = await mongocli.do_update(
+                "live-trades",
+                {'_id': lto['_id']},
+                {'$set': {'status': lto['status']}})
+                
             pass
         elif lto['status'] == 'partially_closed_enter':
             pass

@@ -7,6 +7,7 @@ from multipledispatch import dispatch
 from json import JSONEncoder
 import collections.abc
 import numpy as np
+import copy
 
 class ObjectEncoder(JSONEncoder):
     def default(self, o):
@@ -75,7 +76,7 @@ class GenericObject():
         if template_name is None:
             self._obj = dict()
         else:
-            self._obj =GenericObject.templates[template_name]
+            self._obj = copy.deepcopy(GenericObject.templates[template_name])
 
     @dispatch(dict)
     def load(self, item):     
