@@ -9,6 +9,7 @@ import pandas as pd
 import sys
 import numpy as np
 from scripts import fplot as fp
+import copy
 
 credential_file = r'./test_credentials.json'
 with open(credential_file, 'r') as cred_file:
@@ -98,14 +99,16 @@ async def application(bwrapper, pair_list, df_list):
     for lto in lto_list:
         lto_dict[lto['pair']] = lto
 
-    # original_lto_dict is required to check if the lto_dict is changed
-    original_lto_dict = lto_dict
+    # lto_dict_original is required to check if the lto_dict is changed
+    lto_dict_original = copy.deepcopy(lto_dict)
 
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # TODO: 1.2: Query the status of LTOs from the Broker
     #            - for testing purposes, a mock-broker can be used (checking if the order is fulfilled or not)
+    # TODO: 1.3: Update the LTOs
+    #            - add statistics to the results
     # !!! Only for testing purposes !!!
     for pair in set(lto_dict.keys()) & set(data_dict.keys()):
         pair_klines = data_dict[pair]
@@ -118,16 +121,17 @@ async def application(bwrapper, pair_list, df_list):
         #       waiting for stopLoss to fill
 
         # 1.2.1: Check trades and update status
-        last_kline = pair_klines['15m'].tail(1)
+        pair_klines_dict = pair_klines.get()
+        last_kline = pair_klines_dict['15m'].tail(1)
 
         # TODO: check the expired ones
         if lto_dict[pair]['status'] == 'open_enter':
 
             # Check if the open buy trade is filled
-            if last_kline['low'] < lto_dict[pair]['enter']['limitBuy']['price']:
+            if float(last_kline['low']) < lto_dict[pair]['enter']['limitBuy']['price']:
+                # TODO NEXT: check this update
                 lto_dict[pair]['status'] = 'open_exit'
                 lto_dict[pair]['enter']['enterTime'] =  int(df_list[0].index[-1])
-            
 
         elif lto_dict[pair]['status'] == 'partially_closed_enter':
             # Ignore for the tests
@@ -135,7 +139,9 @@ async def application(bwrapper, pair_list, df_list):
         elif lto_dict[pair]['status'] == 'open_exit':
 
             # Check if the open sell trade is filled or stoploss is taken
-            if last_kline['high'] < lto_dict[pair]['exit']['limitSell']['price']:
+            if float(last_kline['high']) < lto_dict[pair]['exit']['limitSell']['price']:
+
+                # TODO: In this case the result section needs to be fulfilled
                 lto_dict[pair]['status'] = 'closed'
                 lto_dict[pair]['exit']['exitTime'] =  int(df_list[0].index[-1])
 
@@ -145,31 +151,29 @@ async def application(bwrapper, pair_list, df_list):
         else:
             pass
 
-    # TODO: 1.3: Update the LTOs
-    #            - add statistics to the results
     # TODO: 1.4: Write the LTOs to [live-trades] and [hist-trades]
-    # TODO: Move the function after the new trade object execution
+    # NOTE: Move the function after the new trade object execution
     for pair, lto in lto_dict.items():
-        
+        # NOTE: Instead of doing update and then delete, I prefered the  doing them in one iteration of objects due to latency concerns
+
         # If there is no change in the status, continue to iterate
-        if original_lto_dict[pair]['status'] == lto_dict[pair]['status']:
+        if lto_dict_original[pair]['status'] == lto_dict[pair]['status']:
             continue
 
+        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
         if lto['status'] == 'closed':
-
-            # Send closed lto's to the [hist-trades]
-            result_insert = await mongocli.do_insert("hist-trades",lto)
-            result_remove = await mongocli.do_remove("live-trades",{"_id":lto['_id']})
+            result_insert = await mongocli.do_insert_one("hist-trades",lto)
+            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # do_delete_many does not hurt, since the _id is unique
             del lto_dict['pair']
 
+        # If the status is open_exit then, previously it was either "open_enter" or "partially_closed_enter"
         elif lto['status'] == 'open_exit':
-            # Check if the previous state is open exit. If so, update, otherwise continue
-            result_update = await mongocli.do_update(
+            result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
                 {'$set': {'status': lto['status']}})
-                
-            pass
+
+        # NOTE: These two below are not applicable
         elif lto['status'] == 'partially_closed_enter':
             pass
         elif lto['status'] == 'partially_closed_exit':
@@ -203,7 +207,7 @@ async def application(bwrapper, pair_list, df_list):
     logger.info('post-calculation phase started')
     observation_obj = await observer.sample_observer(balance)
 
-    await mongocli.do_insert("observer",observation_obj.get())   
+    await mongocli.do_insert_one("observer",observation_obj.get())   
     return trade_dict
 
 

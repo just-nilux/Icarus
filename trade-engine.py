@@ -94,7 +94,7 @@ async def application(bwrapper, telbot):
     # Phase 3: Perform post-calculation tasks
     logger.info('post-calculation phase started')
     observation_obj = await observer.sample_observer(balance)
-    await mongocli.do_insert("observer",observation_obj.get())   
+    await mongocli.do_insert_one("observer",observation_obj.get())   
 
     logger.debug('Application ended')
     return True
