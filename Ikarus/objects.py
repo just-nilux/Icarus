@@ -46,20 +46,14 @@ class GenericObject():
             "exitTime": ""
         },
         "result": {
-            "canceled": {
-                "time": "",
-                "reason": ""
-            },
-            "closed": {
-                "reason": "",
-                "buyAmount": "",
-                "uyPrice": "",
-                "sellAmount": "",
-                "sellPrice": "",
-                "profit": "",
-                "perc": "",
-                "totalTime": ""
-            }
+            "cause": "",
+            "closedTime": "",
+            "buyAmount": "",
+            "buyPrice": "",
+            "sellAmount": "",
+            "sellPrice": "",
+            "profit": "",
+            "liveTime": ""
         }
     }
 

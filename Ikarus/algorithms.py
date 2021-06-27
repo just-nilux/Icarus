@@ -6,7 +6,7 @@ import logging
 import statistics as st
 import json
 from Ikarus.objects import GenericObject, ObjectEncoder
-
+import bson
 class Algorithm():
 
     def __init__(self):
@@ -201,6 +201,7 @@ class BackTestAlgorithm():
         self.logger.info(f"diff.keys(): {(set(analysis_dict.keys()) - set(lto_dict.keys()))}")
 
         # Only evaluate the analysis dict if there is no open trade belongs to a pair (1 trade at a time for 1 pair)
+        # TODO: NEXT: Test the feature
         for pair in (set(analysis_dict.keys()) - set(lto_dict.keys())):
             time_dict = analysis_dict[pair]
 
@@ -229,7 +230,7 @@ class BackTestAlgorithm():
                         "price": float(min(time_dict.get(['15m', 'low'])[-10:])),
                         "amount": "AllCash"
                         },
-                    "expire": int(dt_index + 3*15*60*1000)
+                    "expire": bson.Int64(dt_index + 3*15*60*1000)
                     }
                 #enter_module["expire"] = dt_index - 3*15*60*1000 # 3 15min block later
                 trade_obj.load('enter', enter_module)
@@ -241,7 +242,7 @@ class BackTestAlgorithm():
                         "price": float(max(time_dict.get(['15m', 'high'])[-10:])),
                         "amount": "AllCash"
                         },
-                    "expire": ""
+                    "expire": bson.Int64(dt_index + 10*15*60*1000)
                     }
                 # expire of the exit_module is calculated after the trade entered
                 trade_obj.load('exit', exit_module)

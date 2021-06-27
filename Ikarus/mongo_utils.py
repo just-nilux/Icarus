@@ -6,6 +6,14 @@ from datetime import datetime
 import motor.motor_asyncio
 from time import time, sleep
 import copy
+import bson
+
+# pre-written queries
+queries = {
+    "open_expire": {"result.cause":"open_expire"},
+    "exit_expire": {"result.cause":"exit_expire"},
+    "closed": {"result.cause":"closed"},
+}
 
 class MongoClient():
 
@@ -33,7 +41,6 @@ class MongoClient():
         result = self.db_bot[col].find(query)
         docs = await result.to_list(None)
         self.logger.info(f"do_find [{col}]: total found document: {len(docs)}")
-        print(f"do_find [{col}]: total found document: {len(docs)}")
         return docs
 
 
@@ -42,13 +49,18 @@ class MongoClient():
         Args:
             col (str): Name of the collection: [live-trade | hist-trade | observer]
             item (dict): Dictionary item
-        """        
-        # Add timestamp as the "_id" of the document
-        item['_id'] = int(time() * 1000)
+        """
+        
+        # Add timestamp as the "_id" of the document if there is already
+        if '_id' not in item.keys():
+            item['_id'] = int(time() * 1000)
+        else:
+            item['_id'] = bson.Int64(item['_id'])
+            
+
         result = await self.db_bot[col].insert_one(item)
         
         self.logger.info(f"do_insert_one [{col}]: inserted id {result.inserted_id}")
-        print(f"do_insert_one [{col}]: inserted id {result.inserted_id}")
         return result
 
 
@@ -72,7 +84,6 @@ class MongoClient():
             
         result = await self.db_bot[col].insert_many(insert_list)
         self.logger.info(f"do_insert_many [{col}]: inserted ids {result.inserted_ids}")
-        print(f"do_insert_many [{col}]: inserted ids {result.inserted_ids}")
         return result
 
 
@@ -86,7 +97,6 @@ class MongoClient():
         # TODO: Update an item in a deeper position in the hierarchy
         result = await self.db_bot[col].update_one(query, update)
         self.logger.info(f"do_update [{col}]: ")
-        print(f"do_update [{col}]: ")
         return result
 
 
@@ -101,7 +111,6 @@ class MongoClient():
         result = self.db_bot[col].delete_many(query)
         after_count = await self.count(col)
         self.logger.info(f"do_delete [{col}]: prev count {prev_count}, after count {after_count}")
-        print(f"do_delete [{col}]: prev count {prev_count}, after count {after_count}")
         return result
 
 async def test1():

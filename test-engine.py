@@ -10,6 +10,7 @@ import sys
 import numpy as np
 from scripts import fplot as fp
 import copy
+import bson
 
 credential_file = r'./test_credentials.json'
 with open(credential_file, 'r') as cred_file:
@@ -87,10 +88,26 @@ async def run_at(dt, coro):
     return await coro
 
 
+async def lto_update(lto_dict, df_list, current_ts):
+    """
+    Do updates in the lto_dict
+
+    Args:
+        lto_dict (dict): Dictionaries of trade-objects
+        df_list ([type]): [description]
+        current_ts (int): Current Timestamp
+
+    Returns:
+        lto_dict: updated lto_dict
+    """
+    return lto_dict
+
+
 async def application(bwrapper, pair_list, df_list):
 
     # Phase 1: Perform pre-calculation tasks
 
+    current_ts = df_list[0].index[-1]
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
 
@@ -116,9 +133,11 @@ async def application(bwrapper, pair_list, df_list):
         # There might be 2 group of open trades:
         # enter: 
         #       waiting for limitBuy to fill
+        #       or to be expired
         # exit: 
         #       waiting for limitSell to fill
         #       waiting for stopLoss to fill
+        #       or to be expired
 
         # 1.2.1: Check trades and update status
         pair_klines_dict = pair_klines.get()
@@ -127,11 +146,18 @@ async def application(bwrapper, pair_list, df_list):
         # TODO: check the expired ones
         if lto_dict[pair]['status'] == 'open_enter':
 
-            # Check if the open buy trade is filled
+            # Check if the open enter trade is filled else if the trade is expired
             if float(last_kline['low']) < lto_dict[pair]['enter']['limitBuy']['price']:
                 # TODO NEXT: check this update
                 lto_dict[pair]['status'] = 'open_exit'
                 lto_dict[pair]['enter']['enterTime'] =  int(df_list[0].index[-1])
+
+            elif lto_dict[pair]['enter']['expire'] >= current_ts:
+                lto_dict[pair]['status'] = 'closed'
+                lto_dict[pair]['result']['cause'] = 'enter_expire'
+                lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
+                #lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['tradeid']-current_ts
+                pass
 
         elif lto_dict[pair]['status'] == 'partially_closed_enter':
             # Ignore for the tests
@@ -143,7 +169,15 @@ async def application(bwrapper, pair_list, df_list):
 
                 # TODO: In this case the result section needs to be fulfilled
                 lto_dict[pair]['status'] = 'closed'
+                lto_dict[pair]['result']['cause'] = 'closed'
                 lto_dict[pair]['exit']['exitTime'] =  int(df_list[0].index[-1])
+
+            elif lto_dict[pair]['exit']['expire'] >= current_ts:
+                lto_dict[pair]['status'] = 'closed'
+                lto_dict[pair]['result']['cause'] = 'enter_expire'
+                lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
+                # TODO: Needs to be decided when the exit expire happend: 
+                #       simple solution: market sell (no matter the price)
 
         elif lto_dict[pair]['status'] == 'partially_closed_exit':
             # Ignore for the tests
@@ -154,24 +188,25 @@ async def application(bwrapper, pair_list, df_list):
     # TODO: 1.4: Write the LTOs to [live-trades] and [hist-trades]
     # NOTE: Move the function after the new trade object execution
     for pair, lto in lto_dict.items():
-        # NOTE: Instead of doing update and then delete, I prefered the  doing them in one iteration of objects due to latency concerns
+        # NOTE: Instead of doing update and then delete, I prefered the doing them in one iteration of objects due to latency concerns
 
-        # If there is no change in the status, continue to iterate
+        # If there is no change in the status, skip the current lto and continue to iterate
         if lto_dict_original[pair]['status'] == lto_dict[pair]['status']:
             continue
 
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
         if lto['status'] == 'closed':
+            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
-            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # do_delete_many does not hurt, since the _id is unique
-            del lto_dict['pair']
+            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # If the status is open_exit then, previously it was either "open_enter" or "partially_closed_enter"
+        # NOTE: Manual trade option is omitted, needs to be added
         elif lto['status'] == 'open_exit':
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
-                {'$set': {'status': lto['status']}})
+                {'$set': {'status': lto['status'], 'enter.enterTime':lto['enter']['enterTime'] }})
 
         # NOTE: These two below are not applicable
         elif lto['status'] == 'partially_closed_enter':
@@ -181,6 +216,9 @@ async def application(bwrapper, pair_list, df_list):
         else:
             pass
 
+    # Clean-up lto_dict from the "closed" ones
+    for pair in lto_dict_original.keys():
+        del lto_dict[pair]
 
     # Phase 2: Perform calculation tasks
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
@@ -192,7 +230,7 @@ async def application(bwrapper, pair_list, df_list):
     # It requires to feed analysis_dict and lto_dict so that it may decide to:
     # - not to enter a new trade if there is already an open trade
     # - cancel the trade if an drawdown is detected
-    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_list[0].index[-1])) # Send last timestamp index
+    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, current_ts)) # Send last timestamp index
 
     if len(trade_dict):
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
