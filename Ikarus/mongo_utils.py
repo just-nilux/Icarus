@@ -10,7 +10,7 @@ import bson
 
 # pre-written queries
 queries = {
-    "open_expire": {"result.cause":"open_expire"},
+    "open_expire": {"result.cause":"enter_expire"},
     "exit_expire": {"result.cause":"exit_expire"},
     "closed": {"result.cause":"closed"},
 }

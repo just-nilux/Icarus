@@ -1,6 +1,7 @@
 @startjson
 {
   "pair1":{
+    "_id": "current timestamp",
     "tradeid": "[dt index of obj creation]",
     "status": "",
     "enter": {

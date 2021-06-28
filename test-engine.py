@@ -103,6 +103,22 @@ async def lto_update(lto_dict, df_list, current_ts):
     return lto_dict
 
 
+async def hto_decompose():
+    hto_closed_list = await mongocli.do_find('hist-trades',{"result.cause":"closed"})
+
+    hto_dict = dict()
+    for hto in hto_closed_list:
+        hto_dict = {
+            "_id": hto['_id'],
+            "enterTime": hto['enter']['enterTime'],
+            "enterPrice": hto['enter']['limitBuy']['price'],
+            "exitTime": hto['exit']['exitTime'],
+            "exitPrice": hto['exit']['limitSell']['price']
+        }
+
+    return pd.DataFrame(hto_dict)
+
+
 async def application(bwrapper, pair_list, df_list):
 
     # Phase 1: Perform pre-calculation tasks
@@ -270,9 +286,6 @@ async def main():
     # so start iterating from the 96 until len(df)
     #print(time_scale_mapping["15m"],len(df))
 
-    df_csv_list[0]['buy'] = np.nan
-    df_csv_list[0]['sell'] = np.nan
-
     total_len = len(df_csv_list[0])-time_scale_mapping["15m"]
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
     for i in range(total_len):
@@ -285,13 +298,49 @@ async def main():
         
         trade_dict = await application(bwrapper, pair_list, df_list)
 
+        '''
         if len(trade_dict):
             tradeid = float(trade_dict[pair_list[0]].get('tradeid'))
 
             # Add buy and sell points to the DataFrame
             df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy','price']))
             df_csv_list[0].loc[tradeid, 'sell'] = float(trade_dict[pair_list[0]].get(['exit','limitSell','price']))
+        '''
 
+    df_csv_list[0]['decision_ts'] = np.nan      # ts when the enter decision is made
+    df_csv_list[0]['buy'] = np.nan              # buy price
+    df_csv_list[0]['sell'] = np.nan             # sell price
+
+    # Read Database to get hist-trades
+    hto_closed_list = await mongocli.do_find('hist-trades',{"result.cause":"closed"})
+    hto_list = []
+    for hto in hto_closed_list:
+        hto_dict = {
+            "_id": hto['_id'],
+            "tradeid": hto['tradeid'],
+            "enterTime": hto['enter']['enterTime'],
+            "enterPrice": hto['enter']['limitBuy']['price'],
+            "exitTime": hto['exit']['exitTime'],
+            "exitPrice": hto['exit']['limitSell']['price']
+        }
+        hto_list.append(hto_dict)
+
+    df_hto = pd.DataFrame(hto_list)
+
+    for idx in df_csv_list[0].index:
+        if idx in df_hto['tradeid']:
+            # TODO NEXT: 
+            df_csv_list[0].loc[idx, 'decision_ts'] = "df_hot buy price level"
+        pass
+
+        if idx in df_hto['enterTime']:
+            pass
+
+        if idx in df_hto['exitTime']:
+            pass       
+
+    count_obs = await mongocli.count("observer")
+    logger.info(f'Total observer item: {count_obs}') 
 
 
     # Statistics
