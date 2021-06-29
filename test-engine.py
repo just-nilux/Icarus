@@ -123,7 +123,7 @@ async def application(bwrapper, pair_list, df_list):
 
     # Phase 1: Perform pre-calculation tasks
 
-    current_ts = df_list[0].index[-1]
+    current_ts = int(df_list[0].index[-1])
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
 
@@ -166,9 +166,9 @@ async def application(bwrapper, pair_list, df_list):
             if float(last_kline['low']) < lto_dict[pair]['enter']['limitBuy']['price']:
                 # TODO NEXT: check this update
                 lto_dict[pair]['status'] = 'open_exit'
-                lto_dict[pair]['enter']['enterTime'] =  int(df_list[0].index[-1])
+                lto_dict[pair]['enter']['enterTime'] = bson.Int64(current_ts)
 
-            elif lto_dict[pair]['enter']['expire'] >= current_ts:
+            elif int(lto_dict[pair]['enter']['expire']) <= current_ts:
                 lto_dict[pair]['status'] = 'closed'
                 lto_dict[pair]['result']['cause'] = 'enter_expire'
                 lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
@@ -181,16 +181,16 @@ async def application(bwrapper, pair_list, df_list):
         elif lto_dict[pair]['status'] == 'open_exit':
 
             # Check if the open sell trade is filled or stoploss is taken
-            if float(last_kline['high']) < lto_dict[pair]['exit']['limitSell']['price']:
+            if float(last_kline['high']) > lto_dict[pair]['exit']['limitSell']['price']:
 
                 # TODO: In this case the result section needs to be fulfilled
                 lto_dict[pair]['status'] = 'closed'
                 lto_dict[pair]['result']['cause'] = 'closed'
-                lto_dict[pair]['exit']['exitTime'] =  int(df_list[0].index[-1])
+                lto_dict[pair]['exit']['exitTime'] = bson.Int64(current_ts)
 
-            elif lto_dict[pair]['exit']['expire'] >= current_ts:
+            elif int(lto_dict[pair]['exit']['expire']) <= current_ts:
                 lto_dict[pair]['status'] = 'closed'
-                lto_dict[pair]['result']['cause'] = 'enter_expire'
+                lto_dict[pair]['result']['cause'] = 'exit_expire'
                 lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
                 # TODO: Needs to be decided when the exit expire happend: 
                 #       simple solution: market sell (no matter the price)
@@ -234,7 +234,8 @@ async def application(bwrapper, pair_list, df_list):
 
     # Clean-up lto_dict from the "closed" ones
     for pair in lto_dict_original.keys():
-        del lto_dict[pair]
+        if lto_dict[pair]['status'] == 'closed':
+            del lto_dict[pair]
 
     # Phase 2: Perform calculation tasks
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
@@ -307,7 +308,7 @@ async def main():
             df_csv_list[0].loc[tradeid, 'sell'] = float(trade_dict[pair_list[0]].get(['exit','limitSell','price']))
         '''
 
-    df_csv_list[0]['decision_ts'] = np.nan      # ts when the enter decision is made
+    df_csv_list[0]['tradeid'] = np.nan          # ts when the enter decision is made
     df_csv_list[0]['buy'] = np.nan              # buy price
     df_csv_list[0]['sell'] = np.nan             # sell price
 
@@ -326,23 +327,31 @@ async def main():
         hto_list.append(hto_dict)
 
     df_hto = pd.DataFrame(hto_list)
+    tradid_list = df_hto['tradeid'].to_list()
+    enterTime_list = df_hto['enterTime'].to_list()
+    exitTime_list = df_hto['exitTime'].to_list()
 
     for idx in df_csv_list[0].index:
-        if idx in df_hto['tradeid']:
-            # TODO NEXT: 
-            df_csv_list[0].loc[idx, 'decision_ts'] = "df_hot buy price level"
-        pass
-
-        if idx in df_hto['enterTime']:
+        print(f"{idx}") 
+        if idx in tradid_list:
+            print(f"tradeid {idx}")
+            df_csv_list[0].loc[idx, 'tradeid'] = float(df_hto[df_hto['tradeid'] == idx]['enterPrice'])
             pass
 
-        if idx in df_hto['exitTime']:
+        if idx in enterTime_list:
+            print(f"enterTime {idx}")
+            df_csv_list[0].loc[idx, 'buy'] = float(df_hto[df_hto['enterTime'] == idx]['enterPrice'])
+            pass
+
+        if idx in exitTime_list:
+            print(f"exitTime {idx}")
+            df_csv_list[0].loc[idx, 'sell'] = float(df_hto[df_hto['exitTime'] == idx]['exitPrice'])
             pass       
 
     count_obs = await mongocli.count("observer")
     logger.info(f'Total observer item: {count_obs}') 
 
-
+    f= open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
     # Statistics
     count_obs = await mongocli.count("observer")
     logger.info(f'Total observer item: {count_obs}') 

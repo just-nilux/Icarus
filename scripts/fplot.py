@@ -7,7 +7,7 @@ import finplot as fplt
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-
+from matplotlib.markers import MarkerStyle as MS
 #kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
 #                    "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
@@ -160,12 +160,20 @@ def buy_sell(df):
             fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
         last_period = period
 
-    point_buy = df['buy']-10
-    point_buy.plot(kind='scatter', color=-2, width=2, ax=ax, zoomscale=False, style='^')
+    if 'buy' in df.columns:
+        point_buy = df['buy']
+        point_buy.plot(kind='scatter', color=-2, width=2, ax=ax, zoomscale=False, style='^')
 
-    point_sell = df['sell']+10
-    point_sell.plot(kind='scatter', color=-1, width=2, ax=ax, zoomscale=False, style='v')
-    
+    if 'sell' in df.columns:
+        point_sell = df['sell']
+        point_sell.plot(kind='scatter', color=-1, width=2, ax=ax, zoomscale=False, style='v')
+
+    if 'tradeid' in df.columns:
+        point_sell = df['tradeid']
+        point_sell.plot(kind='scatter', color=-2, width=2, ax=ax, zoomscale=False, style="t2")
+
+    #TODO: NEXT: provide proper colors
+    #TODO: Print prices and trade id
     fplt.show()
 
 
