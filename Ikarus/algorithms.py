@@ -179,7 +179,9 @@ class BackTestAlgorithm():
 
     async def sample_algorithm(self, analysis_dict, lto_dict, dt_index=None):
         """
-        sample_algorithm
+        It requires to feed analysis_dict and lto_dict so that it may decide to:
+        - not to enter a new trade if there is already an open trade
+        - cancel the trade if an drawdown is detected
 
         Args:
             analysis_dict (dict): analysis.json

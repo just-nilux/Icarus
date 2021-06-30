@@ -162,18 +162,31 @@ def buy_sell(df):
 
     if 'buy' in df.columns:
         point_buy = df['buy']
-        point_buy.plot(kind='scatter', color=-2, width=2, ax=ax, zoomscale=False, style='^')
+        point_buy.plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
 
     if 'sell' in df.columns:
         point_sell = df['sell']
-        point_sell.plot(kind='scatter', color=-1, width=2, ax=ax, zoomscale=False, style='v')
+        point_sell.plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
 
     if 'tradeid' in df.columns:
         point_sell = df['tradeid']
-        point_sell.plot(kind='scatter', color=-2, width=2, ax=ax, zoomscale=False, style="t2")
+        point_sell.plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='tradeid')
 
-    #TODO: NEXT: provide proper colors
+    if 'expired-tradeid' in df.columns:
+        point_sell = df['expired-tradeid']
+        point_sell.plot(kind='scatter', color='#aaaaff', width=2, ax=ax, zoomscale=False, style="t2", legend='expired-tradeid') # Pale-Blue
+
+    if 'enter-expire' in df.columns:
+        point_sell = df['enter-expire']
+        point_sell.plot(kind='scatter', color='#bb00ff', width=2, ax=ax, zoomscale=False, style="^", legend='enter-expire') # Purple
+
+    if 'exit-expire' in df.columns:
+        point_sell = df['exit-expire']
+        point_sell.plot(kind='scatter', color='#bb00ff', width=2, ax=ax, zoomscale=False, style="v", legend='exit-expire') # Purple
+
+    
     #TODO: Print prices and trade id
+    fplt.add_legend('', ax=ax)
     fplt.show()
 
 

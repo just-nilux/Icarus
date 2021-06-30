@@ -119,30 +119,40 @@ async def hto_decompose():
     return pd.DataFrame(hto_dict)
 
 
-async def application(bwrapper, pair_list, df_list):
+async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
 
-    # Phase 1: Perform pre-calculation tasks
+    for pair, lto in lto_dict.items():
+        # NOTE: Instead of doing update and then delete, I prefered the doing them in one iteration of objects due to latency concerns
 
-    current_ts = int(df_list[0].index[-1])
-    # 1.1 Get live trade objects (LTOs)
-    lto_list = await mongocli.do_find('live-trades',{})
+        # If there is no change in the status, skip the current lto and continue to iterate
+        if lto_dict_original[pair]['status'] == lto_dict[pair]['status']:
+            continue
 
-    # Create lto_dict to be updated and then to be processed in algorithm
-    lto_dict = dict()
-    for lto in lto_list:
-        lto_dict[lto['pair']] = lto
+        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
+        if lto['status'] == 'closed':
+            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
+            result_insert = await mongocli.do_insert_one("hist-trades",lto)
+            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
-    # lto_dict_original is required to check if the lto_dict is changed
-    lto_dict_original = copy.deepcopy(lto_dict)
+        # If the status is open_exit then, previously it was either "open_enter" or "partially_closed_enter"
+        # NOTE: Manual trade option is omitted, needs to be added
+        elif lto['status'] == 'open_exit':
+            result_update = await mongocli.do_update( 
+                "live-trades",
+                {'_id': lto['_id']},
+                {'$set': {'status': lto['status'], 'enter.enterTime':lto['enter']['enterTime'] }})
 
-    tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
-    balance, data_dict = await asyncio.gather(*tasks_pre_calc)
+        # NOTE: These two below are not applicable
+        elif lto['status'] == 'partially_closed_enter':
+            pass
+        elif lto['status'] == 'partially_closed_exit':
+            pass
+        else:
+            pass
 
-    # TODO: 1.2: Query the status of LTOs from the Broker
-    #            - for testing purposes, a mock-broker can be used (checking if the order is fulfilled or not)
-    # TODO: 1.3: Update the LTOs
-    #            - add statistics to the results
-    # !!! Only for testing purposes !!!
+
+async def update_ltos(lto_dict, data_dict, current_ts):
+
     for pair in set(lto_dict.keys()) & set(data_dict.keys()):
         pair_klines = data_dict[pair]
 
@@ -201,64 +211,58 @@ async def application(bwrapper, pair_list, df_list):
         else:
             pass
 
-    # TODO: 1.4: Write the LTOs to [live-trades] and [hist-trades]
+
+async def application(bwrapper, pair_list, df_list):
+
+    #################### Phase 1: Perform pre-calculation tasks ####################
+    current_ts = int(df_list[0].index[-1])
+    
+    # 1.1 Get live trade objects (LTOs)
+    lto_list = await mongocli.do_find('live-trades',{})
+
+    lto_dict = dict()
+    for lto in lto_list:
+        lto_dict[lto['pair']] = lto
+
+    lto_dict_original = copy.deepcopy(lto_dict)
+
+    # 1.2 Get balance and datadict
+    tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
+    balance, data_dict = await asyncio.gather(*tasks_pre_calc)
+
+    # 1.3: Query the status of LTOs from the Broker
+    # 1.4: Update the LTOs
+    await update_ltos(lto_dict, data_dict, current_ts)
+
+    # 1.5: Write the LTOs to [live-trades] and [hist-trades]
     # NOTE: Move the function after the new trade object execution
-    for pair, lto in lto_dict.items():
-        # NOTE: Instead of doing update and then delete, I prefered the doing them in one iteration of objects due to latency concerns
+    await write_updated_ltos_to_db(lto_dict, lto_dict_original)
 
-        # If there is no change in the status, skip the current lto and continue to iterate
-        if lto_dict_original[pair]['status'] == lto_dict[pair]['status']:
-            continue
-
-        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
-        if lto['status'] == 'closed':
-            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
-            result_insert = await mongocli.do_insert_one("hist-trades",lto)
-            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
-
-        # If the status is open_exit then, previously it was either "open_enter" or "partially_closed_enter"
-        # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] == 'open_exit':
-            result_update = await mongocli.do_update( 
-                "live-trades",
-                {'_id': lto['_id']},
-                {'$set': {'status': lto['status'], 'enter.enterTime':lto['enter']['enterTime'] }})
-
-        # NOTE: These two below are not applicable
-        elif lto['status'] == 'partially_closed_enter':
-            pass
-        elif lto['status'] == 'partially_closed_exit':
-            pass
-        else:
-            pass
-
-    # Clean-up lto_dict from the "closed" ones
+    # 1.6: Clean-up lto_dict from the "closed" ones
     for pair in lto_dict_original.keys():
         if lto_dict[pair]['status'] == 'closed':
             del lto_dict[pair]
 
-    # Phase 2: Perform calculation tasks
+    #################### Phase 2: Perform calculation tasks ####################
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
-    # It requires to feed analysis_dict and lto_dict so that it may decide to:
-    # - not to enter a new trade if there is already an open trade
-    # - cancel the trade if an drawdown is detected
     trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, current_ts)) # Send last timestamp index
 
+    # 2.3: Execute the trade_dict if any
     if len(trade_dict):
+        # 2.3.1: Send tos to broker
         exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
-        # Write trade_dict to [live-trades] (assume it is executed successfully)
+        # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades",trade_dict)
 
 
-
-    # Phase 3: Perform post-calculation tasks
+    #################### Phase 3: Perform post-calculation tasks ####################
     logger.info('post-calculation phase started')
     observation_obj = await observer.sample_observer(balance)
 
@@ -296,23 +300,9 @@ async def main():
         df_list = []
         for df in df_csv_list:
             df_list.append(df.iloc[i:i+time_scale_mapping["15m"]])
-        
-        trade_dict = await application(bwrapper, pair_list, df_list)
+        await application(bwrapper, pair_list, df_list)
 
-        '''
-        if len(trade_dict):
-            tradeid = float(trade_dict[pair_list[0]].get('tradeid'))
-
-            # Add buy and sell points to the DataFrame
-            df_csv_list[0].loc[tradeid, 'buy'] = float(trade_dict[pair_list[0]].get(['enter','limitBuy','price']))
-            df_csv_list[0].loc[tradeid, 'sell'] = float(trade_dict[pair_list[0]].get(['exit','limitSell','price']))
-        '''
-
-    df_csv_list[0]['tradeid'] = np.nan          # ts when the enter decision is made
-    df_csv_list[0]['buy'] = np.nan              # buy price
-    df_csv_list[0]['sell'] = np.nan             # sell price
-
-    # Read Database to get hist-trades
+    # Read Database to get hist-trades and dump to a DataFrame
     hto_closed_list = await mongocli.do_find('hist-trades',{"result.cause":"closed"})
     hto_list = []
     for hto in hto_closed_list:
@@ -325,8 +315,13 @@ async def main():
             "exitPrice": hto['exit']['limitSell']['price']
         }
         hto_list.append(hto_dict)
-
     df_hto = pd.DataFrame(hto_list)
+
+    # Add tradeid, buyLimit and sellLimit to df columns to be visualized
+    df_csv_list[0]['tradeid'] = np.nan          # ts when the enter decision is made
+    df_csv_list[0]['buy'] = np.nan              # buy price
+    df_csv_list[0]['sell'] = np.nan             # sell price
+
     tradid_list = df_hto['tradeid'].to_list()
     enterTime_list = df_hto['enterTime'].to_list()
     exitTime_list = df_hto['exitTime'].to_list()
@@ -346,16 +341,16 @@ async def main():
         if idx in exitTime_list:
             print(f"exitTime {idx}")
             df_csv_list[0].loc[idx, 'sell'] = float(df_hto[df_hto['exitTime'] == idx]['exitPrice'])
-            pass       
+            pass      
 
-    count_obs = await mongocli.count("observer")
-    logger.info(f'Total observer item: {count_obs}') 
-
+    # Dump df_csv_list[0] to a file for debug purposes
     f= open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
-    # Statistics
+
+    # Evaluate Statistics
     count_obs = await mongocli.count("observer")
     logger.info(f'Total observer item: {count_obs}') 
 
+    # Visualize the test session
     fp.buy_sell(df_csv_list[0])
 
 if __name__ == '__main__':
