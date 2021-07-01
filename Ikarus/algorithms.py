@@ -177,7 +177,7 @@ class BackTestAlgorithm():
         return trade_objs
 
 
-    async def sample_algorithm(self, analysis_dict, lto_dict, dt_index=None):
+    async def sample_algorithm(self, analysis_dict, lto_dict, df_balance, dt_index=None):
         """
         It requires to feed analysis_dict and lto_dict so that it may decide to:
         - not to enter a new trade if there is already an open trade
@@ -189,6 +189,8 @@ class BackTestAlgorithm():
 
             lto_dict (dict): live-trade-objects coming from the [live-trades]
 
+            df_balance (pd.DataFrame): live-trade-objects coming from the [live-trades]
+
             dt_index (int): timestamp in ms for trade_object identifier
             
         Returns:
@@ -196,6 +198,8 @@ class BackTestAlgorithm():
         """
         #Initialize trade_dict to be filled
         trade_dict = dict()
+
+        df_balance['ref_balance']
 
         #for pair, time_dict in analysis_dict.items():
         self.logger.info(f"lto_dict.keys(): {set(lto_dict.keys())}")
@@ -206,7 +210,7 @@ class BackTestAlgorithm():
         # TODO: NEXT: Test the feature
         for pair in (set(analysis_dict.keys()) - set(lto_dict.keys())):
             time_dict = analysis_dict[pair]
-
+            df_balance.loc['ref_balance']
             # Since all parameters are handled in a different way, 
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]

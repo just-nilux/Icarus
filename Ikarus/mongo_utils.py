@@ -113,6 +113,22 @@ class MongoClient():
         self.logger.info(f"do_delete [{col}]: prev count {prev_count}, after count {after_count}")
         return result
 
+# Specific Functions:
+    async def get_last(self, col, query) -> None:
+        """
+        This function reads the selected item from the given collection
+
+        Args:
+            col ([type]): [description]
+            item ([type]): [description]
+        """
+        # TODO: NEXT: Test the get_last
+        result = self.db_bot[col].find(query).sort('_id', pymongo.ASCENDING)
+        docs = await result.to_list(None)
+        self.logger.info(f"do_find [{col}]: total found document: {len(docs)}")
+        return docs
+
+
 async def test1():
     from objects import GenericObject
 

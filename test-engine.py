@@ -227,8 +227,10 @@ async def application(bwrapper, pair_list, df_list):
     lto_dict_original = copy.deepcopy(lto_dict)
 
     # 1.2 Get balance and datadict
+    info_dict = await mongocli.do_find('observer',{})
+    # TODO:give the into the get_current_balance()
     tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
-    balance, data_dict = await asyncio.gather(*tasks_pre_calc)
+    df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
@@ -250,7 +252,7 @@ async def application(bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
-    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, current_ts)) # Send last timestamp index
+    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send last timestamp index
 
     # 2.3: Execute the trade_dict if any
     if len(trade_dict):
@@ -264,7 +266,7 @@ async def application(bwrapper, pair_list, df_list):
 
     #################### Phase 3: Perform post-calculation tasks ####################
     logger.info('post-calculation phase started')
-    observation_obj = await observer.sample_observer(balance)
+    observation_obj = await observer.sample_observer(df_balance)
 
     await mongocli.do_insert_one("observer",observation_obj.get())   
     return trade_dict
@@ -273,6 +275,19 @@ async def application(bwrapper, pair_list, df_list):
 async def main():
 
     bwrapper = binance_wrapper.TestBinanceWrapper(config['cash'], config['commission'])
+
+    # Initiate the cash in the [observer]
+    observation_item = {
+        'balances': 
+        [
+            {
+                'asset':'USDT', 
+                'free':config['cash'], 
+                'locked':0
+            }
+        ]
+    }
+    await mongocli.do_insert_one("observer",observation_item)   
 
     # Get the pair_list
     pair_list = []

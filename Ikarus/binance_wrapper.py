@@ -63,6 +63,12 @@ class BinanceWrapper():
         self.logger.critical('logger_test')
 
     async def get_info(self):
+        """
+        Get all assets with 'free' and 'locked' parts
+
+        Returns:
+            pd.DataFrame: df_balance
+        """        
         info = await self.client.get_account()
         balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
                    for b in info['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
@@ -83,6 +89,12 @@ class BinanceWrapper():
         return df_balance
 
     async def get_all_tickers(self):
+        """
+        Get all possible tickers
+
+        Returns:
+            pd.DataFrame: tickers
+        """        
         df = pd.DataFrame(await self.client.get_all_tickers())
         df.set_index('symbol', inplace=True)
         df.astype(float)
@@ -95,12 +107,14 @@ class BinanceWrapper():
             self.get_all_tickers()
         )
 
+        # Add current prices to df_balance
         price = [float(df_tickers.loc[pair]['price'])
                  if pair != self.ref_currency
                  else 1
                  for pair in df_balance['pair']]
-
         df_balance['price'] = price
+
+        # Evaluate the equity in terms of ref_currency
         df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
 
         return df_balance
@@ -129,6 +143,7 @@ class BinanceWrapper():
         # data_dict
         return data_dict
 
+
     async def monitor_account(self):
         return True
 
@@ -146,6 +161,7 @@ class BinanceWrapper():
         for idx,kline in enumerate(list_klines):
             self.logger.debug("-->Lenth of kline {}: {}".format(idx, len(kline)))
             self.logger.debug("----> 0:[{}] 1:[{}] ... {}:[{}]".format(kline[0][0],kline[1][0],len(kline)-1,kline[-1][0]))
+
 
     async def decompose(self, pairs, time_df, list_klines):
         """
@@ -216,9 +232,10 @@ class TestBinanceWrapper():
     # def_time_df stores the time scale and length for klines
     def_time_df = pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
 
-    def __init__(self, _cash, _commission):
+    def __init__(self, _initial_cash, _commission):
 
-        self.cash = int(_cash)
+        # Set initial cash in the ref_currency
+        self.ref_equity = int(_initial_cash)
         self.comission = float(_commission)
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
@@ -233,9 +250,96 @@ class TestBinanceWrapper():
         print(TestBinanceWrapper.def_time_df)
         pass
 
-    async def get_current_balance(self):
-        df = pd.DataFrame([self.cash],columns=['ref_balance'])
+
+    async def get_info(self):
+        """
+        Get all assets with 'free' and 'locked' parts
+
+        Returns:
+            pd.DataFrame: df_balance
+                    free      locked       total      pair
+            asset                                            
+            BTC    0.024519    0.010736    0.035255   BTCUSDT
+            USDT   0.009022    0.000000    0.009022      USDT
+            DOGE   0.000000  215.300000  215.300000  DOGEUSDT
+            TRY    0.213130    0.000000    0.213130   USDTTRY
+            
+            Initial contidition:
+                    free      locked       total      pair
+            asset                                            
+            USDT   0.009022    0.000000    0.009022      USDT
+        """
+
+        '''
+        Normally self.client.get_account() receives data from Binance API, instead the observer db can be used
+        to store df_balances. It might be inserted to the DB in the beginning, then a new observer item would be
+        inserted in each iteration. Using this method, equity can be traced throughout the session
+        '''
+        info = await self.client.get_account()
+
+        balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
+                   for b in info['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
+
+        df_balance = pd.DataFrame(balance)
+        df_balance.set_index(['asset'], inplace=True)
+        df_balance = df_balance.astype(float)
+        df_balance['total'] = df_balance['free'] + df_balance['locked']
+        pairs = []
+        for asset in df_balance.index:
+            if asset == self.ref_currency:
+                pairs.append(str(asset))
+            elif asset == self.base_currency:
+                pairs.append(str(self.ref_currency)+str(asset))
+            else:
+                pairs.append(str(asset)+str(self.ref_currency))
+        df_balance['pair'] = pairs
+
+        return df_balance
+
+
+    async def get_all_tickers(self):
+        """
+        Get all possible tickers
+
+        Returns:
+            pd.DataFrame: tickers
+        """        
+        df = pd.DataFrame(await self.client.get_all_tickers())
+        df.set_index('symbol', inplace=True)
+        df.astype(float)
         return df
+
+    async def get_current_balance(self,):
+        '''
+        Get all assets with 'free' and 'locked' parts
+
+        Returns:
+            pd.DataFrame: df_balance
+                    free      locked       total      pair        price  ref_balance
+            asset                                                                      
+            BTC    0.024519    0.010736    0.035255   BTCUSDT  33299.74000  1173.982334
+            BNB    0.192785    0.000000    0.192785   BNBUSDT    287.19000    55.365798
+            USDT   0.009022    0.000000    0.009022      USDT      1.00000     0.009022
+            XRP    0.006440   55.000000   55.006440   XRPUSDT      0.66190    36.408763
+            DOGE   0.000000  215.300000  215.300000  DOGEUSDT      0.24518    52.787254
+            TRY    0.213130    0.000000    0.213130   USDTTRY      8.68100     1.850185
+            AVAX   0.000000    5.793000    5.793000  AVAXUSDT     11.21300    64.956909
+        '''        
+        df_balance, df_tickers = await asyncio.gather(
+            self.get_info(),
+            self.get_all_tickers()
+        )
+
+        # Add current prices to df_balance
+        price = [float(df_tickers.loc[pair]['price'])
+                 if pair != self.ref_currency
+                 else 1
+                 for pair in df_balance['pair']]
+        df_balance['price'] = price
+
+        # Evaluate the equity in terms of ref_currency
+        df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
+        return df_balance
 
     async def get_data_dict(self, pairs, time_df, df_list):
         '''
@@ -275,5 +379,6 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_objs):
+    async def execute_decision(self, trade_dict):
+
         return True
