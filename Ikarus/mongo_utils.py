@@ -7,6 +7,7 @@ import motor.motor_asyncio
 from time import time, sleep
 import copy
 import bson
+import pprint
 
 # pre-written queries
 queries = {
@@ -114,7 +115,7 @@ class MongoClient():
         return result
 
 # Specific Functions:
-    async def get_last(self, col, query) -> None:
+    async def get_last_doc(self, col, query) -> None:
         """
         This function reads the selected item from the given collection
 
@@ -122,11 +123,11 @@ class MongoClient():
             col ([type]): [description]
             item ([type]): [description]
         """
-        # TODO: NEXT: Test the get_last
-        result = self.db_bot[col].find(query).sort('_id', pymongo.ASCENDING)
-        docs = await result.to_list(None)
-        self.logger.info(f"do_find [{col}]: total found document: {len(docs)}")
-        return docs
+        result = self.db_bot[col].find(query).sort('_id', pymongo.DESCENDING).limit(1)
+        async for document in result:
+            last_doc = dict(document)
+        # NOTE: Add proper error handling
+        return last_doc
 
 
 async def test1():
@@ -174,7 +175,16 @@ async def test1():
     
     return True
 
+
+async def test2():
+
+    # Find
+    lto_list = await mongocli.get_last_doc('hist-trades',{})
+    
+    return True
+
+
 if __name__ == "__main__":
-    mongocli = MongoClient("localhost", 27017, 'mongo-test')
+    mongocli = MongoClient("localhost", 27017, 'test-bot')
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test1())
+    loop.run_until_complete(test2())

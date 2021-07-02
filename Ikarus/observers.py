@@ -29,7 +29,10 @@ class Observer():
         self.logger.debug('default_observer ended')
         return observation
 
-    async def sample_observer(self,balance):
-        observation_obj = GenericObject('observation')
-        observation_obj.load('equity',int(balance['ref_balance'].sum()))
+    async def sample_observer(self,df_balance):
+        observation_obj = GenericObject()
+        df_balance.reset_index(level=0, inplace=True)
+        # df_balance.drop(['total', 'pair', 'ref_balance',pri], axis=1, inplace=True)
+        observer_item = list(df_balance.T.to_dict().values())
+        observation_obj.load('balances',observer_item)
         return observation_obj

@@ -1,3 +1,5 @@
+from pymongo import mongo_client
+from Ikarus import mongo_utils
 from binance import Client
 import asyncio
 import pandas as pd
@@ -232,26 +234,29 @@ class TestBinanceWrapper():
     # def_time_df stores the time scale and length for klines
     def_time_df = pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
 
-    def __init__(self, _initial_cash, _commission):
+    df_tickers = None
+
+    def __init__(self, _client, _commission):
+
+        self.client = _client
 
         # Set initial cash in the ref_currency
-        self.ref_equity = int(_initial_cash)
         self.comission = float(_commission)
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
+        # Set reference currencies
         self.ref_currency = 'USDT'
         self.base_currency = 'TRY'
 
-        # Default Parameters
-        
+        # TestBinanceWrapper: get df_tickers once
 
         print(TestBinanceWrapper.def_time_df)
         pass
 
 
-    async def get_info(self):
+    async def get_info(self,last_observer_item):
         """
         Get all assets with 'free' and 'locked' parts
 
@@ -275,10 +280,9 @@ class TestBinanceWrapper():
         to store df_balances. It might be inserted to the DB in the beginning, then a new observer item would be
         inserted in each iteration. Using this method, equity can be traced throughout the session
         '''
-        info = await self.client.get_account()
 
         balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
-                   for b in info['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
+                   for b in last_observer_item['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
 
         df_balance = pd.DataFrame(balance)
         df_balance.set_index(['asset'], inplace=True)
@@ -309,7 +313,7 @@ class TestBinanceWrapper():
         df.astype(float)
         return df
 
-    async def get_current_balance(self,):
+    async def get_current_balance(self,last_observer_item):
         '''
         Get all assets with 'free' and 'locked' parts
 
@@ -325,13 +329,19 @@ class TestBinanceWrapper():
             TRY    0.213130    0.000000    0.213130   USDTTRY      8.68100     1.850185
             AVAX   0.000000    5.793000    5.793000  AVAXUSDT     11.21300    64.956909
         '''        
+        
+        # Since current price does not matter getting the ticker once will be enough
+        '''
         df_balance, df_tickers = await asyncio.gather(
-            self.get_info(),
+            self.get_info(last_observer_item),
             self.get_all_tickers()
         )
+        '''
+
+        df_balance = await self.get_info(last_observer_item)
 
         # Add current prices to df_balance
-        price = [float(df_tickers.loc[pair]['price'])
+        price = [float(TestBinanceWrapper.df_tickers.loc[pair]['price'])
                  if pair != self.ref_currency
                  else 1
                  for pair in df_balance['pair']]
@@ -339,6 +349,7 @@ class TestBinanceWrapper():
 
         # Evaluate the equity in terms of ref_currency
         df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
+
         return df_balance
 
     async def get_data_dict(self, pairs, time_df, df_list):
@@ -379,6 +390,19 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_dict):
+    async def execute_decision(self, trade_dict, df_balances):
+        """
+        TestBinanceWrapper: In test sessions, executing a trade_object means
+        changing the df_balance columns 'free' and 'locked' when a trade is
+        started
 
-        return True
+        Args:
+            trade_dict (dict): [description]
+            df_balances (pd.DataFrame): [description]
+
+        Returns:
+            tuple: result, df_balances
+        """
+        result = True
+
+        return result, df_balances

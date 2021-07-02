@@ -199,7 +199,6 @@ class BackTestAlgorithm():
         #Initialize trade_dict to be filled
         trade_dict = dict()
 
-        df_balance['ref_balance']
 
         #for pair, time_dict in analysis_dict.items():
         self.logger.info(f"lto_dict.keys(): {set(lto_dict.keys())}")
@@ -210,7 +209,6 @@ class BackTestAlgorithm():
         # TODO: NEXT: Test the feature
         for pair in (set(analysis_dict.keys()) - set(lto_dict.keys())):
             time_dict = analysis_dict[pair]
-            df_balance.loc['ref_balance']
             # Since all parameters are handled in a different way, 
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]

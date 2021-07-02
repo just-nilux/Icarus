@@ -227,9 +227,9 @@ async def application(bwrapper, pair_list, df_list):
     lto_dict_original = copy.deepcopy(lto_dict)
 
     # 1.2 Get balance and datadict
-    info_dict = await mongocli.do_find('observer',{})
+    info = await mongocli.get_last_doc('observer',{})
     # TODO:give the into the get_current_balance()
-    tasks_pre_calc = bwrapper.get_current_balance(), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
+    tasks_pre_calc = bwrapper.get_current_balance(info), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.3: Query the status of LTOs from the Broker
@@ -257,15 +257,15 @@ async def application(bwrapper, pair_list, df_list):
     # 2.3: Execute the trade_dict if any
     if len(trade_dict):
         # 2.3.1: Send tos to broker
-        exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
+        exec_status, df_balance = await asyncio.create_task(bwrapper.execute_decision(trade_dict,df_balance))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
         # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades",trade_dict)
+        
 
 
     #################### Phase 3: Perform post-calculation tasks ####################
-    logger.info('post-calculation phase started')
     observation_obj = await observer.sample_observer(df_balance)
 
     await mongocli.do_insert_one("observer",observation_obj.get())   
@@ -274,18 +274,17 @@ async def application(bwrapper, pair_list, df_list):
 
 async def main():
 
-    bwrapper = binance_wrapper.TestBinanceWrapper(config['cash'], config['commission'])
+    client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
+                                      api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config['commission'])
+
+    # Init the df_tickers to not to call binance API in each iteration
+    binance_wrapper.TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
     observation_item = {
-        'balances': 
-        [
-            {
-                'asset':'USDT', 
-                'free':config['cash'], 
-                'locked':0
-            }
-        ]
+        'balances': config['balances']
     }
     await mongocli.do_insert_one("observer",observation_item)   
 
