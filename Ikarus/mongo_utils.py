@@ -1,4 +1,5 @@
 import re
+from numpy.core.numeric import False_
 import pymongo
 import logging
 import asyncio
@@ -19,12 +20,12 @@ queries = {
 class MongoClient():
 
     
-    def __init__(self, _host, _port, _db='bot') -> None:
+    def __init__(self, _host, _port, _db='bot', clean=False) -> None:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
         self.logger = logging.getLogger('app.{}'.format(__name__))
 
         # Drop the db if it is no the main one
-        if _db != 'bot':
+        if clean:
             self.client.drop_database(_db)
         self.db_bot = self.client[_db]
 

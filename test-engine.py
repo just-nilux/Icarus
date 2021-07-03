@@ -374,7 +374,10 @@ if __name__ == '__main__':
     config = json.load(f)
     
     logger = logging.getLogger('app')
-    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], config['mongodb']['port'], config['tag'])
+    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
+        config['mongodb']['port'], 
+        config['tag'],
+        clean=True)
 
     # Initialize and configure objects
     setup_logger(config['log-level'])

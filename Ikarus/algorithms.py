@@ -87,47 +87,6 @@ class Algorithm():
         return trade_dict
 
 
-    async def algorithm(self, pairlist, periodic_feed):
-        self.logger.debug("func algorithm started")
-
-        self.logger.debug("Periodic feed[0]: {}".format(periodic_feed))
-        decision = {'operation': None}
-
-        cerebro = bt.Cerebro(stdstats=False)
-
-        print(periodic_feed)
-        kline_columns = ['Opentime', 'Open', 'High', 'Low', 'Close', 'Volume', 'Closetime', 'Quote asset volume',
-                        'Number of trades', 'Taker by base', 'Taker buy quote', 'Ignore']
-        df = pd.DataFrame(periodic_feed, columns=kline_columns)
-        df['Opentime'] = pd.to_datetime(df['Opentime'], unit='ms')
-        df.set_index(['Opentime'], inplace=True)
-        df = df.apply(pd.to_numeric)
-
-        self.logger.debug(str(df))
-
-        data = bt.feeds.PandasData(dataname=df, timeframe=bt.TimeFrame.Minutes)
-
-
-        cerebro.adddata(data)
-        '''
-        cerebro.addstrategy(
-            OrderExecutionStrategy,
-            exectype="Market",
-            perc1=1,
-            perc2=0.5,
-            valid=20,
-            smaperiod=15
-        )
-        '''
-        cerebro.addstrategy(
-            RSIStrategy
-        )
-        cerebro.run()
-        cerebro.plot(style='candlestick',barup='green', bardown='red')
-        self.logger.debug("func algorithm ended")
-        return decision
-
-
     async def dump(self, js_obj):
         """
         This functions dumps json objects to files for debug purposes
@@ -152,29 +111,6 @@ class BackTestAlgorithm():
         self.logger = logging.getLogger('app.{}'.format(__name__))
 
         return
-
-
-    async def default_algorithm(self, analysis_objs):
-        """This function uses backtrader strategy class
-
-        Args:
-            analysis_objs (list): list of analysis.json
-
-        Returns:
-            list: list of trade.json
-        """
-        self.logger.debug('default_algorithm started')
-        trade_objs = []
-        for ao in analysis_objs:
-            trade_obj = dict()
-            trade_obj["status"] = "open"
-            trade_obj["enter"] = {}
-            trade_obj["exit"] = {}
-            trade_obj["result"] = {}
-            trade_objs.append(trade_obj)
-        self.logger.debug('default_algorithm completed')
-
-        return trade_objs
 
 
     async def sample_algorithm(self, analysis_dict, lto_dict, df_balance, dt_index=None):
@@ -227,12 +163,44 @@ class BackTestAlgorithm():
                 trade_obj.load('tradeid',int(dt_index)) # Set tradeid to timestamp
                 #TODO: give proper values to limitBuy
 
+
+                # Calculate enter/exit prices
+                enter_price = min(time_dict.get(['15m', 'low'])[-10:])
+                exit_price = max(time_dict.get(['15m', 'high'])[-10:])
+
+                # Calculate enter/exit amount value
+
+                #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
+                # the base asset will be used.
+                
+                #TODO: 'USDT' should not be hardcoded
+                free_ref_asset = df_balance.loc['USDT','free']
+
+                # Example: Buy XRP with 100$
+                enter_ref_amount=100
+                # TODO: HIGH: Check mininum amount to trade and add this section to here
+                if free_ref_asset > 10:
+                    if free_ref_asset < enter_ref_amount:
+                        enter_ref_amount = free_ref_asset
+                else:
+                    # TODO: Add error logs and send notification
+                    return {}
+
+                # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
+                # Example:
+                #   Buy 100 XRP frm the price XRPUSDT: 0.66 
+                #   Sell the bought XRP from 0.70
+                # (0.66 * 100)/0.7 = 
+                enter_quantity = enter_price * enter_ref_amount / exit_price
+
+                # TODO: NEXT: Implement the price-amount-quantity logic here
                 # Fill enter module
                 enter_module = {
                     "enterTime": "",
                     "limitBuy": {
-                        "price": float(min(time_dict.get(['15m', 'low'])[-10:])),
-                        "amount": "AllCash"
+                        "price": float(enter_price),
+                        "amount": float(enter_quantity),
+                        "quantity": float(enter_price),
                         },
                     "expire": bson.Int64(dt_index + 3*15*60*1000)
                     }
@@ -243,8 +211,8 @@ class BackTestAlgorithm():
                 exit_module = {
                     "exitTime": "",
                     "limitSell": {
-                        "price": float(max(time_dict.get(['15m', 'high'])[-10:])),
-                        "amount": "AllCash"
+                        "price": float(exit_price),
+                        "amount": float(exit_amount)
                         },
                     "expire": bson.Int64(dt_index + 10*15*60*1000)
                     }
