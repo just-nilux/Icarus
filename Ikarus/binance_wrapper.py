@@ -404,5 +404,6 @@ class TestBinanceWrapper():
             tuple: result, df_balances
         """
         result = True
+        # TODO: Evaluate 'free' and 'locked' sizes
 
         return result, df_balances

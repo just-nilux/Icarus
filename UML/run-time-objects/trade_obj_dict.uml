@@ -7,6 +7,7 @@
     "enter": {
       "limitBuy": {
         "price": "",
+        "quantity": "",
         "amount": ""
       },
       "expire": "",
@@ -17,10 +18,12 @@
         "limitSellPrice": "",
         "stopPrice": "",
         "stopLimitPrice": "",
+        "quantity": "",
         "amount": ""
       },
       "limitSell": {
         "price": "",
+        "quantity": "",
         "amount": ""
       },
       "expire": "",
@@ -73,4 +76,6 @@ result:
     - enter_expire: buy limit order expired
     - exit_expire: not clear what to do
     - external: manual interventions
+
+amount: price * quantity
 

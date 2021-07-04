@@ -26,6 +26,7 @@ class GenericObject():
         "enter": {
             "limitBuy": {
                 "price": "",
+                "quantity": "",
                 "amount": ""
             },
             "expire": "",
@@ -36,10 +37,12 @@ class GenericObject():
                 "limitSellPrice": "",
                 "stopPrice": "",
                 "stopLimitPrice": "",
+                "quantity": "",
                 "amount": ""
             },
             "limitSell": {
-                "price":"",
+                "price": "",
+                "quantity": "",
                 "amount": ""
             },
             "expire": "",

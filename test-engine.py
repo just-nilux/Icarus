@@ -210,6 +210,7 @@ async def update_ltos(lto_dict, data_dict, current_ts):
             pass
         else:
             pass
+    return lto_dict
 
 
 async def application(bwrapper, pair_list, df_list):
@@ -228,13 +229,15 @@ async def application(bwrapper, pair_list, df_list):
 
     # 1.2 Get balance and datadict
     info = await mongocli.get_last_doc('observer',{})
-    # TODO:give the into the get_current_balance()
+    # NOTE:info given to the get_current_balance only for test-engine.py
     tasks_pre_calc = bwrapper.get_current_balance(info), bwrapper.get_data_dict(pair_list, test_time_df, df_list)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    await update_ltos(lto_dict, data_dict, current_ts)
+    lto_dict = await update_ltos(lto_dict, data_dict, current_ts)
+
+    # TODO: Based on the updates on lto_dict, update the df_balance
 
     # 1.5: Write the LTOs to [live-trades] and [hist-trades]
     # NOTE: Move the function after the new trade object execution
@@ -252,6 +255,7 @@ async def application(bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
+
     trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send last timestamp index
 
     # 2.3: Execute the trade_dict if any

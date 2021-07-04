@@ -176,7 +176,7 @@ class BackTestAlgorithm():
                 #TODO: 'USDT' should not be hardcoded
                 free_ref_asset = df_balance.loc['USDT','free']
 
-                # Example: Buy XRP with 100$
+                # Example: Buy XRP with 100$ in your account
                 enter_ref_amount=100
                 # TODO: HIGH: Check mininum amount to trade and add this section to here
                 if free_ref_asset > 10:
@@ -188,10 +188,14 @@ class BackTestAlgorithm():
 
                 # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
                 # Example:
-                #   Buy 100 XRP frm the price XRPUSDT: 0.66 
-                #   Sell the bought XRP from 0.70
-                # (0.66 * 100)/0.7 = 
-                enter_quantity = enter_price * enter_ref_amount / exit_price
+                #   Buy XRP from the price XRPUSDT: 0.66 (Price of 1XRP = 0.66$), use 100$ to make the trade
+                #   151,51 = 100$ / 0.66
+                enter_quantity = enter_ref_amount / enter_price
+
+                #   Sell the bought XRP from the price 0.70
+                #   exit_ref_amount = 151,4 * 0.70 = 105.98
+                exit_ref_amount = enter_quantity * exit_price
+
 
                 # TODO: NEXT: Implement the price-amount-quantity logic here
                 # Fill enter module
@@ -199,8 +203,8 @@ class BackTestAlgorithm():
                     "enterTime": "",
                     "limitBuy": {
                         "price": float(enter_price),
-                        "amount": float(enter_quantity),
-                        "quantity": float(enter_price),
+                        "quantity": float(enter_quantity),
+                        "amount": float(enter_ref_amount),
                         },
                     "expire": bson.Int64(dt_index + 3*15*60*1000)
                     }
@@ -212,7 +216,8 @@ class BackTestAlgorithm():
                     "exitTime": "",
                     "limitSell": {
                         "price": float(exit_price),
-                        "amount": float(exit_amount)
+                        "quantity": float(enter_quantity),
+                        "amount": float(exit_ref_amount),
                         },
                     "expire": bson.Int64(dt_index + 10*15*60*1000)
                     }
