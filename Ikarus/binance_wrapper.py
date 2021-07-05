@@ -48,8 +48,17 @@ class BinanceWrapper():
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
-        self.ref_currency = 'USDT'
-        self.base_currency = 'TRY'
+        self.quote_currency = 'USDT'
+        self.credit_currency = 'TRY'
+
+
+        # Currency pairs compare the value of one currency to another—the base currency (or the first one) 
+        # versus the second or the quote currency. It indicates how much of the quote currency is needed to 
+        # purchase one unit of the base currency.
+        
+        # The quotation EUR/USD = 1.2500 means that one euro is exchanged for 1.2500 U.S. dollars. In this case, 
+        # EUR is the base currency and USD is the quote currency (counter currency). This means that 1 euro can be 
+        # exchanged for 1.25 U.S. dollars. Another way of looking at this is that it will cost you $125 to buy 100 euros.
 
         # Default Parameters
         
@@ -81,12 +90,12 @@ class BinanceWrapper():
         df_balance['total'] = df_balance['free'] + df_balance['locked']
         pairs = []
         for asset in df_balance.index:
-            if asset == self.ref_currency:
+            if asset == self.quote_currency:
                 pairs.append(str(asset))
-            elif asset == self.base_currency:
-                pairs.append(str(self.ref_currency)+str(asset))
+            elif asset == self.credit_currency:
+                pairs.append(str(self.quote_currency)+str(asset))
             else:
-                pairs.append(str(asset)+str(self.ref_currency))
+                pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
         return df_balance
 
@@ -111,12 +120,12 @@ class BinanceWrapper():
 
         # Add current prices to df_balance
         price = [float(df_tickers.loc[pair]['price'])
-                 if pair != self.ref_currency
+                 if pair != self.quote_currency
                  else 1
                  for pair in df_balance['pair']]
         df_balance['price'] = price
 
-        # Evaluate the equity in terms of ref_currency
+        # Evaluate the equity in terms of quote_currency
         df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
 
         return df_balance
@@ -240,15 +249,15 @@ class TestBinanceWrapper():
 
         self.client = _client
 
-        # Set initial cash in the ref_currency
+        # Set initial cash in the quote_currency
         self.comission = float(_commission)
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
         # Set reference currencies
-        self.ref_currency = 'USDT'
-        self.base_currency = 'TRY'
+        self.quote_currency = 'USDT'
+        self.credit_currency = 'TRY'
 
         # TestBinanceWrapper: get df_tickers once
 
@@ -290,12 +299,12 @@ class TestBinanceWrapper():
         df_balance['total'] = df_balance['free'] + df_balance['locked']
         pairs = []
         for asset in df_balance.index:
-            if asset == self.ref_currency:
+            if asset == self.quote_currency:
                 pairs.append(str(asset))
-            elif asset == self.base_currency:
-                pairs.append(str(self.ref_currency)+str(asset))
+            elif asset == self.credit_currency:
+                pairs.append(str(self.quote_currency)+str(asset))
             else:
-                pairs.append(str(asset)+str(self.ref_currency))
+                pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
 
         return df_balance
@@ -342,12 +351,12 @@ class TestBinanceWrapper():
 
         # Add current prices to df_balance
         price = [float(TestBinanceWrapper.df_tickers.loc[pair]['price'])
-                 if pair != self.ref_currency
+                 if pair != self.quote_currency
                  else 1
                  for pair in df_balance['pair']]
         df_balance['price'] = price
 
-        # Evaluate the equity in terms of ref_currency
+        # Evaluate the equity in terms of quote_currency
         df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
 
         return df_balance
@@ -404,6 +413,18 @@ class TestBinanceWrapper():
             tuple: result, df_balances
         """
         result = True
+        # Execute trade_dict
+        # TODO: HIGH: In the execute section commission needs to be evaluated. This section should behave
+        #       exactly as the broker. 
+        # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
+
         # TODO: Evaluate 'free' and 'locked' sizes
+
+        # Update free and locked amount of df_balances
+        for pair,to in trade_dict.items():
+            if to.get('status') == 'open_enter':
+                #TODO: V2: 'USDT' should not be hardcoded
+                df_balances.loc['USDT','free'] -= to.get(['enter','limitBuy','amount'])
+                df_balances.loc['USDT','locked'] += to.get(['enter','limitBuy','amount'])
 
         return result, df_balances

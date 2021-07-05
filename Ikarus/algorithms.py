@@ -8,6 +8,11 @@ import json
 from Ikarus.objects import GenericObject, ObjectEncoder
 import bson
 class Algorithm():
+    """
+    For the sake of simplicity, it is assumed that all trade pairs contain
+        the quote_currency (most probably USDT)
+    As a result when you remove the quote_currency from the pair, base_currency is obtained
+    """
 
     def __init__(self):
         self.logger = logging.getLogger('app.{}'.format(__name__))
@@ -173,7 +178,7 @@ class BackTestAlgorithm():
                 #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
                 # the base asset will be used.
                 
-                #TODO: 'USDT' should not be hardcoded
+                #TODO: V2: 'USDT' should not be hardcoded
                 free_ref_asset = df_balance.loc['USDT','free']
 
                 # Example: Buy XRP with 100$ in your account

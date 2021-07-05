@@ -151,8 +151,19 @@ async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
             pass
 
 
-async def update_ltos(lto_dict, data_dict, current_ts):
+async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
+    """
+    Args:
+        lto_dict (dict): will be updated (status, result, exit sections)
+        data_dict (dict): used for getting the candle to see if trade status needs to change
+        current_ts (ts): used for info sections of ltos
+        df_balance (pd.DataFrame): When a lto go from 'open_exit' to 'closed' or 'open_enter' to 'open_exit'
+        it needs to be updated in terms of 'free' and 'locked'
+                                                        
 
+    Returns:
+        dict: lto_dict
+    """
     for pair in set(lto_dict.keys()) & set(data_dict.keys()):
         pair_klines = data_dict[pair]
 
@@ -169,14 +180,29 @@ async def update_ltos(lto_dict, data_dict, current_ts):
         pair_klines_dict = pair_klines.get()
         last_kline = pair_klines_dict['15m'].tail(1)
 
-        # TODO: check the expired ones
         if lto_dict[pair]['status'] == 'open_enter':
 
             # Check if the open enter trade is filled else if the trade is expired
             if float(last_kline['low']) < lto_dict[pair]['enter']['limitBuy']['price']:
-                # TODO NEXT: check this update
+                # NOTE: Since this is testing, no dust created, perfect conversion
                 lto_dict[pair]['status'] = 'open_exit'
                 lto_dict[pair]['enter']['enterTime'] = bson.Int64(current_ts)
+
+                # Remove the bought amount from the 'locked' and 'ref_balance' columns
+                df_balance.loc['USDT', 'locked'] -= lto_dict[pair]['enter']['limitBuy']['amount']
+                df_balance.loc['USDT', 'ref_balance'] = df_balance.loc['USDT', 'locked'] +  df_balance.loc['USDT', 'free']
+
+                # If enter is completed, it means that the quantity of the base_cur exist
+                if pair in list(df_balance.index):
+                    # TODO: APP: we need to place a sell order immediatly
+                    # TODO: TEST: It needs to be 'locked' immediatly
+                    # TODO: NEXT:
+                    df_balance.loc[ pair.replace('USDT',''), 'locked' ] = ['Amy', 89, 93]
+                else:
+                    # Previously there was no base_currency, so we create a row for it
+                    # free  locked    total      pair   price  ref_balance
+                    df_balance.loc[pair.replace('USDT','')] = [0.0, 89, 0, pair, 0, 0]
+                    
 
             elif int(lto_dict[pair]['enter']['expire']) <= current_ts:
                 lto_dict[pair]['status'] = 'closed'
@@ -189,6 +215,9 @@ async def update_ltos(lto_dict, data_dict, current_ts):
             # Ignore for the tests
             pass
         elif lto_dict[pair]['status'] == 'open_exit':
+            # TODO: In order to decide that the sell completed, check the quantity if exist( will be handled in the TODO below)
+            #       df_balance needs to be updated in terms of 'free' and 'locked'
+            #       This is just for testing purposes, might not be needed for it as well
 
             # Check if the open sell trade is filled or stoploss is taken
             if float(last_kline['high']) > lto_dict[pair]['exit']['limitSell']['price']:
@@ -235,7 +264,7 @@ async def application(bwrapper, pair_list, df_list):
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    lto_dict = await update_ltos(lto_dict, data_dict, current_ts)
+    lto_dict = await update_ltos(lto_dict, data_dict, current_ts, df_balance)
 
     # TODO: Based on the updates on lto_dict, update the df_balance
 
