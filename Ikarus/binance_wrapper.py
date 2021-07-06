@@ -399,7 +399,7 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_dict, df_balances):
+    async def execute_decision(self, trade_dict, df_balance):
         """
         TestBinanceWrapper: In test sessions, executing a trade_object means
         changing the df_balance columns 'free' and 'locked' when a trade is
@@ -424,7 +424,7 @@ class TestBinanceWrapper():
         for pair,to in trade_dict.items():
             if to.get('status') == 'open_enter':
                 #TODO: V2: 'USDT' should not be hardcoded
-                df_balances.loc['USDT','free'] -= to.get(['enter','limitBuy','amount'])
-                df_balances.loc['USDT','locked'] += to.get(['enter','limitBuy','amount'])
+                df_balance.loc['USDT','free'] -= to.get(['enter','limitBuy','amount'])
+                df_balance.loc['USDT','locked'] += to.get(['enter','limitBuy','amount'])
 
-        return result, df_balances
+        return result, df_balance

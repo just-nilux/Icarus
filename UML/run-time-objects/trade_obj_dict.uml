@@ -79,3 +79,8 @@ result:
 
 amount: price * quantity
 
+Note: Enter and Exit modules are written once in the decision. They do no get updated.
+However, when buy or sell operations are done. Related information is gathered from the
+broker and written to the results. This approach enable us to compare the expectation
+and the reality
+

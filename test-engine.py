@@ -119,6 +119,27 @@ async def hto_decompose():
     return pd.DataFrame(hto_dict)
 
 
+async def evaluate_stats():
+
+    # Evaluate Statistics
+    logger.info("---------------------------------------------------------")
+    logger.info("---------------------- Statistics -----------------------")
+    logger.info("---------------------------------------------------------")
+
+    logger.info('Total enter_expire trades: {}'.format(await mongocli.count("observer", {'result.cause':'enter_expire'})))
+    logger.info('Total exit_expire trades: {}'.format(await mongocli.count("observer", {'result.cause':'exit_expire'})))
+    logger.info('Total closed trades: {}'.format(await mongocli.count("observer", {'result.cause':'closed'})))
+
+    # TODO: NEXT:
+    # TODO: Evaluate exit_expire profit
+    # TODO: Evaluate closed profit
+    # TODO: Evaluate total profit
+
+
+
+    pass
+
+
 async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
 
     for pair, lto in lto_dict.items():
@@ -191,24 +212,29 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 # Remove the bought amount from the 'locked' and 'ref_balance' columns
                 df_balance.loc['USDT', 'locked'] -= lto_dict[pair]['enter']['limitBuy']['amount']
                 df_balance.loc['USDT', 'ref_balance'] = df_balance.loc['USDT', 'locked'] +  df_balance.loc['USDT', 'free']
-
-                # If enter is completed, it means that the quantity of the base_cur exist
+                # TODO sync the ref_balance and total
+                # Update df_balance: add the quantity to the base_cur or create a row for base_cur
+                base_cur = pair.replace('USDT','')
                 if pair in list(df_balance.index):
                     # TODO: APP: we need to place a sell order immediatly
-                    # TODO: TEST: It needs to be 'locked' immediatly
-                    # TODO: NEXT:
-                    df_balance.loc[ pair.replace('USDT',''), 'locked' ] = ['Amy', 89, 93]
+                    df_balance.loc[base_cur, 'locked' ] += lto_dict[pair]['enter']['limitBuy']['quantity']
                 else:
                     # Previously there was no base_currency, so we create a row for it
                     # free  locked    total      pair   price  ref_balance
-                    df_balance.loc[pair.replace('USDT','')] = [0.0, 89, 0, pair, 0, 0]
-                    
+                    df_balance.loc[base_cur] = [0.0, lto_dict[pair]['exit']['limitSell']['quantity'], 0, pair, 0, 0]
+                    df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
+                    # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
             elif int(lto_dict[pair]['enter']['expire']) <= current_ts:
                 lto_dict[pair]['status'] = 'closed'
                 lto_dict[pair]['result']['cause'] = 'enter_expire'
                 lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
                 #lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['tradeid']-current_ts
+
+                # Update df_balance: return the 'amount' of the enter
+                df_balance.loc['USDT','free'] += lto_dict[pair]['enter']['limitBuy']['amount']
+                df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter']['limitBuy']['amount']
+
                 pass
 
         elif lto_dict[pair]['status'] == 'partially_closed_enter':
@@ -227,12 +253,46 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 lto_dict[pair]['result']['cause'] = 'closed'
                 lto_dict[pair]['exit']['exitTime'] = bson.Int64(current_ts)
 
+                lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limitBuy']['price']
+                lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limitBuy']['amount']
+                lto_dict[pair]['result']['sellPrice'] = lto_dict[pair]['exit']['limitSell']['price']
+                lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['exit']['limitSell']['amount']
+                lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
+                # TODO: Evalutate liveTime
+
+                # Update df_balance: # Update df_balance: write the amount of the exit
+                # TODO: Gather up all the df_balance sections and put them in a function
+                df_balance.loc['USDT','free'] += lto_dict[pair]['result']['sellAmount']
+                df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
+                df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                # NOTE: For the quote_currency total and the ref_balance is the same
+
             elif int(lto_dict[pair]['exit']['expire']) <= current_ts:
                 lto_dict[pair]['status'] = 'closed'
                 lto_dict[pair]['result']['cause'] = 'exit_expire'
                 lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
                 # TODO: Needs to be decided when the exit expire happend: 
                 #       simple solution: market sell (no matter the price)
+
+                # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
+                #             For the sake of simplicity closed price of the last candle is used in the market sell
+                #             by assumming that the 'close' price is pretty close to the 'open' of the future
+                # NOTE: TEST: This section can be improved
+
+                lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limitBuy']['price']
+                lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limitBuy']['amount']
+                lto_dict[pair]['result']['sellPrice'] = float(last_kline['close'])
+                lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['exit']['limitSell']['quantity']
+                # TODO: Add buy and sell sections to result to have the items price, quantity and amount for both
+
+                lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
+                # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
+
+                # Update df_balance: write the amount of the exit
+                df_balance.loc['USDT','free'] += lto_dict[pair]['result']['sellAmount']
+                df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
+                df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                # NOTE: For the quote_currency total and the ref_balance is the same
 
         elif lto_dict[pair]['status'] == 'partially_closed_exit':
             # Ignore for the tests
@@ -393,9 +453,8 @@ async def main():
     # Dump df_csv_list[0] to a file for debug purposes
     f= open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
 
-    # Evaluate Statistics
-    count_obs = await mongocli.count("observer")
-    logger.info(f'Total observer item: {count_obs}') 
+    # Evaluate the statistics
+    await evaluate_stats()
 
     # Visualize the test session
     fp.buy_sell(df_csv_list[0])
