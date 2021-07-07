@@ -126,16 +126,30 @@ async def evaluate_stats():
     logger.info("---------------------- Statistics -----------------------")
     logger.info("---------------------------------------------------------")
 
-    logger.info('Total enter_expire trades: {}'.format(await mongocli.count("observer", {'result.cause':'enter_expire'})))
-    logger.info('Total exit_expire trades: {}'.format(await mongocli.count("observer", {'result.cause':'exit_expire'})))
-    logger.info('Total closed trades: {}'.format(await mongocli.count("observer", {'result.cause':'closed'})))
+    logger.info('Total enter_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':'enter_expire'})))
+    logger.info('Total exit_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':'exit_expire'})))
+    logger.info('Total closed trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':'closed'})))
+    
+    exit_expire_pipe = [
+        {"$match":{"result.cause":{"$eq":"exit_expire"}}},
+        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
+    ]
+    exit_expire_profit = await mongocli.do_find("hist-trades", exit_expire_pipe)
+    logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
+    
+    closed_pipe = [
+        {"$match":{"result.cause":{"$eq":"closed"}}},
+        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
+    ]
+    closed_profit = await mongocli.do_find("hist-trades", closed_pipe)
+    logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
 
-    # TODO: NEXT:
-    # TODO: Evaluate exit_expire profit
-    # TODO: Evaluate closed profit
-    # TODO: Evaluate total profit
-
-
+    last_balance = await mongocli.get_last_doc("observer")
+    for balance in last_balance['balances']:
+        if balance['asset'] == 'USDT':
+            usdt_balance = balance['total']
+            break
+    logger.info('Final equity : {}'.format(usdt_balance))
 
     pass
 
@@ -229,7 +243,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 lto_dict[pair]['status'] = 'closed'
                 lto_dict[pair]['result']['cause'] = 'enter_expire'
                 lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
-                #lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['tradeid']-current_ts
+                # NOTE: No liveTime or closedTime calculated since, the trade was never alive
 
                 # Update df_balance: return the 'amount' of the enter
                 df_balance.loc['USDT','free'] += lto_dict[pair]['enter']['limitBuy']['amount']
@@ -248,17 +262,17 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
             # Check if the open sell trade is filled or stoploss is taken
             if float(last_kline['high']) > lto_dict[pair]['exit']['limitSell']['price']:
 
-                # TODO: In this case the result section needs to be fulfilled
                 lto_dict[pair]['status'] = 'closed'
-                lto_dict[pair]['result']['cause'] = 'closed'
                 lto_dict[pair]['exit']['exitTime'] = bson.Int64(current_ts)
 
+                lto_dict[pair]['result']['cause'] = 'closed'
+                lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
                 lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limitBuy']['price']
                 lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limitBuy']['amount']
                 lto_dict[pair]['result']['sellPrice'] = lto_dict[pair]['exit']['limitSell']['price']
                 lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['exit']['limitSell']['amount']
                 lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
-                # TODO: Evalutate liveTime
+                lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['result']['closedTime'] - lto_dict[pair]['enter']['enterTime']
 
                 # Update df_balance: # Update df_balance: write the amount of the exit
                 # TODO: Gather up all the df_balance sections and put them in a function

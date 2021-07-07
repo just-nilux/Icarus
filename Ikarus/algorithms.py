@@ -201,8 +201,6 @@ class BackTestAlgorithm():
                 #   exit_ref_amount = 151,4 * 0.70 = 105.98
                 exit_ref_amount = enter_quantity * exit_price
 
-
-                # TODO: NEXT: Implement the price-amount-quantity logic here
                 # Fill enter module
                 enter_module = {
                     "enterTime": "",
@@ -226,7 +224,7 @@ class BackTestAlgorithm():
                         },
                     "expire": bson.Int64(dt_index + 10*15*60*1000)
                     }
-                # expire of the exit_module is calculated after the trade entered
+                # expire of the exit_module can be calculated after the trade entered
                 trade_obj.load('exit', exit_module)
 
                 trade_dict[pair] = trade_obj

@@ -40,9 +40,13 @@ class MongoClient():
             col ([type]): [description]
             item ([type]): [description]
         """
-        result = self.db_bot[col].find(query)
-        docs = await result.to_list(None)
-        self.logger.info(f"do_find [{col}]: total found document: {len(docs)}")
+        if type(query) == dict:
+            result = self.db_bot[col].find(query)
+            docs = await result.to_list(None)
+            self.logger.info(f"do_find [{col}]: total found document: {len(docs)}")
+        elif type(query) == list:
+            async for doc in self.db_bot[col].aggregate(query):
+                docs=doc
         return docs
 
 
@@ -108,7 +112,6 @@ class MongoClient():
             col (string): db collection
             query (dict): json query
         """
-        # TODO: Test needed
         prev_count = await self.count(col)
         result = self.db_bot[col].delete_many(query)
         after_count = await self.count(col)
@@ -116,7 +119,7 @@ class MongoClient():
         return result
 
 # Specific Functions:
-    async def get_last_doc(self, col, query) -> None:
+    async def get_last_doc(self, col, query={}) -> None:
         """
         This function reads the selected item from the given collection
 
@@ -179,9 +182,27 @@ async def test1():
 
 async def test2():
 
-    # Find
-    lto_list = await mongocli.get_last_doc('hist-trades',{})
+    pipe = [
+        {"$match":{"result.cause":{"$eq":"exit_expire"}}},
+        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
+    ]
+    exit_expire_profit = await mongocli.do_find("hist-trades", pipe)
+    print('observer.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
     
+    pipe = [
+        {"$match":{"result.cause":{"$eq":"closed"}}},
+        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
+    ]
+    closed_profit = await mongocli.do_find("hist-trades", pipe)
+    print('observer.result.profit: closed : {}'.format(closed_profit['sum']))
+
+    last_balance = await mongocli.get_last_doc("observer")
+    for balance in last_balance['balances']:
+        if balance['asset'] == 'USDT':
+            usdt_balance = balance['total']
+            break
+    print('Final equity : {}'.format(usdt_balance))
+
     return True
 
 

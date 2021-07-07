@@ -418,8 +418,6 @@ class TestBinanceWrapper():
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
 
-        # TODO: Evaluate 'free' and 'locked' sizes
-
         # Update free and locked amount of df_balances
         for pair,to in trade_dict.items():
             if to.get('status') == 'open_enter':
