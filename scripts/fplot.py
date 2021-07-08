@@ -1,5 +1,6 @@
 import argparse
 import backtrader as bt
+from numpy.core.numeric import False_
 from tables import file
 import talib
 import collections
@@ -146,9 +147,10 @@ def fplot(filename=None):
     fplt.show()
 
 
-def buy_sell(df):
+def buy_sell(df, df_enter_expire=None, df_exit_expire=None):
 
-
+    # TODO: NEXT: Separate enter_expire and exit_expire
+    
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
 
@@ -160,30 +162,23 @@ def buy_sell(df):
             fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
         last_period = period
 
-    if 'buy' in df.columns:
-        point_buy = df['buy']
+    if 'closed_buy' in df.columns:
+        point_buy = df['closed_buy']
         point_buy.plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
 
-    if 'sell' in df.columns:
-        point_sell = df['sell']
+    if 'closed_sell' in df.columns:
+        point_sell = df['closed_sell']
         point_sell.plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
 
-    if 'tradeid' in df.columns:
-        point_sell = df['tradeid']
-        point_sell.plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='tradeid')
+    if 'closed_tradeid' in df.columns:
+        point_sell = df['closed_tradeid']
+        point_sell.plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_tradeid')
 
-    if 'expired-tradeid' in df.columns:
-        point_sell = df['expired-tradeid']
-        point_sell.plot(kind='scatter', color='#aaaaff', width=2, ax=ax, zoomscale=False, style="t2", legend='expired-tradeid') # Pale-Blue
-
-    if 'enter-expire' in df.columns:
-        point_sell = df['enter-expire']
-        point_sell.plot(kind='scatter', color='#bb00ff', width=2, ax=ax, zoomscale=False, style="^", legend='enter-expire') # Purple
-
-    if 'exit-expire' in df.columns:
-        point_sell = df['exit-expire']
-        point_sell.plot(kind='scatter', color='#bb00ff', width=2, ax=ax, zoomscale=False, style="v", legend='exit-expire') # Purple
-
+    if 'enter_tradeid' in df.columns:
+        df_expire = df.dropna(subset = ["enter_tradeid"], inplace=False)
+        
+        for index, row in df_expire.iterrows():
+            fplt.add_line((row['enter_tradeid'], row['enter_buy']), (row['enter_expire'], row['enter_buy']), color='#9900ff', interactive=False)
     
     #TODO: Print prices and trade id
     fplt.add_legend('', ax=ax)
