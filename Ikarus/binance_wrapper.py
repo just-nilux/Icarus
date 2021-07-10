@@ -422,7 +422,7 @@ class TestBinanceWrapper():
         for pair,to in trade_dict.items():
             if to.get('status') == 'open_enter':
                 #TODO: V2: 'USDT' should not be hardcoded
-                df_balance.loc['USDT','free'] -= to.get(['enter','limitBuy','amount'])
-                df_balance.loc['USDT','locked'] += to.get(['enter','limitBuy','amount'])
+                df_balance.loc['USDT','free'] -= to.get(['enter','limit','amount'])
+                df_balance.loc['USDT','locked'] += to.get(['enter','limit','amount'])
 
         return result, df_balance

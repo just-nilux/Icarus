@@ -24,28 +24,9 @@ class GenericObject():
         "status": "",
         "tradeid": "",
         "enter": {
-            "limitBuy": {
-                "price": "",
-                "quantity": "",
-                "amount": ""
-            },
-            "expire": "",
             "enterTime": ""
         },
         "exit": {
-            "oco": {
-                "limitSellPrice": "",
-                "stopPrice": "",
-                "stopLimitPrice": "",
-                "quantity": "",
-                "amount": ""
-            },
-            "limitSell": {
-                "price": "",
-                "quantity": "",
-                "amount": ""
-            },
-            "expire": "",
             "exitTime": ""
         },
         "result": {
@@ -68,6 +49,27 @@ class GenericObject():
     
     templates['data'] = {}
 
+    market = {
+        "price": "",
+        "quantity": "",
+        "amount": ""
+    }
+    
+    oco = {
+        "limitPrice": "",
+        "stopPrice": "",
+        "stopLimitPrice": "",
+        "quantity": "",
+        "amount": "",
+        "expire": ""
+    }
+    
+    limit = {
+        "price": "",
+        "quantity": "",
+        "amount": "",
+        "expire": ""
+    }
 
     def __init__(self, template_name=None):
         if template_name is None:

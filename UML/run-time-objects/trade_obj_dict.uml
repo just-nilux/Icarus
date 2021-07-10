@@ -5,28 +5,39 @@
     "tradeid": "[dt index of obj creation]",
     "status": "",
     "enter": {
-      "limitBuy": {
+      "limit": {
+        "price": "",
+        "quantity": "",
+        "amount": "",
+        "expire": ""
+      },
+      "market": {
         "price": "",
         "quantity": "",
         "amount": ""
       },
-      "expire": "",
       "enterTime": ""
     },
     "exit": {
       "oco": {
-        "limitSellPrice": "",
+        "limitPrice": "",
         "stopPrice": "",
         "stopLimitPrice": "",
         "quantity": "",
-        "amount": ""
+        "amount": "",
+        "expire": ""
       },
-      "limitSell": {
+      "limit": {
+        "price": "",
+        "quantity": "",
+        "amount": "",
+        "expire": ""
+      },
+      "market": {
         "price": "",
         "quantity": "",
         "amount": ""
       },
-      "expire": "",
       "exitTime": ""
     },
     "result": {
@@ -65,22 +76,33 @@ Canceled
   If an Limit Order is partially filled than the rest is canceled. For the sake of simlicity(for now)
   In other words, both Canceled and Closed exist at the same time
 
-enter: Default enter type is "limit"
+ENTER MODULE:
+ - Default enter type is "limit"
 
-exit:
-  - It contains either "oco" or "limit"
+EXIT MODULE:
+  - It contains either "oco" or "limit" or "market"
+    - Priority: market > limit > oco:
+    '''
+    if market in keys:
+      do market exit
+    elif limit in keys:
+      do limit exit
+    elif oco in keys:
+      do oco exit
+    else
+    '''
 
-result:
+RESULT MODULE:
   - cause:
     - closed: bought and sold successfully
     - enter_expire: buy limit order expired
     - exit_expire: not clear what to do
     - external: manual interventions
 
-amount: price * quantity
+  amount: price * quantity
 
-Note: Enter and Exit modules are written once in the decision. They do no get updated.
-However, when buy or sell operations are done. Related information is gathered from the
-broker and written to the results. This approach enable us to compare the expectation
-and the reality
+  Note: Enter and Exit modules are written once in the decision. They do no get updated.
+  However, when buy or sell operations are done. Related information is gathered from the
+  broker and written to the results. This approach enable us to compare the expectation
+  and the reality
 

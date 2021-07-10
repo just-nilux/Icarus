@@ -7,6 +7,8 @@ import statistics as st
 import json
 from Ikarus.objects import GenericObject, ObjectEncoder
 import bson
+import copy
+
 class Algorithm():
     """
     For the sake of simplicity, it is assumed that all trade pairs contain
@@ -166,7 +168,7 @@ class BackTestAlgorithm():
                 trade_obj = GenericObject('trade')
                 trade_obj.load('status','open_enter') # Set initial status to 'open'
                 trade_obj.load('tradeid',int(dt_index)) # Set tradeid to timestamp
-                #TODO: give proper values to limitBuy
+                #TODO: give proper values to limit
 
 
                 # Calculate enter/exit prices
@@ -204,25 +206,26 @@ class BackTestAlgorithm():
                 # Fill enter module
                 enter_module = {
                     "enterTime": "",
-                    "limitBuy": {
+                    "limit": {
                         "price": float(enter_price),
                         "quantity": float(enter_quantity),
                         "amount": float(enter_ref_amount),
+                        "expire": bson.Int64(dt_index + 3*15*60*1000)
                         },
-                    "expire": bson.Int64(dt_index + 3*15*60*1000)
                     }
+
                 #enter_module["expire"] = dt_index - 3*15*60*1000 # 3 15min block later
                 trade_obj.load('enter', enter_module)
 
                 # Fill exit module
                 exit_module = {
                     "exitTime": "",
-                    "limitSell": {
+                    "limit": {
                         "price": float(exit_price),
                         "quantity": float(enter_quantity),
                         "amount": float(exit_ref_amount),
+                        "expire": bson.Int64(dt_index + 10*15*60*1000)
                         },
-                    "expire": bson.Int64(dt_index + 10*15*60*1000)
                     }
                 # expire of the exit_module can be calculated after the trade entered
                 trade_obj.load('exit', exit_module)

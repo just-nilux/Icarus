@@ -13,8 +13,8 @@ async def get_enter_expire(df):
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
-            "enterExpire": hto['enter']['expire'],
-            "enterPrice": hto['enter']['limitBuy']['price'],
+            "enterExpire": hto['enter']['limit']['expire'],
+            "enterPrice": hto['enter']['limit']['price'],
         }
         hto_ent_exp_list.append(hto_dict)
 
@@ -31,9 +31,9 @@ async def get_closed(df):
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
             "enterTime": hto['enter']['enterTime'],
-            "enterPrice": hto['enter']['limitBuy']['price'],
+            "enterPrice": hto['enter']['limit']['price'],
             "exitTime": hto['exit']['exitTime'],
-            "exitPrice": hto['exit']['limitSell']['price'],
+            "exitPrice": hto['exit']['limit']['price'],
             "sellPrice": hto['result']['sellPrice']
         }
         hto_closed_list.append(hto_dict)
@@ -51,10 +51,10 @@ async def get_exit_expire(df):
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
             "enterTime": hto['enter']['enterTime'],
-            "enterPrice": hto['enter']['limitBuy']['price'],
-            "exitPrice": hto['exit']['limitSell']['price'],
+            "enterPrice": hto['enter']['limit']['price'],
+            "exitPrice": hto['exit']['limit']['price'],
             "sellPrice": hto['result']['sellPrice'],
-            "exitExpire": hto['exit']['expire']
+            "exitExpire": hto['exit']['limit']['expire']
         }
         hto_closed_list.append(hto_dict)
     df = pd.DataFrame(hto_closed_list)

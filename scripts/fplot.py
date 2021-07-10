@@ -147,7 +147,7 @@ def fplot(filename=None):
     fplt.show()
 
 
-def buy_sell(df, df_closed=None, df_enter_expire=None, df_exit_expire=None):
+def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame()):
     
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
@@ -161,47 +161,52 @@ def buy_sell(df, df_closed=None, df_enter_expire=None, df_exit_expire=None):
         last_period = period
 
     # Closed trade visualization
-    for idx, row in df_closed.iterrows():
-        # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
-        profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
+    if not df_closed.empty:
+        for idx, row in df_closed.iterrows():
+            # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
+            profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
 
-        # Default trade_color is green. If profit < 0  then red
-        trade_color = '#60FF60'
-        if profit_perc <1:
-            trade_color = '#FF9090'
+            # Default trade_color is green. If profit < 0  then red
+            trade_color = '#60FF60'
+            if profit_perc <1:
+                trade_color = '#FF9090'
 
-        fplt.add_rect((row['tradeid'], row['exitPrice']), (row['exitTime'], row['enterPrice']), color=trade_color, interactive=True)
-        fplt.add_text((row['tradeid'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
-        fplt.add_line((row['tradeid'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
+            fplt.add_rect((row['tradeid'], row['exitPrice']), (row['exitTime'], row['enterPrice']), color=trade_color, interactive=True)
+            fplt.add_text((row['tradeid'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+            fplt.add_line((row['tradeid'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
 
-    df_closed.set_index('tradeid',inplace=True)
-    df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_tradeid')
+        df_closed.set_index('tradeid',inplace=True)
+        df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_tradeid')
 
-    df_closed.set_index('exitTime',inplace=True)
-    df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
+        df_closed.set_index('exitTime',inplace=True)
+        df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
 
-    df_closed.set_index('enterTime',inplace=True)
-    df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
-    # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+        df_closed.set_index('enterTime',inplace=True)
+        df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+        # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
 
     # Enter expired trade visualization
-    for idx, row in df_enter_expire.iterrows():
-        fplt.add_line((row['tradeid'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
+    if not df_enter_expire.empty:
+        for idx, row in df_enter_expire.iterrows():
+            fplt.add_line((row['tradeid'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
 
     # Exit expired trade visualization
-    for idx, row in df_exit_expire.iterrows():
-        fplt.add_rect((row['tradeid'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
-        profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-        fplt.add_text((row['tradeid'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
-        fplt.add_line((row['tradeid'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-        fplt.add_line((row['tradeid'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
+    if not df_exit_expire.empty:
+        for idx, row in df_exit_expire.iterrows():
+            fplt.add_rect((row['tradeid'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
+            profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
+            fplt.add_text((row['tradeid'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+            fplt.add_line((row['tradeid'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
+            fplt.add_line((row['tradeid'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
 
     #TODO: Print prices and trade id
     fplt.add_legend('', ax=ax)
     fplt.show()
 
+
+    # TODO: Add visualizeion styles for Market and OCO
     # TODO: Improve the visualization:
-    # - square should be laydown starting from the limitsell.price to stop loss
+    # - square should be laydown starting from the limit.price to stop loss
     # - enter bar colors: blue (limit buy, market)
     # TODO: FUTURE:
     # - place green buy symbol at enter time on blue bars
