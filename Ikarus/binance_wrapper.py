@@ -425,4 +425,7 @@ class TestBinanceWrapper():
                 df_balance.loc['USDT','free'] -= to.get(['enter','limit','amount'])
                 df_balance.loc['USDT','locked'] += to.get(['enter','limit','amount'])
 
+        # NOTE: Normally if there is an market order it shoul be executed right here. 
+        # For testing purposes it is moved to the lto_pdate function test-engine.py
+
         return result, df_balance
