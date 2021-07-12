@@ -404,6 +404,22 @@ class TestBinanceWrapper():
         changing the df_balance columns 'free' and 'locked' when a trade is
         started
 
+        Execution Logic:
+        for to in trade_dict:
+            1. open_enter
+                a. market
+                    - Get the 'result'
+                b. limit
+            2. partially_closed_enter
+                -
+            3. open_exit
+                a. market
+                    - Get the 'result'
+                b. limit
+                c. oco
+            4. partially_closed_exit
+            -
+
         Args:
             trade_dict (dict): [description]
             df_balances (pd.DataFrame): [description]
@@ -412,30 +428,57 @@ class TestBinanceWrapper():
             tuple: result, df_balances
         """
         result = True
-        # Execute trade_dict
-        # TODO: HIGH: In the execute section commission needs to be evaluated. This section should behave
+
+        # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
 
-        for pair,to in trade_dict.items():
-            if to.get('status') == 'open_enter':
-                pass
-            elif to.get('status') == 'open_exit':
-                pass
-                
-        # Execute Market Orders (Buy or Sell)
-        # NOTE: Normally no buy/sell order is executed. In some exceptions it is possible and it needs to be executed immediately
 
         # Update free and locked amount of df_balances
-        for pair,to in trade_dict.items():
-            if to['status'] == 'open_enter':
+        for pair in trade_dict.keys():
+            
+            if trade_dict[pair]['status'] == 'open_enter':
                 #TODO: V2: 'USDT' should not be hardcoded
-                df_balance.loc['USDT','free'] -= to['enter']['limit']['amount']
-                df_balance.loc['USDT','locked'] += to['enter']['limit']['amount']
+                if 'market' in trade_dict[pair]['enter'].keys():
+                    pass
+
+                elif 'limit' in trade_dict[pair]['enter'].keys():
+                    df_balance.loc['USDT','free'] -= trade_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc['USDT','locked'] += trade_dict[pair]['enter']['limit']['amount']
+                    pass
+
+                else:
+                    # TODO: Internal Error
+                    pass
+
+            elif trade_dict[pair]['status'] == 'partially_closed_exit':
+                # TODO: Handle the issue for deployment
+                pass
+
+            elif trade_dict[pair]['status'] == 'open_exit':
+
+                if 'market' in trade_dict[pair]['enter'].keys():
+                    pass
+
+                elif 'limit' in trade_dict[pair]['exit'].keys():
+                    pass
+
+                elif 'oco' in trade_dict[pair]['exit'].keys():
+                    pass
+
+                else:
+                    # TODO: Internal Error
+                    pass
+
+            elif trade_dict[pair]['status'] == 'partially_closed_exit':
+                # TODO: Handle the issue for deployment
+                pass
+            
+            else:
+                # TODO: Internal Error
+                pass
 
         # NOTE: Normally if there is an market order it should be executed right here. 
         # For testing purposes it is moved to the lto_pdate function test-engine.py
-
-
 
         return result, df_balance

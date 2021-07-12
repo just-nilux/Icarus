@@ -403,6 +403,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 if float(last_kline['low']) < lto_dict[pair]['exit']['oco']['price']:
                     # Stop Loss takens
                     pass
+                
                 elif float(last_kline['high']) > lto_dict[pair]['exit']['limit']['price']:
                     # Limit taken
                     pass
