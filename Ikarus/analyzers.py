@@ -53,10 +53,10 @@ class Analyzer():
         for pair,data_obj in data_dict.items():
             self.logger.debug("  analysis started: [{}]".format(pair))
 
-            analysis_obj = GenericObject()
+            analysis_obj = dict()
             # time_scale: 1m, 15m, ... 1M
             # time_df: pd.DataFrame with columns of Ikarus.kline_column_names
-            for time_scale, time_df in data_obj.get().items():
+            for time_scale, time_df in data_obj.items():
                 self.logger.debug("    analysing [{}]: [{}]".format(pair,time_scale))
 
                 # TODO: asycn wrapper for each indicator
@@ -82,7 +82,7 @@ class Analyzer():
                 stats['high'] = list(time_df['high'])
 
                 # Assign "stats" to each "time_scale"
-                analysis_obj.load(time_scale,stats)
+                analysis_obj[time_scale] = stats
 
             analysis_dict[pair] = analysis_obj
             self.logger.debug("  analysis ended: [{}]".format(pair))

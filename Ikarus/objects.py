@@ -20,7 +20,7 @@ class GenericObject():
 
     templates = dict()
     
-    templates['trade'] = {
+    trade = {
         "status": "",
         "tradeid": "",
         "enter": {

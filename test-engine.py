@@ -287,10 +287,10 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
     # market order is executed here.
 
     for pair in set(lto_dict.keys()) & set(data_dict.keys()):
-        pair_klines = data_dict[pair]
+        pair_klines_dict = data_dict[pair]
 
         # 1.2.1: Check trades and update status
-        pair_klines_dict = pair_klines.get()
+        # pair_klines_dict = pair_klines
         last_kline = pair_klines_dict['15m'].tail(1)
 
         if lto_dict[pair]['status'] == 'open_enter':
@@ -393,6 +393,9 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
                     df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
+                
+                else:
+                    pass
 
             elif 'oco' in lto_dict[pair]['exit'].keys():
                 # NOTE: Think about the worst case and check the stop loss first.
@@ -403,6 +406,34 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 elif float(last_kline['high']) > lto_dict[pair]['exit']['limit']['price']:
                     # Limit taken
                     pass
+
+                elif int(lto_dict[pair]['exit']['oco']['expire']) <= current_ts:
+                    lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['result']['cause'] = 'exit_expire'
+                    lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
+                    # TODO: Needs to be decided when the exit expire happend: 
+                    #       simple solution: market sell (no matter the price)
+
+                    # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
+                    #             For the sake of simplicity closed price of the last candle is used in the market sell
+                    #             by assumming that the 'close' price is pretty close to the 'open' of the future
+                    # NOTE: TEST: This section can be improved
+
+                    lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limit']['price']
+                    lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limit']['amount']
+                    lto_dict[pair]['result']['sellPrice'] = float(last_kline['close']) # TODO: Needs to go to market execution in execute_order function
+                    lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['exit']['limit']['quantity']
+                    # TODO: Add buy and sell sections to result to have the items price, quantity and amount for both
+
+                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
+                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
+
+                    # Update df_balance: write the amount of the exit
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['sellAmount']
+                    df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
+                    df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                    # NOTE: For the quote_currency total and the ref_balance is the same
+
                 else:
                     pass
 

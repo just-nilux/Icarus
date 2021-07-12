@@ -74,9 +74,8 @@ class Algorithm():
 
             if trange_mean5 < trange_mean20:
                 self.logger.info(f"{pair}: BUY SIGNAL")
-                trade_obj = GenericObject('trade')
-                trade_obj.load('status','created')
-                trade_obj.load('status','created')
+                trade_obj = copy.deepcopy(GenericObject.trade)
+                trade_obj['status'] = 'created' # TODO: Fix to open_enter
                 trade_dict[pair] = trade_obj
 
             else:
@@ -106,6 +105,7 @@ class Algorithm():
         """    
 
         js_file = open("run-time-objs/trade.json", "w")
+        # TODO: remove Object Encoder
         json.dump(js_obj, js_file, indent=4, cls=ObjectEncoder)
         js_file.close()
         self.logger.debug("trade.json file created")
@@ -157,23 +157,23 @@ class BackTestAlgorithm():
             # TODO: Create a list of indicator handlers: [atr_handler()]
 
             #trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
-            trange_mean5 = st.mean(time_dict.get(['15m', 'trange'])[-5:])
+            trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
 
             #trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
-            trange_mean20 = st.mean(time_dict.get(['15m', 'trange'])[-20:])
+            trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
 
-            # Make decision to enter or not          
+            # Make decision to enter or not
             if trange_mean5 < trange_mean20:
                 self.logger.info(f"{pair}: BUY SIGNAL")
-                trade_obj = GenericObject('trade')
-                trade_obj.load('status','open_enter') # Set initial status to 'open'
-                trade_obj.load('tradeid',int(dt_index)) # Set tradeid to timestamp
+                trade_obj = copy.deepcopy(GenericObject.trade)
+                trade_obj['status'] = 'open_enter'
+                trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp
                 #TODO: give proper values to limit
 
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict.get(['15m', 'low'])[-10:])
-                exit_price = max(time_dict.get(['15m', 'high'])[-10:])
+                enter_price = min(time_dict['15m']['low'][-10:])
+                exit_price = max(time_dict['15m']['high'][-10:])
 
                 # Calculate enter/exit amount value
 
@@ -215,7 +215,7 @@ class BackTestAlgorithm():
                     }
 
                 #enter_module["expire"] = dt_index - 3*15*60*1000 # 3 15min block later
-                trade_obj.load('enter', enter_module)
+                trade_obj['enter'] = enter_module
 
                 # Fill exit module
                 exit_module = {
@@ -228,7 +228,7 @@ class BackTestAlgorithm():
                         },
                     }
                 # expire of the exit_module can be calculated after the trade entered
-                trade_obj.load('exit', exit_module)
+                trade_obj['exit'] = exit_module
 
                 trade_dict[pair] = trade_obj
 

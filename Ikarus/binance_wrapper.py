@@ -226,7 +226,6 @@ class BinanceWrapper():
         return True
 
 
-
 class TestBinanceWrapper():
 
     def_time_scales = [Client.KLINE_INTERVAL_1MINUTE, 
@@ -373,10 +372,10 @@ class TestBinanceWrapper():
 
         do_dict = dict()
         for idx_pair,pair in enumerate(pairs):
-            do = GenericObject()
+            do = dict()
             # This only works if only 1 time scale(i.e. 15m) is given for each pair and they are the same
             for idx_row, row in time_df.iterrows():
-                do.load(row["scale"],df_list[idx_pair])
+                do[row["scale"]] = df_list[idx_pair]
 
             do_dict[pair] = do
             
@@ -389,7 +388,7 @@ class TestBinanceWrapper():
             copy_obj = dict()
             for pair,do in js_obj.items():
                 pair_obj = dict()
-                for k,v in do.get().items():
+                for k,v in do.items():
                     pair_obj[k] = v.to_string()
                 copy_obj[pair] = pair_obj
 
@@ -418,14 +417,25 @@ class TestBinanceWrapper():
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
 
-        # Update free and locked amount of df_balances
         for pair,to in trade_dict.items():
             if to.get('status') == 'open_enter':
-                #TODO: V2: 'USDT' should not be hardcoded
-                df_balance.loc['USDT','free'] -= to.get(['enter','limit','amount'])
-                df_balance.loc['USDT','locked'] += to.get(['enter','limit','amount'])
+                pass
+            elif to.get('status') == 'open_exit':
+                pass
+                
+        # Execute Market Orders (Buy or Sell)
+        # NOTE: Normally no buy/sell order is executed. In some exceptions it is possible and it needs to be executed immediately
 
-        # NOTE: Normally if there is an market order it shoul be executed right here. 
+        # Update free and locked amount of df_balances
+        for pair,to in trade_dict.items():
+            if to['status'] == 'open_enter':
+                #TODO: V2: 'USDT' should not be hardcoded
+                df_balance.loc['USDT','free'] -= to['enter']['limit']['amount']
+                df_balance.loc['USDT','locked'] += to['enter']['limit']['amount']
+
+        # NOTE: Normally if there is an market order it should be executed right here. 
         # For testing purposes it is moved to the lto_pdate function test-engine.py
+
+
 
         return result, df_balance

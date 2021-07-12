@@ -81,11 +81,11 @@ class MongoClient():
 
         insert_list = []
         for pair, obj in item_dict.items():
-            obj.load('pair',pair)
+            obj['pair'] = pair
             #timestamp = int(time() * 1000)
             #print("int value:",timestamp)
-            obj.load('_id',int(time() * 1000))
-            insert_list.append(obj.get())
+            obj['_id'] = int(time() * 1000)
+            insert_list.append(obj)
             sleep(0.01)
             
         result = await self.db_bot[col].insert_many(insert_list)
