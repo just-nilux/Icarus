@@ -268,7 +268,6 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 b. oco
                     i. sell
                     ii. stoploss
-                    # TODO: Check the priority of sell vs stoploss
                     iii. expire
             4. partially_closed_exit
             -
@@ -299,6 +298,8 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                 # Check if the open enter trade is filled else if the trade is expired
                 if float(last_kline['low']) < lto_dict[pair]['enter']['limit']['price']:
+                    # TODO: NEXT: status: Instead of 'closed', use a new status 'enter_expire' and let alg. to decide.
+
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     lto_dict[pair]['status'] = 'open_exit'
                     lto_dict[pair]['enter']['enterTime'] = bson.Int64(current_ts)
@@ -368,6 +369,9 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     # NOTE: For the quote_currency total and the ref_balance is the same
 
                 elif int(lto_dict[pair]['exit']['limit']['expire']) <= current_ts:
+
+                    # TODO: NEXT: status: Instead of 'closed', use a new status 'exit_expire' and let alg. to decide.
+
                     lto_dict[pair]['status'] = 'closed'
                     lto_dict[pair]['result']['cause'] = 'exit_expire'
                     lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
@@ -479,12 +483,17 @@ async def application(bwrapper, pair_list, df_list):
     # 1.4: Update the LTOs
     lto_dict = await update_ltos(lto_dict, data_dict, current_ts, df_balance)
 
-    # TODO: Based on the updates on lto_dict, update the df_balance
+    # TODO: Based on the updates on lto_dict, update the df_balance [CHECKJ]
+
+
+    # NOTE: All the insert/delete/update operations can be handled after the 'execute_decision'
+    #       No need to do so before the algorihm review the ongoing process and make a decision
 
     # 1.5: Write the LTOs to [live-trades] and [hist-trades]
-    # NOTE: Move the function after the new trade object execution
+    # TODO: Move the function after the new trade object execution
     await write_updated_ltos_to_db(lto_dict, lto_dict_original)
 
+    # TODO: Remove 1.6 No need to delete
     # 1.6: Clean-up lto_dict from the "closed" ones
     for pair in lto_dict_original.keys():
         if lto_dict[pair]['status'] == 'closed':
@@ -497,7 +506,19 @@ async def application(bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
+    # NOTE: Algorithm may make a new decision about an lto (handling the exit_expire)
+    #       In this case lto can be copied directly from lto_dict to the trade_dict and executed.
+    #       Then lto record in MongoDB get updated. Deleted from the [live-trades] and writen the updated version to [hist-trades] 
+    #       
+    #       Possible cases to update an lto:
+    #       - status: enter_expire
+    #           - cancel: Delete the to from [live-trades], fill the 'result', write to the [hist-trades]
+    #       - status:exit_expire
+    #           - TODO: market_sell: Delete the to from [live-trades], fill the 'result', write to the [hist-trades]
+    #           - extend the expire time: Update the to in [live-trades]
+    #       - drawdown alert from analysis
 
+    # NOTE: No need to update the lto_dict since it will not be used afterwards
     trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send last timestamp index
 
     # 2.3: Execute the trade_dict if any
@@ -507,6 +528,7 @@ async def application(bwrapper, pair_list, df_list):
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
         # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
+        # NOTE: If a to contains market-exit then it should go to [hist-trades]
         result = await mongocli.do_insert_many("live-trades",trade_dict)
         
 

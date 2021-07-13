@@ -432,17 +432,24 @@ class TestBinanceWrapper():
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
-
+        # TODO: V2: 'USDT' should not be hardcoded
 
         # Update free and locked amount of df_balances
         for pair in trade_dict.keys():
-            
+            # NOTE: The status values other than 'open_enter' is here for lto update
             if trade_dict[pair]['status'] == 'open_enter':
-                #TODO: V2: 'USDT' should not be hardcoded
+                
                 if 'market' in trade_dict[pair]['enter'].keys():
+                    # Execute Order
+
+                    # Get the result
+
                     pass
 
                 elif 'limit' in trade_dict[pair]['enter'].keys():
+                    # TODO: LIVE: Execute limit order
+                    # NOTE: TEST: No action needeD
+                    # TEST: Update df_balance
                     df_balance.loc['USDT','free'] -= trade_dict[pair]['enter']['limit']['amount']
                     df_balance.loc['USDT','locked'] += trade_dict[pair]['enter']['limit']['amount']
                     pass
@@ -451,29 +458,8 @@ class TestBinanceWrapper():
                     # TODO: Internal Error
                     pass
 
-            elif trade_dict[pair]['status'] == 'partially_closed_exit':
-                # TODO: Handle the issue for deployment
-                pass
+            # TODO: NEXT: status: Expired handling
 
-            elif trade_dict[pair]['status'] == 'open_exit':
-
-                if 'market' in trade_dict[pair]['enter'].keys():
-                    pass
-
-                elif 'limit' in trade_dict[pair]['exit'].keys():
-                    pass
-
-                elif 'oco' in trade_dict[pair]['exit'].keys():
-                    pass
-
-                else:
-                    # TODO: Internal Error
-                    pass
-
-            elif trade_dict[pair]['status'] == 'partially_closed_exit':
-                # TODO: Handle the issue for deployment
-                pass
-            
             else:
                 # TODO: Internal Error
                 pass
