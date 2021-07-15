@@ -315,8 +315,12 @@ class TestBinanceWrapper():
 
         Returns:
             pd.DataFrame: tickers
-        """        
-        df = pd.DataFrame(await self.client.get_all_tickers())
+        """
+        # NOTE: Ticker hack for testing
+        f = open('tickers.json','r')
+        tickers_json = json.load(f)
+        tickers = tickers_json['tickers']
+        df = pd.DataFrame(tickers)
         df.set_index('symbol', inplace=True)
         df.astype(float)
         return df
@@ -398,8 +402,13 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_dict, df_balance):
+    async def execute_decision(self, trade_dict, df_balance, lto_dict):
         """
+        'execute_decision' method is responsible for
+            - execute new to's
+            - execute lto updates
+            - update the df_balance
+
         TestBinanceWrapper: In test sessions, executing a trade_object means
         changing the df_balance columns 'free' and 'locked' when a trade is
         started
@@ -428,6 +437,24 @@ class TestBinanceWrapper():
             tuple: result, df_balances
         """
         result = True
+
+        # Execute decsisions about ltos
+        for pair in lto_dict.keys():
+            # NOTE: Consider the fact that each pair may contain more than 1 trade
+            if lto_dict[pair]['status'] == 'cancel':
+                # Execute 'cancel' decision
+                # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
+                # (This requires other updates for TEST)
+                # TODO: DEPLOY: Binance cancel the order
+                lto_dict[pair]['status'] == 'closed'
+
+                # TEST: Update df_balance
+                if 'market' in lto_dict[pair]['enter'].keys(): enter_type = 'market'
+                elif 'limit' in lto_dict[pair]['enter'].keys(): enter_type = 'limit'
+
+                df_balance.loc['USDT','free'] += lto_dict[pair]['enter'][enter_type]['amount']
+                df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter'][enter_type]['amount']
+                pass
 
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 

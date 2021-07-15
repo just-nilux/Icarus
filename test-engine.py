@@ -298,7 +298,6 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                 # Check if the open enter trade is filled else if the trade is expired
                 if float(last_kline['low']) < lto_dict[pair]['enter']['limit']['price']:
-                    # TODO: NEXT: status: Instead of 'closed', use a new status 'enter_expire' and let alg. to decide.
 
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     lto_dict[pair]['status'] = 'open_exit'
@@ -321,15 +320,8 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                         # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
                 elif int(lto_dict[pair]['enter']['limit']['expire']) <= current_ts:
-                    lto_dict[pair]['status'] = 'closed'
-                    lto_dict[pair]['result']['cause'] = 'enter_expire'
-                    lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
-                    # NOTE: No liveTime or closedTime calculated since, the trade was never alive
-
-                    # Update df_balance: return the 'amount' of the enter
-                    df_balance.loc['USDT','free'] += lto_dict[pair]['enter']['limit']['amount']
-                    df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter']['limit']['amount']
-                    pass
+                    # Report the expiration to algorithm
+                    lto_dict[pair]['status'] = 'enter_expire'
 
             else:
                 # TODO: Internal Error
@@ -372,7 +364,9 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                     # TODO: NEXT: status: Instead of 'closed', use a new status 'exit_expire' and let alg. to decide.
 
-                    lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['status'] = 'exit_expire'
+                    '''
+                    # Temporaryly keep the old logic
                     lto_dict[pair]['result']['cause'] = 'exit_expire'
                     lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
                     # TODO: Needs to be decided when the exit expire happend: 
@@ -397,6 +391,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
                     df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
+                    '''
                 
                 else:
                     pass
@@ -489,15 +484,6 @@ async def application(bwrapper, pair_list, df_list):
     # NOTE: All the insert/delete/update operations can be handled after the 'execute_decision'
     #       No need to do so before the algorihm review the ongoing process and make a decision
 
-    # 1.5: Write the LTOs to [live-trades] and [hist-trades]
-    # TODO: Move the function after the new trade object execution
-    await write_updated_ltos_to_db(lto_dict, lto_dict_original)
-
-    # TODO: Remove 1.6 No need to delete
-    # 1.6: Clean-up lto_dict from the "closed" ones
-    for pair in lto_dict_original.keys():
-        if lto_dict[pair]['status'] == 'closed':
-            del lto_dict[pair]
 
     #################### Phase 2: Perform calculation tasks ####################
     analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
@@ -522,18 +508,29 @@ async def application(bwrapper, pair_list, df_list):
     trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send last timestamp index
 
     # 2.3: Execute the trade_dict if any
-    if len(trade_dict):
+    if len(trade_dict) or len(lto_dict):
         # 2.3.1: Send tos to broker
-        exec_status, df_balance = await asyncio.create_task(bwrapper.execute_decision(trade_dict,df_balance))
+        exec_status, df_balance = await asyncio.create_task(bwrapper.execute_decision(trade_dict, df_balance, lto_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-
-        # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
-        # NOTE: If a to contains market-exit then it should go to [hist-trades]
-        result = await mongocli.do_insert_many("live-trades",trade_dict)
+        if len(trade_dict):
+            # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
+            # NOTE: If a to contains market-exit then it should go to [hist-trades]
+            result = await mongocli.do_insert_many("live-trades",trade_dict)
         
 
-
     #################### Phase 3: Perform post-calculation tasks ####################
+
+    # 1.5: Write the LTOs to [live-trades] and [hist-trades]
+    # TODO: Move the function after the new trade object execution
+    await write_updated_ltos_to_db(lto_dict, lto_dict_original)
+
+    # TODO: Remove 1.6 No need to delete
+    # 1.6: Clean-up lto_dict from the "closed" ones
+    for pair in lto_dict_original.keys():
+        if lto_dict[pair]['status'] == 'closed':
+            del lto_dict[pair]
+
+
     observation_obj = await observer.sample_observer(df_balance)
 
     await mongocli.do_insert_one("observer",observation_obj.get())   
@@ -542,8 +539,11 @@ async def application(bwrapper, pair_list, df_list):
 
 async def main():
 
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
-                                      api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+    # NOTE: Temporary hack for yesting without internet connection
+    #client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
+    #                                  api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+
+    client = 'mock_client'
 
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config['commission'])
 

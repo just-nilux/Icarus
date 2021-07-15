@@ -65,13 +65,29 @@
 4. In each cycle, the status of the [pair1] is updated by sync'ing with the Broker.
 5. When the status is updated as "Closed", it is moved from "LTDB" to "HTDB" (Historical Trade DB)
 
-status
-  open_enter:
-  partially_closed_enter:
-  open_exit:
-  partially_closed_exit:
-  closed:
-  
+MAIN MODULE:
+
+  _id:                                              Gathered from the Binance Trade id
+
+  tradeid:                                          Timestamp of the decision
+
+  status:
+    Status of a trade object:
+    - open_enter:                                   Trade is waiting to enter
+    - partially_closed_enter:
+    - enter_expire:           (Temporary State):    Trade enter time is expired, this will be converted to:
+      - closed                                        Give up on the trade and execute cancel decision
+      - open_enter                                    Give a change to to and postpone the expiration time
+    - open_exit:                                    Trade is waiting to exit
+    - partially_closed_exit:
+    - exit_expire:            (Temporary State):    Trade exit time is expired
+      - cancel                                        Market sell and exit
+      - open_exit                                     Postpone the expiration time
+    - cancel :                (Temporary State):    Trade exit time is expired
+      - closed                                        Close
+    - closed:                                       Trade completed/canceled (Only way to go to [hist-trade])
+  NOTE: Temporary states are only used to evaluate the status of the to by the algorithm it may decide, execute and update the status
+
 Canceled
   If an Limit Order is partially filled than the rest is canceled. For the sake of simlicity(for now)
   In other words, both Canceled and Closed exist at the same time
@@ -93,7 +109,8 @@ EXIT MODULE:
     '''
 
 RESULT MODULE:
-  - cause:
+
+  - cause: main.status might be the same with cause such as 'closed', 'enter_expire', 'exit_expire'
     - closed: bought and sold successfully
     - enter_expire: buy limit order expired
     - exit_expire: not clear what to do

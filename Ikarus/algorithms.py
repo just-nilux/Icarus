@@ -148,9 +148,44 @@ class BackTestAlgorithm():
         self.logger.info(f"analysis_dict.keys(): {set(analysis_dict.keys())}")
         self.logger.info(f"diff.keys(): {(set(analysis_dict.keys()) - set(lto_dict.keys()))}")
 
-        # Only evaluate the analysis dict if there is no open trade belongs to a pair (1 trade at a time for 1 pair)
-        # TODO: NEXT: Test the feature
-        for pair in (set(analysis_dict.keys()) - set(lto_dict.keys())):
+        # TODO: Update the iteration logic based on the trade id not the pair
+        # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
+        for pair in analysis_dict.keys():
+
+            # Decide whether or not to make decision and how to make a decision
+
+            # Check if there is already an lto for a specific pair
+            if pair in lto_dict.keys():
+                # NOTE: If a pair contains multiple to then there should be another level of iteration as well
+                if lto_dict[pair]['status'] == 'enter_expire':
+                    lto_dict[pair]['status'] = 'cancel'
+                    lto_dict[pair]['result']['cause'] = 'enter_expire'
+                    lto_dict[pair]['result']['closedTime'] = bson.Int64(dt_index)
+                    # NOTE: No liveTime or closedTime calculated since, the trade was never alive
+                    continue
+
+                elif lto_dict[pair]['status'] == 'exit_expire':
+                    # Special handling for exit_expire
+                    # TODO: NEXT:
+                    
+                    # Do market exit
+                    # NOTE: In order to do market exit, the execution logic should be:
+                    # TODO: HERE: Create the logic
+                    #   1.  Cancel the limit/oco
+                    #   2.  Create Market order with the amount/quantity data from previous oco/limit order
+                    lto_dict[pair]['status'] = 'open_exit'
+
+                    lto_dict[pair]['result']['exit']['market']
+                    continue
+
+                elif lto_dict[pair]['status'] != 'closed':
+                    # If the status is not closed, just skip the iteration. otherwise go on to make a decision
+                    # NOTE: This logic contains the status: 'open_exit', 'open_enter', 'partially_closed_enter', 'partially_closed_exit'
+                    continue
+            else:
+                # Make a brand new decision
+                pass
+
             time_dict = analysis_dict[pair]
             # Since all parameters are handled in a different way, 
             # there needs to be different handlers for each type of indicator
