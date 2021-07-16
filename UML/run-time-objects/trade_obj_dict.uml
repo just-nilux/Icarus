@@ -34,9 +34,7 @@
         "expire": ""
       },
       "market": {
-        "price": "",
-        "quantity": "",
-        "amount": ""
+        "quantity": ""
       },
       "exitTime": ""
     },
@@ -49,7 +47,8 @@
       "sellPrice": "",
       "profit": "",
       "liveTime": ""
-    }
+    },
+    "action": "[optional]"
   },
   "pair2":{}
 }
@@ -70,6 +69,17 @@ MAIN MODULE:
   _id:                                              Gathered from the Binance Trade id
 
   tradeid:                                          Timestamp of the decision
+
+  action:                                           In case of an updatein decision, the action item can be added to the
+                                                    lto and the action is executed.
+
+    - cancel                                        Cancel lto
+    - update [TODO]                                 Cancel and update
+      - if status:'enter_expire', it may cancel the old order and create a new one with the current values
+      - if status:'exit_expire', it may cancel the old order(limit or oco) and create a new one with the current values
+    - market_enter                                  Cancel the previous one and market enter
+    - amrket_exit                                   Cancel the previous one and market exit
+
 
   status:
     Status of a trade object:
@@ -93,9 +103,11 @@ Canceled
   In other words, both Canceled and Closed exist at the same time
 
 ENTER MODULE:
+  - Enter module tells how it is planned to enter
  - Default enter type is "limit"
 
 EXIT MODULE:
+  - Exit module tells how it is planned to exit
   - It contains either "oco" or "limit" or "market"
     - Priority: market > limit > oco:
     '''
@@ -109,7 +121,8 @@ EXIT MODULE:
     '''
 
 RESULT MODULE:
-
+  - Result module tells you what actually happend
+  
   - cause: main.status might be the same with cause such as 'closed', 'enter_expire', 'exit_expire'
     - closed: bought and sold successfully
     - enter_expire: buy limit order expired

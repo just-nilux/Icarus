@@ -364,8 +364,8 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                     # TODO: NEXT: status: Instead of 'closed', use a new status 'exit_expire' and let alg. to decide.
 
-                    lto_dict[pair]['status'] = 'exit_expire'
-                    '''
+                    lto_dict[pair]['status'] = 'closed'
+                    
                     # Temporaryly keep the old logic
                     lto_dict[pair]['result']['cause'] = 'exit_expire'
                     lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
@@ -391,7 +391,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
                     df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
-                    '''
+                    
                 
                 else:
                     pass
@@ -510,7 +510,7 @@ async def application(bwrapper, pair_list, df_list):
     # 2.3: Execute the trade_dict if any
     if len(trade_dict) or len(lto_dict):
         # 2.3.1: Send tos to broker
-        exec_status, df_balance = await asyncio.create_task(bwrapper.execute_decision(trade_dict, df_balance, lto_dict))
+        exec_status, df_balance, lto_dict = await asyncio.create_task(bwrapper.execute_decision(trade_dict, df_balance, lto_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
         if len(trade_dict):
             # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)

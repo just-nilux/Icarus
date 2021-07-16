@@ -414,6 +414,16 @@ class TestBinanceWrapper():
         started
 
         Execution Logic:
+        for pair in lto_dict.keys():
+            1. Check for 'cancel'
+                In case of enter expire, it might be decided to cancel the order
+
+            2. Check for 'market' orders in enter phase
+                In case of enter expire, it might be decided to enter with market order
+
+            3. Check for 'market' orders in exits phase
+                In case of exit expire, it might be decided to exit with market order
+
         for to in trade_dict:
             1. open_enter
                 a. market
@@ -446,7 +456,7 @@ class TestBinanceWrapper():
                 # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
                 # (This requires other updates for TEST)
                 # TODO: DEPLOY: Binance cancel the order
-                lto_dict[pair]['status'] == 'closed'
+                lto_dict[pair]['status'] = 'closed'
 
                 # TEST: Update df_balance
                 if 'market' in lto_dict[pair]['enter'].keys(): enter_type = 'market'
@@ -456,6 +466,15 @@ class TestBinanceWrapper():
                 df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter'][enter_type]['amount']
                 pass
 
+            # Look for market orders
+            # Execute enter.market orders for lto's
+            if 'market' in lto_dict[pair]['enter'].keys():
+                pass
+
+            # Execute exit.market orders for lto's
+            elif 'market' in lto_dict[pair]['exit'].keys():
+                pass
+            
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
@@ -494,4 +513,4 @@ class TestBinanceWrapper():
         # NOTE: Normally if there is an market order it should be executed right here. 
         # For testing purposes it is moved to the lto_pdate function test-engine.py
 
-        return result, df_balance
+        return result, df_balance, lto_dict

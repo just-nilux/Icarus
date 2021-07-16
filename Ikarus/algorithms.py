@@ -164,18 +164,14 @@ class BackTestAlgorithm():
                     # NOTE: No liveTime or closedTime calculated since, the trade was never alive
                     continue
 
-                elif lto_dict[pair]['status'] == 'exit_expire':
-                    # Special handling for exit_expire
-                    # TODO: NEXT:
-                    
-                    # Do market exit
-                    # NOTE: In order to do market exit, the execution logic should be:
-                    # TODO: HERE: Create the logic
-                    #   1.  Cancel the limit/oco
-                    #   2.  Create Market order with the amount/quantity data from previous oco/limit order
-                    lto_dict[pair]['status'] = 'open_exit'
+                elif lto_dict[pair]['status'] == 'exit_expire':                
+                    # Do market exit               
+                    if 'limit' in lto_dict[pair]['exit'].keys(): exit_type = 'limit'
+                    elif 'oco' in lto_dict[pair]['exit'].keys(): exit_type = 'oco'
+                    else: pass #Internal Error
 
-                    lto_dict[pair]['result']['exit']['market']
+                    lto_dict[pair]['status'] = 'open_exit'
+                    lto_dict[pair]['exit']['market'] = {'amount': lto_dict[pair]['exit'][exit_type]['amount']}
                     continue
 
                 elif lto_dict[pair]['status'] != 'closed':
