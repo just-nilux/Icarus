@@ -162,7 +162,11 @@ class BackTestAlgorithm():
                     lto_dict[pair]['result']['cause'] = 'enter_expire'
                     lto_dict[pair]['result']['closedTime'] = bson.Int64(dt_index)
                     # NOTE: No liveTime or closedTime calculated since, the trade was never alive
-                    continue
+
+                    # NOTE: Since this trade will be cancelled before the execution of new trade, 
+                    #       we can decide to whether or not to enter, 
+                    #       instead of continue and not to enter
+                    # continue
 
                 elif lto_dict[pair]['status'] == 'exit_expire':                
                     # Do market exit               
@@ -172,7 +176,10 @@ class BackTestAlgorithm():
 
                     lto_dict[pair]['status'] = 'open_exit'
                     lto_dict[pair]['exit']['market'] = {'amount': lto_dict[pair]['exit'][exit_type]['amount']}
-                    continue
+                    # NOTE: Since this trade will be cancelled before the execution of new trade, 
+                    #       we can decide to whether or not to enter, 
+                    #       instead of continue and not to enter
+                    #continue
 
                 elif lto_dict[pair]['status'] != 'closed':
                     # If the status is not closed, just skip the iteration. otherwise go on to make a decision
