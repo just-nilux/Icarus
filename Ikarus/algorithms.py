@@ -161,11 +161,6 @@ class BackTestAlgorithm():
                     lto_dict[pair]['action'] = 'cancel'
                     lto_dict[pair]['result']['cause'] = 'enter_expire'
 
-                    # NOTE: Since this trade will be cancelled before the execution of new trade, 
-                    #       we can decide to whether or not to enter, 
-                    #       instead of continue and not to enter
-                    # continue
-
                 elif lto_dict[pair]['status'] == 'exit_expire':                
                     # Do market exit               
                     if 'limit' in lto_dict[pair]['exit'].keys(): exit_type = 'limit'
@@ -181,6 +176,11 @@ class BackTestAlgorithm():
                     #       we can decide to whether or not to enter, 
                     #       instead of continue and not to enter
                     #continue
+
+                elif lto_dict[pair]['status'] == 'waiting_exit':
+                    # LTO is entered succesfully, so exit order should be executed
+                    lto_dict[pair]['action'] = 'execute_exit'
+                    continue
 
                 elif lto_dict[pair]['status'] != 'closed':
                     # If the status is not closed, just skip the iteration. otherwise go on to make a decision

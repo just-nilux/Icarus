@@ -87,7 +87,7 @@ MAIN MODULE:
       - if status:'exit_expire', it may cancel the old order(limit or oco) and create a new one with the current values
     - market_enter                                  Cancel the previous one and market enter
     - market_exit                                   Cancel the previous one and market exit
-
+    - execute_exit                                  Place the exit order in the to
 
   status:
     Status of a trade object:
@@ -96,11 +96,13 @@ MAIN MODULE:
     - enter_expire:           (Temporary State):    Trade enter time is expired, this will be converted to:
       - closed                                        Give up on the trade and execute cancel decision
       - open_enter                                    Give a change to to and postpone the expiration time
+    - waiting_exit:           (Temporary State):    Enter is successful and the exit order is waiting to be placed
     - open_exit:                                    Trade is waiting to exit
     - partially_closed_exit:
     - exit_expire:            (Temporary State):    Trade exit time is expired
       - cancel                                        Market sell and exit
       - open_exit                                     Postpone the expiration time
+      
     - closed:                                       Trade completed/canceled (Only way to go to [hist-trade])
   NOTE: Temporary states are only used to evaluate the status of the to by the algorithm it may decide, execute and update the status
 

@@ -415,14 +415,15 @@ class TestBinanceWrapper():
 
         Execution Logic:
         for pair in lto_dict.keys():
-            1. Check for 'cancel'
-                In case of enter expire, it might be decided to cancel the order
-
-            2. Check for 'market' orders in enter phase
-                In case of enter expire, it might be decided to enter with market order
-
-            3. Check for 'market' orders in exits phase
-                In case of exit expire, it might be decided to exit with market order
+            if 'action' in lto_dict[pair].keys():
+                1. cancel
+                    In case of enter expire, it might be decided to cancel the order
+                2. update
+                    cancel the prev order and place the same type of order with updated values
+                3. market_enter
+                    In case of enter expire, it might be decided to enter with market order
+                4. market_exit
+                    In case of exit expire, it might be decided to exit with market order
 
         for to in trade_dict:
             1. open_enter
@@ -497,10 +498,17 @@ class TestBinanceWrapper():
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
+                elif lto_dict[pair]['action'] == 'execute_exit':
+                    # If the enter is successfull and the algorithm decides to execute the exit order
+                    # TODO: DEPLOY: Place to order to Binance:
+                    #       No need to fill anything in 'result' or 'exit' sections.
+
+                    lto_dict[pair]['status'] = 'open_exit'
+                    pass
+                
                 # Delete the action, after the action is taken
                 del lto_dict[pair]['action']
-            
-                
+               
             
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
@@ -513,9 +521,11 @@ class TestBinanceWrapper():
             if trade_dict[pair]['status'] == 'open_enter':
                 
                 if 'market' in trade_dict[pair]['enter'].keys():
-                    # Execute Order
+                    # TODO: DEPLOY: Execute Order
 
-                    # Get the result
+                    # TODO: DEPLOY: Get the result
+                    
+                    # TODO: TEST: Set status to closed, fill result, arrange df_balance
 
                     pass
 

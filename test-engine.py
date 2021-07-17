@@ -25,7 +25,6 @@ test_time_df = pd.DataFrame({"scale":test_time_scales, "length":test_time_length
 time_scale_mapping = dict(zip(test_time_scales, test_time_lengths_str))
 
 
-
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
     Call in a loop to create terminal progress bar
@@ -272,7 +271,8 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 if float(last_kline['low']) < lto_dict[pair]['enter']['limit']['price']:
 
                     # NOTE: Since this is testing, no dust created, perfect conversion
-                    lto_dict[pair]['status'] = 'open_exit'
+                    # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
+                    lto_dict[pair]['status'] = 'waiting_exit'
                     lto_dict[pair]['result']['enter']['type'] = 'limit'
                     lto_dict[pair]['result']['enter']['time'] = bson.Int64(current_ts)
                     lto_dict[pair]['result']['enter']['price'] = lto_dict[pair]['enter']['limit']['price']
@@ -286,7 +286,6 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     # Update df_balance: add the quantity to the base_cur or create a row for base_cur
                     base_cur = pair.replace('USDT','')
                     if pair in list(df_balance.index):
-                        # TODO: APP: we need to place a sell order immediatly
                         df_balance.loc[base_cur, 'locked' ] += lto_dict[pair]['result']['enter']['quantity']
                     else:
                         # Previously there was no base_currency, so we create a row for it
@@ -308,9 +307,6 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
             pass
 
         elif lto_dict[pair]['status'] == 'open_exit':
-            # TODO: In order to decide that the sell completed, check the quantity if exist( will be handled in the TODO below)
-            #       df_balance needs to be updated in terms of 'free' and 'locked'
-            #       This is just for testing purposes, might not be needed for it as well
 
             if 'limit' in lto_dict[pair]['exit'].keys():
 
