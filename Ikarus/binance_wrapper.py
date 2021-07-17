@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from Ikarus.objects import GenericObject, ObjectEncoder
 import json
-import numpy as np
+import bson
 '''
 [
   [
@@ -402,7 +402,7 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_dict, df_balance, lto_dict):
+    async def execute_decision(self, trade_dict, df_balance, lto_dict, data_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -450,30 +450,66 @@ class TestBinanceWrapper():
 
         # Execute decsisions about ltos
         for pair in lto_dict.keys():
-            # NOTE: Consider the fact that each pair may contain more than 1 trade
-            if lto_dict[pair]['status'] == 'cancel':
-                # Execute 'cancel' decision
-                # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
-                # (This requires other updates for TEST)
-                # TODO: DEPLOY: Binance cancel the order
-                lto_dict[pair]['status'] = 'closed'
+            if 'action' in lto_dict[pair].keys():
 
-                # TEST: Update df_balance
-                if 'market' in lto_dict[pair]['enter'].keys(): enter_type = 'market'
-                elif 'limit' in lto_dict[pair]['enter'].keys(): enter_type = 'limit'
+                # NOTE: Consider the fact that each pair may contain more than 1 trade in future
+                if lto_dict[pair]['action'] == 'cancel':
+                    # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
+                    # (This requires other updates for TEST)
+                    # TODO: DEPLOY: Binance cancel the order
+                    lto_dict[pair]['status'] = 'closed'
 
-                df_balance.loc['USDT','free'] += lto_dict[pair]['enter'][enter_type]['amount']
-                df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter'][enter_type]['amount']
-                pass
+                    # TEST: Update df_balance
+                    # No need to check the enter type because lto do not contain 'market'. It only contains 'limit'
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter']['limit']['amount']
+            
+                elif lto_dict[pair]['action'] == 'update':
+                    pass
+                
+                elif lto_dict[pair]['action'] == 'market_enter':
+                    pass
+                
+                elif lto_dict[pair]['action'] == 'market_exit':
+                    # TODO: DEPLOY: Execute Market Order in Bnance
 
-            # Look for market orders
-            # Execute enter.market orders for lto's
-            if 'market' in lto_dict[pair]['enter'].keys():
-                pass
+                    lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['result']['cause'] = 'exit_expire'
+                    last_kline = data_dict[pair]['15m'].tail(1)
 
-            # Execute exit.market orders for lto's
-            elif 'market' in lto_dict[pair]['exit'].keys():
-                pass
+                    lto_dict[pair]['result']['sellPrice'] = float(last_kline['close'])
+                    lto_dict[pair]['result']['closedTime'] = bson.Int64(last_kline.index.values)
+
+                    # TODO: We dont know if the enter type is limit or market. This should be updated.
+                    lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limit']['price']
+                    lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limit']['amount']
+
+
+                    # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
+                    #             For the sake of simplicity closed price of the last candle is used in the market sell
+                    #             by assumming that the 'close' price is pretty close to the 'open' of the future        
+                    lto_dict[pair]['result']['sellPrice'] = float(last_kline['close'])
+
+                    if 'limit' in lto_dict[pair]['exit'].keys(): prev_exit_type = 'limit'
+                    elif 'oco' in lto_dict[pair]['exit'].keys(): prev_exit_type = 'oco'
+                    lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['exit'][prev_exit_type]['quantity']
+
+                    # TODO: HIGH: instead of enter limit quantity, quantity should be written to the result section as well 
+                    lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['enter']['limit']['quantity']
+                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
+
+                    # Update df_balance: write the amount of the exit
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['sellAmount']
+                    df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
+                    df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                    # NOTE: For the quote_currency total and the ref_balance is the same
+                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
+                    pass
+            
+                # Delete the action, after the action is taken
+                del lto_dict[pair]['action']
+            
+                
             
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
@@ -503,8 +539,6 @@ class TestBinanceWrapper():
                 else:
                     # TODO: Internal Error
                     pass
-
-            # TODO: NEXT: status: Expired handling
 
             else:
                 # TODO: Internal Error

@@ -362,37 +362,9 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                 elif int(lto_dict[pair]['exit']['limit']['expire']) <= current_ts:
 
-                    # TODO: NEXT: status: Instead of 'closed', use a new status 'exit_expire' and let alg. to decide.
-
-                    lto_dict[pair]['status'] = 'closed'
+                    # TODO: NEXT: Copy this section to execute_decisison function
+                    lto_dict[pair]['status'] = 'exit_expire'
                     
-                    # Temporaryly keep the old logic
-                    lto_dict[pair]['result']['cause'] = 'exit_expire'
-                    lto_dict[pair]['result']['closedTime'] = bson.Int64(current_ts)
-                    # TODO: Needs to be decided when the exit expire happend: 
-                    #       simple solution: market sell (no matter the price)
-
-                    # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
-                    #             For the sake of simplicity closed price of the last candle is used in the market sell
-                    #             by assumming that the 'close' price is pretty close to the 'open' of the future
-                    # NOTE: TEST: This section can be improved
-
-                    lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limit']['price']
-                    lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limit']['amount']
-                    lto_dict[pair]['result']['sellPrice'] = float(last_kline['close'])
-                    lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['exit']['limit']['quantity']
-                    # TODO: Add buy and sell sections to result to have the items price, quantity and amount for both
-
-                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
-                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
-
-                    # Update df_balance: write the amount of the exit
-                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['sellAmount']
-                    df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
-                    df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
-                    
-                
                 else:
                     pass
 
@@ -510,7 +482,7 @@ async def application(bwrapper, pair_list, df_list):
     # 2.3: Execute the trade_dict if any
     if len(trade_dict) or len(lto_dict):
         # 2.3.1: Send tos to broker
-        exec_status, df_balance, lto_dict = await asyncio.create_task(bwrapper.execute_decision(trade_dict, df_balance, lto_dict))
+        exec_status, df_balance, lto_dict = await asyncio.create_task(bwrapper.execute_decision(trade_dict, df_balance, lto_dict, data_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
         if len(trade_dict):
             # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
