@@ -160,9 +160,6 @@ class BackTestAlgorithm():
                 if lto_dict[pair]['status'] == 'enter_expire':
                     lto_dict[pair]['action'] = 'cancel'
                     lto_dict[pair]['result']['cause'] = 'enter_expire'
-                    # TODO: Move closed Time calc to executute section
-                    lto_dict[pair]['result']['closedTime'] = bson.Int64(dt_index)
-                    # NOTE: No liveTime or closedTime calculated since, the trade was never alive
 
                     # NOTE: Since this trade will be cancelled before the execution of new trade, 
                     #       we can decide to whether or not to enter, 
@@ -175,9 +172,11 @@ class BackTestAlgorithm():
                     elif 'oco' in lto_dict[pair]['exit'].keys(): exit_type = 'oco'
                     else: pass #Internal Error
 
-                    lto_dict[pair]['status'] = 'open_exit'
                     lto_dict[pair]['action'] = 'market_exit'
-                    lto_dict[pair]['exit']['market'] = {'amount': lto_dict[pair]['exit'][exit_type]['amount']}
+                    lto_dict[pair]['exit']['market'] = {
+                        'amount': lto_dict[pair]['exit'][exit_type]['amount'],
+                        'quantity': lto_dict[pair]['exit'][exit_type]['quantity']
+                    }
                     # NOTE: Since this trade will be cancelled before the execution of new trade, 
                     #       we can decide to whether or not to enter, 
                     #       instead of continue and not to enter
@@ -245,7 +244,6 @@ class BackTestAlgorithm():
 
                 # Fill enter module
                 enter_module = {
-                    "enterTime": "",
                     "limit": {
                         "price": float(enter_price),
                         "quantity": float(enter_quantity),
@@ -259,7 +257,6 @@ class BackTestAlgorithm():
 
                 # Fill exit module
                 exit_module = {
-                    "exitTime": "",
                     "limit": {
                         "price": float(exit_price),
                         "quantity": float(enter_quantity),

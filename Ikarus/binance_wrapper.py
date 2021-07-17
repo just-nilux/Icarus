@@ -477,29 +477,20 @@ class TestBinanceWrapper():
                     lto_dict[pair]['result']['cause'] = 'exit_expire'
                     last_kline = data_dict[pair]['15m'].tail(1)
 
-                    lto_dict[pair]['result']['sellPrice'] = float(last_kline['close'])
-                    lto_dict[pair]['result']['closedTime'] = bson.Int64(last_kline.index.values)
-
-                    # TODO: We dont know if the enter type is limit or market. This should be updated.
-                    lto_dict[pair]['result']['buyPrice'] = lto_dict[pair]['enter']['limit']['price']
-                    lto_dict[pair]['result']['buyAmount'] = lto_dict[pair]['enter']['limit']['amount']
-
-
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
                     #             For the sake of simplicity closed price of the last candle is used in the market sell
-                    #             by assumming that the 'close' price is pretty close to the 'open' of the future        
-                    lto_dict[pair]['result']['sellPrice'] = float(last_kline['close'])
+                    #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
-                    if 'limit' in lto_dict[pair]['exit'].keys(): prev_exit_type = 'limit'
-                    elif 'oco' in lto_dict[pair]['exit'].keys(): prev_exit_type = 'oco'
-                    lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['exit'][prev_exit_type]['quantity']
+                    lto_dict[pair]['result']['exit']['type'] = 'market_exit'
+                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)    
+                    lto_dict[pair]['result']['exit']['price'] = float(last_kline['close'])
+                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['market']['quantity']
+                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['result']['exit']['price'] * lto_dict[pair]['result']['exit']['quantity']
 
-                    # TODO: HIGH: instead of enter limit quantity, quantity should be written to the result section as well 
-                    lto_dict[pair]['result']['sellAmount'] = lto_dict[pair]['result']['sellPrice'] * lto_dict[pair]['enter']['limit']['quantity']
-                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['sellAmount'] - lto_dict[pair]['result']['buyAmount']
+                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
 
                     # Update df_balance: write the amount of the exit
-                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['sellAmount']
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['exit']['amount']
                     df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
                     df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
                     # NOTE: For the quote_currency total and the ref_balance is the same

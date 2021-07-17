@@ -24,20 +24,27 @@ class GenericObject():
         "status": "",
         "tradeid": "",
         "enter": {
-            "enterTime": ""
         },
         "exit": {
-            "exitTime": ""
         },
         "result": {
             "cause": "",
-            "closedTime": "",
-            "buyAmount": "",
-            "buyPrice": "",
-            "sellAmount": "",
-            "sellPrice": "",
-            "profit": "",
-            "liveTime": ""
+            "enter": {
+                "type": "",
+                "time": "",
+                "price": "",
+                "quantity": "",
+                "amount": ""
+            },
+            "exit": {
+                "type": "",
+                "time": "",
+                "price": "",
+                "quantity": "",
+                "amount": ""
+            },
+            "profit": 0,
+            "liveTime": 0
         }
     }
 
@@ -50,7 +57,6 @@ class GenericObject():
     templates['data'] = {}
 
     market = {
-        "price": "",
         "quantity": "",
         "amount": ""
     }

@@ -12,11 +12,9 @@
         "expire": ""
       },
       "market": {
-        "price": "",
         "quantity": "",
         "amount": ""
-      },
-      "enterTime": ""
+      }
     },
     "exit": {
       "oco": {
@@ -34,19 +32,29 @@
         "expire": ""
       },
       "market": {
-        "quantity": ""
-      },
-      "exitTime": ""
+        "quantity": "",
+        "amount": ""
+      }
     },
     "result": {
       "cause": "",
-      "closedTime": "",
-      "buyAmount": "",
-      "buyPrice": "",
-      "sellAmount": "",
-      "sellPrice": "",
-      "profit": "",
-      "liveTime": ""
+      "enter": {
+        "type": "",
+        "time": "",
+        "price": "",
+        "quantity": "",
+        "amount": ""
+      },
+      "exit": {
+        "type": "",
+        "time": "",
+        "price": "",
+        "quantity": "",
+        "amount": ""
+      },
+      "profit": 0,
+      "liveTime": 0,
+      "history":["open_enter", "open_exit", "closed"]
     },
     "action": "[optional]"
   },
