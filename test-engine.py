@@ -274,7 +274,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
                     lto_dict[pair]['status'] = 'waiting_exit'
                     lto_dict[pair]['result']['enter']['type'] = 'limit'
-                    lto_dict[pair]['result']['enter']['time'] = bson.Int64(current_ts)
+                    lto_dict[pair]['result']['enter']['time'] = bson.Int64(last_kline.index.values)
                     lto_dict[pair]['result']['enter']['price'] = lto_dict[pair]['enter']['limit']['price']
                     lto_dict[pair]['result']['enter']['amount'] = lto_dict[pair]['enter']['limit']['amount']
                     lto_dict[pair]['result']['enter']['quantity'] = lto_dict[pair]['enter']['limit']['quantity']
@@ -294,7 +294,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
                         # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
-                elif int(lto_dict[pair]['enter']['limit']['expire']) <= current_ts:
+                elif int(lto_dict[pair]['enter']['limit']['expire']) <= bson.Int64(last_kline.index.values):
                     # Report the expiration to algorithm
                     lto_dict[pair]['status'] = 'enter_expire'
 
@@ -314,12 +314,10 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 if float(last_kline['high']) > lto_dict[pair]['exit']['limit']['price']:
 
                     lto_dict[pair]['status'] = 'closed'
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(current_ts)
-
                     lto_dict[pair]['result']['cause'] = 'closed'
 
                     lto_dict[pair]['result']['exit']['type'] = 'limit'
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(current_ts)
+                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
                     lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['limit']['price']
                     lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['exit']['limit']['amount']
                     lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['limit']['quantity']
@@ -334,7 +332,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
 
-                elif int(lto_dict[pair]['exit']['limit']['expire']) <= current_ts:
+                elif int(lto_dict[pair]['exit']['limit']['expire']) <= bson.Int64(last_kline.index.values):
                     lto_dict[pair]['status'] = 'exit_expire'
                     
                 else:
@@ -400,8 +398,13 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 async def application(bwrapper, pair_list, df_list):
 
     #################### Phase 1: Perform pre-calculation tasks ####################
-    current_ts = int(df_list[0].index[-1])
+    #current_ts = int(df_list[0].index[-1])
     
+    # The close time of the last_kline + 1ms, corresponds to the open_tme of the future kline which is actually the kline we are in. 
+    # If the execution cycle takes 2 second, then the order execution and the updates will be done
+    # 2 second after the new kline started. But the analysis will be done based on the last closed kline
+    current_ts = int(df_list[0]['close_time'].iloc[-1] + 1) 
+
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
 
@@ -550,7 +553,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('app')
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
-        config['tag'],
+        config['tag']+"ts",
         clean=True)
 
     # Initialize and configure objects

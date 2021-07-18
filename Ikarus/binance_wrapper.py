@@ -483,7 +483,7 @@ class TestBinanceWrapper():
                     #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
                     lto_dict[pair]['result']['exit']['type'] = 'market_exit'
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)    
+                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
                     lto_dict[pair]['result']['exit']['price'] = float(last_kline['close'])
                     lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['market']['quantity']
                     lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['result']['exit']['price'] * lto_dict[pair]['result']['exit']['quantity']
