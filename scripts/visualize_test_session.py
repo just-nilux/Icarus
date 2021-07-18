@@ -62,6 +62,25 @@ async def get_exit_expire(df):
     return df
 
 
+async def get_oco_stoploss(df):
+    # Read Database to get hist-trades and dump to a DataFrame
+    hto_list = await mongocli.do_find('hist-trades',{'result.exit.type':'oco_stoploss'})
+    hto_closed_list = []
+    for hto in hto_list:
+        hto_dict = {
+            "_id": hto['_id'],                                      # MongoDB id
+            "tradeid": hto['tradeid'],                              # The time that the enter decision made
+            "enterTime": hto['result']['enter']['time'],            # Real enter time
+            "enterPrice": hto['result']['enter']['price'],            # Real enter price
+            "plannedExitPrice": hto['exit']['oco']['price'],               # Planned exit price
+            "realExitPrice": hto['result']['exit']['price'],            # Real exit price
+        }
+        hto_closed_list.append(hto_dict)
+    df = pd.DataFrame(hto_closed_list)
+
+    return df
+
+
 async def visualize_db():
     # Read Database to get hist-trades and dump to a DataFrame
 

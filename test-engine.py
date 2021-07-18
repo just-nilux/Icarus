@@ -447,8 +447,8 @@ async def application(bwrapper, pair_list, df_list):
     #           - extend the expire time: Update the to in [live-trades]
     #       - drawdown alert from analysis
 
-    # NOTE: No need to update the lto_dict since it will not be used afterwards
-    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send last timestamp index
+    # NOTE: Execution of multiple algorithm is possible, if 'algorithm': 'sample_oco_algorithm' like items added to the to's
+    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send the last timestamp index
 
     # 2.3: Execute the trade_dict if any
     if len(trade_dict) or len(lto_dict):
