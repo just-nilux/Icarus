@@ -206,7 +206,7 @@ class BackTestAlgorithm():
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = 'open_enter'
-                trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp
+                trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
                 #TODO: give proper values to limit
 
 
@@ -248,7 +248,7 @@ class BackTestAlgorithm():
                         "price": float(enter_price),
                         "quantity": float(enter_quantity),
                         "amount": float(enter_ref_amount),
-                        "expire": bson.Int64(dt_index + 3*15*60*1000)
+                        "expire": bson.Int64(dt_index + 2*15*60*1000) # If you want to give 3 iteration, then write 2
                         },
                     }
 
@@ -261,7 +261,7 @@ class BackTestAlgorithm():
                         "price": float(exit_price),
                         "quantity": float(enter_quantity),
                         "amount": float(exit_ref_amount),
-                        "expire": bson.Int64(dt_index + 10*15*60*1000)
+                        "expire": bson.Int64(dt_index + 9*15*60*1000)
                         },
                     }
                 # expire of the exit_module can be calculated after the trade entered
@@ -367,7 +367,7 @@ class BackTestAlgorithm():
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = 'open_enter'
-                trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp
+                trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
                 #TODO: give proper values to limit
 
 
@@ -409,7 +409,7 @@ class BackTestAlgorithm():
                         "price": float(enter_price),
                         "quantity": float(enter_quantity),
                         "amount": float(enter_ref_amount),
-                        "expire": bson.Int64(dt_index + 3*15*60*1000)
+                        "expire": bson.Int64(dt_index + 2*15*60*1000) # If you want to give 3 iteration, then write 2
                         },
                     }
 
@@ -417,7 +417,6 @@ class BackTestAlgorithm():
                 trade_obj['enter'] = enter_module
 
                 # Fill exit module
-                # TODO: NEXT: Complete oco order flow
                 exit_module = {
                     "oco": {
                         "limitPrice": float(exit_price),
@@ -425,7 +424,7 @@ class BackTestAlgorithm():
                         "stopLimitPrice": float(enter_quantity)*0.994,      # Lose max %0.06 of the amount
                         "quantity": float(enter_quantity),
                         "amount": float(exit_ref_amount),
-                        "expire": bson.Int64(dt_index + 10*15*60*1000)
+                        "expire": bson.Int64(dt_index + 9*15*60*1000)
                     }
                 }
                 # expire of the exit_module can be calculated after the trade entered
