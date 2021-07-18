@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from Ikarus.objects import GenericObject, ObjectEncoder
 import json
-import numpy as np
+import bson
 '''
 [
   [
@@ -402,7 +402,7 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_dict, df_balance, lto_dict):
+    async def execute_decision(self, trade_dict, df_balance, lto_dict, data_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -414,6 +414,17 @@ class TestBinanceWrapper():
         started
 
         Execution Logic:
+        for pair in lto_dict.keys():
+            if 'action' in lto_dict[pair].keys():
+                1. cancel
+                    In case of enter expire, it might be decided to cancel the order
+                2. update
+                    cancel the prev order and place the same type of order with updated values
+                3. market_enter
+                    In case of enter expire, it might be decided to enter with market order
+                4. market_exit
+                    In case of exit expire, it might be decided to exit with market order
+
         for to in trade_dict:
             1. open_enter
                 a. market
@@ -440,22 +451,65 @@ class TestBinanceWrapper():
 
         # Execute decsisions about ltos
         for pair in lto_dict.keys():
-            # NOTE: Consider the fact that each pair may contain more than 1 trade
-            if lto_dict[pair]['status'] == 'cancel':
-                # Execute 'cancel' decision
-                # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
-                # (This requires other updates for TEST)
-                # TODO: DEPLOY: Binance cancel the order
-                lto_dict[pair]['status'] == 'closed'
+            if 'action' in lto_dict[pair].keys():
 
-                # TEST: Update df_balance
-                if 'market' in lto_dict[pair]['enter'].keys(): enter_type = 'market'
-                elif 'limit' in lto_dict[pair]['enter'].keys(): enter_type = 'limit'
+                # NOTE: Consider the fact that each pair may contain more than 1 trade in future
+                if lto_dict[pair]['action'] == 'cancel':
+                    # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
+                    # (This requires other updates for TEST)
+                    # TODO: DEPLOY: Binance cancel the order
+                    lto_dict[pair]['status'] = 'closed'
 
-                df_balance.loc['USDT','free'] += lto_dict[pair]['enter'][enter_type]['amount']
-                df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter'][enter_type]['amount']
-                pass
+                    # TEST: Update df_balance
+                    # No need to check the enter type because lto do not contain 'market'. It only contains 'limit'
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter']['limit']['amount']
+            
+                elif lto_dict[pair]['action'] == 'update':
+                    pass
+                
+                elif lto_dict[pair]['action'] == 'market_enter':
+                    pass
+                
+                elif lto_dict[pair]['action'] == 'market_exit':
+                    # TODO: DEPLOY: Execute Market Order in Bnance
 
+                    lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['result']['cause'] = 'exit_expire'
+                    last_kline = data_dict[pair]['15m'].tail(1)
+
+                    # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
+                    #             For the sake of simplicity closed price of the last candle is used in the market sell
+                    #             by assumming that the 'close' price is pretty close to the 'open' of the future
+
+                    lto_dict[pair]['result']['exit']['type'] = 'market_exit'
+                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[pair]['result']['exit']['price'] = float(last_kline['close'])
+                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['market']['quantity']
+                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['result']['exit']['price'] * lto_dict[pair]['result']['exit']['quantity']
+
+                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
+
+                    # Update df_balance: write the amount of the exit
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['exit']['amount']
+                    df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
+                    df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                    # NOTE: For the quote_currency total and the ref_balance is the same
+                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
+                    pass
+            
+                elif lto_dict[pair]['action'] == 'execute_exit':
+                    # If the enter is successfull and the algorithm decides to execute the exit order
+                    # TODO: DEPLOY: Place to order to Binance:
+                    #       No need to fill anything in 'result' or 'exit' sections.
+
+                    lto_dict[pair]['status'] = 'open_exit'
+                    pass
+                
+                # Delete the action, after the action is taken
+                del lto_dict[pair]['action']
+               
+            
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
@@ -467,9 +521,11 @@ class TestBinanceWrapper():
             if trade_dict[pair]['status'] == 'open_enter':
                 
                 if 'market' in trade_dict[pair]['enter'].keys():
-                    # Execute Order
+                    # TODO: DEPLOY: Execute Order
 
-                    # Get the result
+                    # TODO: DEPLOY: Get the result
+                    
+                    # TODO: TEST: Set status to closed, fill result, arrange df_balance
 
                     pass
 
@@ -485,8 +541,6 @@ class TestBinanceWrapper():
                     # TODO: Internal Error
                     pass
 
-            # TODO: NEXT: status: Expired handling
-
             else:
                 # TODO: Internal Error
                 pass
@@ -494,4 +548,4 @@ class TestBinanceWrapper():
         # NOTE: Normally if there is an market order it should be executed right here. 
         # For testing purposes it is moved to the lto_pdate function test-engine.py
 
-        return result, df_balance
+        return result, df_balance, lto_dict

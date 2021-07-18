@@ -12,11 +12,9 @@
         "expire": ""
       },
       "market": {
-        "price": "",
         "quantity": "",
         "amount": ""
-      },
-      "enterTime": ""
+      }
     },
     "exit": {
       "oco": {
@@ -34,22 +32,31 @@
         "expire": ""
       },
       "market": {
+        "quantity": "",
+        "amount": ""
+      }
+    },
+    "result": {
+      "cause": "",
+      "enter": {
+        "type": "",
+        "time": "",
         "price": "",
         "quantity": "",
         "amount": ""
       },
-      "exitTime": ""
+      "exit": {
+        "type": "",
+        "time": "",
+        "price": "",
+        "quantity": "",
+        "amount": ""
+      },
+      "profit": 0,
+      "liveTime": 0,
+      "history":["open_enter", "open_exit", "closed"]
     },
-    "result": {
-      "cause": "",
-      "closedTime": "",
-      "buyAmount": "",
-      "buyPrice": "",
-      "sellAmount": "",
-      "sellPrice": "",
-      "profit": "",
-      "liveTime": ""
-    }
+    "action": "[optional]"
   },
   "pair2":{}
 }
@@ -71,6 +78,17 @@ MAIN MODULE:
 
   tradeid:                                          Timestamp of the decision
 
+  action:                                           In case of an updatein decision, the action item can be added to the
+                                                    lto and the action is executed.
+
+    - cancel                                        Cancel lto
+    - update [TODO]                                 Cancel and update
+      - if status:'enter_expire', it may cancel the old order and create a new one with the current values
+      - if status:'exit_expire', it may cancel the old order(limit or oco) and create a new one with the current values
+    - market_enter                                  Cancel the previous one and market enter
+    - market_exit                                   Cancel the previous one and market exit
+    - execute_exit                                  Place the exit order in the to
+
   status:
     Status of a trade object:
     - open_enter:                                   Trade is waiting to enter
@@ -78,13 +96,13 @@ MAIN MODULE:
     - enter_expire:           (Temporary State):    Trade enter time is expired, this will be converted to:
       - closed                                        Give up on the trade and execute cancel decision
       - open_enter                                    Give a change to to and postpone the expiration time
+    - waiting_exit:           (Temporary State):    Enter is successful and the exit order is waiting to be placed
     - open_exit:                                    Trade is waiting to exit
     - partially_closed_exit:
     - exit_expire:            (Temporary State):    Trade exit time is expired
       - cancel                                        Market sell and exit
       - open_exit                                     Postpone the expiration time
-    - cancel :                (Temporary State):    Trade exit time is expired
-      - closed                                        Close
+      
     - closed:                                       Trade completed/canceled (Only way to go to [hist-trade])
   NOTE: Temporary states are only used to evaluate the status of the to by the algorithm it may decide, execute and update the status
 
@@ -93,9 +111,11 @@ Canceled
   In other words, both Canceled and Closed exist at the same time
 
 ENTER MODULE:
+  - Enter module tells how it is planned to enter
  - Default enter type is "limit"
 
 EXIT MODULE:
+  - Exit module tells how it is planned to exit
   - It contains either "oco" or "limit" or "market"
     - Priority: market > limit > oco:
     '''
@@ -109,7 +129,8 @@ EXIT MODULE:
     '''
 
 RESULT MODULE:
-
+  - Result module tells you what actually happend
+  
   - cause: main.status might be the same with cause such as 'closed', 'enter_expire', 'exit_expire'
     - closed: bought and sold successfully
     - enter_expire: buy limit order expired

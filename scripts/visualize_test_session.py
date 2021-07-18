@@ -30,11 +30,11 @@ async def get_closed(df):
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
-            "enterTime": hto['enter']['enterTime'],
+            "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
-            "exitTime": hto['exit']['exitTime'],
+            "exitTime": hto['result']['exit']['time'],
             "exitPrice": hto['exit']['limit']['price'],
-            "sellPrice": hto['result']['sellPrice']
+            "sellPrice": hto['result']['exit']['price']
         }
         hto_closed_list.append(hto_dict)
     df = pd.DataFrame(hto_closed_list)
@@ -50,11 +50,30 @@ async def get_exit_expire(df):
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
-            "enterTime": hto['enter']['enterTime'],
+            "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
             "exitPrice": hto['exit']['limit']['price'],
-            "sellPrice": hto['result']['sellPrice'],
+            "sellPrice": hto['result']['exit']['price'],
             "exitExpire": hto['exit']['limit']['expire']
+        }
+        hto_closed_list.append(hto_dict)
+    df = pd.DataFrame(hto_closed_list)
+
+    return df
+
+
+async def get_oco_stoploss(df):
+    # Read Database to get hist-trades and dump to a DataFrame
+    hto_list = await mongocli.do_find('hist-trades',{'result.exit.type':'oco_stoploss'})
+    hto_closed_list = []
+    for hto in hto_list:
+        hto_dict = {
+            "_id": hto['_id'],                                      # MongoDB id
+            "tradeid": hto['tradeid'],                              # The time that the enter decision made
+            "enterTime": hto['result']['enter']['time'],            # Real enter time
+            "enterPrice": hto['result']['enter']['price'],            # Real enter price
+            "plannedExitPrice": hto['exit']['oco']['price'],               # Planned exit price
+            "realExitPrice": hto['result']['exit']['price'],            # Real exit price
         }
         hto_closed_list.append(hto_dict)
     df = pd.DataFrame(hto_closed_list)
