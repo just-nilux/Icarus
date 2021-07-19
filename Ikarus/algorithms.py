@@ -161,7 +161,7 @@ class BackTestAlgorithm():
                     lto_dict[pair]['action'] = 'cancel'
                     lto_dict[pair]['result']['cause'] = 'enter_expire'
 
-                elif lto_dict[pair]['status'] == 'exit_expire':                
+                elif lto_dict[pair]['status'] == 'exit_expire':
                     # Do market exit               
                     if 'limit' in lto_dict[pair]['exit'].keys(): exit_type = 'limit'
                     elif 'oco' in lto_dict[pair]['exit'].keys(): exit_type = 'oco'
@@ -420,8 +420,8 @@ class BackTestAlgorithm():
                 exit_module = {
                     "oco": {
                         "limitPrice": float(exit_price),
-                        "stopPrice": float(enter_quantity)*0.995,           # Auto-execute stop loss if the amount go below %0.05
-                        "stopLimitPrice": float(enter_quantity)*0.994,      # Lose max %0.06 of the amount
+                        "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
+                        "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
                         "quantity": float(enter_quantity),
                         "amount": float(exit_ref_amount),
                         "expire": bson.Int64(dt_index + 9*15*60*1000)
@@ -435,11 +435,6 @@ class BackTestAlgorithm():
             else:
                 self.logger.info(f"{pair}: NO SIGNAL")
 
-            #for time_scale, stat_obj in time_dict.items():
-                # TODO: Create a list of indicator handlers: 
-                # [atr_handler(time_scale,stat_objne)]
-                # Perform calculation
-                #pass
         await self.dump(trade_dict)
         return trade_dict
 

@@ -166,12 +166,17 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
             # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
             profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
 
-            # Default trade_color is green. If profit < 0  then red
-            trade_color = '#60FF60'
-            #if profit_perc <1:
-            #    trade_color = '#FF9090'
+            # Stoploss taken
+            if profit_perc < 0:
+                trade_color = '#FF9090'
+                rect_lower_limit = row['sellPrice']
 
-            fplt.add_rect((row['tradeid'], row['exitPrice']), (row['exitTime'], row['enterPrice']), color=trade_color, interactive=True)
+            # Limit taken
+            else:
+                trade_color = '#60FF60'
+                rect_lower_limit = row['enterPrice']
+
+            fplt.add_rect((row['tradeid'], row['exitPrice']), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
             fplt.add_text((row['tradeid'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
             fplt.add_line((row['tradeid'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
 
@@ -184,29 +189,6 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
         df_closed.set_index('enterTime',inplace=True)
         df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
         # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
-
-    # Closed oco_stoploss
-    if not df_oco_stoploss.empty:
-        for idx, row in df_oco_stoploss.iterrows():
-            # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
-            profit_perc = 100*(row['realExitPrice']-row['enterPrice'])/row['enterPrice']
-
-            # Default trade_color is red.
-            trade_color = '#FF9090'
-
-            fplt.add_rect((row['tradeid'], row['plannedExitPrice']), (row['exitTime'], row['enterPrice']), color=trade_color, interactive=False)
-            fplt.add_text((row['tradeid'], row['plannedExitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
-            fplt.add_line((row['tradeid'], row['plannedExitPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-
-        df_closed.set_index('tradeid',inplace=True)
-        df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_tradeid')
-
-        df_closed.set_index('exitTime',inplace=True)
-        df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
-
-        df_closed.set_index('enterTime',inplace=True)
-        df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
-
 
     # Enter expired trade visualization
     if not df_enter_expire.empty:

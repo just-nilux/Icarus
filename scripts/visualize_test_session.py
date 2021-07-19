@@ -10,6 +10,7 @@ async def get_enter_expire(df):
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'enter_expire'})
     hto_ent_exp_list = []
     for hto in hto_list:
+        # NOTE: HIGH: We dont know it the exit type is limit or not
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
@@ -25,55 +26,45 @@ async def get_enter_expire(df):
 async def get_closed(df):
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'closed'})
-    hto_closed_list = []
+    hto_closed = []
     for hto in hto_list:
+        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
+        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
             "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit']['limit']['price'],
+            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
         }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
+        hto_closed.append(hto_dict)
+
+
+    df = pd.DataFrame(hto_closed)
 
     return df
 
 
 async def get_exit_expire(df):
     # Read Database to get hist-trades and dump to a DataFrame
+    
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'exit_expire'})
     hto_closed_list = []
     for hto in hto_list:
+        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
+        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
-            "exitPrice": hto['exit']['limit']['price'],
+            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit']['limit']['expire']
-        }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
-
-    return df
-
-
-async def get_oco_stoploss(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.exit.type':'oco_stoploss'})
-    hto_closed_list = []
-    for hto in hto_list:
-        hto_dict = {
-            "_id": hto['_id'],                                      # MongoDB id
-            "tradeid": hto['tradeid'],                              # The time that the enter decision made
-            "enterTime": hto['result']['enter']['time'],            # Real enter time
-            "enterPrice": hto['result']['enter']['price'],            # Real enter price
-            "plannedExitPrice": hto['exit']['oco']['price'],               # Planned exit price
-            "realExitPrice": hto['result']['exit']['price'],            # Real exit price
+            "exitExpire": hto['exit'][plannedExitType]['expire']
         }
         hto_closed_list.append(hto_dict)
     df = pd.DataFrame(hto_closed_list)
