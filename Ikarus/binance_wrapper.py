@@ -482,7 +482,7 @@ class TestBinanceWrapper():
                     #             For the sake of simplicity closed price of the last candle is used in the market sell
                     #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
-                    lto_dict[pair]['result']['exit']['type'] = 'market_exit'
+                    lto_dict[pair]['result']['exit']['type'] = 'market'
                     lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
                     lto_dict[pair]['result']['exit']['price'] = float(last_kline['close'])
                     lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['market']['quantity']
@@ -500,7 +500,7 @@ class TestBinanceWrapper():
             
                 elif lto_dict[pair]['action'] == 'execute_exit':
                     # If the enter is successfull and the algorithm decides to execute the exit order
-                    # TODO: DEPLOY: Place to order to Binance:
+                    # TODO: DEPLOY: Place the exit order to Binance: oco or limit
                     #       No need to fill anything in 'result' or 'exit' sections.
 
                     lto_dict[pair]['status'] = 'open_exit'

@@ -18,3 +18,32 @@ TradeObjects are stored in "live-trades" collection of MongoDB. They get updated
 ## Usage of Database:
 Since the Ikarus works based on the life cycle of objects, it needs to be stored. This will be required during algorithms, since they will need recall prev decisions and calculations. 
 
+
+# Notes
+## Note #1: Decision, Enter and Exit Points
+Decision and the enter points can be in the same candle. However, exit cannot be in the same candle with entry. Because the logic goes as follows:
+### t=0:
+- Decision has been made to enter.
+### t=n:
+- Check the candle [n-1], if the entry is succesful.
+- If succesfull, then change the status to 'waiting exit'
+- algorithm will see the status 'waiting exit' and create the 'action' with the value 'execute_exit'
+- exit order will be placed at the beginning of the candle n
+
+In this scenario the earliest execution of exit is possible at [n] where the entry point is at [n-1]
+
+## Note #3: Overlapping Entries
+
+The visualization might be deceiving about the execution logic
+If an rectangle border touches a candle, then the time-interval that the candle contain is inside the candle
+
+## Note #2: Market Order Logic
+
+Since the market orders are executed in the execute_orders function of binance wrapper, 
+it is not expected to have a market section here at this position. If exit_expire happens (the bought
+asset neither reach the sell limit or break the stoploss, then it can wait forever or market sell can be made)
+the decision about what to do can be made by the algorithm, since it is the only place to make a decision.
+In that case if it makes a decision to market sell, it is executed. If it makes a decision to wait until the 
+time x, then the expire time can be posponed for a while. In all cases it is decided by the algorihtm and no
+market order is executed here.
+

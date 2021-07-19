@@ -137,10 +137,27 @@ RESULT MODULE:
     - exit_expire: not clear what to do
     - external: manual interventions
 
+  - enter.type:
+    - limit
+    - market (TODO)
+
+  - exit.type:
+    - oco_limit                                         status:closed | cause:closed
+    - oco_stoploss                                      status:closed | cause:closed
+    - limit                                             status:closed | cause:closed
+    - market                                            status:closed | cause:exit_expire
+
   amount: price * quantity
 
   Note: Enter and Exit modules are written once in the decision. They do no get updated.
   However, when buy or sell operations are done. Related information is gathered from the
   broker and written to the results. This approach enable us to compare the expectation
-  and the reality
+  and the reality,
 
+
+Possible scenarios:
+Enter Type            Exit Type
+                                       /-----oco_limit
+limit--------\         /-----oco------|
+              |-------|-----limit      \-----oco_stoploss
+market-------/         \-----market

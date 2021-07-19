@@ -91,21 +91,23 @@ async def run_at(dt, coro):
 async def get_closed_hto(df):
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'closed'})
-    hto_closed_list = []
+    hto_closed = []
     for hto in hto_list:
-        # NOTE: All the data is obtained from the 'result' item
+        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
+        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['result']['enter']['price'],
+            "enterPrice": hto['enter']['limit']['price'],
             "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['result']['exit']['price'],
+            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
         }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
+        hto_closed.append(hto_dict)
 
+    df = pd.DataFrame(hto_closed)
     return df
 
 
@@ -129,18 +131,21 @@ async def get_enter_expire_hto(df):
 
 async def get_exit_expire_hto(df):
     # Read Database to get hist-trades and dump to a DataFrame
+    
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'exit_expire'})
     hto_closed_list = []
     for hto in hto_list:
-        # NOTE: HIGH: We dont know it the exit type is limit or not
+        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
+        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+
         hto_dict = {
             "_id": hto['_id'],
             "tradeid": hto['tradeid'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['result']['enter']['price'],
-            "exitPrice": hto['exit']['limit']['price'],
+            "enterPrice": hto['enter']['limit']['price'],
+            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit']['limit']['expire']
+            "exitExpire": hto['exit'][plannedExitType]['expire']
         }
         hto_closed_list.append(hto_dict)
     df = pd.DataFrame(hto_closed_list)
@@ -247,15 +252,6 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
         dict: lto_dict
     """
 
-    # Maket order logic:
-    # NOTE: Since the market orders are executed in the execute_orders function of binance wrapper, 
-    # it is not expected to have a market section here at this position. If exit_expire happens (the bought
-    # asset neither reach the sell limit or break the stoploss, then it can wait forever or market sell can be made)
-    # the decision about what to do can be made by the algorithm, since it is the only place to make a decision.
-    # In that case if it makes a decision to market sell, it is executed. If it makes a decision to wait until the 
-    # time x, then the expire time can be posponed for a while. In all cases it is decided by the algorihtm and no
-    # market order is executed here.
-
     for pair in set(lto_dict.keys()) & set(data_dict.keys()):
         pair_klines_dict = data_dict[pair]
 
@@ -290,7 +286,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     else:
                         # Previously there was no base_currency, so we create a row for it
                         # free  locked    total      pair   price  ref_balance
-                        df_balance.loc[base_cur] = [0.0, lto_dict[pair]['exit']['limit']['quantity'], 0, pair, 0, 0]
+                        df_balance.loc[base_cur] = [0.0, lto_dict[pair]['result']['enter']['quantity'], 0, pair, 0, 0]
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
                         # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
@@ -341,39 +337,52 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
             elif 'oco' in lto_dict[pair]['exit'].keys():
                 # NOTE: Think about the worst case and check the stop loss first.
 
-                if float(last_kline['low']) < lto_dict[pair]['exit']['oco']['price']:
+                if float(last_kline['low']) < lto_dict[pair]['exit']['oco']['stopPrice']:
                     # Stop Loss takens
-                    pass
-                
-                elif float(last_kline['high']) > lto_dict[pair]['exit']['limit']['price']:
-                    # Limit taken
-                    pass
-
-                elif int(lto_dict[pair]['exit']['oco']['expire']) <= current_ts:
                     lto_dict[pair]['status'] = 'closed'
-                    lto_dict[pair]['result']['cause'] = 'exit_expire'
-                    # TODO: Remove the statment below
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(current_ts)
-                    # TODO: Needs to be decided when the exit expire happend: 
-                    #       simple solution: market sell (no matter the price)
-
-                    # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
-                    #             For the sake of simplicity closed price of the last candle is used in the market sell
-                    #             by assumming that the 'close' price is pretty close to the 'open' of the future
-                    # NOTE: TEST: This section can be improved
-
-                    lto_dict[pair]['result']['exit']['price'] = float(last_kline['close']) # TODO: Needs to go to market execution in execute_order function
-                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['result']['exit']['price'] * lto_dict[pair]['exit']['limit']['quantity']
-                    # TODO: Add buy and sell sections to result to have the items price, quantity and amount for both
+                    lto_dict[pair]['result']['cause'] = 'closed'
+                    # TODO: NEXT: This looks closed but actually oco_Stoploss taken, so visualization should consider the type instead of cause maybe
+                    lto_dict[pair]['result']['exit']['type'] = 'oco_stoploss'
+                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['oco']['stopLimitPrice']
+                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['exit']['oco']['amount']
+                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['oco']['quantity']
 
                     lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
-                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
+                    lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['result']['exit']['time'] - lto_dict[pair]['result']['enter']['time']
 
-                    # Update df_balance: write the amount of the exit
+                    # Update df_balance: # Update df_balance: write the amount of the exit
+                    # TODO: Gather up all the df_balance sections and put them in a function
+                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['exit']['amount']
+                    df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
+                    df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                    pass
+                
+                elif float(last_kline['high']) > lto_dict[pair]['exit']['oco']['limitPrice']:
+                    # Limit taken
+
+                    lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['result']['cause'] = 'closed'
+
+                    lto_dict[pair]['result']['exit']['type'] = 'oco_limit'
+                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['oco']['limitPrice']
+                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['exit']['oco']['amount']
+                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['oco']['quantity']
+
+                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
+                    lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['result']['exit']['time'] - lto_dict[pair]['result']['enter']['time']
+
+                    # Update df_balance: # Update df_balance: write the amount of the exit
+                    # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc['USDT','free'] += lto_dict[pair]['result']['exit']['amount']
                     df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
                     df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
+                    pass
+
+                elif int(lto_dict[pair]['exit']['oco']['expire']) <= bson.Int64(last_kline.index.values):
+                    lto_dict[pair]['status'] = 'exit_expire'
 
                 else:
                     pass
@@ -533,6 +542,7 @@ async def main():
     df_closed_hto = await get_closed_hto(df_csv_list[0])
     df_enter_expire = await get_enter_expire_hto(df_csv_list[0])
     df_exit_expire = await get_exit_expire_hto(df_csv_list[0])
+
     # TODO: Combine 3 call above
 
     # Dump df_csv_list[0] to a file for debug purposes
@@ -553,7 +563,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('app')
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
-        config['tag']+"ts",
+        config['tag'],
         clean=True)
 
     # Initialize and configure objects
