@@ -9,7 +9,7 @@ from Ikarus.objects import GenericObject, ObjectEncoder
 import bson
 import copy
 
-class Algorithm():
+class Strategy():
     """
     For the sake of simplicity, it is assumed that all trade pairs contain
         the quote_currency (most probably USDT)
@@ -112,7 +112,7 @@ class Algorithm():
 
         return True
 
-class BackTestAlgorithm():
+class BackTestStrategy():
 
     def __init__(self):
         self.logger = logging.getLogger('app.{}'.format(__name__))
