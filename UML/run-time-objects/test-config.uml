@@ -1,14 +1,67 @@
 @startjson
 {
-    "tag": "test-session-tag",
-    "log-level": "info",
-    "cash": 10000,
+    "tag": "test-bot",
+    "log-level": "INFO",
     "commission": 0.075,
-    "files": ["file_path1","file_path2","file_path3"] 
-    "algorithm":{
-        "max-open-trades": 1,
+    "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017
+    },
+    "balances": [
+        {
+            "asset": "USDT", 
+            "free": 10000, 
+            "locked": 0
+        },
+        {
+            "asset": "TRY", 
+            "free": 1234, 
+            "locked": 0
+        },
+        {
+            "asset": "AVAX", 
+            "free": 345, 
+            "locked": 0
+        }
+    ],
+    "strategy": {
+        "enter": {
+            "type": "limit"
+        },
+        "exit": {
+            "type": "oco"
+        },
+        "action_mapping": {
+            "enter_expire": "cancel",
+            "exit_expire": "market_exit"
+        },
+        "max_lto": 1
     }
 }
 @endjson
 
 Note: it is expected from all files to have the same timescale such as 15m, 1h etc
+
+STRATEGY:
+
+    enter:
+        - limit
+        - market
+    
+    exit:
+        - oco
+        - limit
+        - market
+
+    action_mapping:
+        'action_mapping' item contains "status-action" pairs, which directs the flow of TOs
+        
+        enter_expire:
+            - cancel
+            - postpone
+            - market_enter
+
+        exit_expire:
+            - market_exit
+            - postpone

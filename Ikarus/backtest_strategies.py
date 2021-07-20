@@ -37,9 +37,83 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 class OCOBackTest(StrategyBase):
 
-    def __init__(self):
+    def __init__(self,_config):
         self.logger = logging.getLogger('app.{}'.format(__name__))
+        self.config = _config
+        '''
+        self.config = {
+            "enter": "limit",
+            "exit": "oco",
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "market_exit"
+            },
+            "max_lto": 1
+        }
+        '''
         return
+
+    async def _postpone(self, lto, phase, planned_phase_type, expire_time):
+        lto['action'] = 'postpone'
+        lto[phase][planned_phase_type]['expire'] = expire_time
+        return lto
+
+
+    async def _do_market_exit(self, lto, planned_exit_type):
+
+        lto['action'] = 'market_exit'
+        lto['exit']['market'] = {
+            'amount': lto['exit'][planned_exit_type]['amount'],
+            'quantity': lto['exit'][planned_exit_type]['quantity']
+        }
+        return lto
+
+
+    async def _create_enter_module(self, enter_price, enter_quantity, enter_ref_amount, expire_time):
+
+        if self.config['enter']['type'] == 'limit':
+            enter_module = {
+                "limit": {
+                    "price": float(enter_price),
+                    "quantity": float(enter_quantity),
+                    "amount": float(enter_ref_amount),
+                    "expire": expire_time
+                    },
+                }
+        elif self.config['enter']['type'] == 'market':
+            # TODO: Create 'market' orders to enter
+            pass
+        else: pass # Internal Error
+        return enter_module
+
+
+    async def _create_exit_module(self, enter_price, enter_quantity, exit_price, exit_ref_amount, expire_time):
+
+        if self.config['exit']['type'] == 'oco':
+            exit_module = {
+                "oco": {
+                    "limitPrice": float(exit_price),
+                    "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
+                    "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
+                    "quantity": float(enter_quantity),
+                    "amount": float(exit_ref_amount),
+                    "expire": expire_time
+                }
+            }
+        elif self.config['exit']['type'] == 'limit':
+            exit_module = {
+                "limit": {
+                    "price": float(exit_price),
+                    "quantity": float(enter_quantity),
+                    "amount": float(exit_ref_amount),
+                    "expire": expire_time
+                    },
+                }
+        elif self.config['exit']['type'] == 'market':
+            pass
+        else: pass # Internal Error
+        return exit_module
+
 
     async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
         """
@@ -83,24 +157,20 @@ class OCOBackTest(StrategyBase):
                     lto_dict[pair]['result']['cause'] = 'enter_expire'
 
                 elif lto_dict[pair]['status'] == 'exit_expire':                
-                    # Do market exit               
+                    # Do market exit
                     if 'limit' in lto_dict[pair]['exit'].keys(): exit_type = 'limit'
                     elif 'oco' in lto_dict[pair]['exit'].keys(): exit_type = 'oco'
                     else: pass #Internal Error
 
-                    lto_dict[pair]['action'] = 'market_exit'
-                    lto_dict[pair]['exit']['market'] = {
-                        'amount': lto_dict[pair]['exit'][exit_type]['amount'],
-                        'quantity': lto_dict[pair]['exit'][exit_type]['quantity']
-                    }
-
+                    lto_dict[pair] = await self._do_market_exit(lto_dict[pair], exit_type)
                     # NOTE: In order to use the action postpone, history should be used. Otherwise it is not known if the trade is already postponed before
                     # Postpone the expiration
-                    # lto_dict[pair]['action'] = 'postpone'
-                    # lto_dict[pair]['exit']['expire'] = bson.Int64(dt_index + 2*15*60*1000) # If you want to give 3 iteration, then write 2
-            
+                    #lto_dict[pair] = await self._postpone(lto_dict[pair],'exit', exit_type, bson.Int64(dt_index + 2*15*60*1000))
+
                 elif lto_dict[pair]['status'] == 'waiting_exit':
                     # LTO is entered succesfully, so exit order should be executed
+                    # TODO: expire of the exit_module can be calculated after the trade entered
+
                     lto_dict[pair]['action'] = 'execute_exit'
                     continue
 
@@ -163,31 +233,10 @@ class OCOBackTest(StrategyBase):
                 exit_ref_amount = enter_quantity * exit_price
 
                 # Fill enter module
-                enter_module = {
-                    "limit": {
-                        "price": float(enter_price),
-                        "quantity": float(enter_quantity),
-                        "amount": float(enter_ref_amount),
-                        "expire": bson.Int64(dt_index + 2*15*60*1000) # If you want to give 3 iteration, then write 2
-                        },
-                    }
-
-                #enter_module["expire"] = dt_index - 3*15*60*1000 # 3 15min block later
-                trade_obj['enter'] = enter_module
+                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000))
 
                 # Fill exit module
-                exit_module = {
-                    "oco": {
-                        "limitPrice": float(exit_price),
-                        "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
-                        "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
-                        "quantity": float(enter_quantity),
-                        "amount": float(exit_ref_amount),
-                        "expire": bson.Int64(dt_index + 9*15*60*1000)
-                    }
-                }
-                # expire of the exit_module can be calculated after the trade entered
-                trade_obj['exit'] = exit_module
+                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
 
                 trade_dict[pair] = trade_obj
 

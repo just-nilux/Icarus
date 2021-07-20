@@ -24,7 +24,17 @@
             "locked": 0
         }
     ],
-    "trade": {
+    "strategy": {
+        "enter": {
+            "type": "limit"
+        },
+        "exit": {
+            "type": "limit"
+        },
+        "action_mapping": {
+            "enter_expire": "cancel",
+            "exit_expire": "market_exit"
+        },
         "max_lto": 1
     }
 }
