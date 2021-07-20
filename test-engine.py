@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime, timedelta
 import json
-from Ikarus import binance_wrapper, algorithms, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, backtest_strategies, notifications, analyzers, observers, mongo_utils
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -341,7 +341,6 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     # Stop Loss takens
                     lto_dict[pair]['status'] = 'closed'
                     lto_dict[pair]['result']['cause'] = 'closed'
-                    # TODO: NEXT: This looks closed but actually oco_Stoploss taken, so visualization should consider the type instead of cause maybe
                     lto_dict[pair]['result']['exit']['type'] = 'oco_stoploss'
                     lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
                     lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['oco']['stopLimitPrice']
@@ -433,15 +432,12 @@ async def application(bwrapper, pair_list, df_list):
     # 1.4: Update the LTOs
     lto_dict = await update_ltos(lto_dict, data_dict, current_ts, df_balance)
 
-    # TODO: Based on the updates on lto_dict, update the df_balance [CHECKJ]
-
-
     # NOTE: All the insert/delete/update operations can be handled after the 'execute_decision'
     #       No need to do so before the algorihm review the ongoing process and make a decision
 
 
     #################### Phase 2: Perform calculation tasks ####################
-    analyzer, algorithm = analyzers.Analyzer(), algorithms.BackTestAlgorithm()
+    analyzer, strategy = analyzers.Analyzer(), backtest_strategies.LimitBackTest()
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
@@ -455,12 +451,12 @@ async def application(bwrapper, pair_list, df_list):
     #       - status: enter_expire
     #           - cancel: Delete the to from [live-trades], fill the 'result', write to the [hist-trades]
     #       - status:exit_expire
-    #           - TODO: market_sell: Delete the to from [live-trades], fill the 'result', write to the [hist-trades]
-    #           - extend the expire time: Update the to in [live-trades]
+    #           - market_sell: Delete the to from [live-trades], fill the 'result', write to the [hist-trades]
+    #           - TODO: NEXT: Test the feature: extend the expire time: Update the to in [live-trades]
     #       - drawdown alert from analysis
 
     # NOTE: Execution of multiple algorithm is possible, if 'algorithm': 'sample_oco_algorithm' like items added to the to's
-    trade_dict = await asyncio.create_task(algorithm.sample_algorithm(analysis_dict, lto_dict, df_balance, current_ts)) # Send the last timestamp index
+    trade_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts)) # Send the last timestamp index
 
     # 2.3: Execute the trade_dict if any
     if len(trade_dict) or len(lto_dict):

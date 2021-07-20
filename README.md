@@ -6,6 +6,17 @@ It's main focus is the "risk management". If you can not manage the risk then tr
 
 Ikarus manages the risk by keeping all the sub system artifacts transparent and analyzable.
 
+# Capabilities
+1. Available order types:
+    - enter
+        - market
+        - limit
+    - exit
+        - market
+        - limit
+        - oco
+
+
 ## Objects:
 Ikarus uses objects to simplify, categorize and manage operations. Objects are located in the data layers that contains the raw input. In order to manage the data, a simplification process is needed. This simplification is performed by the objects. Each object have a life cycle. They are created, updated and deleted/stored in related collection of the database. In order to store and reuse the variables, they are designed as JSON compatible.
 * **DataObject:**
