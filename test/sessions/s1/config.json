@@ -23,5 +23,8 @@
             "free": 345, 
             "locked": 0
         }
-    ]
+    ],
+    "trade": {
+        "max_lto": 1
+    }
 }

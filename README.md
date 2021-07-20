@@ -9,12 +9,12 @@ Ikarus manages the risk by keeping all the sub system artifacts transparent and 
 # Capabilities
 1. Available order types:
     - enter
-        - market
-        - limit
+        - **market**
+        - **limit:** If limit expires then it might be decided to 'cancel' or 'market_enter'
     - exit
-        - market
-        - limit
-        - oco
+        - **market**
+        - **limit:** If limit expires then it might be decided to 'market_exit' or postpone the 'exit.expire'
+        - **oco:** If limit expires then it might be decided to 'market_exit' or postpone the 'exit.expire'
 
 
 ## Objects:

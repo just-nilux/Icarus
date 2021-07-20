@@ -455,10 +455,11 @@ class TestBinanceWrapper():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
                 if lto_dict[pair]['action'] == 'cancel':
-                    # TODO: 'cancel' action currently nly used for enter phase, exit phase cancel can be added
+                    # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
                     # (This requires other updates for TEST)
                     # TODO: DEPLOY: Binance cancel the order
                     lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
 
                     # TEST: Update df_balance
                     # No need to check the enter type because lto do not contain 'market'. It only contains 'limit'
@@ -475,6 +476,7 @@ class TestBinanceWrapper():
                     # TODO: DEPLOY: Execute Market Order in Bnance
 
                     lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     lto_dict[pair]['result']['cause'] = 'exit_expire'
                     last_kline = data_dict[pair]['15m'].tail(1)
 
@@ -504,8 +506,19 @@ class TestBinanceWrapper():
                     #       No need to fill anything in 'result' or 'exit' sections.
 
                     lto_dict[pair]['status'] = 'open_exit'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     pass
-                
+
+                # Postpone can be for the enter or the exit phase
+                #elif lto_dict[pair]['action'] == 'postpone':
+                #    if lto_dict[pair]['status'] == 'enter_expire':
+                #        pass
+                #    elif lto_dict[pair]['status'] == 'exit_expire':
+                #        last_kline = data_dict[pair]['15m'].tail(1)
+                #        lto_dict[pair]['exit']['expire'] = bson.Int64(last_kline.index.values)
+                #        pass
+                #    else: pass
+
                 # Delete the action, after the action is taken
                 del lto_dict[pair]['action']
                

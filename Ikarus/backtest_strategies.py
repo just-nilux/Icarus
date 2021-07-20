@@ -94,6 +94,11 @@ class OCOBackTest(StrategyBase):
                         'quantity': lto_dict[pair]['exit'][exit_type]['quantity']
                     }
 
+                    # NOTE: In order to use the action postpone, history should be used. Otherwise it is not known if the trade is already postponed before
+                    # Postpone the expiration
+                    # lto_dict[pair]['action'] = 'postpone'
+                    # lto_dict[pair]['exit']['expire'] = bson.Int64(dt_index + 2*15*60*1000) # If you want to give 3 iteration, then write 2
+            
                 elif lto_dict[pair]['status'] == 'waiting_exit':
                     # LTO is entered succesfully, so exit order should be executed
                     lto_dict[pair]['action'] = 'execute_exit'
@@ -120,6 +125,7 @@ class OCOBackTest(StrategyBase):
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = 'open_enter'
+                trade_obj['history'].append(trade_obj['status'])
                 trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
                 #TODO: give proper values to limit
 
@@ -281,10 +287,7 @@ class LimitBackTest(StrategyBase):
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]
 
-            #trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
             trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
-
-            #trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
             trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
 
             # Make decision to enter or not
@@ -292,6 +295,7 @@ class LimitBackTest(StrategyBase):
                 self.logger.info(f"{pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = 'open_enter'
+                lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                 trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
                 #TODO: give proper values to limit
 

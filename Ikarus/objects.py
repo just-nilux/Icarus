@@ -45,9 +45,11 @@ class GenericObject():
             },
             "profit": 0,
             "liveTime": 0
-        }
+        },
+        "history": []
     }
-
+    # TODO: Adding states to 'history' is currently manual and cumbersome.
+    #       It can be automated if an update method is used by the GenericObject class
     templates['observation'] = {
         "equity": 0
     }

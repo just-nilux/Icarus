@@ -191,25 +191,34 @@ async def evaluate_stats():
 async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
 
     for pair, lto in lto_dict.items():
-        # NOTE: Instead of doing update and then delete, I prefered the doing them in one iteration of objects due to latency concerns
 
-        # If there is no change in the status, skip the current lto and continue to iterate
-        if lto_dict_original[pair]['status'] == lto_dict[pair]['status']:
-            continue
-
+        # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
         if lto['status'] == 'closed':
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
-        # If the status is open_exit then, previously it was either "open_enter" or "partially_closed_enter"
         # NOTE: Manual trade option is omitted, needs to be added
         elif lto['status'] == 'open_exit':
+            # - The status might be changed from 'open_enter' or 'partially_closed_enter' to 'open_exit' (changes in result.enter and history)
+            # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
-                {'$set': {'status': lto['status'], 'result.enter':lto['result']['enter'] }})
+                {'$set': {'status': 
+                        lto['status'],
+                        'exit':lto['exit'],
+                        'result.enter':lto['result']['enter'],
+                        'history':lto['history'] 
+                    }})
+                
+        elif lto['status'] == 'open_enter':
+            # - 'open_enter' might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
+            result_update = await mongocli.do_update( 
+                "live-trades",
+                {'_id': lto['_id']},
+                {'$set': {'status': lto['status'], 'enter':lto['enter'], 'history':lto['history'] }})
 
         # NOTE: These two below are not applicable
         elif lto['status'] == 'partially_closed_enter':
@@ -269,6 +278,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
                     lto_dict[pair]['status'] = 'waiting_exit'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     lto_dict[pair]['result']['enter']['type'] = 'limit'
                     lto_dict[pair]['result']['enter']['time'] = bson.Int64(last_kline.index.values)
                     lto_dict[pair]['result']['enter']['price'] = lto_dict[pair]['enter']['limit']['price']
@@ -293,6 +303,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 elif int(lto_dict[pair]['enter']['limit']['expire']) <= bson.Int64(last_kline.index.values):
                     # Report the expiration to algorithm
                     lto_dict[pair]['status'] = 'enter_expire'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
 
             else:
                 # TODO: Internal Error
@@ -310,6 +321,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 if float(last_kline['high']) > lto_dict[pair]['exit']['limit']['price']:
 
                     lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     lto_dict[pair]['result']['cause'] = 'closed'
 
                     lto_dict[pair]['result']['exit']['type'] = 'limit'
@@ -330,6 +342,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                 elif int(lto_dict[pair]['exit']['limit']['expire']) <= bson.Int64(last_kline.index.values):
                     lto_dict[pair]['status'] = 'exit_expire'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     
                 else:
                     pass
@@ -340,6 +353,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                 if float(last_kline['low']) < lto_dict[pair]['exit']['oco']['stopPrice']:
                     # Stop Loss takens
                     lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     lto_dict[pair]['result']['cause'] = 'closed'
                     lto_dict[pair]['result']['exit']['type'] = 'oco_stoploss'
                     lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
@@ -361,6 +375,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
                     # Limit taken
 
                     lto_dict[pair]['status'] = 'closed'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
                     lto_dict[pair]['result']['cause'] = 'closed'
 
                     lto_dict[pair]['result']['exit']['type'] = 'oco_limit'
@@ -382,6 +397,7 @@ async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
 
                 elif int(lto_dict[pair]['exit']['oco']['expire']) <= bson.Int64(last_kline.index.values):
                     lto_dict[pair]['status'] = 'exit_expire'
+                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
 
                 else:
                     pass
@@ -437,7 +453,7 @@ async def application(bwrapper, pair_list, df_list):
 
 
     #################### Phase 2: Perform calculation tasks ####################
-    analyzer, strategy = analyzers.Analyzer(), backtest_strategies.LimitBackTest()
+    analyzer, strategy = analyzers.Analyzer(), backtest_strategies.OCOBackTest()
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
