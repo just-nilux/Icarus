@@ -149,7 +149,7 @@ class BinanceWrapper():
         composit_klines = list(await asyncio.gather(*tasks_klines_scales))
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
-        await self.dump_data_obj(data_dict)
+        # await self.dump_data_obj(data_dict)
 
         # data_dict
         return data_dict
@@ -383,7 +383,7 @@ class TestBinanceWrapper():
 
             do_dict[pair] = do
             
-        await self.dump_data_obj(do_dict)
+        # await self.dump_data_obj(do_dict)
         return do_dict    
 
 
