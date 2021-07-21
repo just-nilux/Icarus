@@ -514,7 +514,7 @@ async def main():
 
     client = 'mock_client'
 
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config['commission'])
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
     # Init the df_tickers to not to call binance API in each iteration
     binance_wrapper.TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()

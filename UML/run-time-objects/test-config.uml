@@ -2,7 +2,6 @@
 {
     "tag": "test-bot",
     "log-level": "INFO",
-    "commission": 0.075,
     "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
     "mongodb":{
         "host": "localhost",
@@ -25,6 +24,9 @@
             "locked": 0
         }
     ],
+    "broker": {
+        "commission": 0.075,
+    }
     "strategy": {
         "enter": {
             "type": "limit"
@@ -43,8 +45,10 @@
 
 Note: it is expected from all files to have the same timescale such as 15m, 1h etc
 
-STRATEGY:
+BROKER:
+    Broker section only used in TEST mode.
 
+STRATEGY:
     enter:
         - limit
         - market
@@ -58,10 +62,10 @@ STRATEGY:
         'action_mapping' item contains "status-action" pairs, which directs the flow of TOs
         
         enter_expire:
-            - cancel
+            - cancel (default if postpone fails once)
             - postpone
             - market_enter
 
         exit_expire:
-            - market_exit
+            - market_exit (default if postpone fails once)
             - postpone

@@ -55,7 +55,7 @@ class OCOBackTest(StrategyBase):
 
     async def _postpone(self, lto, phase, expire_time):
         lto['action'] = 'postpone'
-        lto[phase][self.config['exit']['type']]['expire'] = expire_time
+        lto[phase][self.config[phase]['type']]['expire'] = expire_time
         return lto
 
 
@@ -115,27 +115,26 @@ class OCOBackTest(StrategyBase):
         return exit_module
 
 
-    async def _handle_ito(self, lto):
+    async def _handle_lto(self, lto, dt_index):
         skip_calculation = False
         
         if lto['status'] == 'enter_expire':            
-            if self.config['action_mapping']['enter_expire'] == 'cancel':
+            if self.config['action_mapping']['enter_expire'] == 'cancel' or lto['history'].count('enter_expire') > 1:
                 lto['action'] = 'cancel'
                 lto['result']['cause'] = 'enter_expire'
 
-            elif self.config['action_mapping']['enter_expire'] == 'postpone':
-                lto = await self._postpone(lto,'enter', bson.Int64(dt_index + 2*15*60*1000))
-                # TODO: NEXT: Test te postpone mechanism
+            elif self.config['action_mapping']['enter_expire'] == 'postpone' and lto['history'].count('enter_expire') <= 1:
+                lto = await self._postpone(lto,'enter', bson.Int64(dt_index + 2*15*60*1000)) # Postpone 3 x 15 min
+                skip_calculation = True
             else: pass
 
         elif lto['status'] == 'exit_expire':                
-            if self.config['action_mapping']['exit_expire'] == 'market_exit':
+            if self.config['action_mapping']['exit_expire'] == 'market_exit' or lto['history'].count('exit_expire') > 1:
                 lto = await self._do_market_exit(lto)
 
-            elif self.config['action_mapping']['exit_expire'] == 'postpone':
+            elif self.config['action_mapping']['exit_expire'] == 'postpone' and lto['history'].count('exit_expire') <= 1:
                 lto = await self._postpone(lto,'exit', bson.Int64(dt_index + 2*15*60*1000))
-                # TODO: NEXT: Test te postpone mechanism
-
+                skip_calculation = True
             else: pass
 
             # NOTE: In order to use the action postpone, history should be used. Otherwise it is not known if the trade is already postponed before
@@ -185,7 +184,7 @@ class OCOBackTest(StrategyBase):
             # Check if there is already an lto for a specific pair
             if pair in lto_dict.keys():
                 # NOTE: If a pair contains multiple to then there should be another level of iteration as well
-                skip_calculation, lto_dict[pair] = await self._handle_ito(lto_dict[pair])
+                skip_calculation, lto_dict[pair] = await self._handle_lto(lto_dict[pair], dt_index)
 
                 if skip_calculation: continue;
 

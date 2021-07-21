@@ -244,12 +244,12 @@ class TestBinanceWrapper():
 
     df_tickers = None
 
-    def __init__(self, _client, _commission):
+    def __init__(self, _client, _config):
 
         self.client = _client
 
         # Set initial cash in the quote_currency
-        self.comission = float(_commission)
+        self.config = _config
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
@@ -407,6 +407,7 @@ class TestBinanceWrapper():
         'execute_decision' method is responsible for
             - execute new to's
             - execute lto updates
+                - Strategy do not update the status. It creates the 'action' and the execute_decision update the status
             - update the df_balance
 
         TestBinanceWrapper: In test sessions, executing a trade_object means
@@ -510,14 +511,16 @@ class TestBinanceWrapper():
                     pass
 
                 # Postpone can be for the enter or the exit phase
-                #elif lto_dict[pair]['action'] == 'postpone':
-                #    if lto_dict[pair]['status'] == 'enter_expire':
-                #        pass
-                #    elif lto_dict[pair]['status'] == 'exit_expire':
-                #        last_kline = data_dict[pair]['15m'].tail(1)
-                #        lto_dict[pair]['exit']['expire'] = bson.Int64(last_kline.index.values)
-                #        pass
-                #    else: pass
+                elif lto_dict[pair]['action'] == 'postpone':
+                    if lto_dict[pair]['status'] == 'enter_expire':
+                        lto_dict[pair]['status'] = 'open_enter'
+                        lto_dict[pair]['history'].append(lto_dict[pair]['status'])
+
+                    elif lto_dict[pair]['status'] == 'exit_expire':
+                        lto_dict[pair]['status'] = 'open_exit'
+                        lto_dict[pair]['history'].append(lto_dict[pair]['status'])
+                        pass
+                    else: pass
 
                 # Delete the action, after the action is taken
                 del lto_dict[pair]['action']

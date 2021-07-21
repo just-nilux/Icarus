@@ -1,7 +1,6 @@
 {
     "tag": "test-bot",
     "log-level": "INFO",
-    "commission": 0.075,
     "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
     "mongodb":{
         "host": "localhost",
@@ -24,6 +23,9 @@
             "locked": 0
         }
     ],
+    "broker": {
+        "commission": 0.075
+    },
     "strategy": {
         "enter": {
             "type": "limit"
@@ -33,7 +35,7 @@
         },
         "action_mapping": {
             "enter_expire": "cancel",
-            "exit_expire": "market_exit"
+            "exit_expire": "postpone"
         },
         "max_lto": 1
     }
