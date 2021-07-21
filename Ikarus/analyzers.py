@@ -87,7 +87,7 @@ class Analyzer():
             analysis_dict[pair] = analysis_obj
             self.logger.debug("  analysis ended: [{}]".format(pair))
 
-        await self.dump(analysis_dict)
+        # await self.dump(analysis_dict)
         self.logger.debug("sample_analyzer ended")
         return analysis_dict
 

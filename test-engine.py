@@ -453,7 +453,9 @@ async def application(bwrapper, pair_list, df_list):
 
 
     #################### Phase 2: Perform calculation tasks ####################
-    analyzer, strategy = analyzers.Analyzer(), backtest_strategies.OCOBackTest()
+    # TODO: Creating the strategy and analyzer is cumbersome. Move them to 'main' or make them global
+    # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global 
+    analyzer, strategy = analyzers.Analyzer(), backtest_strategies.OCOBackTest(config['strategy'])
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
@@ -512,7 +514,7 @@ async def main():
 
     client = 'mock_client'
 
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config['commission'])
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
     # Init the df_tickers to not to call binance API in each iteration
     binance_wrapper.TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
