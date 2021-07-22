@@ -153,12 +153,12 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
 
     # Add period separator lines
-    periods = pd.to_datetime(df.index, unit='ms').strftime('%H')
-    last_period = ''
-    for x,(period,price) in enumerate(zip(periods, df.close)):
-        if period != last_period:
-            fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
-        last_period = period
+    #periods = pd.to_datetime(df.index, unit='ms').strftime('%H')
+    #last_period = ''
+    #for x,(period,price) in enumerate(zip(periods, df.close)):
+    #    if period != last_period:
+    #        fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
+    #    last_period = period
 
     # Closed trade visualization (result.exit.type: limit or oco_limit)
     if not df_closed.empty:
@@ -209,16 +209,8 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
     fplt.show()
 
 
-    # TODO: Add visualizeion styles for Market and OCO
     # TODO: Improve the visualization:
-    # - square should be laydown starting from the limit.price to stop loss
-    # - enter bar colors: blue (limit buy, market)
-    # TODO: FUTURE:
-    # - place green buy symbol at enter time on blue bars
-    # - place red sell symbol at exit time on magenta bars
-    # NOTE: This implementation depends on stop loss
-
-
+    # - exit_expire square can be laydown starting from the limit.price to stop loss if the exit type is oco
 
 # Helper Functions
 
