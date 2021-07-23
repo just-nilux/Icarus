@@ -219,7 +219,7 @@ async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
             pass
 
 
-async def update_ltos(lto_dict, data_dict, current_ts, df_balance):
+async def update_ltos(lto_dict, data_dict, df_balance):
     """
     Args:
         lto_dict (dict): will be updated (status, result, exit sections)
@@ -393,8 +393,8 @@ async def application(bwrapper, pair_list, df_list):
     #################### Phase 1: Perform pre-calculation tasks ####################
     #current_ts = int(df_list[0].index[-1])
     
-    # The close time of the last_kline + 1ms, corresponds to the open_tme of the future kline which is actually the kline we are in. 
-    # If the execution cycle takes 2 second, then the order execution and the updates will be done
+    # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
+    # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
     current_ts = int(df_list[0]['close_time'].iloc[-1] + 1) 
 
@@ -415,8 +415,7 @@ async def application(bwrapper, pair_list, df_list):
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    lto_dict = await update_ltos(lto_dict, data_dict, current_ts, df_balance)
-
+    lto_dict = await update_ltos(lto_dict, data_dict, df_balance)
 
     #################### Phase 2: Perform calculation tasks ####################
 
@@ -425,27 +424,27 @@ async def application(bwrapper, pair_list, df_list):
 
     # 2.2: Algorithm is the only authority to make decision
     # NOTE: Execution of multiple algorithm is possible, if 'algorithm': 'sample_oco_algorithm' like items added to the to's
-    trade_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts)) # Send the last timestamp index
+    nto_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts)) # Send the last timestamp index
 
-    # 2.3: Execute the trade_dict if any
-    if len(trade_dict) or len(lto_dict):
-        # 2.3.1: Send tos to broker
-        exec_status, df_balance, lto_dict = await asyncio.create_task(bwrapper.execute_decision(trade_dict, df_balance, lto_dict, data_dict))
+    # 2.3: Execute LTOs and NTOs if any
+    if len(nto_dict) or len(lto_dict):
+        # 2.3.1: Execute the TOs
+        exec_status, df_balance, lto_dict = await asyncio.create_task(bwrapper.execute_decision(nto_dict, df_balance, lto_dict, data_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-        if len(trade_dict):
+        if len(nto_dict):
             # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
-            result = await mongocli.do_insert_many("live-trades",trade_dict)
-        
+            result = await mongocli.do_insert_many("live-trades",nto_dict)     
 
     #################### Phase 3: Perform post-calculation tasks ####################
 
-    # 1.5: Write the LTOs to [live-trades] and [hist-trades]
+    # 3.1: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_dict, lto_dict_original)
 
+    # 3.2: Get the onserver
     observation_obj = await observer.sample_observer(df_balance)
-
     await mongocli.do_insert_one("observer",observation_obj.get())   
-    return trade_dict
+
+    pass
 
 
 async def main():
@@ -472,8 +471,6 @@ async def main():
     time_scale_list = []
     df_csv_list = []
 
-    # Get the df_csv_list to aggregate
-
     # Iterate over the given files
     for file in config['files']:
         filename = file.split('\\')[-1]
@@ -483,10 +480,6 @@ async def main():
         df = df.set_index(['open_time'])
         df_csv_list.append(df)
 
-    #for 15m there exist 96 points
-    # so start iterating from the 96 until len(df)
-    #print(time_scale_mapping["15m"],len(df))
-
     # TODO: Multiple pairs, or multiple timescale for a pair logic, requires some generalizations
     hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
     total_len = len(df_csv_list[0]) - hist_data_length
@@ -494,6 +487,7 @@ async def main():
     for i in range(total_len):
         logger.debug(f'Iteration {i}:')
         printProgressBar(i + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        # TODO: Consider the fact that last candle can be newly opened candle and the analysis shouold be performed based on the last closed candle
         # Create the df_list
         df_list = []
         for df in df_csv_list:
@@ -540,7 +534,7 @@ if __name__ == '__main__':
 
     # Setup initial objects
     observer = observers.Observer()
-    analyzer = analyzers.Analyzer()
+    analyzer = analyzers.Analyzer(config)
     strategy = backtest_strategies.OCOBackTest(config)
 
     # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global

@@ -42,9 +42,12 @@
         },
         "max_lto": 1
     },
+    "analysis": {
+        "indicators": ["low","high","llow", "hhigh", "trange"]
+    },
     "data_input": {
-        "scale":["15m", "1d"],
-        "length_str":[ "1 day", "3 months" ],
-        "length_int":[ 96, 90 ]
+        "scale":["15m"],
+        "length_str":[ "1 day" ],
+        "length_int":[ 96 ]
     }
 }

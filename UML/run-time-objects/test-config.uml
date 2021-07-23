@@ -46,6 +46,9 @@
         },
         "max_lto": 1
     },
+    "analysis": {
+        "indicators": ["low","high","llow", "hhigh", "trange", {"name":"moving_average", "params":[5,20]}]
+    },
     "data_input": {
         "scale":["15m", "1d"],
         "length_str":[ "1 day", "3 months" ],
@@ -80,6 +83,20 @@ STRATEGY:
         exit_expire:
             - market_exit (default if postpone fails once)
             - postpone
+
+ANALYSIS:
+    indicators:
+        - low:
+        - high:
+        - llow:
+        - obv:
+        - dict:
+            - name:
+            - param
+    # TODO: Each indicator should be explained in a doc to keep things manageable
+
+    # TODO: NEXT: If an indicator item is dict then it requires some parameters to run.
+
 
 DATA_INPUT:
     data_input is used to determine which time scales will be used( 1m, 15m, 1h, 1d etc.) and what should be the length of historical data in this time_scale
@@ -121,8 +138,15 @@ DATA_INPUT:
         KLINE_INTERVAL_3DAY = '3d'          | 30  | 3 months
         KLINE_INTERVAL_1WEEK = '1w'         | 52  | 1 year
         KLINE_INTERVAL_1MONTH = '1M'        | 12  | 1 year
-
+        
+# TODO: NEXT: Check what happens if an unused scale and length is given
 # TODO: NEXT: Check binance package to see if there is a limit (it is written 500) for receiving some number of candles
 # TODO: NEXT: Check binance package to see if there the received last candle is the current newly open candle or not.
               If so, TEST module should be updated to behave the same.
 # TODO: NEXT: Check the effect of timezone. If needed it can be added
+
+# TODO: FUTURE: There should be mapping such as: 
+#               feature                | strategy   | indicators
+#               falling knife catching | x          | y,z
+#
+# TODO: There should be testing mechanism for each feaure
