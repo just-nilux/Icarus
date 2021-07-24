@@ -403,6 +403,7 @@ async def application(bwrapper, pair_list, df_list):
 
     lto_dict = dict()
     for lto in lto_list:
+        # TODO: NEXT: Update pair to tradeid and change the logic of required evaluations
         lto_dict[lto['pair']] = lto
 
     lto_dict_original = copy.deepcopy(lto_dict)
@@ -515,7 +516,6 @@ async def main():
 
 if __name__ == '__main__':
     
-    print(str(sys.argv[1]))
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
     

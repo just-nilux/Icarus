@@ -1,3 +1,4 @@
+from asyncio.tasks import gather
 from binance import Client
 import asyncio
 import pandas as pd
@@ -30,10 +31,11 @@ class BinanceWrapper():
 
     def __init__(self, _client, _config):
         self.client = _client
-
+        self.config = _config
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
+        # Set reference currencies
         self.quote_currency = _config['broker']['quote_currency']
         self.credit_currency = _config['broker']['credit_currency']
 
@@ -46,12 +48,6 @@ class BinanceWrapper():
         # exchanged for 1.25 U.S. dollars. Another way of looking at this is that it will cost you $125 to buy 100 euros.
         pass
 
-    async def logger_test(self):
-        self.logger.debug('logger_test')
-        self.logger.info('logger_test')
-        self.logger.warning('logger_test')
-        self.logger.error('logger_test')
-        self.logger.critical('logger_test')
 
     async def get_info(self):
         """
@@ -69,6 +65,8 @@ class BinanceWrapper():
         df_balance = df_balance.astype(float)
         df_balance['total'] = df_balance['free'] + df_balance['locked']
         pairs = []
+
+        # TODO: The logic of creating pairs might be updated to try the both combination
         for asset in df_balance.index:
             if asset == self.quote_currency:
                 pairs.append(str(asset))
@@ -78,6 +76,7 @@ class BinanceWrapper():
                 pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
         return df_balance
+
 
     async def get_all_tickers(self):
         """
@@ -90,6 +89,7 @@ class BinanceWrapper():
         df.set_index('symbol', inplace=True)
         df.astype(float)
         return df
+
 
     async def get_current_balance(self):
 
@@ -110,6 +110,7 @@ class BinanceWrapper():
 
         return df_balance
 
+
     async def get_data_dict(self, pairs, time_df):
         """
         This functions returns the historical kline values in the data_dict format.
@@ -124,20 +125,56 @@ class BinanceWrapper():
         tasks_klines_scales = []
         for pair in pairs:
             for index, row in time_df.iterrows():
-                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_int"]))))
+                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
             
         composit_klines = list(await asyncio.gather(*tasks_klines_scales))
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
-        # await self.dump_data_obj(data_dict)
+        await self.dump_data_obj(data_dict)
+        # NOTE: Keep in mind that the last row is the current candle that has not been completed
         return data_dict
 
 
+    async def get_lto_orders(self, lto_dict):
+        """
+        This functions gathers the corresponding order objects of LTOs from the brokers
+
+        Args:
+            lto_dict (dict): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        # Check the status of LTOs:
+        coroutines = []
+        for pair, lto in lto_dict:
+            coroutines.append(self.client.get_order(symbol=pair, orderId=lto['tradeid']))
+            # NOTE: 'tradeid' can be changed with 'orderid' for the consistency with the api
+
+        lto_orders=[] # TODO: It can be a dict
+        if len(coroutines):
+            lto_orders = list(asyncio.gather(*coroutines))
+            # TODO: Check the format of the lto orders and put them in a proper shape
+        
+        return lto_orders
+
+
+    async def get_open_orders(self):
+        """
+        This method returns all the open orders. 
+        It might be useful to detect if there is an external source of order and keep track
+
+        Returns:
+            [type]: [description]
+        """
+        # NOTE: Currently it is not needed to take the external orders in account.
+        # TODO: Decide what to do with all orders or all open orders
+        orders = self.client.get_open_orders(symbol='BNBBTC')
+        orders = self.client.get_all_orders(symbol='BNBBTC')
+        return orders
+
+
     async def monitor_account(self):
-        return True
-
-
-    async def update_db(self,trade_objs):
         return True
 
 
@@ -165,19 +202,17 @@ class BinanceWrapper():
             dict: decomposed list_klines
         """        
         self.logger.debug("decompose started")
-
+        # TODO: Change the GenericObject to dict
         do_dict = dict()
         num_of_scale = len(time_df.index)
         for idx_pair,pair in enumerate(pairs):
             self.logger.debug("decompose started: [{}]".format(pair))
-            do = GenericObject()
+            do = dict()
             for idx_row, row in time_df.iterrows():
                 self.logger.debug("decomposing [{}]: [{}]".format(pair,row["scale"]))
                 df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
                 df.columns = BinanceWrapper.kline_column_names
-                do.load(row["scale"],df)
-                print(row["scale"])
-                print(df)
+                do[row["scale"]] = df
             do_dict[pair] = do
             self.logger.debug("decompose ended [{}]:".format(pair))
             #self.logger.debug("{}-{}".format(pair,type(do_dict[pair][row["scale"]])))
@@ -191,13 +226,11 @@ class BinanceWrapper():
         copy_obj = dict()
         for pair,do in js_obj.items():
             pair_obj = dict()
-            for k,v in do.get().items():
+            for k,v in do.items():
                 pair_obj[k] = v.to_string()
             copy_obj[pair] = pair_obj
 
-
-        self.logger.debug("data.json file created")
-        js_file = open("run-time-objs/data.json", "w")
+        js_file = open("run-time-objs/data_obj.json", "w")
         json.dump(copy_obj, js_file, indent=4)
         js_file.close()
 
