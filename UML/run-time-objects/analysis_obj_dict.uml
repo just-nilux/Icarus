@@ -1,7 +1,14 @@
 @startjson
 {
   "pair": {
-    "weekly": {
+    "15m": {
+      "moving_average": {
+        "5": ["nan", "nan", "nan", "nan", "nan", 1,2,3,4],
+        "20": ["nan", "nan", "nan", "nan", "nan", "..."]
+      },
+      "trange":[1,2,3,4,5],
+      "hhigh":8.67,
+      "llow":8.44,
       "trend": {
         "direction": "up",
         "strength": "high"
@@ -15,17 +22,16 @@
         "isRange": true,
         "top": 5.678,
         "bot": 5.555
-      }
+      },
+      "IsDrawDown": ""
     },
-    "daily": "",
-    "hourly": "",
-    "15min": "",
-    "1min": "",
-    "IsDrawDown": "",
-    "Extension": {}
+    "1d": ""
   }
 }
 @endjson
 
 Extension:
   This is the field that can be used for dev purposes
+
+NOTE: 
+  analysis object may contain level 1 and 2 abstractions such as the 'moving_average' and 'trend' items respectively

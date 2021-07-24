@@ -329,11 +329,11 @@ class TestBinanceWrapper():
     async def get_data_dict(self, pairs, time_df, df_list):
         '''
         time_df:
-        -------------------------
+        ---------------------------------------
             scale   length_str      length_int
         0   15m     96/"1 day"      96
         1   1h      168/"1 week"    x   
-        -------------------------
+        ---------------------------------------
         '''
 
         do_dict = dict()
@@ -345,7 +345,6 @@ class TestBinanceWrapper():
 
             do_dict[pair] = do
         
-        # TODO: NEXT: time_scale, tradeble pair etc shoudl be configurable from the config file
         # await self.dump_data_obj(do_dict)
         return do_dict    
 

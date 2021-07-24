@@ -4,13 +4,13 @@
 database "MongoDB" {
     frame "trade-bot-db" {
         folder "live-trades" {
-            [{"tradeId":456, trade_obj}]
+            [live trade_objs]
         }
         folder "hist-trades" {
-            [{"tradeId":123, trade_obj}]
+            [closed trade_objs]
         }
         folder "observer" {
-            [observer_obj]
+            [observer_objs]
         }
     }
 }

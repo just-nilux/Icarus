@@ -431,16 +431,18 @@ async def application(bwrapper, pair_list, df_list):
         # 2.3.1: Execute the TOs
         exec_status, df_balance, lto_dict = await asyncio.create_task(bwrapper.execute_decision(nto_dict, df_balance, lto_dict, data_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-        if len(nto_dict):
-            # 2.3.2: Write trade_dict to [live-trades] (assume it is executed successfully)
-            result = await mongocli.do_insert_many("live-trades",nto_dict)     
+
 
     #################### Phase 3: Perform post-calculation tasks ####################
 
-    # 3.1: Write the LTOs and NTOs to [live-trades] and [hist-trades]
+    if len(nto_dict):
+        # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
+        result = await mongocli.do_insert_many("live-trades",nto_dict)     
+
+    # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_dict, lto_dict_original)
 
-    # 3.2: Get the onserver
+    # 3.3: Get the onserver
     observation_obj = await observer.sample_observer(df_balance)
     await mongocli.do_insert_one("observer",observation_obj.get())   
 
@@ -468,6 +470,7 @@ async def main():
 
     # Obtain the pairs and the time scales of the input data
     pair_list = []
+    # NOTE: Normally the pair list is obtained from the config, but for testing it is coming from the data files.
     time_scale_list = []
     df_csv_list = []
 
@@ -481,6 +484,7 @@ async def main():
         df_csv_list.append(df)
 
     # TODO: Multiple pairs, or multiple timescale for a pair logic, requires some generalizations
+    #       This changes can be handled after the app is confident about working 1 pair and 1 scale
     hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
     total_len = len(df_csv_list[0]) - hist_data_length
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)

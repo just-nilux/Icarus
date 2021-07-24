@@ -43,9 +43,13 @@
         "max_lto": 1
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange"]
+        "indicators": ["low","high","llow", "hhigh", "trange", "moving_average"],
+        "params": {
+            "moving_average": [5,20]
+        }
     },
     "data_input": {
+        "pairs": ["BTCUSDT"],
         "scale":["15m"],
         "length_str":[ "1 day" ],
         "length_int":[ 96 ]

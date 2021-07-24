@@ -89,7 +89,9 @@ async def visualize_db():
 
 if __name__ == '__main__':
     
-    # python.exe .\scripts\visualize_test_session.py --filename .\test\data\btcusdt_15m_202005121212_202005191213.csv
+    # TODO: In order to visualize test session:
+    #       1. Get the trade data from db
+    #       2. Get the candle data from either file or api. (provide option)
 
     parser = argparse.ArgumentParser(description='Optional app description')
     parser.add_argument('--host', type=str, default='localhost')

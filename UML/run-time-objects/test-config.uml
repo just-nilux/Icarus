@@ -47,9 +47,13 @@
         "max_lto": 1
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange", {"name":"moving_average", "params":[5,20]}]
+        "indicators": ["low","high","llow", "hhigh", "trange", "moving_average"],
+        "params": {
+            "moving_average": [5,20]
+        }
     },
     "data_input": {
+        "pairs": ["BTCUSDT", "XRPUSDT"],
         "scale":["15m", "1d"],
         "length_str":[ "1 day", "3 months" ],
         "length_int":[ 96, 90 ]
@@ -90,12 +94,10 @@ ANALYSIS:
         - high:
         - llow:
         - obv:
-        - dict:
-            - name:
-            - param
+    params
+        - moving average:
+            - [5,20]
     # TODO: Each indicator should be explained in a doc to keep things manageable
-
-    # TODO: NEXT: If an indicator item is dict then it requires some parameters to run.
 
 
 DATA_INPUT:
@@ -138,7 +140,11 @@ DATA_INPUT:
         KLINE_INTERVAL_3DAY = '3d'          | 30  | 3 months
         KLINE_INTERVAL_1WEEK = '1w'         | 52  | 1 year
         KLINE_INTERVAL_1MONTH = '1M'        | 12  | 1 year
-        
+
+# TODO: NEXT: Live trade-engine requires some pairs to be decided to trade. The pairs for test-engine is obtained from the given files.
+#             Based on the decision, historical data is acquired.
+
+
 # TODO: NEXT: Check what happens if an unused scale and length is given
 # TODO: NEXT: Check binance package to see if there is a limit (it is written 500) for receiving some number of candles
 # TODO: NEXT: Check binance package to see if there the received last candle is the current newly open candle or not.
@@ -149,4 +155,4 @@ DATA_INPUT:
 #               feature                | strategy   | indicators
 #               falling knife catching | x          | y,z
 #
-# TODO: There should be testing mechanism for each feaure
+# TODO: FUTURE: There should be testing mechanism for each feaure

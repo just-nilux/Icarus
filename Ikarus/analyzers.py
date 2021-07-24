@@ -30,7 +30,7 @@ class Analyzer():
             'llow': asyncio.create_task(self._ind_llow()),
             'hhigh': asyncio.create_task(self._ind_hhigh()),
             'trange': asyncio.create_task(self._ind_trange()),
-            'ma5': asyncio.create_task(self._ind_ma5())
+            'moving_average': asyncio.create_task(self._ind_moving_average())
         }
         return all_indicators
 
@@ -46,18 +46,12 @@ class Analyzer():
                 all_indicators = await self.generate_coroutines()
                 indicator_coroutines = []
                 for ind in self.config['analysis']['indicators']:
-                    if ind in all_indicators.keys():
-                        indicator_coroutines.append(all_indicators[ind])
-                    else: 
-                        raise RuntimeError(f'Unknown indicator: "{ind}"')
+                    if ind in all_indicators.keys(): indicator_coroutines.append(all_indicators[ind])
+                    else: raise RuntimeError(f'Unknown indicator: "{ind}"')
+
                 analysis_output = list(await asyncio.gather(*indicator_coroutines))
 
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
-                # TODO: If an indicator requires extra parameters, it can reach it from the config file,
-                #       But if an generic indicator requires param: such as having the moving average with the 
-                #       window size 5 and 20, then 5 and 20 should be given.
-                #       As an alternative, 'moving average' function read 5 and 20 fromo the cnfig and return them together
-
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
                 for key, value in zip(self.config['analysis']['indicators'], analysis_output):
@@ -85,4 +79,8 @@ class Analyzer():
     async def _ind_hhigh(self): return self.current_time_df['high'].max()
     async def _ind_trange(self): return list(ta.TRANGE( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
     async def _ind_obv(self): return list(ta.OBV(self.current_time_df['close'], self.current_time_df['volume']))
-    async def _ind_ma5(self): return list(ta.MA(self.current_time_df['close'], timeperiod=5, matype=0))
+    async def _ind_moving_average(self):
+        ma = {}
+        for param in self.config['analysis']['params']['moving_average']:
+            ma[param] = list(ta.MA(self.current_time_df['close'], timeperiod=param, matype=0))
+        return ma
