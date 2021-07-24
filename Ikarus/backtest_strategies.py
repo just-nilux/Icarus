@@ -39,7 +39,9 @@ class OCOBackTest(StrategyBase):
 
     def __init__(self,_config):
         self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.config = _config
+        self.config = _config['strategy']
+        self.quote_currency = _config['broker']['quote_currency']
+        
         '''
         self.config = {
             "enter": "limit",
@@ -155,6 +157,7 @@ class OCOBackTest(StrategyBase):
 
         return skip_calculation, lto
 
+
     async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
         """
         It requires to feed analysis_dict and lto_dict so that it may decide to:
@@ -216,8 +219,7 @@ class OCOBackTest(StrategyBase):
                 #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
                 # the base asset will be used.
                 
-                #TODO: V2: 'USDT' should not be hardcoded
-                free_ref_asset = df_balance.loc['USDT','free']
+                free_ref_asset = df_balance.loc[self.quote_currency,'free']
 
                 # Example: Buy XRP with 100$ in your account
                 enter_ref_amount=100

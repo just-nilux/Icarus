@@ -1,21 +1,10 @@
-import re
-from numpy.core.numeric import False_
 import pymongo
 import logging
 import asyncio
-from datetime import datetime
 import motor.motor_asyncio
 from time import time, sleep
 import copy
 import bson
-import pprint
-
-# pre-written queries
-queries = {
-    "open_expire": {"result.cause":"enter_expire"},
-    "exit_expire": {"result.cause":"exit_expire"},
-    "closed": {"result.cause":"closed"},
-}
 
 class MongoClient():
 
@@ -62,7 +51,6 @@ class MongoClient():
             item['_id'] = int(time() * 1000)
         else:
             item['_id'] = bson.Int64(item['_id'])
-            
 
         result = await self.db_bot[col].insert_one(item)
         
@@ -82,8 +70,6 @@ class MongoClient():
         insert_list = []
         for pair, obj in item_dict.items():
             obj['pair'] = pair
-            #timestamp = int(time() * 1000)
-            #print("int value:",timestamp)
             obj['_id'] = int(time() * 1000)
             insert_list.append(obj)
             sleep(0.01)
@@ -100,7 +86,6 @@ class MongoClient():
             query (dict): json query
             update (dict): update rule
         """
-        # TODO: Update an item in a deeper position in the hierarchy
         result = await self.db_bot[col].update_one(query, update)
         self.logger.info(f"do_update [{col}]: ")
         return result
@@ -118,7 +103,7 @@ class MongoClient():
         self.logger.info(f"do_delete [{col}]: prev count {prev_count}, after count {after_count}")
         return result
 
-# Specific Functions:
+# Specific Methods:
     async def get_last_doc(self, col, query={}) -> None:
         """
         This function reads the selected item from the given collection
@@ -130,7 +115,8 @@ class MongoClient():
         result = self.db_bot[col].find(query).sort('_id', pymongo.DESCENDING).limit(1)
         async for document in result:
             last_doc = dict(document)
-        # NOTE: Add proper error handling
+
+        assert 'last_doc' in locals(), "No last document!"
         return last_doc
 
 

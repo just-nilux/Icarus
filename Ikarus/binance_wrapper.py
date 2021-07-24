@@ -1,11 +1,8 @@
-from pymongo import mongo_client
-from Ikarus import mongo_utils
 from binance import Client
 import asyncio
 import pandas as pd
 import logging
-from datetime import datetime, timedelta
-from Ikarus.objects import GenericObject, ObjectEncoder
+from Ikarus.objects import GenericObject
 import json
 import bson
 '''
@@ -28,29 +25,17 @@ import bson
 '''
 class BinanceWrapper():
 
-    def_time_scales = [Client.KLINE_INTERVAL_1MINUTE, 
-                            Client.KLINE_INTERVAL_15MINUTE, 
-                            Client.KLINE_INTERVAL_1HOUR, 
-                            Client.KLINE_INTERVAL_1DAY, 
-                            Client.KLINE_INTERVAL_1WEEK, 
-                            Client.KLINE_INTERVAL_1MONTH]
-    def_time_lengths_str = ["1 hour", "1 day", "1 week", "1 month", "6 months", "12 months"]
-
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
                         "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
-    # def_time_df stores the time scale and length for klines
-    def_time_df = pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
-
-    def __init__(self, _client):
+    def __init__(self, _client, _config):
         self.client = _client
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
-        self.quote_currency = 'USDT'
-        self.credit_currency = 'TRY'
-
+        self.quote_currency = _config['broker']['quote_currency']
+        self.credit_currency = _config['broker']['credit_currency']
 
         # Currency pairs compare the value of one currency to another—the base currency (or the first one) 
         # versus the second or the quote currency. It indicates how much of the quote currency is needed to 
@@ -59,11 +44,6 @@ class BinanceWrapper():
         # The quotation EUR/USD = 1.2500 means that one euro is exchanged for 1.2500 U.S. dollars. In this case, 
         # EUR is the base currency and USD is the quote currency (counter currency). This means that 1 euro can be 
         # exchanged for 1.25 U.S. dollars. Another way of looking at this is that it will cost you $125 to buy 100 euros.
-
-        # Default Parameters
-        
-
-        print(BinanceWrapper.def_time_df)
         pass
 
     async def logger_test(self):
@@ -144,14 +124,12 @@ class BinanceWrapper():
         tasks_klines_scales = []
         for pair in pairs:
             for index, row in time_df.iterrows():
-                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length"]))))
+                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_int"]))))
             
         composit_klines = list(await asyncio.gather(*tasks_klines_scales))
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
         # await self.dump_data_obj(data_dict)
-
-        # data_dict
         return data_dict
 
 
@@ -228,39 +206,23 @@ class BinanceWrapper():
 
 class TestBinanceWrapper():
 
-    def_time_scales = [Client.KLINE_INTERVAL_1MINUTE, 
-                            Client.KLINE_INTERVAL_15MINUTE, 
-                            Client.KLINE_INTERVAL_1HOUR, 
-                            Client.KLINE_INTERVAL_1DAY, 
-                            Client.KLINE_INTERVAL_1WEEK, 
-                            Client.KLINE_INTERVAL_1MONTH]
-    def_time_lengths_str = ["1 hour", "1 day", "1 week", "1 month", "6 months", "12 months"]
-
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
                         "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
-
-    # def_time_df stores the time scale and length for klines
-    def_time_df = pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
 
     df_tickers = None
 
     def __init__(self, _client, _config):
 
         self.client = _client
-
-        # Set initial cash in the quote_currency
         self.config = _config
-
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
         # Set reference currencies
-        self.quote_currency = 'USDT'
-        self.credit_currency = 'TRY'
+        self.quote_currency = _config['broker']['quote_currency']
+        self.credit_currency = _config['broker']['credit_currency']
 
         # TestBinanceWrapper: get df_tickers once
-
-        print(TestBinanceWrapper.def_time_df)
         pass
 
 
@@ -367,11 +329,11 @@ class TestBinanceWrapper():
     async def get_data_dict(self, pairs, time_df, df_list):
         '''
         time_df:
-        -------------------------
-            scale   length
-        0   15m     96/"1 day" 
-        1   1h      168/"1 week"
-        -------------------------
+        ---------------------------------------
+            scale   length_str      length_int
+        0   15m     96/"1 day"      96
+        1   1h      168/"1 week"    x   
+        ---------------------------------------
         '''
 
         do_dict = dict()
@@ -382,7 +344,7 @@ class TestBinanceWrapper():
                 do[row["scale"]] = df_list[idx_pair]
 
             do_dict[pair] = do
-            
+        
         # await self.dump_data_obj(do_dict)
         return do_dict    
 
@@ -402,18 +364,9 @@ class TestBinanceWrapper():
 
             return True
 
-    async def execute_decision(self, trade_dict, df_balance, lto_dict, data_dict):
+
+    async def _execute_lto(self, lto_dict, df_balance, data_dict):
         """
-        'execute_decision' method is responsible for
-            - execute new to's
-            - execute lto updates
-                - Strategy do not update the status. It creates the 'action' and the execute_decision update the status
-            - update the df_balance
-
-        TestBinanceWrapper: In test sessions, executing a trade_object means
-        changing the df_balance columns 'free' and 'locked' when a trade is
-        started
-
         Execution Logic:
         for pair in lto_dict.keys():
             if 'action' in lto_dict[pair].keys():
@@ -426,31 +379,13 @@ class TestBinanceWrapper():
                 4. market_exit
                     In case of exit expire, it might be decided to exit with market order
 
-        for to in trade_dict:
-            1. open_enter
-                a. market
-                    - Get the 'result'
-                b. limit
-            2. partially_closed_enter
-                -
-            3. open_exit
-                a. market
-                    - Get the 'result'
-                b. limit
-                c. oco
-            4. partially_closed_exit
-            -
-
         Args:
-            trade_dict (dict): [description]
-            df_balances (pd.DataFrame): [description]
+            lto_dict (dict): [description]
+            df_balance (pd.DataFrame): [description]
 
         Returns:
-            tuple: result, df_balances
+            tuple: lto_dict, df_balance
         """
-        result = True
-
-        # Execute decsisions about ltos
         for pair in lto_dict.keys():
             if 'action' in lto_dict[pair].keys():
 
@@ -464,8 +399,8 @@ class TestBinanceWrapper():
 
                     # TEST: Update df_balance
                     # No need to check the enter type because lto do not contain 'market'. It only contains 'limit'
-                    df_balance.loc['USDT','free'] += lto_dict[pair]['enter']['limit']['amount']
-                    df_balance.loc['USDT','locked'] -= lto_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'free'] += lto_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'locked'] -= lto_dict[pair]['enter']['limit']['amount']
             
                 elif lto_dict[pair]['action'] == 'update':
                     pass
@@ -494,9 +429,9 @@ class TestBinanceWrapper():
                     lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
 
                     # Update df_balance: write the amount of the exit
-                    df_balance.loc['USDT','free'] += lto_dict[pair]['result']['exit']['amount']
-                    df_balance.loc['USDT','total'] = df_balance.loc['USDT','free'] + df_balance.loc['USDT','locked']
-                    df_balance.loc['USDT','ref_balance'] = df_balance.loc['USDT','total']
+                    df_balance.loc[self.quote_currency,'free'] += lto_dict[pair]['result']['exit']['amount']
+                    df_balance.loc[self.quote_currency,'total'] = df_balance.loc[self.quote_currency,'free'] + df_balance.loc[self.quote_currency,'locked']
+                    df_balance.loc[self.quote_currency,'ref_balance'] = df_balance.loc[self.quote_currency,'total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
@@ -524,44 +459,94 @@ class TestBinanceWrapper():
 
                 # Delete the action, after the action is taken
                 del lto_dict[pair]['action']
-               
-            
-        # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
-        #       exactly as the broker. 
-        # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
-        # TODO: V2: 'USDT' should not be hardcoded
 
-        # Update free and locked amount of df_balances
+        return lto_dict, df_balance
+
+
+    async def _execute_nto(self, trade_dict, df_balance):
+        """
+        for to in trade_dict:
+            1. open_enter
+                a. market
+                    - Get the 'result'
+                b. limit
+            2. partially_closed_enter
+                -
+            3. open_exit
+                a. market
+                    - Get the 'result'
+                b. limit
+                c. oco
+            4. partially_closed_exit
+            -
+
+        Args:
+            trade_dict (dict): [description]
+            df_balances (pd.DataFrame): [description]
+
+        Returns:
+            [type]: [description]
+        """
         for pair in trade_dict.keys():
             # NOTE: The status values other than 'open_enter' is here for lto update
             if trade_dict[pair]['status'] == 'open_enter':
                 
                 if 'market' in trade_dict[pair]['enter'].keys():
-                    # TODO: DEPLOY: Execute Order
-
-                    # TODO: DEPLOY: Get the result
-                    
-                    # TODO: TEST: Set status to closed, fill result, arrange df_balance
-
+                    # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
                 elif 'limit' in trade_dict[pair]['enter'].keys():
                     # TODO: LIVE: Execute limit order
-                    # NOTE: TEST: No action needeD
+                    # NOTE: TEST: No action needed
                     # TEST: Update df_balance
-                    df_balance.loc['USDT','free'] -= trade_dict[pair]['enter']['limit']['amount']
-                    df_balance.loc['USDT','locked'] += trade_dict[pair]['enter']['limit']['amount']
-                    pass
+                    df_balance.loc[self.quote_currency,'free'] -= trade_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'locked'] += trade_dict[pair]['enter']['limit']['amount']
 
-                else:
-                    # TODO: Internal Error
-                    pass
+                else: pass # TODO: Internal Error
 
-            else:
-                # TODO: Internal Error
-                pass
+            else: pass # TODO: Internal Error
+        return trade_dict, df_balance
 
-        # NOTE: Normally if there is an market order it should be executed right here. 
-        # For testing purposes it is moved to the lto_pdate function test-engine.py
+
+    async def execute_decision(self, trade_dict, df_balance, lto_dict, data_dict):
+        """
+        'execute_decision' method is responsible for
+            - execute new to's
+            - execute lto updates
+                - Strategy do not update the status. It creates the 'action' and the execute_decision update the status
+            - update the df_balance
+
+        TestBinanceWrapper: In test sessions, executing a trade_object means
+        changing the df_balance columns 'free' and 'locked' when a trade is
+        started
+
+        Execution Logic:
+        1. Execute live_trade_objects
+        2. Execute new_trade_objects
+
+        Args:
+            trade_dict (dict): [description]
+            df_balances (pd.DataFrame): [description]
+
+        Returns:
+            tuple: result, df_balances
+        """
+        result = True
+
+        # Execute decsisions about ltos
+        lto_dict, df_balance = await self._execute_lto(lto_dict, df_balance, data_dict)
+
+        # Execute new trade objects
+        trade_dict, df_balance = await self._execute_nto(trade_dict, df_balance)      
+            
+        # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
+        #       exactly as the broker. 
+        # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
+
+        # TODO: Consider returning trade_dict, because:
+        #   - orders may not be accepted by the broker
+        #       - In this case this side where to handle the issue: here or the main script
+        #   - market sell causes instant fill
+        #   - market enter causes instant fill
 
         return result, df_balance, lto_dict
