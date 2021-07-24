@@ -10,6 +10,7 @@ import sys
 from scripts import fplot as fp
 import copy
 import bson
+import time
 
 # Global Variables
 SYSTEM_STATUS = 0
@@ -180,7 +181,7 @@ async def evaluate_stats():
 
 async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
 
-    for pair, lto in lto_dict.items():
+    for tradeid, lto in lto_dict.items():
 
         # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
@@ -232,143 +233,145 @@ async def update_ltos(lto_dict, data_dict, df_balance):
         dict: lto_dict
     """
 
-    for pair in set(lto_dict.keys()) & set(data_dict.keys()):
+    for tradeid in lto_dict.keys():
+        # NOTE: data_dict uses pairs as key
+        pair = lto_dict[tradeid]['pair']
         pair_klines_dict = data_dict[pair]
 
         # 1.2.1: Check trades and update status
         # pair_klines_dict = pair_klines
         last_kline = pair_klines_dict['15m'].tail(1)
 
-        if lto_dict[pair]['status'] == 'open_enter':
+        if lto_dict[tradeid]['status'] == 'open_enter':
             # NOTE: There is 2 method to enter: 'limit' and 'market'. Since market executed directly, it is not expected to have market at this stage
-            if 'limit' in lto_dict[pair]['enter'].keys():
+            if 'limit' in lto_dict[tradeid]['enter'].keys():
 
                 # Check if the open enter trade is filled else if the trade is expired
-                if float(last_kline['low']) < lto_dict[pair]['enter']['limit']['price']:
+                if float(last_kline['low']) < lto_dict[tradeid]['enter']['limit']['price']:
 
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
-                    lto_dict[pair]['status'] = 'waiting_exit'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
-                    lto_dict[pair]['result']['enter']['type'] = 'limit'
-                    lto_dict[pair]['result']['enter']['time'] = bson.Int64(last_kline.index.values)
-                    lto_dict[pair]['result']['enter']['price'] = lto_dict[pair]['enter']['limit']['price']
-                    lto_dict[pair]['result']['enter']['amount'] = lto_dict[pair]['enter']['limit']['amount']
-                    lto_dict[pair]['result']['enter']['quantity'] = lto_dict[pair]['enter']['limit']['quantity']
+                    lto_dict[tradeid]['status'] = 'waiting_exit'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    lto_dict[tradeid]['result']['enter']['type'] = 'limit'
+                    lto_dict[tradeid]['result']['enter']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['enter']['price'] = lto_dict[tradeid]['enter']['limit']['price']
+                    lto_dict[tradeid]['result']['enter']['amount'] = lto_dict[tradeid]['enter']['limit']['amount']
+                    lto_dict[tradeid]['result']['enter']['quantity'] = lto_dict[tradeid]['enter']['limit']['quantity']
 
                     # Remove the bought amount from the 'locked' and 'ref_balance' columns
-                    df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_dict[tradeid]['enter']['limit']['amount']
                     df_balance.loc[config['broker']['quote_currency'], 'ref_balance'] = df_balance.loc[config['broker']['quote_currency'], 'locked'] +  df_balance.loc[config['broker']['quote_currency'], 'free']
                     # TODO sync the ref_balance and total
                     # Update df_balance: add the quantity to the base_cur or create a row for base_cur
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     if pair in list(df_balance.index):
-                        df_balance.loc[base_cur, 'locked' ] += lto_dict[pair]['result']['enter']['quantity']
+                        df_balance.loc[base_cur, 'locked' ] += lto_dict[tradeid]['result']['enter']['quantity']
                     else:
                         # Previously there was no base_currency, so we create a row for it
                         # free  locked    total      pair   price  ref_balance
-                        df_balance.loc[base_cur] = [0.0, lto_dict[pair]['result']['enter']['quantity'], 0, pair, 0, 0]
+                        df_balance.loc[base_cur] = [0.0, lto_dict[tradeid]['result']['enter']['quantity'], 0, pair, 0, 0]
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
                         # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
-                elif int(lto_dict[pair]['enter']['limit']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_dict[tradeid]['enter']['limit']['expire']) <= bson.Int64(last_kline.index.values):
                     # Report the expiration to algorithm
-                    lto_dict[pair]['status'] = 'enter_expire'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
+                    lto_dict[tradeid]['status'] = 'enter_expire'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
 
             else:
                 # TODO: Internal Error
                 pass
 
-        elif lto_dict[pair]['status'] == 'partially_closed_enter':
+        elif lto_dict[tradeid]['status'] == 'partially_closed_enter':
             # Ignore for the tests
             pass
 
-        elif lto_dict[pair]['status'] == 'open_exit':
+        elif lto_dict[tradeid]['status'] == 'open_exit':
 
-            if 'limit' in lto_dict[pair]['exit'].keys():
+            if 'limit' in lto_dict[tradeid]['exit'].keys():
 
                 # Check if the open sell trade is filled or stoploss is taken
-                if float(last_kline['high']) > lto_dict[pair]['exit']['limit']['price']:
+                if float(last_kline['high']) > lto_dict[tradeid]['exit']['limit']['price']:
 
-                    lto_dict[pair]['status'] = 'closed'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
-                    lto_dict[pair]['result']['cause'] = 'closed'
+                    lto_dict[tradeid]['status'] = 'closed'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    lto_dict[tradeid]['result']['cause'] = 'closed'
 
-                    lto_dict[pair]['result']['exit']['type'] = 'limit'
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
-                    lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['limit']['price']
-                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['exit']['limit']['amount']
-                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['limit']['quantity']
+                    lto_dict[tradeid]['result']['exit']['type'] = 'limit'
+                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['price'] = lto_dict[tradeid]['exit']['limit']['price']
+                    lto_dict[tradeid]['result']['exit']['amount'] = lto_dict[tradeid]['exit']['limit']['amount']
+                    lto_dict[tradeid]['result']['exit']['quantity'] = lto_dict[tradeid]['exit']['limit']['quantity']
 
-                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
-                    lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['result']['exit']['time'] - lto_dict[pair]['result']['enter']['time']
+                    lto_dict[tradeid]['result']['profit'] = lto_dict[tradeid]['result']['exit']['amount'] - lto_dict[tradeid]['result']['enter']['amount']
+                    lto_dict[tradeid]['result']['liveTime'] = lto_dict[tradeid]['result']['exit']['time'] - lto_dict[tradeid]['result']['enter']['time']
 
                     # Update df_balance: # Update df_balance: write the amount of the exit
                     # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_dict[pair]['result']['exit']['amount']
+                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_dict[tradeid]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
                     df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
 
-                elif int(lto_dict[pair]['exit']['limit']['expire']) <= bson.Int64(last_kline.index.values):
-                    lto_dict[pair]['status'] = 'exit_expire'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
+                elif int(lto_dict[tradeid]['exit']['limit']['expire']) <= bson.Int64(last_kline.index.values):
+                    lto_dict[tradeid]['status'] = 'exit_expire'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
                     
                 else:
                     pass
 
-            elif 'oco' in lto_dict[pair]['exit'].keys():
+            elif 'oco' in lto_dict[tradeid]['exit'].keys():
                 # NOTE: Think about the worst case and check the stop loss first.
 
-                if float(last_kline['low']) < lto_dict[pair]['exit']['oco']['stopPrice']:
+                if float(last_kline['low']) < lto_dict[tradeid]['exit']['oco']['stopPrice']:
                     # Stop Loss takens
-                    lto_dict[pair]['status'] = 'closed'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
-                    lto_dict[pair]['result']['cause'] = 'closed'
-                    lto_dict[pair]['result']['exit']['type'] = 'oco_stoploss'
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
-                    lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['oco']['stopLimitPrice']
-                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['exit']['oco']['amount']
-                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['oco']['quantity']
+                    lto_dict[tradeid]['status'] = 'closed'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    lto_dict[tradeid]['result']['cause'] = 'closed'
+                    lto_dict[tradeid]['result']['exit']['type'] = 'oco_stoploss'
+                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['price'] = lto_dict[tradeid]['exit']['oco']['stopLimitPrice']
+                    lto_dict[tradeid]['result']['exit']['amount'] = lto_dict[tradeid]['exit']['oco']['amount']
+                    lto_dict[tradeid]['result']['exit']['quantity'] = lto_dict[tradeid]['exit']['oco']['quantity']
 
-                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
-                    lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['result']['exit']['time'] - lto_dict[pair]['result']['enter']['time']
+                    lto_dict[tradeid]['result']['profit'] = lto_dict[tradeid]['result']['exit']['amount'] - lto_dict[tradeid]['result']['enter']['amount']
+                    lto_dict[tradeid]['result']['liveTime'] = lto_dict[tradeid]['result']['exit']['time'] - lto_dict[tradeid]['result']['enter']['time']
 
                     # Update df_balance: # Update df_balance: write the amount of the exit
                     # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_dict[pair]['result']['exit']['amount']
+                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_dict[tradeid]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
                     df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     pass
                 
-                elif float(last_kline['high']) > lto_dict[pair]['exit']['oco']['limitPrice']:
+                elif float(last_kline['high']) > lto_dict[tradeid]['exit']['oco']['limitPrice']:
                     # Limit taken
 
-                    lto_dict[pair]['status'] = 'closed'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
-                    lto_dict[pair]['result']['cause'] = 'closed'
+                    lto_dict[tradeid]['status'] = 'closed'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    lto_dict[tradeid]['result']['cause'] = 'closed'
 
-                    lto_dict[pair]['result']['exit']['type'] = 'oco_limit'
-                    lto_dict[pair]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
-                    lto_dict[pair]['result']['exit']['price'] = lto_dict[pair]['exit']['oco']['limitPrice']
-                    lto_dict[pair]['result']['exit']['amount'] = lto_dict[pair]['exit']['oco']['amount']
-                    lto_dict[pair]['result']['exit']['quantity'] = lto_dict[pair]['exit']['oco']['quantity']
+                    lto_dict[tradeid]['result']['exit']['type'] = 'oco_limit'
+                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['price'] = lto_dict[tradeid]['exit']['oco']['limitPrice']
+                    lto_dict[tradeid]['result']['exit']['amount'] = lto_dict[tradeid]['exit']['oco']['amount']
+                    lto_dict[tradeid]['result']['exit']['quantity'] = lto_dict[tradeid]['exit']['oco']['quantity']
 
-                    lto_dict[pair]['result']['profit'] = lto_dict[pair]['result']['exit']['amount'] - lto_dict[pair]['result']['enter']['amount']
-                    lto_dict[pair]['result']['liveTime'] = lto_dict[pair]['result']['exit']['time'] - lto_dict[pair]['result']['enter']['time']
+                    lto_dict[tradeid]['result']['profit'] = lto_dict[tradeid]['result']['exit']['amount'] - lto_dict[tradeid]['result']['enter']['amount']
+                    lto_dict[tradeid]['result']['liveTime'] = lto_dict[tradeid]['result']['exit']['time'] - lto_dict[tradeid]['result']['enter']['time']
 
                     # Update df_balance: # Update df_balance: write the amount of the exit
                     # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_dict[pair]['result']['exit']['amount']
+                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_dict[tradeid]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
                     df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
                     pass
 
-                elif int(lto_dict[pair]['exit']['oco']['expire']) <= bson.Int64(last_kline.index.values):
-                    lto_dict[pair]['status'] = 'exit_expire'
-                    lto_dict[pair]['history'].append(lto_dict[pair]['status'])
+                elif int(lto_dict[tradeid]['exit']['oco']['expire']) <= bson.Int64(last_kline.index.values):
+                    lto_dict[tradeid]['status'] = 'exit_expire'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
 
                 else:
                     pass
@@ -377,7 +380,7 @@ async def update_ltos(lto_dict, data_dict, df_balance):
                 # TODO: Internal Error
                 pass
                 
-        elif lto_dict[pair]['status'] == 'partially_closed_exit':
+        elif lto_dict[tradeid]['status'] == 'partially_closed_exit':
             # Ignore for the tests
             pass
 
@@ -404,7 +407,7 @@ async def application(bwrapper, pair_list, df_list):
     lto_dict = dict()
     for lto in lto_list:
         # TODO: NEXT: Update pair to tradeid and change the logic of required evaluations
-        lto_dict[lto['pair']] = lto
+        lto_dict[lto['tradeid']] = lto
 
     lto_dict_original = copy.deepcopy(lto_dict)
 
@@ -424,7 +427,7 @@ async def application(bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
-    # NOTE: Execution of multiple algorithm is possible, if 'algorithm': 'sample_oco_algorithm' like items added to the to's
+    # NOTE: Execution of multiple strategy is possible, if 'strategy': 'sample_oco_strategy' like items added to the TOs
     nto_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts)) # Send the last timestamp index
 
     # 2.3: Execute LTOs and NTOs if any
@@ -438,7 +441,7 @@ async def application(bwrapper, pair_list, df_list):
 
     if len(nto_dict):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        result = await mongocli.do_insert_many("live-trades",nto_dict)     
+        result = await mongocli.do_insert_many("live-trades",[*nto_dict.values()])     
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_dict, lto_dict_original)

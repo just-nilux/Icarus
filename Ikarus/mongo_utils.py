@@ -58,23 +58,15 @@ class MongoClient():
         return result
 
 
-    async def do_insert_many(self, col, item_dict) -> None:
+    async def do_insert_many(self, col, item_list) -> None:
         """
         This function writes the selected item into the collection 
 
         Args:
             col (string): db collection
-            item_dict (dict): Dictionary of GenericObject
+            item_list (list): Dictionary of GenericObject
         """        
-
-        insert_list = []
-        for pair, obj in item_dict.items():
-            obj['pair'] = pair
-            obj['_id'] = int(time() * 1000)
-            insert_list.append(obj)
-            sleep(0.01)
-            
-        result = await self.db_bot[col].insert_many(insert_list)
+        result = await self.db_bot[col].insert_many(item_list)
         self.logger.info(f"do_insert_many [{col}]: inserted ids {result.inserted_ids}")
         return result
 

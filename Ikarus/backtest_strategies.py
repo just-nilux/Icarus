@@ -5,6 +5,7 @@ from Ikarus.objects import GenericObject, ObjectEncoder
 import bson
 import copy
 import abc
+import time
 
 class StrategyBase(metaclass=abc.ABCMeta):
 
@@ -180,20 +181,40 @@ class OCOBackTest(StrategyBase):
         # Initialize trade_dict to be filled
         trade_dict = dict()
 
-        # TODO: Update the iteration logic based on the trade id not the pair
-        # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
-        for pair in analysis_dict.keys():
+        # Create a mapping between the pair and tradeid such as {'BTCUSDT':['123','456']}
+        pair_tradeid_mapping = {}
+        for tradeid, lto in lto_dict.items():
+            pair = lto['pair']
+            if pair not in pair_tradeid_mapping.keys():
+                pair_tradeid_mapping[pair] = []
+            
+            pair_tradeid_mapping[pair].append(tradeid)
 
-            # Check if there is already an lto for a specific pair
-            if pair in lto_dict.keys():
+        # This implementation enable to check number of trades and compare the value with the one in the config file.
+
+
+        # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
+        for ao_pair in analysis_dict.keys():
+
+            # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
+            if ao_pair in pair_tradeid_mapping.keys():
+                
+                # NOTE: If a pair contains multiple LTO then there should be another level of iteration as well
+                skip_calculation, lto_dict[pair_tradeid_mapping[ao_pair][0]] = await self._handle_lto(lto_dict[pair_tradeid_mapping[ao_pair][0]], dt_index)
+                if skip_calculation: continue;
+
+            else: pass # Make a brand new decision
+            '''
+            if ao_pair in lto_dict.keys():
                 # NOTE: If a pair contains multiple to then there should be another level of iteration as well
-                skip_calculation, lto_dict[pair] = await self._handle_lto(lto_dict[pair], dt_index)
+                skip_calculation, lto_dict[ao_pair] = await self._handle_lto(lto_dict[ao_pair], dt_index)
 
                 if skip_calculation: continue;
 
             else: pass # Make a brand new decision
-
-            time_dict = analysis_dict[pair]
+            '''
+            
+            time_dict = analysis_dict[ao_pair]
             # Since all parameters are handled in a different way, 
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]
@@ -203,12 +224,16 @@ class OCOBackTest(StrategyBase):
 
             # Make decision to enter or not
             if trange_mean5 < trange_mean20:
-                self.logger.info(f"{pair}: BUY SIGNAL")
+                self.logger.info(f"{ao_pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = 'open_enter'
+                trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
                 trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
-                #TODO: give proper values to limit
+                # TODO: HIGH Here is the problem, if more than 1 TO created in an iteration, they will have the same 'tradeid' so lto_dict keys will not be unique
+                #       When changing this naming, consider changing the parameters in  visualization as well since they use tradeid as the decision making point
+                #       In this case another param might be added to the TO such as 'decision_time'
+                # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
                 enter_price = min(time_dict['15m']['low'][-10:])
@@ -247,10 +272,12 @@ class OCOBackTest(StrategyBase):
                 # Fill exit module
                 trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
 
-                trade_dict[pair] = trade_obj
+                trade_obj['_id'] = int(time.time() * 1000)
+
+                trade_dict[trade_obj['tradeid']] = trade_obj
 
             else:
-                self.logger.info(f"{pair}: NO SIGNAL")
+                self.logger.info(f"{ao_pair}: NO SIGNAL")
 
         return trade_dict
 
