@@ -197,8 +197,174 @@ class BinanceWrapper():
         return True
 
 
-    async def execute_decision(self, trade_objs):
-        return True
+    async def _execute_lto(self, lto_dict):
+        """
+        Execution Logic:
+        for tradeid in lto_dict.keys():
+            if 'action' in lto_dict[tradeid].keys():
+                1. cancel
+                    In case of enter expire, it might be decided to cancel the order
+                2. update
+                    cancel the prev order and place the same type of order with updated values
+                3. market_enter
+                    In case of enter expire, it might be decided to enter with market order
+                4. market_exit
+                    In case of exit expire, it might be decided to exit with market order
+
+        Args:
+            lto_dict (dict): [description]
+            df_balance (pd.DataFrame): [description]
+
+        Returns:
+            tuple: lto_dict, df_balance
+        """
+        for tradeid in lto_dict.keys():
+            if 'action' in lto_dict[tradeid].keys():
+
+                # NOTE: Consider the fact that each pair may contain more than 1 trade in future
+                if lto_dict[tradeid]['action'] == 'cancel':
+                    # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
+
+                    # TODO: DEPLOY: Binance cancel the order
+                    lto_dict[tradeid]['status'] = 'closed'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+            
+                elif lto_dict[tradeid]['action'] == 'update':
+                    pass
+                
+                elif lto_dict[tradeid]['action'] == 'market_enter':
+                    pass
+                
+                elif lto_dict[tradeid]['action'] == 'market_exit':
+
+                    # TODO: DEPLOY: Execute Market Order in Binance
+                    # TODO: DEPLOY: Wait until the execution and fill the TO 
+                    '''
+                    lto_dict[tradeid]['status'] = 'closed'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    lto_dict[tradeid]['result']['cause'] = 'exit_expire'
+                    last_kline = data_dict[lto_dict[tradeid]['pair']]['15m'].tail(1)
+
+                    lto_dict[tradeid]['result']['exit']['type'] = 'market'
+                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['price'] = float(last_kline['close'])
+                    lto_dict[tradeid]['result']['exit']['quantity'] = lto_dict[tradeid]['exit']['market']['quantity']
+                    lto_dict[tradeid]['result']['exit']['amount'] = lto_dict[tradeid]['result']['exit']['price'] * lto_dict[tradeid]['result']['exit']['quantity']
+
+                    lto_dict[tradeid]['result']['profit'] = lto_dict[tradeid]['result']['exit']['amount'] - lto_dict[tradeid]['result']['enter']['amount']
+                    '''
+                    pass
+            
+                elif lto_dict[tradeid]['action'] == 'execute_exit':
+                    # If the enter is successful and the algorithm decides to execute the exit order
+                    # TODO: LIVE: Place the exit order to Binance: oco or limit
+                    # TODO: LIVE: If the exit type is OCO, then fill the stoploss tradeid in the exit section
+
+                    lto_dict[tradeid]['status'] = 'open_exit'
+                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    pass
+
+                # Postpone can be for the enter or the exit phase
+                elif lto_dict[tradeid]['action'] == 'postpone':
+                    if lto_dict[tradeid]['status'] == 'enter_expire':
+                        lto_dict[tradeid]['status'] = 'open_enter'
+                        lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+
+                    elif lto_dict[tradeid]['status'] == 'exit_expire':
+                        lto_dict[tradeid]['status'] = 'open_exit'
+                        lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                        pass
+                    else: pass
+
+                # Delete the action, after the action is taken
+                del lto_dict[tradeid]['action']
+
+        return lto_dict
+
+
+    async def _execute_nto(self, trade_dict):
+        """
+        for to in trade_dict:
+            1. open_enter
+                a. market
+                    - Get the 'result'
+                b. limit
+            2. partially_closed_enter
+                -
+            3. open_exit
+                a. market
+                    - Get the 'result'
+                b. limit
+                c. oco
+            4. partially_closed_exit
+            -
+
+        Args:
+            trade_dict (dict): [description]
+            df_balances (pd.DataFrame): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        for tradeid in trade_dict.keys():
+            # NOTE: The status values other than 'open_enter' is here for lto update
+            if trade_dict[tradeid]['status'] == 'open_enter':
+                
+                if 'market' in trade_dict[tradeid]['enter'].keys():
+                    # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
+                    pass
+
+                elif 'limit' in trade_dict[tradeid]['enter'].keys():
+                    # TODO: NEXT: LIVE: Execute limit order
+                    pass
+
+                else: pass # TODO: Internal Error
+
+            else: pass # TODO: Internal Error
+        return trade_dict
+
+
+    async def execute_decision(self, trade_dict, lto_dict):
+        """
+        'execute_decision' method is responsible for
+            - execute new to's
+            - execute lto updates
+                - Strategy do not update the status. It creates the 'action' and the execute_decision update the status
+            - update the df_balance
+
+        TestBinanceWrapper: In test sessions, executing a trade_object means
+        changing the df_balance columns 'free' and 'locked' when a trade is
+        started
+
+        Execution Logic:
+        1. Execute live_trade_objects
+        2. Execute new_trade_objects
+
+        Args:
+            trade_dict (dict): [description]
+            df_balances (pd.DataFrame): [description]
+
+        Returns:
+            tuple: result, df_balances
+        """
+        result = True
+        # TODO: These two execution can be done in paralel from the main script. No need for execute_decision (at least for the live-trading)
+
+        # Execute decsisions about ltos
+        # TODO: _execute_lto cannot decide to not to enter if there is not enough balance. This check should be done in strategy.
+        # NOTE: _execute_lto tries to execute, if things fails then it creates an error log, notification etc.
+        lto_dict = await self._execute_lto(lto_dict)
+
+        # Execute new trade objects
+        trade_dict = await self._execute_nto(trade_dict)      
+            
+        # TODO: Consider returning trade_dict, because:
+        #   - orders may not be accepted by the broker
+        #       - In this case this side where to handle the issue: here or the main script
+        #   - market sell causes instant fill
+        #   - market enter causes instant fill
+
+        return result, lto_dict
 
 
     async def pprint_klines(self, list_klines):
@@ -539,20 +705,19 @@ class TestBinanceWrapper():
         Returns:
             [type]: [description]
         """
-        for pair in trade_dict.keys():
+        for tradeid in trade_dict.keys():
             # NOTE: The status values other than 'open_enter' is here for lto update
-            if trade_dict[pair]['status'] == 'open_enter':
+            if trade_dict[tradeid]['status'] == 'open_enter':
                 
-                if 'market' in trade_dict[pair]['enter'].keys():
+                if 'market' in trade_dict[tradeid]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
-                elif 'limit' in trade_dict[pair]['enter'].keys():
-                    # TODO: LIVE: Execute limit order
+                elif 'limit' in trade_dict[tradeid]['enter'].keys():
                     # NOTE: TEST: No action needed
                     # TEST: Update df_balance
-                    df_balance.loc[self.quote_currency,'free'] -= trade_dict[pair]['enter']['limit']['amount']
-                    df_balance.loc[self.quote_currency,'locked'] += trade_dict[pair]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'free'] -= trade_dict[tradeid]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'locked'] += trade_dict[tradeid]['enter']['limit']['amount']
 
                 else: pass # TODO: Internal Error
 

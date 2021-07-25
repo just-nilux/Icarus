@@ -1,0 +1,38 @@
+{
+    "tag": "test-bot",
+    "log-level": "INFO",
+    "credential_file": ".\\test_credentials.json",
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017
+    },
+    "broker": {
+        "quote_currency": "USDT",
+        "credit_currency": "TRY"
+    },
+    "strategy": {
+        "enter": {
+            "type": "limit"
+        },
+        "exit": {
+            "type": "limit"
+        },
+        "action_mapping": {
+            "enter_expire": "cancel",
+            "exit_expire": "market_exit"
+        },
+        "max_lto": 1
+    },
+    "analysis": {
+        "indicators": ["low","high","llow", "hhigh", "trange", "moving_average"],
+        "params": {
+            "moving_average": [5,20]
+        }
+    },
+    "data_input": {
+        "pairs": ["BTCUSDT"],
+        "scale":["15m"],
+        "length_str":[ "1 day" ],
+        "length_int":[ 96 ]
+    }
+}

@@ -1,8 +1,8 @@
 import asyncio
-from binance import Client, AsyncClient, BinanceSocketManager
-from datetime import datetime, timedelta
+from binance import AsyncClient
+from datetime import datetime
 import json
-from Ikarus import binance_wrapper, live_strategies, backtest_strategies, notifications, analyzers, observers, mongo_utils, objects
+from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -54,6 +54,47 @@ async def wait_until(dt):
 async def run_at(dt, coro):
     await wait_until(dt)
     return await coro
+
+
+async def write_updated_ltos_to_db(lto_dict, lto_dict_original):
+
+    for tradeid, lto in lto_dict.items():
+
+        # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
+        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
+        if lto['status'] == 'closed':
+            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
+            result_insert = await mongocli.do_insert_one("hist-trades",lto)
+            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
+
+        # NOTE: Manual trade option is omitted, needs to be added
+        elif lto['status'] == 'open_exit':
+            # - The status might be changed from 'open_enter' or 'partially_closed_enter' to 'open_exit' (changes in result.enter and history)
+            # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
+            result_update = await mongocli.do_update( 
+                "live-trades",
+                {'_id': lto['_id']},
+                {'$set': {'status': 
+                        lto['status'],
+                        'exit':lto['exit'],
+                        'result.enter':lto['result']['enter'],
+                        'history':lto['history'] 
+                    }})
+                
+        elif lto['status'] == 'open_enter':
+            # - 'open_enter' might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
+            result_update = await mongocli.do_update( 
+                "live-trades",
+                {'_id': lto['_id']},
+                {'$set': {'status': lto['status'], 'enter':lto['enter'], 'history':lto['history'] }})
+
+        # NOTE: These two below are not applicable
+        elif lto['status'] == 'partially_closed_enter':
+            pass
+        elif lto['status'] == 'partially_closed_exit':
+            pass
+        else:
+            pass
 
 
 async def update_ltos(lto_dict, orders_dict, data_dict):
@@ -216,6 +257,8 @@ async def application(bwrapper, telbot):
     for lto in lto_list:
         lto_dict[lto['tradeid']] = lto
 
+    lto_dict_original = copy.deepcopy(lto_dict)
+
     # 1.2 Get datadict and orders
     pre_calc_1_coroutines = [ bwrapper.get_data_dict(pair_list, input_data_config),
                               bwrapper.get_lto_orders(lto_dict)]
@@ -236,21 +279,33 @@ async def application(bwrapper, telbot):
     # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
     current_ts = int(time.time())   # Get the timestamp in gmt=0
     current_ts -= int(current_ts % 60) # Round the current_ts to backward (to the beginning of the current minute)
-    trade_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts))
+    nto_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts))
 
-    if len(trade_dict):
-        exec_status = await asyncio.create_task(bwrapper.execute_decision(trade_dict))
-        # TODO: |trade_obj life cycle|1|: Write trade dict to the "live-trades" (write for the first time)
+    # 2.3: Execute LTOs and NTOs if any
+    if len(nto_dict) or len(lto_dict):
+        # 2.3.1: Execute the TOs
+        result, lto_dict = await asyncio.create_task(bwrapper.execute_decision(nto_dict, lto_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-        # await mongocli.insert_many("live-trades",trade_dict)
 
     
-    # Phase 3: Perform post-calculation tasks
-    logger.info('post-calculation phase started')
-    observation_obj = await observer.sample_observer(df_balance)
-    await mongocli.do_insert_one("observer",observation_obj.get())   
+    #################### Phase 3: Perform post-calculation tasks ####################
 
-    logger.debug('Application ended')
+    if len(nto_dict):
+        # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
+        result = await mongocli.do_insert_many("live-trades",[*nto_dict.values()])     
+
+    # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
+    await write_updated_ltos_to_db(lto_dict, lto_dict_original)
+
+    # 3.3: Get the observer
+
+    # 3.3.1 Get df_balance
+    df_balance = await bwrapper.get_current_balance()
+
+    # 3.3.2 Insert df_balance to [observer]
+    observation_obj = await observer.sample_observer(df_balance)
+    await mongocli.do_insert_one("observer",observation_obj.get())
+
     return True
 
 
@@ -330,7 +385,7 @@ if __name__ == "__main__":
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy = backtest_strategies.OCOBackTest(config)
+    strategy = live_strategies.AlwaysEnter(config)
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")
