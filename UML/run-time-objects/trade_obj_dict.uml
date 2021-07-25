@@ -21,6 +21,7 @@
         "limitPrice": "",
         "stopPrice": "",
         "stopLimitPrice": "",
+        "stopLimit_tradeid": "",
         "quantity": "",
         "amount": "",
         "expire": ""

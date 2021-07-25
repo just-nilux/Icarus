@@ -1,4 +1,5 @@
 from asyncio.tasks import gather
+from typing import Awaitable
 from binance import Client
 import asyncio
 import pandas as pd
@@ -143,20 +144,23 @@ class BinanceWrapper():
             lto_dict (dict): [description]
 
         Returns:
-            [type]: [description]
+            [dict]: Each tradeid (orderId) is mapped to it's order object
         """
         # Check the status of LTOs:
         coroutines = []
-        for pair, lto in lto_dict:
-            coroutines.append(self.client.get_order(symbol=pair, orderId=lto['tradeid']))
+        for tradeid, lto in lto_dict:
+            coroutines.append(self.client.get_order(symbol=lto['tradeid'], orderId=tradeid))
             # NOTE: 'tradeid' can be changed with 'orderid' for the consistency with the api
 
-        lto_orders=[] # TODO: It can be a dict
+        lto_orders_dict = {} # TODO: It can be a dict
         if len(coroutines):
-            lto_orders = list(asyncio.gather(*coroutines))
-            # TODO: Check the format of the lto orders and put them in a proper shape
+            for order in list(asyncio.gather(*coroutines)):
+                lto_orders_dict[order['orderId']] = order
         
-        return lto_orders
+        # TESTING PURPOSES
+        await self.get_open_orders()
+
+        return lto_orders_dict
 
 
     async def get_open_orders(self):
@@ -169,8 +173,23 @@ class BinanceWrapper():
         """
         # NOTE: Currently it is not needed to take the external orders in account.
         # TODO: Decide what to do with all orders or all open orders
-        orders = self.client.get_open_orders(symbol='BNBBTC')
-        orders = self.client.get_all_orders(symbol='BNBBTC')
+        orders = await self.client.get_order(symbol='BLZUSDT', orderId=173122044) # OCO-LIMIT SUCCESFULL / MULTIPLE COMISSION
+        orders = await self.client.get_order(symbol='BLZUSDT', orderId=173122043) # OCO-STOPLOSS EXPIRED
+
+        orders = await self.client.get_order(symbol='BTCUSDT', orderId=6002017720) # SUCCESFUL
+        orders = await self.client.get_order(symbol='AVAXUSDT', orderId=340304592) # CANCEL
+        orders = await self.client.get_order(symbol='DOGETRY', orderId=67156655) # OCO-STOPLOSS
+        orders = await self.client.get_order(symbol='DOGETRY', orderId=67156656) # OCO-LIMIT EXPIRED
+
+
+        orders = await self.client.get_open_orders(symbol='BTCUSDT')         
+        orders = await self.client.get_open_orders(symbol='XRPUSDT')
+        orders = await self.client.get_open_orders(symbol='AVAXUSDT')
+
+        orders = await self.client.get_all_orders(symbol='BTCUSDT')
+        orders = await self.client.get_all_orders(symbol='AVAXUSDT')
+        orders = await self.client.get_all_orders(symbol='XRPUSDT')
+
         return orders
 
 
@@ -401,7 +420,7 @@ class TestBinanceWrapper():
     async def _execute_lto(self, lto_dict, df_balance, data_dict):
         """
         Execution Logic:
-        for pair in lto_dict.keys():
+        for tradeid in lto_dict.keys():
             if 'action' in lto_dict[tradeid].keys():
                 1. cancel
                     In case of enter expire, it might be decided to cancel the order

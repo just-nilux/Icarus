@@ -192,7 +192,6 @@ class OCOBackTest(StrategyBase):
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
-
         # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
         for ao_pair in analysis_dict.keys():
 
