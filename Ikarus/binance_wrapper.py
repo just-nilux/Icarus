@@ -308,6 +308,7 @@ class BinanceWrapper():
         Returns:
             [type]: [description]
         """
+        # TODO: NEXT: Get the sample responses when an order is placed or not placed
         for tradeid in trade_dict.keys():
             # NOTE: The status values other than 'open_enter' is here for lto update
             if trade_dict[tradeid]['status'] == 'open_enter':
@@ -317,7 +318,7 @@ class BinanceWrapper():
                     pass
 
                 elif 'limit' in trade_dict[tradeid]['enter'].keys():
-                    # TODO: NEXT: LIVE: Execute limit order
+                    # TODO: NEXT: LIVE: Execute limit order,
                     pass
 
                 else: pass # TODO: Internal Error
@@ -660,6 +661,8 @@ class TestBinanceWrapper():
                     # If the enter is successfull and the algorithm decides to execute the exit order
                     # TODO: DEPLOY: Place the exit order to Binance: oco or limit
                     #       No need to fill anything in 'result' or 'exit' sections.
+
+                    # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
 
                     lto_dict[tradeid]['status'] = 'open_exit'
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])

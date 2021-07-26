@@ -291,7 +291,7 @@ async def application(bwrapper, telbot):
     # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
     current_ts = int(time.time())   # Get the timestamp in gmt=0
     current_ts -= int(current_ts % 60) # Round the current_ts to backward (to the beginning of the current minute)
-    nto_dict = await asyncio.create_task(strategy.run(analysis_dict, lto_dict, df_balance, current_ts))
+    nto_dict = await strategy.run(analysis_dict, lto_dict, df_balance, current_ts)
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_dict) or len(lto_dict):
@@ -328,6 +328,7 @@ async def main(smallest_interval):
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
+    strategy.symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # 1 pair
     # bm = BinanceSocketManager(client)
     bwrapper = binance_wrapper.BinanceWrapper(client, config)
 
@@ -353,6 +354,7 @@ async def main(smallest_interval):
 
             STATUS_TIMEOUT = 0
             
+            '''
             # NOTE: The smallest time interval is 1 minute
             start_ts = int(server_time['serverTime']/1000)
             # NOTE: The logic below, executes the app default per minute. This should be generalized
@@ -365,7 +367,7 @@ async def main(smallest_interval):
                 #asyncio.sleep(period),
                 application(bwrapper, telbot),
             )
-            '''
+            
         except Exception as e:
             if STATUS_TIMEOUT != 1:
                 logger.error(str(e))
@@ -376,6 +378,9 @@ async def main(smallest_interval):
 
 if __name__ == "__main__":
 
+    # TODO: A paper-testing script might be need to develop, live-trade viualization and reveal unseen bugs
+    #       lto_update, bwrapper.execute sections can be directly taken from backtest-engine
+    
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
     

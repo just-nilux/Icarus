@@ -38,10 +38,13 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 class AlwaysEnter(StrategyBase):
 
-    def __init__(self,_config):
+    def __init__(self, _config):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy']
         self.quote_currency = _config['broker']['quote_currency']
+
+        # TODO: Make proper handling for symbol_info
+        self.symbol_info = dict()
         return
 
     async def _postpone(self, lto, phase, expire_time):
@@ -146,6 +149,26 @@ class AlwaysEnter(StrategyBase):
 
         return skip_calculation, lto
 
+    
+    async def apply_exchange_filters(self):
+        """
+        Apply the filter of exchange pair
+
+        Returns:
+            [type]: [description]
+        """ 
+        # TODO
+        '''
+        if free_ref_asset > self.symbol_info[]:
+            if free_ref_asset < enter_ref_amount:
+                enter_ref_amount = free_ref_asset
+        else:
+            # TODO: ERROR: NO free asset
+            return {}
+        '''
+
+        pass
+
 
     async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
         """
@@ -192,7 +215,11 @@ class AlwaysEnter(StrategyBase):
 
             else: pass # Make a brand new decision
             
-            time_dict = analysis_dict[ao_pair]
+            if len(analysis_dict[ao_pair].keys()) == 1:
+                scale = list(analysis_dict[ao_pair].keys())[0]
+            else:
+                # NOTE: Multiscale not supported yet
+                pass
 
             # Make decision to enter or not
             if True:
@@ -208,10 +235,8 @@ class AlwaysEnter(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = time_dict['15m']['low'][-1]
-                exit_price = time_dict['15m']['high'][-1]
-
-                # Calculate enter/exit amount value
+                enter_price = float(analysis_dict[ao_pair][scale]['low'][-1])
+                exit_price = float(analysis_dict[ao_pair][scale]['high'][-1])
 
                 #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
                 # the base asset will be used.
@@ -220,13 +245,6 @@ class AlwaysEnter(StrategyBase):
 
                 # Example: Buy XRP with 100$ in your account
                 enter_ref_amount=100
-                # TODO: HIGH: Check mininum amount to trade and add this section to here
-                if free_ref_asset > 10:
-                    if free_ref_asset < enter_ref_amount:
-                        enter_ref_amount = free_ref_asset
-                else:
-                    # TODO: Add error logs and send notification
-                    return {}
 
                 # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
                 # Example:
@@ -238,10 +256,11 @@ class AlwaysEnter(StrategyBase):
                 #   exit_ref_amount = 151,4 * 0.70 = 105.98
                 exit_ref_amount = enter_quantity * exit_price
 
-                # Fill enter module
-                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000))
+                # TODO: Apply filter function needs to be added to met the pair-exchange requirements
+                await self.apply_exchange_filters()
 
-                # Fill exit module
+                # Fill enter and exit modules
+                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000))
                 trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
 
                 trade_obj['_id'] = int(time.time() * 1000)
@@ -431,23 +450,14 @@ class OCOBackTest(StrategyBase):
                 if skip_calculation: continue;
 
             else: pass # Make a brand new decision
-            '''
-            if ao_pair in lto_dict.keys():
-                # NOTE: If a pair contains multiple to then there should be another level of iteration as well
-                skip_calculation, lto_dict[ao_pair] = await self._handle_lto(lto_dict[ao_pair], dt_index)
 
-                if skip_calculation: continue;
-
-            else: pass # Make a brand new decision
-            '''
-            
-            time_dict = analysis_dict[ao_pair]
-            # Since all parameters are handled in a different way, 
-            # there needs to be different handlers for each type of indicator
-            # TODO: Create a list of indicator handlers: [atr_handler()]
-
-            trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
-            trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
+            if len(analysis_dict[ao_pair].keys()) == 1:
+                scale = list(analysis_dict[ao_pair].keys())[0]
+            else:
+                # NOTE: Multiscale not supported yet
+                pass
+            trange_mean5 = st.mean(analysis_dict[ao_pair][scale]['trange'][-5:])
+            trange_mean20 = st.mean(analysis_dict[ao_pair][scale]['trange'][-20:])
 
             # Make decision to enter or not
             if trange_mean5 < trange_mean20:
@@ -463,8 +473,8 @@ class OCOBackTest(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict['15m']['low'][-10:])
-                exit_price = max(time_dict['15m']['high'][-10:])
+                enter_price = min(analysis_dict[ao_pair][scale]['low'][-10:])
+                exit_price = max(analysis_dict[ao_pair][scale]['high'][-10:])
 
                 # Calculate enter/exit amount value
 

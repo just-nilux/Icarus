@@ -239,7 +239,7 @@ async def update_ltos(lto_dict, data_dict, df_balance):
         pair_klines_dict = data_dict[pair]
 
         # 1.2.1: Check trades and update status
-        # pair_klines_dict = pair_klines
+        # TODO: Update the following patch for the multi scale
         last_kline = pair_klines_dict['15m'].tail(1)
 
         if lto_dict[tradeid]['status'] == 'open_enter':
