@@ -15,9 +15,19 @@ import time
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
+def generate_scales_in_minute(config_dict):
+    scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
+    scales_in_minute = []
+    for scale in config_dict['data_input']['scale']:
+        scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
+
+    config_dict['data_input']['scales_in_minute'] = scales_in_minute
+
+    return config_dict
+
 def setup_logger(_log_lvl):
     global logger
-    log_filename = 'log/test-ikarus-app.log'
+    log_filename = 'log/ikarus-app.log'
     logger = logging.getLogger('app')
     logger.setLevel(logging.DEBUG)
 
@@ -125,11 +135,12 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
         pair = lto_dict[tradeid]['pair']
 
         # TODO: '15m' should not be hardcoded
+        # TODO: NEXT: Resolve the time_Scale issue
         last_kline = data_dict[pair]['15m'].tail(1)
         # 1.2.1: Check trades and update status
         # pair_klines_dict = pair_klines
         # TODO NEXT: Continue to integrate this section
-        # TODO: A mocl might be needed to simulate live orders
+        # TODO: A mock might be needed to simulate live orders
         if lto_dict[tradeid]['status'] == 'open_enter':
             # NOTE: There is 2 method to enter: 'limit' and 'market'. Since market executed directly, it is not expected to have market at this stage
             if 'limit' in lto_dict[tradeid]['enter'].keys():
@@ -250,7 +261,7 @@ async def application(bwrapper, telbot):
     pair_list = config['data_input']['pairs']
     
     #################### Phase 1: Perform pre-calculation tasks ####################
-
+    logger.debug('Phase 1 started')
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
     lto_dict = dict()
@@ -273,6 +284,7 @@ async def application(bwrapper, telbot):
     df_balance, lto_dict, analysis_dict = await asyncio.gather(*pre_calc_2_coroutines)
 
     #################### Phase 2: Perform calculation tasks ####################
+    logger.debug('Phase 2 started')
     # TODO: Either create task for each coroutine or only await them.
 
     # NOTE: current_ts is the open time of the current live candle (open time)
@@ -289,6 +301,7 @@ async def application(bwrapper, telbot):
 
     
     #################### Phase 3: Perform post-calculation tasks ####################
+    logger.debug('Phase 3 started')
 
     if len(nto_dict):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
@@ -309,7 +322,7 @@ async def application(bwrapper, telbot):
     return True
 
 
-async def main(period):
+async def main(smallest_interval):
     global SYSTEM_STATUS, STATUS_TIMEOUT
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
@@ -339,19 +352,20 @@ async def main(period):
                 SYSTEM_STATUS = 0
 
             STATUS_TIMEOUT = 0
-            '''
+            
             # NOTE: The smallest time interval is 1 minute
             start_ts = int(server_time['serverTime']/1000)
-            start_ts = start_ts - (start_ts % 60) + 61  # 1 minute 1 second ahead
-            result = await asyncio.create_task(run_at(start_ts, application(bwrapper, client, telbot)))
+            # NOTE: The logic below, executes the app default per minute. This should be generalized
+            start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1  # (x minute) * (60 sec) + (1 second) ahead
+            result = await asyncio.create_task(run_at(start_ts, application(bwrapper, telbot)))
+            
             '''
-
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
             await asyncio.gather(
                 #asyncio.sleep(period),
                 application(bwrapper, telbot),
             )
-
+            '''
         except Exception as e:
             if STATUS_TIMEOUT != 1:
                 logger.error(str(e))
@@ -391,5 +405,8 @@ if __name__ == "__main__":
     logger.info("------------------- Engine Restarted --------------------")
     logger.info("---------------------------------------------------------")
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(5))
+
+    config = generate_scales_in_minute(config)
+    min(config['data_input']['scales_in_minute'])
+    loop.run_until_complete( main( min( config['data_input']['scales_in_minute'])))
     print("Completed")

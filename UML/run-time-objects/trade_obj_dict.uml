@@ -2,7 +2,8 @@
 {
   "pair1":{
     "_id": "current timestamp",
-    "tradeid": "[dt index of obj creation]",
+    "tradeid": "(orderId of the Broker)",
+    "decision_time": "[dt index of obj creation]",
     "status": "",
     "enter": {
       "limit": {

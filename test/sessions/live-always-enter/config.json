@@ -1,6 +1,6 @@
 {
-    "tag": "test-bot",
-    "log-level": "INFO",
+    "tag": "BOT",
+    "log-level": "DEBUG",
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
@@ -31,8 +31,8 @@
     },
     "data_input": {
         "pairs": ["BTCUSDT"],
-        "scale":["15m"],
-        "length_str":[ "1 day" ],
+        "scale":["1m"],
+        "length_str":[ "12 hours" ],
         "length_int":[ 96 ]
     }
 }

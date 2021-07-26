@@ -7,6 +7,8 @@ import logging
 from Ikarus.objects import GenericObject
 import json
 import bson
+import time
+
 '''
 [
   [
@@ -127,7 +129,7 @@ class BinanceWrapper():
         for pair in pairs:
             for index, row in time_df.iterrows():
                 tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
-            
+
         composit_klines = list(await asyncio.gather(*tasks_klines_scales))
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
@@ -705,19 +707,21 @@ class TestBinanceWrapper():
         Returns:
             [type]: [description]
         """
-        for tradeid in trade_dict.keys():
+        for key in trade_dict.keys():
             # NOTE: The status values other than 'open_enter' is here for lto update
-            if trade_dict[tradeid]['status'] == 'open_enter':
+            if trade_dict[key]['status'] == 'open_enter':
                 
-                if 'market' in trade_dict[tradeid]['enter'].keys():
+                if 'market' in trade_dict[key]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
-                elif 'limit' in trade_dict[tradeid]['enter'].keys():
-                    # NOTE: TEST: No action needed
-                    # TEST: Update df_balance
-                    df_balance.loc[self.quote_currency,'free'] -= trade_dict[tradeid]['enter']['limit']['amount']
-                    df_balance.loc[self.quote_currency,'locked'] += trade_dict[tradeid]['enter']['limit']['amount']
+                elif 'limit' in trade_dict[key]['enter'].keys():
+                    # NOTE: In live-trading tradeid's are gathered from the broker and it is unique. Here it is set to a unique
+                    #       timestamp values
+
+                    trade_dict[key]['tradeid'] = int(time.time() * 1000) 
+                    df_balance.loc[self.quote_currency,'free'] -= trade_dict[key]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'locked'] += trade_dict[key]['enter']['limit']['amount']
 
                 else: pass # TODO: Internal Error
 

@@ -89,7 +89,7 @@ async def get_closed_hto(df):
 
         hto_dict = {
             "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
+            "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
             "exitTime": hto['result']['exit']['time'],
@@ -110,7 +110,7 @@ async def get_enter_expire_hto(df):
         # NOTE: HIGH: We dont know it the exit type is limit or not
         hto_dict = {
             "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
+            "decision_time": hto['decision_time'],
             "enterExpire": hto['enter']['limit']['expire'],
             "enterPrice": hto['enter']['limit']['price'],
         }
@@ -131,7 +131,7 @@ async def get_exit_expire_hto(df):
 
         hto_dict = {
             "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
+            "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
@@ -441,7 +441,7 @@ async def application(bwrapper, pair_list, df_list):
 
     if len(nto_dict):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        result = await mongocli.do_insert_many("live-trades",[*nto_dict.values()])     
+        result = await mongocli.do_insert_many("live-trades",[*nto_dict.values()])
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_dict, lto_dict_original)

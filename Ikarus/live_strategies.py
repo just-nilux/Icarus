@@ -201,7 +201,7 @@ class AlwaysEnter(StrategyBase):
                 trade_obj['status'] = 'open_enter'
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
-                trade_obj['tradeid'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
+                trade_obj['decision_time'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
                 # TODO: HIGH Here is the problem, if more than 1 TO created in an iteration, they will have the same 'tradeid' so lto_dict keys will not be unique
                 #       When changing this naming, consider changing the parameters in  visualization as well since they use tradeid as the decision making point
                 #       In this case another param might be added to the TO such as 'decision_time'
@@ -246,7 +246,8 @@ class AlwaysEnter(StrategyBase):
 
                 trade_obj['_id'] = int(time.time() * 1000)
 
-                trade_dict[trade_obj['tradeid']] = trade_obj
+                # Normally trade id should be unique and be given by the broker. Until it is executed assign the current ts. It will be updated at execution anyway
+                trade_dict[trade_obj['_id']] = trade_obj
 
             else:
                 self.logger.info(f"{ao_pair}: NO SIGNAL")
