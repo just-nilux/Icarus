@@ -478,6 +478,8 @@ async def main():
     df_csv_list = []
 
     # Iterate over the given files
+    # TODO: To simulate live-trade, include the next candle as the current candle
+
     for file in config['files']:
         filename = file.split('\\')[-1]
         pair_list.append(filename.split('_')[0].upper())

@@ -131,12 +131,17 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
     # NOTE: Expiration: Normally bson.Int64(last_kline.index.values): denotes the 'open_time' of last closed kline.
     #       However, in live-trading the last kline is the newly opened kline. Keep that in mind.
 
+    # TODO: NEXT: Check the key error
+    # TODO: NEXT: Find a way to create more meaningfull erro messages
     for tradeid in lto_dict.keys():
         pair = lto_dict[tradeid]['pair']
 
-        # TODO: '15m' should not be hardcoded
-        # TODO: NEXT: Resolve the time_Scale issue
-        last_kline = data_dict[pair]['15m'].tail(1)
+        assert len(data_dict[pair].keys()) == 1, "Multiple time scale is not supported"
+        scale = list(data_dict[pair].keys())[0]
+        #new_candle_open_time = bson.Int64(data_dict[pair][scale].tail(1).index.values)  # current_candle open_time
+        last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].tail(2).index.values[0])  # current_candle open_time
+        # NOTE: last_closed_candle_open_time is used because for the anything that happens: it happend in the last closed kline
+
         # 1.2.1: Check trades and update status
         # pair_klines_dict = pair_klines
         # TODO NEXT: Continue to integrate this section
@@ -153,12 +158,12 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                     lto_dict[tradeid]['status'] = 'waiting_exit'
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
                     lto_dict[tradeid]['result']['enter']['type'] = 'limit'
-                    lto_dict[tradeid]['result']['enter']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['enter']['time'] = last_closed_candle_open_time
                     lto_dict[tradeid]['result']['enter']['price'] = orders_dict[tradeid]['price']
                     lto_dict[tradeid]['result']['enter']['quantity'] = orders_dict[tradeid]['executedQty']
                     lto_dict[tradeid]['result']['enter']['amount'] = orders_dict[tradeid]['price'] * orders_dict[tradeid]['executedQty']
 
-                elif int(lto_dict[tradeid]['enter']['limit']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_dict[tradeid]['enter']['limit']['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
                     lto_dict[tradeid]['status'] = 'enter_expire'
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
@@ -183,7 +188,7 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                     lto_dict[tradeid]['result']['cause'] = 'closed'
 
                     lto_dict[tradeid]['result']['exit']['type'] = 'limit'
-                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_dict[tradeid]['result']['exit']['price'] = orders_dict[tradeid]['price']
                     lto_dict[tradeid]['result']['exit']['amount'] = orders_dict[tradeid]['executedQty']
                     lto_dict[tradeid]['result']['exit']['quantity'] = orders_dict[tradeid]['price'] * orders_dict[tradeid]['executedQty']
@@ -192,7 +197,7 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                     lto_dict[tradeid]['result']['liveTime'] = lto_dict[tradeid]['result']['exit']['time'] - lto_dict[tradeid]['result']['enter']['time']
 
 
-                elif int(lto_dict[tradeid]['exit']['limit']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_dict[tradeid]['exit']['limit']['expire']) <= last_closed_candle_open_time:
                     lto_dict[tradeid]['status'] = 'exit_expire'
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
                     
@@ -210,7 +215,7 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
                     lto_dict[tradeid]['result']['cause'] = 'closed'
                     lto_dict[tradeid]['result']['exit']['type'] = 'oco_stoploss'
-                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_dict[tradeid]['result']['exit']['price'] = orders_dict[stoploss_tradeid]['price']
                     lto_dict[tradeid]['result']['exit']['quantity'] = orders_dict[stoploss_tradeid]['executedQty']
                     lto_dict[tradeid]['result']['exit']['amount'] = orders_dict[stoploss_tradeid]['price'] * orders_dict[stoploss_tradeid]['executedQty']
@@ -226,7 +231,7 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                     lto_dict[tradeid]['result']['cause'] = 'closed'
 
                     lto_dict[tradeid]['result']['exit']['type'] = 'oco_limit'
-                    lto_dict[tradeid]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_dict[tradeid]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_dict[tradeid]['result']['exit']['price'] = orders_dict[tradeid]['price']
                     lto_dict[tradeid]['result']['exit']['quantity'] = orders_dict[tradeid]['executedQty']
                     lto_dict[tradeid]['result']['exit']['amount'] = orders_dict[tradeid]['price'] * orders_dict[tradeid]['executedQty']
@@ -235,7 +240,7 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                     lto_dict[tradeid]['result']['profit'] = lto_dict[tradeid]['result']['exit']['amount'] - lto_dict[tradeid]['result']['enter']['amount']
                     lto_dict[tradeid]['result']['liveTime'] = lto_dict[tradeid]['result']['exit']['time'] - lto_dict[tradeid]['result']['enter']['time']
 
-                elif int(lto_dict[tradeid]['exit']['oco']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_dict[tradeid]['exit']['oco']['expire']) <= last_closed_candle_open_time:
                     lto_dict[tradeid]['status'] = 'exit_expire'
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
 
@@ -266,17 +271,20 @@ async def application(bwrapper, telbot):
     lto_list = await mongocli.do_find('live-trades',{})
     lto_dict = dict()
     for lto in lto_list:
-        lto_dict[lto['tradeid']] = lto
+        lto_dict[str(lto['tradeid'])] = lto
 
     lto_dict_original = copy.deepcopy(lto_dict)
 
     # 1.2 Get datadict and orders
+    logger.debug('pre_calc_1_coroutines')
     pre_calc_1_coroutines = [ bwrapper.get_data_dict(pair_list, input_data_config),
                               bwrapper.get_lto_orders(lto_dict)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
+    logger.debug('pre_calc_2_coroutines')
+    # TODO: There is an error here below
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
                               update_ltos(lto_dict, orders, data_dict),
                               analyzer.sample_analyzer(data_dict)]
@@ -303,9 +311,11 @@ async def application(bwrapper, telbot):
     #################### Phase 3: Perform post-calculation tasks ####################
     logger.debug('Phase 3 started')
 
+    # TODO: WHY THIS SECTION CAUSE ERROR ON HISTORICAL KLINES???
     if len(nto_dict):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        result = await mongocli.do_insert_many("live-trades",[*nto_dict.values()])     
+        nto_list = list(nto_dict.values())
+        await mongocli.do_insert_many("live-trades",nto_list)     
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_dict, lto_dict_original)
@@ -337,7 +347,7 @@ async def main(smallest_interval):
             sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=5)
             server_time = await client.get_server_time()
             # sys_stat ve server time can be gathered
-
+            logger.info(str(datetime.fromtimestamp(int(server_time['serverTime']/1000))))
             # Check system status
             if sys_stat['status'] != 0:
                 if SYSTEM_STATUS != 1:
@@ -363,7 +373,7 @@ async def main(smallest_interval):
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
             await asyncio.gather(
-                #asyncio.sleep(period),
+                asyncio.sleep(10),
                 application(bwrapper, telbot),
             )
             
@@ -411,6 +421,5 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
     config = generate_scales_in_minute(config)
-    min(config['data_input']['scales_in_minute'])
     loop.run_until_complete( main( min( config['data_input']['scales_in_minute'])))
     print("Completed")

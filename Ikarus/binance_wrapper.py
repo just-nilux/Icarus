@@ -106,16 +106,23 @@ class BinanceWrapper():
         Returns:
             dict: [description]
         """
+        self.logger.info('get_data_dict started')
+
         tasks_klines_scales = []
         for pair in pairs:
             for index, row in time_df.iterrows():
                 tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
 
-        composit_klines = list(await asyncio.gather(*tasks_klines_scales))
+        #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))
+        self.logger.info('composit_klines started')
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+        self.logger.info('composit_klines ended')
+
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
-        await self.dump_data_obj(data_dict)
+        #await self.dump_data_obj(data_dict)
         # NOTE: Keep in mind that the last row is the current candle that has not been completed
+        self.logger.info('get_data_dict ended')
         return data_dict
 
 
@@ -129,19 +136,23 @@ class BinanceWrapper():
         Returns:
             [dict]: Each tradeid (orderId) is mapped to it's order object
         """
+        self.logger.info('get_lto_orders started')
+
         # Check the status of LTOs:
         coroutines = []
-        for tradeid, lto in lto_dict:
-            coroutines.append(self.client.get_order(symbol=lto['tradeid'], orderId=tradeid))
+        for tradeid, lto in lto_dict.items():
+            coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=tradeid)) # TODO: NEXT: Check if the trade id must be  int or str strictly
             # NOTE: 'tradeid' can be changed with 'orderid' for the consistency with the api
+        self.logger.info('get_lto_orders corooutines created')
 
-        lto_orders_dict = {} # TODO: It can be a dict
+        lto_orders_dict = {}
         if len(coroutines):
-            for order in list(asyncio.gather(*coroutines)):
+            for order in list(await asyncio.gather(*coroutines)): # Where the fuck is await
                 lto_orders_dict[order['orderId']] = order
         
         # TESTING PURPOSES
-        await self.get_open_orders()
+        #await self.get_open_orders()
+        self.logger.info('get_lto_orders started')
 
         return lto_orders_dict
 
@@ -304,7 +315,7 @@ class BinanceWrapper():
                         del trade_dict[nto_key]
                         # TODO: Notification
                     else:
-                        trade_dict[nto_key]['tradeid'] = response['orderId']
+                        trade_dict[nto_key]['tradeid'] = str(response['orderId'])
                         # TODO: Notification
 
                 else: pass # TODO: Internal Error
@@ -386,10 +397,11 @@ class BinanceWrapper():
                 self.logger.debug("decomposing [{}]: [{}]".format(pair,row["scale"]))
                 df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
                 df.columns = BinanceWrapper.kline_column_names
+                df = df.set_index(['open_time'])
                 do[row["scale"]] = df
             do_dict[pair] = do
             self.logger.debug("decompose ended [{}]:".format(pair))
-            #self.logger.debug("{}-{}".format(pair,type(do_dict[pair][row["scale"]])))
+            self.logger.debug("{}-{}".format(pair,type(do_dict[pair][row["scale"]])))
 
         self.logger.debug("decompose ended")
         return do_dict
