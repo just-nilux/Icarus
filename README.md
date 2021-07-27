@@ -51,6 +51,21 @@ for each lto
         - expire
 - partially_closed_exit
 
+### nto_execute:
+for to in trade_dict:
+    1. open_enter
+        a. market
+            - Get the 'result'
+        b. limit
+    2. partially_closed_enter
+        -
+    3. open_exit
+        a. market
+            - Get the 'result'
+        b. limit
+        c. oco
+    4. partially_closed_exit
+    -
 
 # Notes
 ## Note #1: Decision, Enter and Exit Points

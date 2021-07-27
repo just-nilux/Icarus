@@ -2,6 +2,7 @@ import logging
 import statistics as st
 import json
 from Ikarus.objects import GenericObject, ObjectEncoder
+from binance.helpers import round_step_size
 import bson
 import copy
 import abc
@@ -150,14 +151,20 @@ class AlwaysEnter(StrategyBase):
         return skip_calculation, lto
 
     
-    async def apply_exchange_filters(self):
+    async def apply_exchange_filters(self, to, phase):
         """
-        Apply the filter of exchange pair
+        - Call this method prior to any order placement
 
+        - Apply the filter of exchange pair
+
+        - This methhod does not check if the current conditiones are good to go.
+            If a filter is not satisfied then it would create an exception. Validation
+            costs time. Maybe in future 
+
+        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
         Returns:
-            [type]: [description]
+            dict: [description]
         """ 
-        # TODO
         '''
         if free_ref_asset > self.symbol_info[]:
             if free_ref_asset < enter_ref_amount:
@@ -167,7 +174,15 @@ class AlwaysEnter(StrategyBase):
             return {}
         '''
 
-        pass
+        # Fixing PRICE_FILTER: tickSize
+        to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
+                                                                                float(self.symbol_info['filters'][0]['tickSize']))
+        
+        # Fixing LOT_SIZE: minQty
+        to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
+                                                                                float(self.symbol_info['filters'][2]['minQty']))
+
+        return to
 
 
     async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
@@ -215,11 +230,8 @@ class AlwaysEnter(StrategyBase):
 
             else: pass # Make a brand new decision
             
-            if len(analysis_dict[ao_pair].keys()) == 1:
-                scale = list(analysis_dict[ao_pair].keys())[0]
-            else:
-                # NOTE: Multiscale not supported yet
-                pass
+            assert len(analysis_dict[ao_pair].keys()) == 1, "Multiple time scale is not supported"
+            scale = list(analysis_dict[ao_pair].keys())[0]
 
             # Make decision to enter or not
             if True:
@@ -228,26 +240,18 @@ class AlwaysEnter(StrategyBase):
                 trade_obj['status'] = 'open_enter'
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
-                trade_obj['decision_time'] = int(dt_index) # Set tradeid to timestamp which is the open time of the current kline not the last closed kline
+                trade_obj['decision_time'] = int(dt_index) # Set tradeid to decision_time which is the open time of the current kline not the last closed kline
                 # TODO: HIGH Here is the problem, if more than 1 TO created in an iteration, they will have the same 'tradeid' so lto_dict keys will not be unique
                 #       When changing this naming, consider changing the parameters in  visualization as well since they use tradeid as the decision making point
                 #       In this case another param might be added to the TO such as 'decision_time'
-                # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = float(analysis_dict[ao_pair][scale]['low'][-1])
-                exit_price = float(analysis_dict[ao_pair][scale]['high'][-1])
-
-                #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
-                # the base asset will be used.
+                enter_price = float(analysis_dict[ao_pair][scale]['low'][-1])/2 # NOTE: Give half of the price to make sure it will enter
+                exit_price = float(analysis_dict[ao_pair][scale]['high'][-1])*2 # NOTE: Give double of the price to make sure it will not exit
                 
-                free_ref_asset = df_balance.loc[self.quote_currency,'free']
-
                 # Example: Buy XRP with 100$ in your account
                 enter_ref_amount=100
 
-                # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
-                # Example:
                 #   Buy XRP from the price XRPUSDT: 0.66 (Price of 1XRP = 0.66$), use 100$ to make the trade
                 #   151,51 = 100$ / 0.66
                 enter_quantity = enter_ref_amount / enter_price
@@ -256,14 +260,17 @@ class AlwaysEnter(StrategyBase):
                 #   exit_ref_amount = 151,4 * 0.70 = 105.98
                 exit_ref_amount = enter_quantity * exit_price
 
-                # TODO: Apply filter function needs to be added to met the pair-exchange requirements
-                await self.apply_exchange_filters()
-
                 # Fill enter and exit modules
-                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000))
+                # TODO: Expire calculation should be based on the 'scale'. It should not be hardcoded '15'
+                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000)) 
                 trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
-
                 trade_obj['_id'] = int(time.time() * 1000)
+
+                # TODO: Check the free amount of quote currency
+                free_ref_asset = df_balance.loc[self.quote_currency,'free']
+
+                # TODO: Apply filter function needs to be added to met the pair-exchange requirements
+                trade_obj = await self.apply_exchange_filters(trade_obj, phase='enter')
 
                 # Normally trade id should be unique and be given by the broker. Until it is executed assign the current ts. It will be updated at execution anyway
                 trade_dict[trade_obj['_id']] = trade_obj
@@ -451,11 +458,9 @@ class OCOBackTest(StrategyBase):
 
             else: pass # Make a brand new decision
 
-            if len(analysis_dict[ao_pair].keys()) == 1:
-                scale = list(analysis_dict[ao_pair].keys())[0]
-            else:
-                # NOTE: Multiscale not supported yet
-                pass
+            assert len(analysis_dict[ao_pair].keys()) == 1, "Multiple time scale is not supported"
+            scale = list(analysis_dict[ao_pair].keys())[0]
+
             trange_mean5 = st.mean(analysis_dict[ao_pair][scale]['trange'][-5:])
             trange_mean20 = st.mean(analysis_dict[ao_pair][scale]['trange'][-20:])
 

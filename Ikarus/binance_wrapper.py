@@ -1,32 +1,13 @@
 from asyncio.tasks import gather
-from typing import Awaitable
-from binance import Client
+from binance.exceptions import BinanceAPIException
 import asyncio
 import pandas as pd
 import logging
-from Ikarus.objects import GenericObject
 import json
 import bson
 import time
 
-'''
-[
-  [
-    1499040000000,      // Open time
-    "0.01634790",       // Open
-    "0.80000000",       // High
-    "0.01575800",       // Low
-    "0.01577100",       // Close
-    "148976.11427815",  // Volume
-    1499644799999,      // Close time
-    "2434.19055334",    // Quote asset volume
-    308,                // Number of trades
-    "1756.87402397",    // Taker buy base asset volume
-    "28.46694368",      // Taker buy quote asset volume
-    "17928899.62484339" // Ignore.
-  ]
-]
-'''
+
 class BinanceWrapper():
 
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
@@ -286,20 +267,13 @@ class BinanceWrapper():
 
     async def _execute_nto(self, trade_dict):
         """
-        for to in trade_dict:
-            1. open_enter
-                a. market
-                    - Get the 'result'
-                b. limit
-            2. partially_closed_enter
-                -
-            3. open_exit
-                a. market
-                    - Get the 'result'
-                b. limit
-                c. oco
-            4. partially_closed_exit
-            -
+        If an NTO is executed:
+        - 'tradeid' is obtained from the response
+
+        not executed:
+        - the error message is logged
+        - notification is send
+        - NTO is deleted from the nto_dict
 
         Args:
             trade_dict (dict): [description]
@@ -309,17 +283,29 @@ class BinanceWrapper():
             [type]: [description]
         """
         # TODO: NEXT: Get the sample responses when an order is placed or not placed
-        for tradeid in trade_dict.keys():
+        nto_keys = list(trade_dict.keys())
+        for nto_key in nto_keys:
             # NOTE: The status values other than 'open_enter' is here for lto update
-            if trade_dict[tradeid]['status'] == 'open_enter':
+            if trade_dict[nto_key]['status'] == 'open_enter':
                 
-                if 'market' in trade_dict[tradeid]['enter'].keys():
+                if 'market' in trade_dict[nto_key]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
-                elif 'limit' in trade_dict[tradeid]['enter'].keys():
-                    # TODO: NEXT: LIVE: Execute limit order,
-                    pass
+                elif 'limit' in trade_dict[nto_key]['enter'].keys():
+                    try:
+                        response = await self.client.order_limit_buy(
+                            symbol=trade_dict[nto_key]['pair'],
+                            quantity=trade_dict[nto_key]['enter']['limit']['quantity'],
+                            price=trade_dict[nto_key]['enter']['limit']['price'])
+                    
+                    except BinanceAPIException as e:
+                        self.logger.error(e)
+                        del trade_dict[nto_key]
+                        # TODO: Notification
+                    else:
+                        trade_dict[nto_key]['tradeid'] = response['orderId']
+                        # TODO: Notification
 
                 else: pass # TODO: Internal Error
 
@@ -327,7 +313,7 @@ class BinanceWrapper():
         return trade_dict
 
 
-    async def execute_decision(self, trade_dict, lto_dict):
+    async def execute_decision(self, nto_dict, lto_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -359,7 +345,7 @@ class BinanceWrapper():
         lto_dict = await self._execute_lto(lto_dict)
 
         # Execute new trade objects
-        trade_dict = await self._execute_nto(trade_dict)      
+        nto_dict = await self._execute_nto(nto_dict)      
             
         # TODO: Consider returning trade_dict, because:
         #   - orders may not be accepted by the broker
@@ -367,7 +353,7 @@ class BinanceWrapper():
         #   - market sell causes instant fill
         #   - market enter causes instant fill
 
-        return result, lto_dict
+        return nto_dict, lto_dict
 
 
     async def pprint_klines(self, list_klines):

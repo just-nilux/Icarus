@@ -285,18 +285,18 @@ async def application(bwrapper, telbot):
 
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2 started')
-    # TODO: Either create task for each coroutine or only await them.
 
     # NOTE: current_ts is the open time of the current live candle (open time)
     # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
-    current_ts = int(time.time())   # Get the timestamp in gmt=0
-    current_ts -= int(current_ts % 60) # Round the current_ts to backward (to the beginning of the current minute)
+    current_ts = int(time.time())       # Get the timestamp in gmt=0
+    current_ts -= int(current_ts % 60)  # Round the current_ts to backward (to the beginning of the current minute)
+    current_ts *= 1000                  # Make the resolution milisecond
     nto_dict = await strategy.run(analysis_dict, lto_dict, df_balance, current_ts)
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_dict) or len(lto_dict):
         # 2.3.1: Execute the TOs
-        result, lto_dict = await asyncio.create_task(bwrapper.execute_decision(nto_dict, lto_dict))
+        nto_dict, lto_dict = await asyncio.create_task(bwrapper.execute_decision(nto_dict, lto_dict))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
     
@@ -328,16 +328,15 @@ async def main(smallest_interval):
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    strategy.symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # 1 pair
-    # bm = BinanceSocketManager(client)
+    strategy.symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
     bwrapper = binance_wrapper.BinanceWrapper(client, config)
-
     telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
+
     while True:
         try:
             sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=5)
             server_time = await client.get_server_time()
-            # sys_stat ve server time gather() edilebilir
+            # sys_stat ve server time can be gathered
 
             # Check system status
             if sys_stat['status'] != 0:
@@ -391,7 +390,7 @@ if __name__ == "__main__":
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],
-        clean=True)
+        clean=True) # NOTE: Normally it is False
 
     input_data_config = pd.DataFrame({
         "scale":config['data_input']['scale'],

@@ -35,12 +35,12 @@
         },
         {
             "filterType": "LOT_SIZE",
-            "minQty": "0.00000100",             // Min quantity
-            "maxQty": "9000.00000000",          // Max quantity
-            "stepSize": "0.00000100"            // Stepsize of quantity
+            "minQty": "0.00000100",             // The minimum quantity of BTC we can place an order for
+            "maxQty": "9000.00000000",          // The maximum quantity of BTC we can place an order for
+            "stepSize": "0.00000100"            // The interval we can increase or decrease the quantity by
         },
         {
-            "filterType": "MIN_NOTIONAL", 
+            "filterType": "MIN_NOTIONAL",       // notional_value = price * quantity
             "minNotional": "10.00000000",       // The buy/sell amount should be greater than $10
             "applyToMarket": true,
             "avgPriceMins": 5
