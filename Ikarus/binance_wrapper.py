@@ -315,7 +315,7 @@ class BinanceWrapper():
                         del trade_dict[nto_key]
                         # TODO: Notification
                     else:
-                        trade_dict[nto_key]['tradeid'] = str(response['orderId'])
+                        trade_dict[nto_key]['tradeid'] = int(response['orderId'])
                         # TODO: Notification
 
                 else: pass # TODO: Internal Error

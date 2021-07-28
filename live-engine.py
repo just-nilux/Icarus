@@ -269,9 +269,9 @@ async def application(bwrapper, telbot):
     logger.debug('Phase 1 started')
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
-    lto_dict = dict()
+    lto_dict = {}
     for lto in lto_list:
-        lto_dict[str(lto['tradeid'])] = lto
+        lto_dict[lto['tradeid']] = lto
 
     lto_dict_original = copy.deepcopy(lto_dict)
 
@@ -311,7 +311,6 @@ async def application(bwrapper, telbot):
     #################### Phase 3: Perform post-calculation tasks ####################
     logger.debug('Phase 3 started')
 
-    # TODO: WHY THIS SECTION CAUSE ERROR ON HISTORICAL KLINES???
     if len(nto_dict):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
         nto_list = list(nto_dict.values())

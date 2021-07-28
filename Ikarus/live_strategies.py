@@ -262,8 +262,8 @@ class AlwaysEnter(StrategyBase):
 
                 # Fill enter and exit modules
                 # TODO: Expire calculation should be based on the 'scale'. It should not be hardcoded '15'
-                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000)) 
-                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
+                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*0*60*1000)) 
+                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*0*60*1000))
                 trade_obj['_id'] = int(time.time() * 1000)
 
                 # TODO: Check the free amount of quote currency
