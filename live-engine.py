@@ -131,7 +131,6 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
     # NOTE: Expiration: Normally bson.Int64(last_kline.index.values): denotes the 'open_time' of last closed kline.
     #       However, in live-trading the last kline is the newly opened kline. Keep that in mind.
 
-    # TODO: NEXT: Check the key error
     # TODO: NEXT: Find a way to create more meaningfull erro messages
     for tradeid in lto_dict.keys():
         pair = lto_dict[tradeid]['pair']
@@ -153,7 +152,6 @@ async def update_ltos(lto_dict, orders_dict, data_dict):
                 # Check if the open enter trade is filled else if the trade is expired
                 if orders_dict[tradeid]['status'] == 'FILLED':
 
-                    # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
                     lto_dict[tradeid]['status'] = 'waiting_exit'
                     lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])

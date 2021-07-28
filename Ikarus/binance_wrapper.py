@@ -219,9 +219,21 @@ class BinanceWrapper():
                 if lto_dict[tradeid]['action'] == 'cancel':
                     # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
 
-                    # TODO: DEPLOY: Binance cancel the order
-                    lto_dict[tradeid]['status'] = 'closed'
-                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                    try:
+                        response = await self.client.cancel_order(
+                            symbol=lto_dict[tradeid]['pair'],
+                            orderId=tradeid)
+                        if response['status'] == 'CANCELED': raise Exception('Response status is not "CANCELED"')
+
+                    except Exception as e:
+                        self.logger.error(e)
+                        # TODO: Notification
+
+                    else:
+                        self.logger.info(f'LTO Canceled: {tradeid}')
+                        lto_dict[tradeid]['status'] = 'closed'
+                        lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                        # TODO: Notification
             
                 elif lto_dict[tradeid]['action'] == 'update':
                     pass
@@ -309,13 +321,16 @@ class BinanceWrapper():
                             symbol=trade_dict[nto_key]['pair'],
                             quantity=trade_dict[nto_key]['enter']['limit']['quantity'],
                             price=trade_dict[nto_key]['enter']['limit']['price'])
-                    
-                    except BinanceAPIException as e:
+                        if response['status'] == 'NEW': raise Exception('Response status is not "NEW"')
+
+                    except Exception as e:
                         self.logger.error(e)
                         del trade_dict[nto_key]
                         # TODO: Notification
+                        
                     else:
                         trade_dict[nto_key]['tradeid'] = int(response['orderId'])
+                        self.logger.info(f'NTO limit order placed: {trade_dict[nto_key]["tradeid"]}')
                         # TODO: Notification
 
                 else: pass # TODO: Internal Error
