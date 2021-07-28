@@ -407,6 +407,9 @@ if __name__ == "__main__":
     # Initialize and configure objects
     setup_logger(config['log-level'])
 
+    # Add scales_in_minute to the config to be used in strategy etc.
+    config = generate_scales_in_minute(config)
+
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
@@ -417,6 +420,5 @@ if __name__ == "__main__":
     logger.info("---------------------------------------------------------")
     loop = asyncio.get_event_loop()
 
-    config = generate_scales_in_minute(config)
     loop.run_until_complete( main( min( config['data_input']['scales_in_minute'])))
     print("Completed")

@@ -16,6 +16,17 @@ import time
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
+def generate_scales_in_minute(config_dict):
+    scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
+    scales_in_minute = []
+    for scale in config_dict['data_input']['scale']:
+        scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
+
+    config_dict['data_input']['scales_in_minute'] = scales_in_minute
+
+    return config_dict
+
+
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
     Call in a loop to create terminal progress bar
@@ -539,6 +550,9 @@ if __name__ == '__main__':
 
     # Initialize and configure objects
     setup_logger(config['log-level'])
+
+    # Add scales_in_minute to the config to be used in strategy etc.
+    config = generate_scales_in_minute(config)
 
     # Setup initial objects
     observer = observers.Observer()

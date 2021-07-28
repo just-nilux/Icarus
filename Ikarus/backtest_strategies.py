@@ -42,19 +42,13 @@ class OCOBackTest(StrategyBase):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy']
         self.quote_currency = _config['broker']['quote_currency']
-        
-        '''
-        self.config = {
-            "enter": "limit",
-            "exit": "oco",
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "market_exit"
-            },
-            "max_lto": 1
-        }
-        '''
+        self.scales_in_minute = _config['data_input']['scales_in_minute']
+
         return
+
+
+    def _eval_future_candle_time(self, start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
+
 
     async def _postpone(self, lto, phase, expire_time):
         lto['action'] = 'postpone'
@@ -127,7 +121,7 @@ class OCOBackTest(StrategyBase):
                 lto['result']['cause'] = 'enter_expire'
 
             elif self.config['action_mapping']['enter_expire'] == 'postpone' and lto['history'].count('enter_expire') <= 1:
-                lto = await self._postpone(lto,'enter', bson.Int64(dt_index + 2*15*60*1000)) # Postpone 3 x 15 min
+                lto = await self._postpone(lto,'enter', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # Postpone 3 x 15 min
                 skip_calculation = True
             else: pass
 
@@ -136,7 +130,7 @@ class OCOBackTest(StrategyBase):
                 lto = await self._do_market_exit(lto)
 
             elif self.config['action_mapping']['exit_expire'] == 'postpone' and lto['history'].count('exit_expire') <= 1:
-                lto = await self._postpone(lto,'exit', bson.Int64(dt_index + 2*15*60*1000))
+                lto = await self._postpone(lto,'exit', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
                 skip_calculation = True
             else: pass
 
@@ -266,10 +260,10 @@ class OCOBackTest(StrategyBase):
                 exit_ref_amount = enter_quantity * exit_price
 
                 # Fill enter module
-                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000))
+                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
 
                 # Fill exit module
-                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
+                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, self._eval_future_candle_time(dt_index,9,self.scales_in_minute[0]))
 
                 trade_obj['_id'] = int(time.time() * 1000)
 
