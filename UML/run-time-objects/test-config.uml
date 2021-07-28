@@ -141,8 +141,11 @@ DATA_INPUT:
         KLINE_INTERVAL_1WEEK = '1w'         | 52  | 1 year
         KLINE_INTERVAL_1MONTH = '1M'        | 12  | 1 year
 
-# TODO: NEXT: Live trade-engine requires some pairs to be decided to trade. The pairs for test-engine is obtained from the given files.
-#             Based on the decision, historical data is acquired.
+# NOTE: There are more than 300 USDT pairs and it is cumbursome to do so. Current apporach will continue (the matrix: pairs x scales)
+# NOTE: data_input logic can be sth like {'BTCUSDT':{'scale':[], 'length_int':[], 'length_str':[]}}
+#               This logic solves the multi pair problem by defining scales for each of them
+#               No need for hard coded following statement: "data_dict[pair]['15m'].tail(1)" since the '15m' will be mapped to a specific pair
+# NOTE: There are more than 300 USDT pairs and it is cumbursome to do so. Current apporach will continue (the matrix: pairs x scales)
 
 
 # TODO: NEXT: Check what happens if an unused scale and length is given
@@ -155,4 +158,9 @@ DATA_INPUT:
 #               feature                | strategy   | indicators
 #               falling knife catching | x          | y,z
 #
+
+# TODO: FUTURE: If there is 100 pair to trade and execute 10 strategy, it is hard to write 100 item.
+#       Thus the mapping such as: {'falling_knife':['BTCUSDT','XRPUSDT']} might be better
+#       Thinkabout that logic
+
 # TODO: FUTURE: There should be testing mechanism for each feaure

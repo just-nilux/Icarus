@@ -12,7 +12,7 @@ async def get_enter_expire(df):
         # NOTE: HIGH: We dont know it the exit type is limit or not
         hto_dict = {
             "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
+            "decision_time": hto['decision_time'],
             "enterExpire": hto['enter']['limit']['expire'],
             "enterPrice": hto['enter']['limit']['price'],
         }
@@ -32,7 +32,7 @@ async def get_closed(df):
 
         hto_dict = {
             "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
+            "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
             "exitTime": hto['result']['exit']['time'],
@@ -58,7 +58,7 @@ async def get_exit_expire(df):
 
         hto_dict = {
             "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
+            "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter']['limit']['price'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],

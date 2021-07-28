@@ -23,6 +23,7 @@ class GenericObject():
     trade = {
         "status": "",
         "tradeid": "",
+        "decision_time": "",
         "enter": {
         },
         "exit": {
@@ -67,6 +68,7 @@ class GenericObject():
         "limitPrice": "",
         "stopPrice": "",
         "stopLimitPrice": "",
+        "stopLimit_tradeid": "",
         "quantity": "",
         "amount": "",
         "expire": ""
