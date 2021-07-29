@@ -61,7 +61,8 @@ class OCOBackTest(StrategyBase):
         lto['action'] = 'market_exit'
         lto['exit']['market'] = {
             'amount': lto['exit'][self.config['exit']['type']]['amount'],
-            'quantity': lto['exit'][self.config['exit']['type']]['quantity']
+            'quantity': lto['exit'][self.config['exit']['type']]['quantity'],
+            'orderId': '',
         }
         return lto
 
@@ -74,7 +75,8 @@ class OCOBackTest(StrategyBase):
                     "price": float(enter_price),
                     "quantity": float(enter_quantity),
                     "amount": float(enter_ref_amount),
-                    "expire": expire_time
+                    "expire": expire_time,
+                    "orderId": ""
                     },
                 }
         elif self.config['enter']['type'] == 'market':
@@ -94,7 +96,9 @@ class OCOBackTest(StrategyBase):
                     "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
                     "quantity": float(enter_quantity),
                     "amount": float(exit_ref_amount),
-                    "expire": expire_time
+                    "expire": expire_time,
+                    "limit_orderId": "",
+                    "stopLimit_orderId": ""
                 }
             }
         elif self.config['exit']['type'] == 'limit':
@@ -103,7 +107,8 @@ class OCOBackTest(StrategyBase):
                     "price": float(exit_price),
                     "quantity": float(enter_quantity),
                     "amount": float(exit_ref_amount),
-                    "expire": expire_time
+                    "expire": expire_time,
+                    "orderId": ""
                     },
                 }
         elif self.config['exit']['type'] == 'market':
@@ -113,6 +118,9 @@ class OCOBackTest(StrategyBase):
 
 
     async def _handle_lto(self, lto, dt_index):
+        """
+        This function decides what to do for the LTOs based on their 'status'
+        """        
         skip_calculation = False
         
         if lto['status'] == 'enter_expire':            
@@ -176,13 +184,13 @@ class OCOBackTest(StrategyBase):
         trade_dict = dict()
 
         # Create a mapping between the pair and tradeid such as {'BTCUSDT':['123','456']}
-        pair_tradeid_mapping = {}
-        for tradeid, lto in lto_dict.items():
+        pair_key_mapping = {}
+        for _id, lto in lto_dict.items():
             pair = lto['pair']
-            if pair not in pair_tradeid_mapping.keys():
-                pair_tradeid_mapping[pair] = []
-            
-            pair_tradeid_mapping[pair].append(tradeid)
+            if pair not in pair_key_mapping.keys():
+                pair_key_mapping[pair] = []
+
+            pair_key_mapping[pair].append(_id)
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
@@ -190,10 +198,10 @@ class OCOBackTest(StrategyBase):
         for ao_pair in analysis_dict.keys():
 
             # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
-            if ao_pair in pair_tradeid_mapping.keys():
+            if ao_pair in pair_key_mapping.keys():
                 
                 # NOTE: If a pair contains multiple LTO then there should be another level of iteration as well
-                skip_calculation, lto_dict[pair_tradeid_mapping[ao_pair][0]] = await self._handle_lto(lto_dict[pair_tradeid_mapping[ao_pair][0]], dt_index)
+                skip_calculation, lto_dict[pair_key_mapping[ao_pair][0]] = await self._handle_lto(lto_dict[pair_key_mapping[ao_pair][0]], dt_index)
                 if skip_calculation: continue;
 
             else: pass # Make a brand new decision

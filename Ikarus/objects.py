@@ -22,7 +22,6 @@ class GenericObject():
     
     trade = {
         "status": "",
-        "tradeid": "",
         "decision_time": "",
         "enter": {
         },
@@ -71,14 +70,17 @@ class GenericObject():
         "stopLimit_tradeid": "",
         "quantity": "",
         "amount": "",
-        "expire": ""
+        "expire": "",
+        "limit_orderId": "",
+        "stopLimit_orderId": ""
     }
     
     limit = {
         "price": "",
         "quantity": "",
         "amount": "",
-        "expire": ""
+        "expire": "",
+        "orderId": ""
     }
 
     def __init__(self, template_name=None):

@@ -2,7 +2,6 @@
 {
   "pair1":{
     "_id": "current timestamp",
-    "tradeid": "(orderId of the Broker)",
     "decision_time": "[dt index of obj creation]",
     "status": "",
     "enter": {
@@ -10,11 +9,13 @@
         "price": "",
         "quantity": "",
         "amount": "",
-        "expire": ""
+        "expire": "",
+        "orderId": ""
       },
       "market": {
         "quantity": "",
-        "amount": ""
+        "amount": "",
+		"orderId": ""
       }
     },
     "exit": {
@@ -25,17 +26,21 @@
         "stopLimit_tradeid": "",
         "quantity": "",
         "amount": "",
-        "expire": ""
+        "expire": "",
+		"limit_orderId": "",
+		"stopLimit_orderId": ""
       },
       "limit": {
         "price": "",
         "quantity": "",
         "amount": "",
-        "expire": ""
+        "expire": "",
+		"orderId": ""
       },
       "market": {
         "quantity": "",
-        "amount": ""
+        "amount": "",
+		"orderId": ""
       }
     },
     "result": {
@@ -58,7 +63,7 @@
       "liveTime": 0,
       "history":["open_enter", "open_exit", "closed"]
     },
-    "action": "[optional]"
+    "action": "[optional and transitory]"
   },
   "pair2":{}
 }
@@ -74,11 +79,14 @@
 4. In each cycle, the status of the [pair1] is updated by sync'ing with the Broker.
 5. When the status is updated as "Closed", it is moved from "LTDB" to "HTDB" (Historical Trade DB)
 
+NOTE: A TO should contain multiple orderId. Considering the fact that multiple entry/exit level might be possible in future,
+	it might be better to have a list in lto['enter']['limit'] that contains multiple 'entry_module' with orderId's in it.
+
 MAIN MODULE:
 
   _id:                                              Gathered from the Binance Trade id
 
-  tradeid:                                          Timestamp of the decision
+  NOTE: tradeid is removed from here since multile tradeid will be required
 
   action:                                           In case of an updatein decision, the action item can be added to the
                                                     lto and the action is executed.
