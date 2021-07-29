@@ -635,11 +635,11 @@ class TestBinanceWrapper():
             return True
 
 
-    async def _execute_lto(self, lto_dict, df_balance, data_dict):
+    async def _execute_lto(self, lto_list, df_balance, data_dict):
         """
         Execution Logic:
-        for _id in lto_dict.keys():
-            if 'action' in lto_dict[_id].keys():
+        for i in range(len(lto_list)):
+            if 'action' in lto_list[i].keys():
                 1. cancel
                     In case of enter expire, it might be decided to cancel the order
                 2. update
@@ -650,94 +650,94 @@ class TestBinanceWrapper():
                     In case of exit expire, it might be decided to exit with market order
 
         Args:
-            lto_dict (dict): [description]
+            lto_list (list): [description]
             df_balance (pd.DataFrame): [description]
 
         Returns:
-            tuple: lto_dict, df_balance
+            tuple: lto_list, df_balance
         """
-        for _id in lto_dict.keys():
-            if 'action' in lto_dict[_id].keys():
+        for i in range(len(lto_list)):
+            if 'action' in lto_list[i].keys():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
-                if lto_dict[_id]['action'] == 'cancel':
+                if lto_list[i]['action'] == 'cancel':
                     # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
                     # (This requires other updates for TEST)
                     # TODO: DEPLOY: Binance cancel the order
-                    lto_dict[_id]['status'] = 'closed'
-                    lto_dict[_id]['history'].append(lto_dict[_id]['status'])
+                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['history'].append(lto_list[i]['status'])
 
                     # TEST: Update df_balance
                     # No need to check the enter type because lto do not contain 'market'. It only contains 'limit'
-                    df_balance.loc[self.quote_currency,'free'] += lto_dict[_id]['enter']['limit']['amount']
-                    df_balance.loc[self.quote_currency,'locked'] -= lto_dict[_id]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter']['limit']['amount']
             
-                elif lto_dict[_id]['action'] == 'update':
+                elif lto_list[i]['action'] == 'update':
                     pass
                 
-                elif lto_dict[_id]['action'] == 'market_enter':
+                elif lto_list[i]['action'] == 'market_enter':
                     pass
                 
-                elif lto_dict[_id]['action'] == 'market_exit':
+                elif lto_list[i]['action'] == 'market_exit':
                     # TODO: DEPLOY: Execute Market Order in Bnance
 
-                    lto_dict[_id]['status'] = 'closed'
-                    lto_dict[_id]['history'].append(lto_dict[_id]['status'])
-                    lto_dict[_id]['result']['cause'] = 'exit_expire'
-                    last_kline = data_dict[lto_dict[_id]['pair']]['15m'].tail(1)
+                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['history'].append(lto_list[i]['status'])
+                    lto_list[i]['result']['cause'] = 'exit_expire'
+                    last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
                     #             For the sake of simplicity closed price of the last candle is used in the market sell
                     #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
-                    lto_dict[_id]['result']['exit']['type'] = 'market'
-                    lto_dict[_id]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
-                    lto_dict[_id]['result']['exit']['price'] = float(last_kline['close'])
-                    lto_dict[_id]['result']['exit']['quantity'] = lto_dict[_id]['exit']['market']['quantity']
-                    lto_dict[_id]['result']['exit']['amount'] = lto_dict[_id]['result']['exit']['price'] * lto_dict[_id]['result']['exit']['quantity']
+                    lto_list[i]['result']['exit']['type'] = 'market'
+                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['market']['quantity']
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
-                    lto_dict[_id]['result']['profit'] = lto_dict[_id]['result']['exit']['amount'] - lto_dict[_id]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
 
                     # Update df_balance: write the amount of the exit
-                    df_balance.loc[self.quote_currency,'free'] += lto_dict[_id]['result']['exit']['amount']
+                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[self.quote_currency,'total'] = df_balance.loc[self.quote_currency,'free'] + df_balance.loc[self.quote_currency,'locked']
                     df_balance.loc[self.quote_currency,'ref_balance'] = df_balance.loc[self.quote_currency,'total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
-                elif lto_dict[_id]['action'] == 'execute_exit':
+                elif lto_list[i]['action'] == 'execute_exit':
                     # If the enter is successfull and the algorithm decides to execute the exit order
                     # TODO: DEPLOY: Place the exit order to Binance: oco or limit
                     #       No need to fill anything in 'result' or 'exit' sections.
 
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
 
-                    lto_dict[_id]['status'] = 'open_exit'
-                    lto_dict[_id]['history'].append(lto_dict[_id]['status'])
+                    lto_list[i]['status'] = 'open_exit'
+                    lto_list[i]['history'].append(lto_list[i]['status'])
                     pass
 
                 # Postpone can be for the enter or the exit phase
-                elif lto_dict[_id]['action'] == 'postpone':
-                    if lto_dict[_id]['status'] == 'enter_expire':
-                        lto_dict[_id]['status'] = 'open_enter'
-                        lto_dict[_id]['history'].append(lto_dict[_id]['status'])
+                elif lto_list[i]['action'] == 'postpone':
+                    if lto_list[i]['status'] == 'enter_expire':
+                        lto_list[i]['status'] = 'open_enter'
+                        lto_list[i]['history'].append(lto_list[i]['status'])
 
-                    elif lto_dict[_id]['status'] == 'exit_expire':
-                        lto_dict[_id]['status'] = 'open_exit'
-                        lto_dict[_id]['history'].append(lto_dict[_id]['status'])
+                    elif lto_list[i]['status'] == 'exit_expire':
+                        lto_list[i]['status'] = 'open_exit'
+                        lto_list[i]['history'].append(lto_list[i]['status'])
                         pass
                     else: pass
 
                 # Delete the action, after the action is taken
-                del lto_dict[_id]['action']
+                del lto_list[i]['action']
 
-        return lto_dict, df_balance
+        return lto_list, df_balance
 
 
-    async def _execute_nto(self, trade_dict, df_balance):
+    async def _execute_nto(self, nto_list, df_balance):
         """
-        for to in trade_dict:
+        for i in range(len(nto_list)):
             1. open_enter
                 a. market
                     - Get the 'result'
@@ -759,31 +759,31 @@ class TestBinanceWrapper():
         Returns:
             [type]: [description]
         """
-        for key in trade_dict.keys():
+        for i in range(len(nto_list)):
             # NOTE: The status values other than 'open_enter' is here for lto update
-            if trade_dict[key]['status'] == 'open_enter':
+            if nto_list[i]['status'] == 'open_enter':
                 
-                if 'market' in trade_dict[key]['enter'].keys():
+                if 'market' in nto_list[i]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
-                elif 'limit' in trade_dict[key]['enter'].keys():
+                elif 'limit' in nto_list[i]['enter'].keys():
                     # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
                     #       timestamp values
 
                     #trade_dict[key]['tradeid'] = int(time.time() * 1000) 
                     # NOTE: No need for 'tradeid' since there is a unique item '_id' if needed
-                    trade_dict[key]['enter']['limit']['orderId'] = int(time.time() * 1000) # Get the order id from the broker
-                    df_balance.loc[self.quote_currency,'free'] -= trade_dict[key]['enter']['limit']['amount']
-                    df_balance.loc[self.quote_currency,'locked'] += trade_dict[key]['enter']['limit']['amount']
+                    nto_list[i]['enter']['limit']['orderId'] = int(time.time() * 1000) # Get the order id from the broker
+                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['enter']['limit']['amount']
+                    df_balance.loc[self.quote_currency,'locked'] += nto_list[i]['enter']['limit']['amount']
 
                 else: pass # TODO: Internal Error
 
             else: pass # TODO: Internal Error
-        return trade_dict, df_balance
+        return nto_list, df_balance
 
 
-    async def execute_decision(self, trade_dict, df_balance, lto_dict, data_dict):
+    async def execute_decision(self, trade_dict, df_balance, lto_list, data_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -809,7 +809,7 @@ class TestBinanceWrapper():
         result = True
 
         # Execute decsisions about ltos
-        lto_dict, df_balance = await self._execute_lto(lto_dict, df_balance, data_dict)
+        lto_list, df_balance = await self._execute_lto(lto_list, df_balance, data_dict)
 
         # Execute new trade objects
         trade_dict, df_balance = await self._execute_nto(trade_dict, df_balance)      
@@ -824,4 +824,4 @@ class TestBinanceWrapper():
         #   - market sell causes instant fill
         #   - market enter causes instant fill
 
-        return result, df_balance, lto_dict
+        return result, df_balance, lto_list

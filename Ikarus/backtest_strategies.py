@@ -23,7 +23,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 NotImplemented)
 
     @abc.abstractmethod
-    async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
+    async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):
         """Load in the data set"""
         raise NotImplementedError
 
@@ -161,7 +161,7 @@ class OCOBackTest(StrategyBase):
         return skip_calculation, lto
 
 
-    async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
+    async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):
         """
         It requires to feed analysis_dict and lto_dict so that it may decide to:
         - not to enter a new trade if there is already an open trade
@@ -181,16 +181,16 @@ class OCOBackTest(StrategyBase):
             dict: trade.json
         """
         # Initialize trade_dict to be filled
-        trade_dict = dict()
+        trade_objects = []
 
         # Create a mapping between the pair and tradeid such as {'BTCUSDT':['123','456']}
         pair_key_mapping = {}
-        for _id, lto in lto_dict.items():
+        for i, lto in enumerate(lto_list):
             pair = lto['pair']
             if pair not in pair_key_mapping.keys():
                 pair_key_mapping[pair] = []
 
-            pair_key_mapping[pair].append(_id)
+            pair_key_mapping[pair].append(i)
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
@@ -201,7 +201,7 @@ class OCOBackTest(StrategyBase):
             if ao_pair in pair_key_mapping.keys():
                 
                 # NOTE: If a pair contains multiple LTO then there should be another level of iteration as well
-                skip_calculation, lto_dict[pair_key_mapping[ao_pair][0]] = await self._handle_lto(lto_dict[pair_key_mapping[ao_pair][0]], dt_index)
+                skip_calculation, lto_list[pair_key_mapping[ao_pair][0]] = await self._handle_lto(lto_list[pair_key_mapping[ao_pair][0]], dt_index)
                 if skip_calculation: continue;
 
             else: pass # Make a brand new decision
@@ -275,12 +275,12 @@ class OCOBackTest(StrategyBase):
 
                 trade_obj['_id'] = int(time.time() * 1000)
 
-                trade_dict[trade_obj['_id']] = trade_obj # Use the mongo _id as the key since it does not matter until it becomes an LTO
+                trade_objects.append(trade_obj) # Use the mongo _id as the key since it does not matter until it becomes an LTO
 
             else:
                 self.logger.info(f"{ao_pair}: NO SIGNAL")
 
-        return trade_dict
+        return trade_objects
 
     async def dump_to(self, js_obj: dict):
         js_file = open("run-time-objs/trade.json", "w")
