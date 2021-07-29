@@ -44,7 +44,7 @@ def setup_logger(_log_lvl):
 
     # create formatter and add it to the handlers
     formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
-
+    formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
 
@@ -274,15 +274,12 @@ async def application(bwrapper, telbot):
     lto_dict_original = copy.deepcopy(lto_dict)
 
     # 1.2 Get datadict and orders
-    logger.debug('pre_calc_1_coroutines')
     pre_calc_1_coroutines = [ bwrapper.get_data_dict(pair_list, input_data_config),
                               bwrapper.get_lto_orders(lto_dict)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
-    logger.debug('pre_calc_2_coroutines')
-    # TODO: There is an error here below
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
                               update_ltos(lto_dict, orders, data_dict),
                               analyzer.sample_analyzer(data_dict)]
@@ -344,7 +341,7 @@ async def main(smallest_interval):
             sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=5)
             server_time = await client.get_server_time()
             # sys_stat ve server time can be gathered
-            logger.info(str(datetime.fromtimestamp(int(server_time['serverTime']/1000))))
+            logger.info(f'System time: {server_time["serverTime"]}')
             # Check system status
             if sys_stat['status'] != 0:
                 if SYSTEM_STATUS != 1:
@@ -360,11 +357,12 @@ async def main(smallest_interval):
 
             STATUS_TIMEOUT = 0
             
-            '''
+            
             # NOTE: The smallest time interval is 1 minute
             start_ts = int(server_time['serverTime']/1000)
             # NOTE: The logic below, executes the app default per minute. This should be generalized
             start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1  # (x minute) * (60 sec) + (1 second) ahead
+            logger.info(f'Cycle start time: {start_ts}')
             result = await asyncio.create_task(run_at(start_ts, application(bwrapper, telbot)))
             
             '''
@@ -373,7 +371,7 @@ async def main(smallest_interval):
                 asyncio.sleep(10),
                 application(bwrapper, telbot),
             )
-            
+            '''
         except Exception as e:
             if STATUS_TIMEOUT != 1:
                 logger.error(str(e))

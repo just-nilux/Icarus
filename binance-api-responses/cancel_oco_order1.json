@@ -1,0 +1,54 @@
+{
+    "orderListId": 38706761,
+    "contingencyType": "OCO",
+    "listStatusType": "ALL_DONE",
+    "listOrderStatus": "ALL_DONE",
+    "listClientOrderId": "Ybe86eSl8fw2pYPHpXavng",
+    "transactionTime": 1627564069897,
+    "symbol": "BTCUSDT",
+    "orders": [
+        {
+            "symbol": "BTCUSDT",
+            "orderId": 6980216362,
+            "clientOrderId": "8dmgBQvDRZzGXRdCwywtQ5"
+        },
+        {
+            "symbol": "BTCUSDT",
+            "orderId": 6980216363,
+            "clientOrderId": "r66UfZaw19V6dRWkkWnqTe"
+        }
+    ],
+    "orderReports": [
+        {
+            "symbol": "BTCUSDT",
+            "origClientOrderId": "8dmgBQvDRZzGXRdCwywtQ5",
+            "orderId": 6980216362,
+            "orderListId": 38706761,
+            "clientOrderId": "ORJr4MbO1PsgnvMXqnkS0u",
+            "price": "19750.17000000",
+            "origQty": "0.00506300",
+            "executedQty": "0.00000000",
+            "cummulativeQuoteQty": "0.00000000",
+            "status": "CANCELED",
+            "timeInForce": "GTC",
+            "type": "STOP_LOSS_LIMIT",
+            "side": "SELL",
+            "stopPrice": "19759.00000000"
+        },
+        {
+            "symbol": "BTCUSDT",
+            "origClientOrderId": "r66UfZaw19V6dRWkkWnqTe",
+            "orderId": 6980216363,
+            "orderListId": 38706761,
+            "clientOrderId": "ORJr4MbO1PsgnvMXqnkS0u",
+            "price": "80750.17000000",
+            "origQty": "0.00506300",
+            "executedQty": "0.00000000",
+            "cummulativeQuoteQty": "0.00000000",
+            "status": "CANCELED",
+            "timeInForce": "GTC",
+            "type": "LIMIT_MAKER",
+            "side": "SELL"
+        }
+    ]
+}

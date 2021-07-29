@@ -1,5 +1,6 @@
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
+from binance.enums import *
 import asyncio
 import pandas as pd
 import logging
@@ -14,6 +15,10 @@ class BinanceWrapper():
                         "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
     def __init__(self, _client, _config):
+        # TODO: Think about the binance.exceptions.BinanceAPIException: APIError(code=-1021): Timestamp for this request was 1000ms ahead of the server's time.
+        #       The alternative slution (the wrapper for the binane client can be added to here):
+        #       https://github.com/sammchardy/python-binance/issues/249
+
         self.client = _client
         self.config = _config
         self.logger = logging.getLogger('app.{}'.format(__name__))
@@ -141,13 +146,16 @@ class BinanceWrapper():
         # Check the status of LTOs:
         coroutines = []
         for tradeid, lto in lto_dict.items():
-            coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=tradeid)) # TODO: NEXT: Check if the trade id must be  int or str strictly
+            coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=tradeid))
+
+            # NOTE: If the type is OCO then get the tradeid of stop_limit order
+            if self.config['strategy']['exit']['type'] == 'oco':
+                coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto_dict['exit']['oco']['stopLimit_tradeid']))
             # NOTE: 'tradeid' can be changed with 'orderid' for the consistency with the api
-        self.logger.info('get_lto_orders corooutines created')
 
         lto_orders_dict = {}
         if len(coroutines):
-            for order in list(await asyncio.gather(*coroutines)): # Where the fuck is await
+            for order in list(await asyncio.gather(*coroutines)):
                 lto_orders_dict[order['orderId']] = order
         
         # TESTING PURPOSES
@@ -223,7 +231,7 @@ class BinanceWrapper():
                         response = await self.client.cancel_order(
                             symbol=lto_dict[tradeid]['pair'],
                             orderId=tradeid)
-                        if response['status'] == 'CANCELED': raise Exception('Response status is not "CANCELED"')
+                        if response['status'] != 'CANCELED': raise Exception('Response status is not "CANCELED"')
 
                     except Exception as e:
                         self.logger.error(e)
@@ -263,23 +271,51 @@ class BinanceWrapper():
             
                 elif lto_dict[tradeid]['action'] == 'execute_exit':
                     # If the enter is successful and the algorithm decides to execute the exit order
-                    # TODO: LIVE: Place the exit order to Binance: oco or limit
                     # TODO: LIVE: If the exit type is OCO, then fill the stoploss tradeid in the exit section
+                    # TODO: Test the OCO
+                    try:
+                        if self.config['strategy']['exit']['type'] == 'limit':
+                            response = self.client.order_limit_sell(
+                                symbol=lto_dict[tradeid]['pair'],
+                                quantity=lto_dict[tradeid]['exit']['limit']['quantity'],
+                                price=lto_dict[tradeid]['exit']['limit']['price'])
+                            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
-                    lto_dict[tradeid]['status'] = 'open_exit'
-                    lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
-                    pass
+                        elif self.config['strategy']['exit']['type'] == 'oco':
+                            response = self.client.create_oco_order(
+                                symbol=lto_dict[tradeid]['pair'],
+                                side=SIDE_SELL,
+                                quantity=lto_dict[tradeid]['exit']['oco']['quantity'],
+                                price=lto_dict[tradeid]['exit']['oco']['limitPrice'],
+                                stopPrice=lto_dict[tradeid]['exit']['oco']['stopPrice'],
+                                stopLimitPrice=lto_dict[tradeid]['exit']['oco']['stopLimitPrice'],
+                                stopLimitTimeInForce=TIME_IN_FORCE_GTC)
+
+                            #if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+                            #lto_dict[tradeid]['exit']['oco']['stopLimit_tradeid'] = response['orderReports'][0]['orderId']
+                            # TODO: NEXT Fill the oco order trade id to 'stopLimit_tradeid'
+                        else: pass
+                    except Exception as e:
+                        self.logger.error(e)
+                        # TODO: Notification
+
+                    else:
+                        lto_dict[tradeid]['status'] = 'open_exit'
+                        lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                        self.logger.info(f'LTO {tradeid}: exit order placed')
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_dict[tradeid]['action'] == 'postpone':
                     if lto_dict[tradeid]['status'] == 'enter_expire':
                         lto_dict[tradeid]['status'] = 'open_enter'
                         lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
+                        self.logger.info(f'LTO {tradeid}: postponed the ENTER to {lto_dict[tradeid]["exit"]["limit"]["expire"]}')
 
                     elif lto_dict[tradeid]['status'] == 'exit_expire':
                         lto_dict[tradeid]['status'] = 'open_exit'
                         lto_dict[tradeid]['history'].append(lto_dict[tradeid]['status'])
-                        pass
+                        self.logger.info(f'LTO {tradeid}: postponed the EXIT to {lto_dict[tradeid]["exit"][self.config["strategy"]["exit"]["type"]]["expire"]}')
+
                     else: pass
 
                 # Delete the action, after the action is taken
@@ -321,13 +357,13 @@ class BinanceWrapper():
                             symbol=trade_dict[nto_key]['pair'],
                             quantity=trade_dict[nto_key]['enter']['limit']['quantity'],
                             price=trade_dict[nto_key]['enter']['limit']['price'])
-                        if response['status'] == 'NEW': raise Exception('Response status is not "NEW"')
+                        if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
                     except Exception as e:
                         self.logger.error(e)
                         del trade_dict[nto_key]
                         # TODO: Notification
-                        
+
                     else:
                         trade_dict[nto_key]['tradeid'] = int(response['orderId'])
                         self.logger.info(f'NTO limit order placed: {trade_dict[nto_key]["tradeid"]}')

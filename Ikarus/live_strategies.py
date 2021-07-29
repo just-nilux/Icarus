@@ -58,7 +58,7 @@ class AlwaysEnter(StrategyBase):
     def _eval_future_candle_time(self, start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
 
 
-    async def _do_market_exit(self, lto):
+    async def _config_market_exit(self, lto):
 
         lto['action'] = 'market_exit'
         lto['exit']['market'] = {
@@ -117,28 +117,28 @@ class AlwaysEnter(StrategyBase):
     async def _handle_lto(self, lto, dt_index):
         skip_calculation = False
         
-        if lto['status'] == 'enter_expire':            
+        if lto['status'] == 'enter_expire':
             if self.config['action_mapping']['enter_expire'] == 'cancel' or lto['history'].count('enter_expire') > 1:
                 lto['action'] = 'cancel'
                 lto['result']['cause'] = 'enter_expire'
 
             elif self.config['action_mapping']['enter_expire'] == 'postpone' and lto['history'].count('enter_expire') <= 1:
-                lto = await self._postpone(lto,'enter', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # Postpone 3 x 15 min
+                postponed_candles = 1 # postponed_candles = 1 means 2 candle
+                lto = await self._postpone(lto,'enter', self._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0])) 
                 skip_calculation = True
             else: pass
 
-        elif lto['status'] == 'exit_expire':                
+        elif lto['status'] == 'exit_expire':
             if self.config['action_mapping']['exit_expire'] == 'market_exit' or lto['history'].count('exit_expire') > 1:
-                lto = await self._do_market_exit(lto)
+                lto = await self._config_market_exit(lto)
+                self.logger.info(f'LTO {lto["tradeid"]}: market exit configured')
 
             elif self.config['action_mapping']['exit_expire'] == 'postpone' and lto['history'].count('exit_expire') <= 1:
-                lto = await self._postpone(lto,'exit', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
+                postponed_candles = 1
+                lto = await self._postpone(lto,'exit', self._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
                 skip_calculation = True
             else: pass
 
-            # NOTE: In order to use the action postpone, history should be used. Otherwise it is not known if the trade is already postponed before
-            # Postpone the expiration
-            #lto_dict[pair] = await self._postpone(lto_dict[pair],'exit', exit_type, bson.Int64(dt_index + 2*15*60*1000))
 
         elif lto['status'] == 'waiting_exit':
             # LTO is entered succesfully, so exit order should be executed

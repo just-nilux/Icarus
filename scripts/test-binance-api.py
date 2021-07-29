@@ -12,3 +12,22 @@ client = Client(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'], api_se
 
 # Place the break point here
 pass
+
+response = client.create_oco_order(
+    symbol='BTCUSDT',
+    side=SIDE_SELL,
+    quantity=0.005063,
+    price=80750.17,
+    stopPrice=19759,
+    stopLimitPrice=19750.17,
+    stopLimitTimeInForce=TIME_IN_FORCE_GTC)
+
+order1 = client.get_order(symbol='BTCUSDT', orderId=response['orderReports'][0]['orderId'])
+
+order2 = client.get_order(symbol='BTCUSDT', orderId=response['orderReports'][1]['orderId'])
+
+cancel_order1 = client.cancel_order(symbol='BTCUSDT', orderId=response['orderReports'][0]['orderId'])
+
+cancel_order2 = client.cancel_order(symbol='BTCUSDT', orderId=response['orderReports'][1]['orderId'])
+
+# TODO: NEXT: Place the test OCO order here / then cancel it and see responses
