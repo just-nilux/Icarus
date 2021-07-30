@@ -208,8 +208,7 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
-                {'$set': {'status': 
-                        lto['status'],
+                {'$set': {'status': lto['status'],
                         'exit':lto['exit'],
                         'result.enter':lto['result']['enter'],
                         'history':lto['history'] 

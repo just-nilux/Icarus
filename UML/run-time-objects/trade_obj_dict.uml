@@ -1,6 +1,5 @@
 @startjson
-{
-  "pair1":{
+[{
     "_id": "current timestamp",
     "decision_time": "[dt index of obj creation]",
     "status": "",
@@ -23,19 +22,18 @@
         "limitPrice": "",
         "stopPrice": "",
         "stopLimitPrice": "",
-        "stopLimit_tradeid": "",
         "quantity": "",
         "amount": "",
         "expire": "",
-		"limit_orderId": "",
-		"stopLimit_orderId": ""
+        "orderId": "",
+        "stopLimit_orderId": ""
       },
       "limit": {
         "price": "",
         "quantity": "",
         "amount": "",
         "expire": "",
-		"orderId": ""
+        "orderId": ""
       },
       "market": {
         "quantity": "",
@@ -65,8 +63,8 @@
     },
     "action": "[optional and transitory]"
   },
-  "pair2":{}
-}
+  {}
+]
 @endjson
 
 1. This object is created once when the "ENTER" decision is made with certain conditions.
@@ -171,3 +169,7 @@ Enter Type            Exit Type
 limit--------\         /-----oco------|
               |-------|-----limit      \-----oco_stoploss
 market-------/         \-----market
+
+NOTE: OCO has 2 orderId:
+    - orderId: orderId of the orders with the type LIMIT_MAKER
+    - stopLoss_orderId: orderId of the orders with the type STOP_LOSS_LIMIT

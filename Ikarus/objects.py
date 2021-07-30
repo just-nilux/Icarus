@@ -67,11 +67,11 @@ class GenericObject():
         "limitPrice": "",
         "stopPrice": "",
         "stopLimitPrice": "",
-        "stopLimit_tradeid": "",
+        "stopLimit_orderId": "",
         "quantity": "",
         "amount": "",
         "expire": "",
-        "limit_orderId": "",
+        "orderId": "",
         "stopLimit_orderId": ""
     }
     

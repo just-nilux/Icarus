@@ -97,7 +97,7 @@ class OCOBackTest(StrategyBase):
                     "quantity": float(enter_quantity),
                     "amount": float(exit_ref_amount),
                     "expire": expire_time,
-                    "limit_orderId": "",
+                    "orderId": "",
                     "stopLimit_orderId": ""
                 }
             }
@@ -183,7 +183,7 @@ class OCOBackTest(StrategyBase):
         # Initialize trade_dict to be filled
         trade_objects = []
 
-        # Create a mapping between the pair and tradeid such as {'BTCUSDT':['123','456']}
+        # Create a mapping between the pair and orderId such as {'BTCUSDT':['123','456']}
         pair_key_mapping = {}
         for i, lto in enumerate(lto_list):
             pair = lto['pair']
