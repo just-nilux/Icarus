@@ -245,13 +245,14 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
     # TODO: NEXT: What is the use of dicts? Think about it
     for i in range(len(lto_list)):
-        # NOTE: data_dict uses pairs as key
         pair = lto_list[i]['pair']
-        pair_klines_dict = data_dict[pair]
 
         # 1.2.1: Check trades and update status
         # TODO: Update the following patch for the multi scale
-        last_kline = pair_klines_dict['15m'].tail(1)
+        assert len(data_dict[pair].keys()) == 1, "Multiple time scale is not supported"
+        scale = list(data_dict[pair].keys())[0]
+        last_kline = data_dict[pair][scale].tail(1)
+        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])  # current_candle open_time
 
         if lto_list[i]['status'] == 'open_enter':
             # NOTE: There is 2 method to enter: 'limit' and 'market'. Since market executed directly, it is not expected to have market at this stage
@@ -265,7 +266,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['status'] = 'waiting_exit'
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['enter']['type'] = 'limit'
-                    lto_list[i]['result']['enter']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['enter']['price'] = lto_list[i]['enter']['limit']['price']
                     lto_list[i]['result']['enter']['amount'] = lto_list[i]['enter']['limit']['amount']
                     lto_list[i]['result']['enter']['quantity'] = lto_list[i]['enter']['limit']['quantity']
@@ -285,7 +286,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
                         # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
-                elif int(lto_list[i]['enter']['limit']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_list[i]['enter']['limit']['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
                     lto_list[i]['status'] = 'enter_expire'
                     lto_list[i]['history'].append(lto_list[i]['status'])
@@ -310,7 +311,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['result']['cause'] = 'closed'
 
                     lto_list[i]['result']['exit']['type'] = 'limit'
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit']['limit']['price']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit']['limit']['amount']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['limit']['quantity']
@@ -325,7 +326,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
 
-                elif int(lto_list[i]['exit']['limit']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_list[i]['exit']['limit']['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = 'exit_expire'
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     
@@ -341,7 +342,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = 'closed'
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit']['oco']['stopLimitPrice']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit']['oco']['amount']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['oco']['quantity']
@@ -364,7 +365,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['result']['cause'] = 'closed'
 
                     lto_list[i]['result']['exit']['type'] = 'oco_limit'
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit']['oco']['limitPrice']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit']['oco']['amount']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['oco']['quantity']
@@ -380,7 +381,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     # NOTE: For the quote_currency total and the ref_balance is the same
                     pass
 
-                elif int(lto_list[i]['exit']['oco']['expire']) <= bson.Int64(last_kline.index.values):
+                elif int(lto_list[i]['exit']['oco']['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = 'exit_expire'
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
