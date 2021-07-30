@@ -18,7 +18,7 @@
             "type": "limit"
         },
         "action_mapping": {
-            "enter_expire": "cancel",
+            "enter_expire": "postpone",
             "exit_expire": "market_exit"
         },
         "max_lto": 1

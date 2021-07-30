@@ -23,7 +23,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 NotImplemented)
 
     @abc.abstractmethod
-    async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
+    async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):
         """Load in the data set"""
         raise NotImplementedError
 
@@ -42,19 +42,13 @@ class OCOBackTest(StrategyBase):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy']
         self.quote_currency = _config['broker']['quote_currency']
-        
-        '''
-        self.config = {
-            "enter": "limit",
-            "exit": "oco",
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "market_exit"
-            },
-            "max_lto": 1
-        }
-        '''
+        self.scales_in_minute = _config['data_input']['scales_in_minute']
+
         return
+
+
+    def _eval_future_candle_time(self, start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
+
 
     async def _postpone(self, lto, phase, expire_time):
         lto['action'] = 'postpone'
@@ -67,7 +61,8 @@ class OCOBackTest(StrategyBase):
         lto['action'] = 'market_exit'
         lto['exit']['market'] = {
             'amount': lto['exit'][self.config['exit']['type']]['amount'],
-            'quantity': lto['exit'][self.config['exit']['type']]['quantity']
+            'quantity': lto['exit'][self.config['exit']['type']]['quantity'],
+            'orderId': '',
         }
         return lto
 
@@ -80,7 +75,8 @@ class OCOBackTest(StrategyBase):
                     "price": float(enter_price),
                     "quantity": float(enter_quantity),
                     "amount": float(enter_ref_amount),
-                    "expire": expire_time
+                    "expire": expire_time,
+                    "orderId": ""
                     },
                 }
         elif self.config['enter']['type'] == 'market':
@@ -100,7 +96,9 @@ class OCOBackTest(StrategyBase):
                     "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
                     "quantity": float(enter_quantity),
                     "amount": float(exit_ref_amount),
-                    "expire": expire_time
+                    "expire": expire_time,
+                    "orderId": "",
+                    "stopLimit_orderId": ""
                 }
             }
         elif self.config['exit']['type'] == 'limit':
@@ -109,7 +107,8 @@ class OCOBackTest(StrategyBase):
                     "price": float(exit_price),
                     "quantity": float(enter_quantity),
                     "amount": float(exit_ref_amount),
-                    "expire": expire_time
+                    "expire": expire_time,
+                    "orderId": ""
                     },
                 }
         elif self.config['exit']['type'] == 'market':
@@ -119,6 +118,9 @@ class OCOBackTest(StrategyBase):
 
 
     async def _handle_lto(self, lto, dt_index):
+        """
+        This function decides what to do for the LTOs based on their 'status'
+        """        
         skip_calculation = False
         
         if lto['status'] == 'enter_expire':            
@@ -127,7 +129,7 @@ class OCOBackTest(StrategyBase):
                 lto['result']['cause'] = 'enter_expire'
 
             elif self.config['action_mapping']['enter_expire'] == 'postpone' and lto['history'].count('enter_expire') <= 1:
-                lto = await self._postpone(lto,'enter', bson.Int64(dt_index + 2*15*60*1000)) # Postpone 3 x 15 min
+                lto = await self._postpone(lto,'enter', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # Postpone 3 x 15 min
                 skip_calculation = True
             else: pass
 
@@ -136,7 +138,7 @@ class OCOBackTest(StrategyBase):
                 lto = await self._do_market_exit(lto)
 
             elif self.config['action_mapping']['exit_expire'] == 'postpone' and lto['history'].count('exit_expire') <= 1:
-                lto = await self._postpone(lto,'exit', bson.Int64(dt_index + 2*15*60*1000))
+                lto = await self._postpone(lto,'exit', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
                 skip_calculation = True
             else: pass
 
@@ -159,7 +161,7 @@ class OCOBackTest(StrategyBase):
         return skip_calculation, lto
 
 
-    async def run(self, analysis_dict, lto_dict, df_balance, dt_index=None):
+    async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):
         """
         It requires to feed analysis_dict and lto_dict so that it may decide to:
         - not to enter a new trade if there is already an open trade
@@ -179,16 +181,16 @@ class OCOBackTest(StrategyBase):
             dict: trade.json
         """
         # Initialize trade_dict to be filled
-        trade_dict = dict()
+        trade_objects = []
 
-        # Create a mapping between the pair and tradeid such as {'BTCUSDT':['123','456']}
-        pair_tradeid_mapping = {}
-        for tradeid, lto in lto_dict.items():
+        # Create a mapping between the pair and orderId such as {'BTCUSDT':['123','456']}
+        pair_key_mapping = {}
+        for i, lto in enumerate(lto_list):
             pair = lto['pair']
-            if pair not in pair_tradeid_mapping.keys():
-                pair_tradeid_mapping[pair] = []
-            
-            pair_tradeid_mapping[pair].append(tradeid)
+            if pair not in pair_key_mapping.keys():
+                pair_key_mapping[pair] = []
+
+            pair_key_mapping[pair].append(i)
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
@@ -196,10 +198,10 @@ class OCOBackTest(StrategyBase):
         for ao_pair in analysis_dict.keys():
 
             # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
-            if ao_pair in pair_tradeid_mapping.keys():
+            if ao_pair in pair_key_mapping.keys():
                 
                 # NOTE: If a pair contains multiple LTO then there should be another level of iteration as well
-                skip_calculation, lto_dict[pair_tradeid_mapping[ao_pair][0]] = await self._handle_lto(lto_dict[pair_tradeid_mapping[ao_pair][0]], dt_index)
+                skip_calculation, lto_list[pair_key_mapping[ao_pair][0]] = await self._handle_lto(lto_list[pair_key_mapping[ao_pair][0]], dt_index)
                 if skip_calculation: continue;
 
             else: pass # Make a brand new decision
@@ -266,19 +268,19 @@ class OCOBackTest(StrategyBase):
                 exit_ref_amount = enter_quantity * exit_price
 
                 # Fill enter module
-                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, bson.Int64(dt_index + 2*15*60*1000))
+                trade_obj['enter'] = await self._create_enter_module(enter_price, enter_quantity, enter_ref_amount, self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
 
                 # Fill exit module
-                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, bson.Int64(dt_index + 9*15*60*1000))
+                trade_obj['exit'] = await self._create_exit_module(enter_price, enter_quantity, exit_price, exit_ref_amount, self._eval_future_candle_time(dt_index,9,self.scales_in_minute[0]))
 
                 trade_obj['_id'] = int(time.time() * 1000)
 
-                trade_dict[trade_obj['_id']] = trade_obj # Use the mongo _id as the key since it does not matter until it becomes an LTO
+                trade_objects.append(trade_obj) # Use the mongo _id as the key since it does not matter until it becomes an LTO
 
             else:
                 self.logger.info(f"{ao_pair}: NO SIGNAL")
 
-        return trade_dict
+        return trade_objects
 
     async def dump_to(self, js_obj: dict):
         js_file = open("run-time-objs/trade.json", "w")

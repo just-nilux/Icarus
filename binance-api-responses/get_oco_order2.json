@@ -1,0 +1,20 @@
+{
+    "symbol": "BTCUSDT",
+    "orderId": 6980216363,
+    "orderListId": 38706761,
+    "clientOrderId": "r66UfZaw19V6dRWkkWnqTe",
+    "price": "80750.17000000",
+    "origQty": "0.00506300",
+    "executedQty": "0.00000000",
+    "cummulativeQuoteQty": "0.00000000",
+    "status": "NEW",
+    "timeInForce": "GTC",
+    "type": "LIMIT_MAKER",
+    "side": "SELL",
+    "stopPrice": "0.00000000",
+    "icebergQty": "0.00000000",
+    "time": 1627564031687,
+    "updateTime": 1627564031687,
+    "isWorking": true,
+    "origQuoteOrderQty": "0.00000000"
+}
