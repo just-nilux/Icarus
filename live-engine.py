@@ -2,7 +2,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils, lto_manipulator
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -157,9 +157,9 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['enter']['type'] = 'limit'
                     lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['enter']['price'] = orders_dict[enter_orderId]['price']
-                    lto_list[i]['result']['enter']['quantity'] = orders_dict[enter_orderId]['executedQty']
-                    lto_list[i]['result']['enter']['amount'] = orders_dict[enter_orderId]['price'] * orders_dict[enter_orderId]['executedQty']
+                    lto_list[i]['result']['enter']['price'] = float(orders_dict[enter_orderId]['price'])
+                    lto_list[i]['result']['enter']['quantity'] = float(orders_dict[enter_orderId]['executedQty'])
+                    lto_list[i]['result']['enter']['amount'] = float(lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity'])
 
                 elif int(lto_list[i]['enter']['limit']['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -187,9 +187,9 @@ async def update_ltos(lto_list, orders_dict, data_dict):
 
                     lto_list[i]['result']['exit']['type'] = 'limit'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = orders_dict[exit_orderId]['price']
-                    lto_list[i]['result']['exit']['amount'] = orders_dict[exit_orderId]['executedQty']
-                    lto_list[i]['result']['exit']['quantity'] = orders_dict[exit_orderId]['price'] * orders_dict[exit_orderId]['executedQty']
+                    lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['price'])
+                    lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['executedQty'])
+                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['price'])
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -214,9 +214,9 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['cause'] = 'closed'
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = orders_dict[oco_stopLoss_orderId]['price']
-                    lto_list[i]['result']['exit']['quantity'] = orders_dict[oco_stopLoss_orderId]['executedQty']
-                    lto_list[i]['result']['exit']['amount'] = orders_dict[oco_stopLoss_orderId]['price'] * orders_dict[oco_stopLoss_orderId]['executedQty']
+                    lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLoss_orderId]['price'])
+                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_stopLoss_orderId]['executedQty'])
+                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -230,9 +230,9 @@ async def update_ltos(lto_list, orders_dict, data_dict):
 
                     lto_list[i]['result']['exit']['type'] = 'oco_limit'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = orders_dict[oco_limit_orderId]['price']
-                    lto_list[i]['result']['exit']['quantity'] = orders_dict[oco_limit_orderId]['executedQty']
-                    lto_list[i]['result']['exit']['amount'] = orders_dict[oco_limit_orderId]['price'] * orders_dict[oco_limit_orderId]['executedQty']
+                    lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_limit_orderId]['price'])
+                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_limit_orderId]['executedQty'])
+                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
 
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
@@ -275,6 +275,10 @@ async def application(bwrapper, telbot):
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
+
+    # NOTE: Only works once
+    if len(lto_list):
+        orders = await lto_manipulator.change_order_to_filled(lto_list[0], orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),

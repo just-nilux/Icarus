@@ -232,7 +232,8 @@ class BinanceWrapper():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
                 if lto_list[i]['action'] == 'cancel':
-                    # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
+                    # TODO: NEXT: Add cancel for EXIT
+                    # NOTE: if the status enter expire and the action is cancel than cancel the exit order. vice versa
 
                     try:
                         response = await self.client.cancel_order(
@@ -259,7 +260,6 @@ class BinanceWrapper():
                 elif lto_list[i]['action'] == 'market_exit':
 
                     # TODO: DEPLOY: Execute Market Order in Binance
-                    # TODO: DEPLOY: Wait until the execution and fill the TO 
                     '''
                     lto_list[i]['status'] = 'closed'
                     lto_list[i]['history'].append(lto_list[i]['status'])
@@ -281,16 +281,16 @@ class BinanceWrapper():
                     # TODO: Test the OCO
                     try:
                         if self.config['strategy']['exit']['type'] == 'limit':
-                            response = self.client.order_limit_sell(
+                            response = await self.client.order_limit_sell(
                                 symbol=lto_list[i]['pair'],
                                 quantity=lto_list[i]['exit']['limit']['quantity'],
                                 price=lto_list[i]['exit']['limit']['price'])
                             if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
                             self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
-
+                            lto_list[i]['exit']['limit']['orderId'] = response['orderId']
 
                         elif self.config['strategy']['exit']['type'] == 'oco':
-                            response = self.client.create_oco_order(
+                            response = await self.client.create_oco_order(
                                 symbol=lto_list[i]['pair'],
                                 side=SIDE_SELL,
                                 quantity=lto_list[i]['exit']['oco']['quantity'],
@@ -303,8 +303,11 @@ class BinanceWrapper():
 
                             response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
 
-                            self.logger.info(f'LTO {response_stoploss["orderId"]}: {response_stoploss["side"]} {response_stoploss["type"]} order placed')
+                            lto_list[i]['exit']['oco']['orderId'] = response_limit_maker['orderId']
                             self.logger.info(f'LTO {response_limit_maker["orderId"]}: {response_limit_maker["side"]} {response_limit_maker["type"]} order placed')
+
+                            lto_list[i]['exit']['oco']['stopLimit_orderId'] = response_stoploss['orderId']
+                            self.logger.info(f'LTO {response_stoploss["orderId"]}: {response_stoploss["side"]} {response_stoploss["type"]} order placed')
 
                         else: pass
                     except Exception as e:
