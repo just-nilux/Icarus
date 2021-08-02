@@ -61,7 +61,7 @@ class AlwaysEnter(StrategyBase):
 
     async def _config_market_exit(self, lto):
 
-        lto['action'] = 'market_exit'
+        lto['action'] = ACTN_MARKET_EXIT
         lto['exit'][TYPE_MARKET] = {
             'amount': lto['exit'][self.config['exit']['type']]['amount'],
             'quantity': lto['exit'][self.config['exit']['type']]['quantity'],
@@ -185,8 +185,8 @@ class AlwaysEnter(StrategyBase):
         skip_calculation = False
         
         if lto['status'] == STAT_ENTER_EXP:
-            if self.config['action_mapping'][STAT_ENTER_EXP] == 'cancel' or lto['history'].count(STAT_ENTER_EXP) > 1:
-                lto['action'] = 'cancel'
+            if self.config['action_mapping'][STAT_ENTER_EXP] == ACTN_CANCEL or lto['history'].count(STAT_ENTER_EXP) > 1:
+                lto['action'] = ACTN_CANCEL
                 lto['result']['cause'] = STAT_ENTER_EXP
 
             elif self.config['action_mapping'][STAT_ENTER_EXP] == 'postpone' and lto['history'].count(STAT_ENTER_EXP) <= 1:
@@ -198,7 +198,7 @@ class AlwaysEnter(StrategyBase):
             else: pass
 
         elif lto['status'] == STAT_EXIT_EXP:
-            if self.config['action_mapping'][STAT_EXIT_EXP] == 'market_exit' or lto['history'].count(STAT_EXIT_EXP) > 1:
+            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
                 lto = await self._config_market_exit(lto)
                 self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
@@ -213,7 +213,7 @@ class AlwaysEnter(StrategyBase):
             # LTO is entered succesfully, so exit order should be executed
             # TODO: expire of the exit_module can be calculated after the trade entered
 
-            lto['action'] = 'execute_exit'
+            lto['action'] = ACTN_EXEC_EXIT
             lto = await self.apply_exchange_filters(lto, phase='exit')
             skip_calculation = True
 

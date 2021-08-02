@@ -232,7 +232,7 @@ class BinanceWrapper():
             if 'action' in lto_list[i].keys():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
-                if lto_list[i]['action'] == 'cancel':
+                if lto_list[i]['action'] == ACTN_CANCEL:
                     # TODO: NEXT: Add cancel for EXIT
                     # NOTE: if the status enter expire and the action is cancel than cancel the exit order. vice versa
 
@@ -252,13 +252,13 @@ class BinanceWrapper():
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         # TODO: Notification
             
-                elif lto_list[i]['action'] == 'update':
+                elif lto_list[i]['action'] == ACTN_UPDATE:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_enter':
+                elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_exit':
+                elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
 
                     # TODO: DEPLOY: Execute Market Order in Binance
                     '''
@@ -277,7 +277,7 @@ class BinanceWrapper():
                     '''
                     pass
             
-                elif lto_list[i]['action'] == 'execute_exit':
+                elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
                     # TODO: Test the OCO
                     try:
@@ -675,8 +675,8 @@ class TestBinanceWrapper():
             if 'action' in lto_list[i].keys():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
-                if lto_list[i]['action'] == 'cancel':
-                    # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
+                if lto_list[i]['action'] == ACTN_CANCEL:
+                    # TODO: ACTN_CANCEL action currently only used for enter phase, exit phase cancel can be added
                     # (This requires other updates for TEST)
                     # TODO: DEPLOY: Binance cancel the order
                     lto_list[i]['status'] = STAT_CLOSED
@@ -687,13 +687,13 @@ class TestBinanceWrapper():
                     df_balance.loc[self.quote_currency,'free'] += lto_list[i]['enter'][TYPE_LIMIT]['amount']
                     df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
             
-                elif lto_list[i]['action'] == 'update':
+                elif lto_list[i]['action'] == ACTN_UPDATE:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_enter':
+                elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_exit':
+                elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
                     # TODO: DEPLOY: Execute Market Order in Bnance
 
                     lto_list[i]['status'] = STAT_CLOSED
@@ -721,7 +721,7 @@ class TestBinanceWrapper():
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
-                elif lto_list[i]['action'] == 'execute_exit':
+                elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
                     # TODO: DEPLOY: Place the exit order to Binance: oco or limit
                     #       No need to fill anything in 'result' or 'exit' sections.
