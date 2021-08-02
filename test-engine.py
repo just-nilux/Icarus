@@ -3,6 +3,7 @@ from binance import Client, AsyncClient
 from datetime import datetime
 import json
 from Ikarus import binance_wrapper, backtest_strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -95,14 +96,14 @@ async def get_closed_hto(df):
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'closed'})
     hto_closed = []
     for hto in hto_list:
-        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
-        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
+        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
 
         hto_dict = {
             "_id": hto['_id'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter']['limit']['price'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
             "exitTime": hto['result']['exit']['time'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
@@ -122,8 +123,8 @@ async def get_enter_expire_hto(df):
         hto_dict = {
             "_id": hto['_id'],
             "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter']['limit']['expire'],
-            "enterPrice": hto['enter']['limit']['price'],
+            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
         }
         hto_ent_exp_list.append(hto_dict)
 
@@ -137,14 +138,14 @@ async def get_exit_expire_hto(df):
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'exit_expire'})
     hto_closed_list = []
     for hto in hto_list:
-        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
-        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
+        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
 
         hto_dict = {
             "_id": hto['_id'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter']['limit']['price'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price'],
             "exitExpire": hto['exit'][plannedExitType]['expire']
@@ -255,24 +256,24 @@ async def update_ltos(lto_list, data_dict, df_balance):
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])  # current_candle open_time
 
         if lto_list[i]['status'] == 'open_enter':
-            # NOTE: There is 2 method to enter: 'limit' and 'market'. Since market executed directly, it is not expected to have market at this stage
-            if 'limit' in lto_list[i]['enter'].keys():
+            # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
+            if TYPE_LIMIT in lto_list[i]['enter'].keys():
 
                 # Check if the open enter trade is filled else if the trade is expired
-                if float(last_kline['low']) < lto_list[i]['enter']['limit']['price']:
+                if float(last_kline['low']) < lto_list[i]['enter'][TYPE_LIMIT]['price']:
 
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
                     lto_list[i]['status'] = 'waiting_exit'
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['enter']['type'] = 'limit'
+                    lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['enter']['price'] = lto_list[i]['enter']['limit']['price']
-                    lto_list[i]['result']['enter']['amount'] = lto_list[i]['enter']['limit']['amount']
-                    lto_list[i]['result']['enter']['quantity'] = lto_list[i]['enter']['limit']['quantity']
+                    lto_list[i]['result']['enter']['price'] = lto_list[i]['enter'][TYPE_LIMIT]['price']
+                    lto_list[i]['result']['enter']['amount'] = lto_list[i]['enter'][TYPE_LIMIT]['amount']
+                    lto_list[i]['result']['enter']['quantity'] = lto_list[i]['enter'][TYPE_LIMIT]['quantity']
 
                     # Remove the bought amount from the 'locked' and 'ref_balance' columns
-                    df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_list[i]['enter']['limit']['amount']
+                    df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
                     df_balance.loc[config['broker']['quote_currency'], 'ref_balance'] = df_balance.loc[config['broker']['quote_currency'], 'locked'] +  df_balance.loc[config['broker']['quote_currency'], 'free']
                     # TODO sync the ref_balance and total
                     # Update df_balance: add the quantity to the base_cur or create a row for base_cur
@@ -286,7 +287,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
                         # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
-                elif int(lto_list[i]['enter']['limit']['expire']) <= last_closed_candle_open_time:
+                elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
                     lto_list[i]['status'] = 'enter_expire'
                     lto_list[i]['history'].append(lto_list[i]['status'])
@@ -301,20 +302,20 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
         elif lto_list[i]['status'] == 'open_exit':
 
-            if 'limit' in lto_list[i]['exit'].keys():
+            if TYPE_LIMIT in lto_list[i]['exit'].keys():
 
                 # Check if the open sell trade is filled or stoploss is taken
-                if float(last_kline['high']) > lto_list[i]['exit']['limit']['price']:
+                if float(last_kline['high']) > lto_list[i]['exit'][TYPE_LIMIT]['price']:
 
                     lto_list[i]['status'] = 'closed'
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = 'closed'
 
-                    lto_list[i]['result']['exit']['type'] = 'limit'
+                    lto_list[i]['result']['exit']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit']['limit']['price']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit']['limit']['amount']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['limit']['quantity']
+                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_LIMIT]['price']
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit'][TYPE_LIMIT]['amount']
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_LIMIT]['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -326,26 +327,26 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     # NOTE: For the quote_currency total and the ref_balance is the same
 
-                elif int(lto_list[i]['exit']['limit']['expire']) <= last_closed_candle_open_time:
+                elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = 'exit_expire'
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     
                 else:
                     pass
 
-            elif 'oco' in lto_list[i]['exit'].keys():
+            elif TYPE_OCO in lto_list[i]['exit'].keys():
                 # NOTE: Think about the worst case and check the stop loss first.
 
-                if float(last_kline['low']) < lto_list[i]['exit']['oco']['stopPrice']:
+                if float(last_kline['low']) < lto_list[i]['exit'][TYPE_OCO]['stopPrice']:
                     # Stop Loss takens
                     lto_list[i]['status'] = 'closed'
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = 'closed'
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit']['oco']['stopLimitPrice']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit']['oco']['amount']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['oco']['quantity']
+                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice']
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit'][TYPE_OCO]['amount']
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -357,7 +358,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     pass
                 
-                elif float(last_kline['high']) > lto_list[i]['exit']['oco']['limitPrice']:
+                elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
                     # Limit taken
 
                     lto_list[i]['status'] = 'closed'
@@ -366,9 +367,9 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
                     lto_list[i]['result']['exit']['type'] = 'oco_limit'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit']['oco']['limitPrice']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit']['oco']['amount']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['oco']['quantity']
+                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['limitPrice']
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit'][TYPE_OCO]['amount']
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -381,7 +382,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     # NOTE: For the quote_currency total and the ref_balance is the same
                     pass
 
-                elif int(lto_list[i]['exit']['oco']['expire']) <= last_closed_candle_open_time:
+                elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = 'exit_expire'
                     lto_list[i]['history'].append(lto_list[i]['status'])
 

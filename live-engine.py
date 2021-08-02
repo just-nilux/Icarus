@@ -3,6 +3,7 @@ from binance import AsyncClient
 from datetime import datetime
 import json
 from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils, lto_manipulator
+from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -72,14 +73,14 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
 
         # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
-        if lto['status'] == 'closed':
+        if lto['status'] == STAT_CLOSED:
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] == 'open_exit':
-            # - The status might be changed from 'open_enter' or 'partially_closed_enter' to 'open_exit' (changes in result.enter and history)
+        elif lto['status'] == STAT_OPEN_EXIT:
+            # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
             # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
@@ -91,17 +92,17 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
                         'history':lto['history'] 
                     }})
                 
-        elif lto['status'] == 'open_enter':
-            # - 'open_enter' might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
+        elif lto['status'] == STAT_OPEN_ENTER:
+            # - STAT_OPEN_ENTER might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
                 {'$set': {'status': lto['status'], 'enter':lto['enter'], 'history':lto['history'] }})
 
         # NOTE: These two below are not applicable
-        elif lto['status'] == 'partially_closed_enter':
+        elif lto['status'] == STAT_PART_CLOSED_ENTER:
             pass
-        elif lto['status'] == 'partially_closed_exit':
+        elif lto['status'] == 'STAT_PART_CLOSED_EXIT':
             pass
         else:
             pass
@@ -111,7 +112,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     """
     Args:
         lto_dict (dict): will be updated (status, result, exit sections)
-        df_balance (pd.DataFrame): When a lto go from 'open_exit' to 'closed' or 'open_enter' to 'open_exit'
+        df_balance (pd.DataFrame): When a lto go from STAT_OPEN_EXIT to STAT_CLOSED or STAT_OPEN_ENTER to STAT_OPEN_EXIT
         it needs to be updated in terms of 'free' and 'locked'                                               
 
     Returns:
@@ -125,13 +126,12 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     #       - If the limit_maker İS CANCELED they bot oco orders canceld and this is an external touch
     #       : Keep the limit_maker as the 'tradeid' of the lto and keep the oco_stoploss in that lto. If needed reach it.
 
-    # NOTE: Each lto with enter/exit type 'limit' has 1 order in orders_dict. However, each OCO exit has 2 orders in orders dict.
+    # NOTE: Each lto with enter/exit type TYPE_LIMIT has 1 order in orders_dict. However, each OCO exit has 2 orders in orders dict.
     #       len(orders_dict) >= len(lto_dict)
 
     # NOTE: Expiration: Normally bson.Int64(last_kline.index.values): denotes the 'open_time' of last closed kline.
     #       However, in live-trading the last kline is the newly opened kline. Keep that in mind.
 
-    # TODO: NEXT: Find a way to create more meaningfull erro messages
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
@@ -144,48 +144,48 @@ async def update_ltos(lto_list, orders_dict, data_dict):
         # 1.2.1: Check trades and update status
 
         # TODO: A mock might be needed to simulate live orders
-        if lto_list[i]['status'] == 'open_enter':
-            # NOTE: There is 2 method to enter: 'limit' and 'market'. Since market executed directly, it is not expected to have market at this stage
-            if 'limit' in lto_list[i]['enter'].keys():
+        if lto_list[i]['status'] == STAT_OPEN_ENTER:
+            # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
+            if TYPE_LIMIT in lto_list[i]['enter'].keys():
                 
-                enter_orderId = lto_list[i]['enter']['limit']['orderId'] # Get the orderId of the enter module
+                enter_orderId = lto_list[i]['enter'][TYPE_LIMIT]['orderId'] # Get the orderId of the enter module
                 # Check if the open enter trade is filled else if the trade is expired
                 if orders_dict[enter_orderId]['status'] == 'FILLED':
 
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
                     lto_list[i]['status'] = 'waiting_exit'
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['enter']['type'] = 'limit'
+                    lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['enter']['price'] = float(orders_dict[enter_orderId]['price'])
                     lto_list[i]['result']['enter']['quantity'] = float(orders_dict[enter_orderId]['executedQty'])
                     lto_list[i]['result']['enter']['amount'] = float(lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity'])
 
-                elif int(lto_list[i]['enter']['limit']['expire']) <= last_closed_candle_open_time:
+                elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
-                    lto_list[i]['status'] = 'enter_expire'
+                    lto_list[i]['status'] = STAT_ENTER_EXP
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
             else:
                 # TODO: Internal Error
                 pass
 
-        elif lto_list[i]['status'] == 'partially_closed_enter':
+        elif lto_list[i]['status'] == STAT_PART_CLOSED_ENTER:
             # Ignore for the tests
             pass
 
-        elif lto_list[i]['status'] == 'open_exit':
+        elif lto_list[i]['status'] == STAT_OPEN_EXIT:
 
-            if 'limit' in lto_list[i]['exit'].keys():
-                exit_orderId = lto_list[i]['exit']['limit']['orderId'] # Get the orderId of the enter module
+            if TYPE_LIMIT in lto_list[i]['exit'].keys():
+                exit_orderId = lto_list[i]['exit'][TYPE_LIMIT]['orderId'] # Get the orderId of the enter module
                 # Check if the open sell trade is filled or stoploss is taken
                 if orders_dict[exit_orderId]['status'] == 'FILLED':
 
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'closed'
+                    lto_list[i]['result']['cause'] = STAT_CLOSED
 
-                    lto_list[i]['result']['exit']['type'] = 'limit'
+                    lto_list[i]['result']['exit']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['price'])
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['executedQty'])
@@ -195,23 +195,23 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
 
-                elif int(lto_list[i]['exit']['limit']['expire']) <= last_closed_candle_open_time:
-                    lto_list[i]['status'] = 'exit_expire'
+                elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
+                    lto_list[i]['status'] = STAT_EXIT_EXP
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     
                 else:
                     pass
 
-            elif 'oco' in lto_list[i]['exit'].keys():
-                oco_limit_orderId = lto_list[i]['exit']['oco']['orderId'] # Get the orderId of the enter module
-                oco_stopLoss_orderId = lto_list[i]['exit']['oco']['stopLoss_orderId'] # Get the orderId of the enter module
+            elif TYPE_OCO in lto_list[i]['exit'].keys():
+                oco_limit_orderId = lto_list[i]['exit'][TYPE_OCO]['orderId'] # Get the orderId of the enter module
+                oco_stopLoss_orderId = lto_list[i]['exit'][TYPE_OCO]['stopLoss_orderId'] # Get the orderId of the enter module
 
                 if orders_dict[oco_limit_orderId]['status'] == 'EXPIRED':
 
                     # Stop Loss takens
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'closed'
+                    lto_list[i]['result']['cause'] = STAT_CLOSED
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLoss_orderId]['price'])
@@ -224,9 +224,9 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                 elif orders_dict[oco_limit_orderId]['status'] == 'FILLED':
 
                     # Limit taken
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'closed'
+                    lto_list[i]['result']['cause'] = STAT_CLOSED
 
                     lto_list[i]['result']['exit']['type'] = 'oco_limit'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
@@ -238,8 +238,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                elif int(lto_list[i]['exit']['oco']['expire']) <= last_closed_candle_open_time:
-                    lto_list[i]['status'] = 'exit_expire'
+                elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
+                    lto_list[i]['status'] = STAT_EXIT_EXP
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
                 else:
@@ -249,7 +249,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                 # TODO: Internal Error
                 pass
                 
-        elif lto_list[i]['status'] == 'partially_closed_exit':
+        elif lto_list[i]['status'] == 'STAT_PART_CLOSED_EXIT':
             # Ignore for the tests
             pass
 
@@ -261,6 +261,14 @@ async def update_ltos(lto_list, orders_dict, data_dict):
 
 
 async def application(bwrapper, telbot):
+
+    # NOTE: current_ts is the open time of the current live candle (open time)
+    # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
+    current_ts = int(time.time())       # Get the timestamp in gmt=0
+    current_ts -= int(current_ts % 60)  # Round the current_ts to backward (to the beginning of the current minute)
+    current_ts *= 1000                  # Make the resolution milisecond
+    logger.info(f'Ikarus Time: [{current_ts}]')
+
     pair_list = config['data_input']['pairs']
     
     #################### Phase 1: Perform pre-calculation tasks ####################
@@ -277,8 +285,8 @@ async def application(bwrapper, telbot):
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     # NOTE: Only works once
-    if len(lto_list):
-        orders = await lto_manipulator.change_order_to_filled(lto_list[0], orders)
+    #if len(lto_list):
+    #    orders = await lto_manipulator.change_order_to_filled(lto_list[0], orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
@@ -290,11 +298,6 @@ async def application(bwrapper, telbot):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2 started')
 
-    # NOTE: current_ts is the open time of the current live candle (open time)
-    # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
-    current_ts = int(time.time())       # Get the timestamp in gmt=0
-    current_ts -= int(current_ts % 60)  # Round the current_ts to backward (to the beginning of the current minute)
-    current_ts *= 1000                  # Make the resolution milisecond
     nto_list = await strategy.run(analysis_dict, lto_list, df_balance, current_ts)
 
     # 2.3: Execute LTOs and NTOs if any

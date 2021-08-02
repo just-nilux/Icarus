@@ -2,6 +2,7 @@ import logging
 import statistics as st
 import json
 from Ikarus.objects import GenericObject, ObjectEncoder
+from Ikarus.enums import *
 import bson
 import copy
 import abc
@@ -59,7 +60,7 @@ class OCOBackTest(StrategyBase):
     async def _do_market_exit(self, lto):
 
         lto['action'] = 'market_exit'
-        lto['exit']['market'] = {
+        lto['exit'][TYPE_MARKET] = {
             'amount': lto['exit'][self.config['exit']['type']]['amount'],
             'quantity': lto['exit'][self.config['exit']['type']]['quantity'],
             'orderId': '',
@@ -69,7 +70,7 @@ class OCOBackTest(StrategyBase):
 
     async def _create_enter_module(self, enter_price, enter_quantity, enter_ref_amount, expire_time):
 
-        if self.config['enter']['type'] == 'limit':
+        if self.config['enter']['type'] == TYPE_LIMIT:
             enter_module = {
                 "limit": {
                     "price": float(enter_price),
@@ -79,8 +80,8 @@ class OCOBackTest(StrategyBase):
                     "orderId": ""
                     },
                 }
-        elif self.config['enter']['type'] == 'market':
-            # TODO: Create 'market' orders to enter
+        elif self.config['enter']['type'] == TYPE_MARKET:
+            # TODO: Create TYPE_MARKET orders to enter
             pass
         else: pass # Internal Error
         return enter_module
@@ -88,7 +89,7 @@ class OCOBackTest(StrategyBase):
 
     async def _create_exit_module(self, enter_price, enter_quantity, exit_price, exit_ref_amount, expire_time):
 
-        if self.config['exit']['type'] == 'oco':
+        if self.config['exit']['type'] == TYPE_OCO:
             exit_module = {
                 "oco": {
                     "limitPrice": float(exit_price),
@@ -101,7 +102,7 @@ class OCOBackTest(StrategyBase):
                     "stopLimit_orderId": ""
                 }
             }
-        elif self.config['exit']['type'] == 'limit':
+        elif self.config['exit']['type'] == TYPE_LIMIT:
             exit_module = {
                 "limit": {
                     "price": float(exit_price),
@@ -111,7 +112,7 @@ class OCOBackTest(StrategyBase):
                     "orderId": ""
                     },
                 }
-        elif self.config['exit']['type'] == 'market':
+        elif self.config['exit']['type'] == TYPE_MARKET:
             pass
         else: pass # Internal Error
         return exit_module

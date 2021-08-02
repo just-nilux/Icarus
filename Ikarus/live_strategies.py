@@ -2,6 +2,7 @@ import logging
 import statistics as st
 import json
 from Ikarus.objects import GenericObject, ObjectEncoder
+from Ikarus.enums import *
 from binance.helpers import round_step_size
 import bson
 import copy
@@ -61,7 +62,7 @@ class AlwaysEnter(StrategyBase):
     async def _config_market_exit(self, lto):
 
         lto['action'] = 'market_exit'
-        lto['exit']['market'] = {
+        lto['exit'][TYPE_MARKET] = {
             'amount': lto['exit'][self.config['exit']['type']]['amount'],
             'quantity': lto['exit'][self.config['exit']['type']]['quantity'],
             'orderId': '',
@@ -71,7 +72,7 @@ class AlwaysEnter(StrategyBase):
 
     async def _create_enter_module(self, enter_price, enter_quantity, enter_ref_amount, expire_time):
 
-        if self.config['enter']['type'] == 'limit':
+        if self.config['enter']['type'] == TYPE_LIMIT:
             enter_module = {
                 "limit": {
                     "price": float(enter_price),
@@ -81,8 +82,8 @@ class AlwaysEnter(StrategyBase):
                     "orderId": ""
                     },
                 }
-        elif self.config['enter']['type'] == 'market':
-            # TODO: Create 'market' orders to enter
+        elif self.config['enter']['type'] == TYPE_MARKET:
+            # TODO: Create TYPE_MARKET orders to enter
             pass
         else: pass # Internal Error
         return enter_module
@@ -90,7 +91,7 @@ class AlwaysEnter(StrategyBase):
 
     async def _create_exit_module(self, enter_price, enter_quantity, exit_price, exit_ref_amount, expire_time):
 
-        if self.config['exit']['type'] == 'oco':
+        if self.config['exit']['type'] == TYPE_OCO:
             exit_module = {
                 "oco": {
                     "limitPrice": float(exit_price),
@@ -103,7 +104,7 @@ class AlwaysEnter(StrategyBase):
                     "stopLimit_orderId": ""
                 }
             }
-        elif self.config['exit']['type'] == 'limit':
+        elif self.config['exit']['type'] == TYPE_LIMIT:
             exit_module = {
                 "limit": {
                     "price": float(exit_price),
@@ -113,7 +114,7 @@ class AlwaysEnter(StrategyBase):
                     "orderId": ""
                     },
                 }
-        elif self.config['exit']['type'] == 'market':
+        elif self.config['exit']['type'] == TYPE_MARKET:
             pass
         else: pass # Internal Error
         return exit_module
@@ -151,7 +152,7 @@ class AlwaysEnter(StrategyBase):
                                                                                     float(self.symbol_info['filters'][2]['minQty']))
 
         elif phase == 'exit':
-            if self.config[phase]['type'] == 'oco':
+            if self.config[phase]['type'] == TYPE_OCO:
                 # Fixing PRICE_FILTER: tickSize
                 # TODO: NEXT: Optimize the this mess
                 to[phase][self.config[phase]['type']]['limitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['limitPrice'], 
@@ -168,7 +169,7 @@ class AlwaysEnter(StrategyBase):
                                                                                         float(self.symbol_info['filters'][2]['minQty']))
                 # TODO: NEXT: How to define quantity: use the quantity in the enter phase
             
-            elif self.config[phase]['type'] == 'limit':
+            elif self.config[phase]['type'] == TYPE_LIMIT:
                 to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
                                                                                         float(self.symbol_info['filters'][0]['tickSize']))
                 # Fixing LOT_SIZE: minQty

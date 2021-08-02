@@ -10,11 +10,11 @@ Ikarus manages the risk by keeping all the sub system artifacts transparent and 
 1. Available order types:
     - enter
         - **market**
-        - **limit:** If limit expires then it might be decided to 'cancel' or 'market_enter'
+        - **limit:** If limit expires then it might be decided to ACTN_CANCEL or ACTN_MARKET_ENTER
     - exit
         - **market**
-        - **limit:** If limit expires then it might be decided to 'market_exit' or postpone the 'exit.expire'
-        - **oco:** If limit expires then it might be decided to 'market_exit' or postpone the 'exit.expire'
+        - **limit:** If limit expires then it might be decided to ACTN_MARKET_EXIT or postpone the 'exit.expire'
+        - **oco:** If limit expires then it might be decided to ACTN_MARKET_EXIT or postpone the 'exit.expire'
 
 
 # Objects:
@@ -49,7 +49,7 @@ for each lto
         - sell
         - stoploss
         - expire
-- partially_closed_exit
+- STAT_PART_CLOSED_EXIT
 
 ### nto_execute:
 for to in trade_dict:
@@ -64,7 +64,7 @@ for to in trade_dict:
             - Get the 'result'
         b. limit
         c. oco
-    4. partially_closed_exit
+    4. STAT_PART_CLOSED_EXIT
     -
 
 # Notes
@@ -75,7 +75,7 @@ Decision and the enter points can be in the same candle. However, exit cannot be
 ### t=n:
 - Check the candle [n-1], if the entry is succesful.
 - If succesfull, then change the status to 'waiting exit'
-- algorithm will see the status 'waiting exit' and create the 'action' with the value 'execute_exit'
+- algorithm will see the status 'waiting exit' and create the 'action' with the value ACTN_EXEC_EXIT
 - exit order will be placed at the beginning of the candle n
 
 In this scenario the earliest execution of exit is possible at [n] where the entry point is at [n-1]

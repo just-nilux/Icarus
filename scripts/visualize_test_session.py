@@ -1,5 +1,7 @@
 import asyncio
 from Ikarus import mongo_utils
+from Ikarus.enums import *
+
 import pandas as pd
 import argparse
 import fplot as fp
@@ -13,8 +15,8 @@ async def get_enter_expire(df):
         hto_dict = {
             "_id": hto['_id'],
             "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter']['limit']['expire'],
-            "enterPrice": hto['enter']['limit']['price'],
+            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
         }
         hto_ent_exp_list.append(hto_dict)
 
@@ -27,14 +29,14 @@ async def get_closed(df):
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'closed'})
     hto_closed = []
     for hto in hto_list:
-        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
-        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
+        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
 
         hto_dict = {
             "_id": hto['_id'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter']['limit']['price'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
             "exitTime": hto['result']['exit']['time'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
@@ -53,14 +55,14 @@ async def get_exit_expire(df):
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':'exit_expire'})
     hto_closed_list = []
     for hto in hto_list:
-        if 'oco' in hto['exit'].keys():  plannedExitType = 'oco'; plannedPriceName = 'limitPrice'
-        elif 'limit' in hto['exit'].keys(): plannedExitType = 'limit'; plannedPriceName = 'price'
+        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
+        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
 
         hto_dict = {
             "_id": hto['_id'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter']['limit']['price'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price'],
             "exitExpire": hto['exit'][plannedExitType]['expire']

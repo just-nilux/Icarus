@@ -78,7 +78,7 @@
 5. When the status is updated as "Closed", it is moved from "LTDB" to "HTDB" (Historical Trade DB)
 
 NOTE: A TO should contain multiple orderId. Considering the fact that multiple entry/exit level might be possible in future,
-	it might be better to have a list in lto['enter']['limit'] that contains multiple 'entry_module' with orderId's in it.
+	it might be better to have a list in lto['enter'][TYPE_LIMIT] that contains multiple 'entry_module' with orderId's in it.
 
 MAIN MODULE:
 
