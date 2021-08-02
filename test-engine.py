@@ -93,7 +93,7 @@ async def run_at(dt, coro):
 
 async def get_closed_hto(df):
     # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':'closed'})
+    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
     hto_closed = []
     for hto in hto_list:
         if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
@@ -116,7 +116,7 @@ async def get_closed_hto(df):
 
 async def get_enter_expire_hto(df):
     # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':'enter_expire'})
+    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
     hto_ent_exp_list = []
     for hto in hto_list:
         # NOTE: HIGH: We dont know it the exit type is limit or not
@@ -135,7 +135,7 @@ async def get_enter_expire_hto(df):
 async def get_exit_expire_hto(df):
     # Read Database to get hist-trades and dump to a DataFrame
     
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':'exit_expire'})
+    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
     hto_closed_list = []
     for hto in hto_list:
         if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
@@ -163,9 +163,9 @@ async def evaluate_stats():
     logger.info("---------------------- Statistics -----------------------")
     logger.info("---------------------------------------------------------")
 
-    logger.info('Total enter_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':'enter_expire'})))
-    logger.info('Total exit_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':'exit_expire'})))
-    logger.info('Total closed trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':'closed'})))
+    logger.info('Total enter_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_ENTER_EXP})))
+    logger.info('Total exit_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_EXIT_EXP})))
+    logger.info('Total closed trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_CLOSED})))
     
     exit_expire_pipe = [
         {"$match":{"result.cause":{"$eq":"exit_expire"}}},
@@ -197,14 +197,14 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
 
         # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
-        if lto['status'] == 'closed':
+        if lto['status'] == STAT_CLOSED:
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] == 'open_exit':
-            # - The status might be changed from 'open_enter' or 'partially_closed_enter' to 'open_exit' (changes in result.enter and history)
+        elif lto['status'] == STAT_OPEN_EXIT:
+            # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
             # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
@@ -215,17 +215,17 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
                         'history':lto['history'] 
                     }})
                 
-        elif lto['status'] == 'open_enter':
-            # - 'open_enter' might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
+        elif lto['status'] == STAT_OPEN_ENTER:
+            # - STAT_OPEN_ENTER might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
                 {'$set': {'status': lto['status'], 'enter':lto['enter'], 'history':lto['history'] }})
 
         # NOTE: These two below are not applicable
-        elif lto['status'] == 'partially_closed_enter':
+        elif lto['status'] == STAT_PART_CLOSED_ENTER:
             pass
-        elif lto['status'] == 'partially_closed_exit':
+        elif lto['status'] == STAT_PART_CLOSED_EXIT:
             pass
         else:
             pass
@@ -237,7 +237,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
         lto_dict (dict): will be updated (status, result, exit sections)
         data_dict (dict): used for getting the candle to see if trade status needs to change
         current_ts (ts): used for info sections of ltos
-        df_balance (pd.DataFrame): When a lto go from 'open_exit' to 'closed' or 'open_enter' to 'open_exit'
+        df_balance (pd.DataFrame): When a lto go from STAT_OPEN_EXIT to STAT_CLOSED or STAT_OPEN_ENTER to STAT_OPEN_EXIT
         it needs to be updated in terms of 'free' and 'locked'                                               
 
     Returns:
@@ -255,7 +255,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
         last_kline = data_dict[pair][scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])  # current_candle open_time
 
-        if lto_list[i]['status'] == 'open_enter':
+        if lto_list[i]['status'] == STAT_OPEN_ENTER:
             # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
             if TYPE_LIMIT in lto_list[i]['enter'].keys():
 
@@ -264,7 +264,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
-                    lto_list[i]['status'] = 'waiting_exit'
+                    lto_list[i]['status'] = STAT_WAITING_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
@@ -289,27 +289,27 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
-                    lto_list[i]['status'] = 'enter_expire'
+                    lto_list[i]['status'] = STAT_ENTER_EXP
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
             else:
                 # TODO: Internal Error
                 pass
 
-        elif lto_list[i]['status'] == 'partially_closed_enter':
+        elif lto_list[i]['status'] == STAT_PART_CLOSED_ENTER:
             # Ignore for the tests
             pass
 
-        elif lto_list[i]['status'] == 'open_exit':
+        elif lto_list[i]['status'] == STAT_OPEN_EXIT:
 
             if TYPE_LIMIT in lto_list[i]['exit'].keys():
 
                 # Check if the open sell trade is filled or stoploss is taken
                 if float(last_kline['high']) > lto_list[i]['exit'][TYPE_LIMIT]['price']:
 
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'closed'
+                    lto_list[i]['result']['cause'] = STAT_CLOSED
 
                     lto_list[i]['result']['exit']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
@@ -328,7 +328,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     # NOTE: For the quote_currency total and the ref_balance is the same
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
-                    lto_list[i]['status'] = 'exit_expire'
+                    lto_list[i]['status'] = STAT_EXIT_EXP
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     
                 else:
@@ -339,9 +339,9 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
                 if float(last_kline['low']) < lto_list[i]['exit'][TYPE_OCO]['stopPrice']:
                     # Stop Loss takens
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'closed'
+                    lto_list[i]['result']['cause'] = STAT_CLOSED
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice']
@@ -361,9 +361,9 @@ async def update_ltos(lto_list, data_dict, df_balance):
                 elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
                     # Limit taken
 
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'closed'
+                    lto_list[i]['result']['cause'] = STAT_CLOSED
 
                     lto_list[i]['result']['exit']['type'] = 'oco_limit'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
@@ -383,7 +383,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     pass
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
-                    lto_list[i]['status'] = 'exit_expire'
+                    lto_list[i]['status'] = STAT_EXIT_EXP
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
                 else:
@@ -393,7 +393,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
                 # TODO: Internal Error
                 pass
                 
-        elif lto_list[i]['status'] == 'partially_closed_exit':
+        elif lto_list[i]['status'] == STAT_PART_CLOSED_EXIT:
             # Ignore for the tests
             pass
 

@@ -136,7 +136,7 @@ class BinanceWrapper():
         """
         This functions gathers the corresponding order objects of LTOs from the brokers
         
-        If the status is 'open_exit', then open enter is taken and no need to get the enter order.
+        If the status is STAT_OPEN_EXIT, then open enter is taken and no need to get the enter order.
         Thus, the order gathering logic, checks the state and decides which orders to be gathered such as:
         limit enter or limit exit or oco_limit exit andoco_stoploss exit. Whatever that is not gathered should already be FILLED
 
@@ -152,9 +152,9 @@ class BinanceWrapper():
         coroutines = []
         for lto in lto_list:
 
-            if lto['status'] == 'open_enter':
+            if lto['status'] == STAT_OPEN_ENTER:
                 coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter'][TYPE_LIMIT]['orderId']))
-            elif lto['status'] == 'open_exit':
+            elif lto['status'] == STAT_OPEN_EXIT:
                 if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_LIMIT]['orderId']))
                 elif self.config['strategy']['exit']['type'] == TYPE_OCO:
@@ -248,7 +248,7 @@ class BinanceWrapper():
 
                     else:
                         self.logger.info(f'LTO Canceled: {response["orderId"]}')
-                        lto_list[i]['status'] = 'closed'
+                        lto_list[i]['status'] = STAT_CLOSED
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         # TODO: Notification
             
@@ -262,9 +262,9 @@ class BinanceWrapper():
 
                     # TODO: DEPLOY: Execute Market Order in Binance
                     '''
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'exit_expire'
+                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
                     last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
                     lto_list[i]['result']['exit']['type'] = TYPE_MARKET
@@ -316,19 +316,19 @@ class BinanceWrapper():
                         # TODO: Notification
 
                     else:
-                        lto_list[i]['status'] = 'open_exit'
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == 'postpone':
 
-                    if lto_list[i]['status'] == 'enter_expire':
-                        lto_list[i]['status'] = 'open_enter'
+                    if lto_list[i]['status'] == STAT_ENTER_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_ENTER
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         self.logger.info(f'LTO {lto_list[i]["enter"]["limit"]["orderId"]}: postponed the ENTER to {lto_list[i]["enter"]["limit"]["expire"]}')
 
-                    elif lto_list[i]['status'] == 'exit_expire':
-                        lto_list[i]['status'] = 'open_exit'
+                    elif lto_list[i]['status'] == STAT_EXIT_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         self.logger.info(f'LTO {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["expire"]}')
 
@@ -359,8 +359,8 @@ class BinanceWrapper():
         # TODO: HIGH: Should we check the keys of an module and use the priorities or should we only use config file enter/exit types?
         nto_list_len = len(nto_list)
         for i in range(nto_list_len):
-            # NOTE: The status values other than 'open_enter' is here for lto update
-            if nto_list[i]['status'] == 'open_enter':
+            # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
+            if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
@@ -679,7 +679,7 @@ class TestBinanceWrapper():
                     # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
                     # (This requires other updates for TEST)
                     # TODO: DEPLOY: Binance cancel the order
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
                     # TEST: Update df_balance
@@ -696,9 +696,9 @@ class TestBinanceWrapper():
                 elif lto_list[i]['action'] == 'market_exit':
                     # TODO: DEPLOY: Execute Market Order in Bnance
 
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'exit_expire'
+                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
                     last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
@@ -728,18 +728,18 @@ class TestBinanceWrapper():
 
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
 
-                    lto_list[i]['status'] = 'open_exit'
+                    lto_list[i]['status'] = STAT_OPEN_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     pass
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == 'postpone':
-                    if lto_list[i]['status'] == 'enter_expire':
-                        lto_list[i]['status'] = 'open_enter'
+                    if lto_list[i]['status'] == STAT_ENTER_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_ENTER
                         lto_list[i]['history'].append(lto_list[i]['status'])
 
-                    elif lto_list[i]['status'] == 'exit_expire':
-                        lto_list[i]['status'] = 'open_exit'
+                    elif lto_list[i]['status'] == STAT_EXIT_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         pass
                     else: pass
@@ -775,8 +775,8 @@ class TestBinanceWrapper():
             [type]: [description]
         """
         for i in range(len(nto_list)):
-            # NOTE: The status values other than 'open_enter' is here for lto update
-            if nto_list[i]['status'] == 'open_enter':
+            # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
+            if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented

@@ -7,7 +7,7 @@ import fplot as fp
 
 async def get_enter_expire(df):
     # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':'enter_expire'})
+    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
     hto_ent_exp_list = []
     for hto in hto_list:
         # NOTE: HIGH: We dont know it the exit type is limit or not
@@ -25,7 +25,7 @@ async def get_enter_expire(df):
 
 async def get_closed(df):
     # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':'closed'})
+    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
     hto_closed = []
     for hto in hto_list:
         if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
@@ -51,7 +51,7 @@ async def get_closed(df):
 async def get_exit_expire(df):
     # Read Database to get hist-trades and dump to a DataFrame
     
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':'exit_expire'})
+    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
     hto_closed_list = []
     for hto in hto_list:
         if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'

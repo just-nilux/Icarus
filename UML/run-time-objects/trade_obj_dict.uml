@@ -91,8 +91,8 @@ MAIN MODULE:
 
     - cancel                                        Cancel lto
     - update [TODO]                                 Cancel and update
-      - if status:'enter_expire', it may cancel the old order and create a new one with the current values
-      - if status:'exit_expire', it may cancel the old order(limit or oco) and create a new one with the current values
+      - if status:STAT_ENTER_EXP, it may cancel the old order and create a new one with the current values
+      - if status:STAT_EXIT_EXP, it may cancel the old order(limit or oco) and create a new one with the current values
     - market_enter                                  Cancel the previous one and market enter
     - market_exit                                   Cancel the previous one and market exit
     - execute_exit                                  Place the exit order in the to
@@ -139,7 +139,7 @@ EXIT MODULE:
 RESULT MODULE:
   - Result module tells you what actually happend
   
-  - cause: main.status might be the same with cause such as 'closed', 'enter_expire', 'exit_expire'
+  - cause: main.status might be the same with cause such as STAT_CLOSED, STAT_ENTER_EXP, STAT_EXIT_EXP
     - closed: bought and sold successfully
     - enter_expire: buy limit order expired
     - exit_expire: not clear what to do

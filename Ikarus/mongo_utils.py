@@ -116,10 +116,10 @@ async def test1():
     from objects import GenericObject
 
     to1, to2, to3, to4= GenericObject('trade'), GenericObject('trade'), GenericObject('trade'), GenericObject('trade')
-    to1.load('status','open_enter')
-    to2.load('status','open_enter')
-    to3.load('status','open_exit')
-    to4.load('status','closed')
+    to1.load('status',STAT_OPEN_ENTER)
+    to2.load('status',STAT_OPEN_ENTER)
+    to3.load('status',STAT_OPEN_EXIT)
+    to4.load('status',STAT_CLOSED)
 
     trade_dict = dict({'BTCUSDT':to1, 'XRPUSDT':to2, 'AVAXUSDT':to3, 'USDTTRY':to4})
 
@@ -135,10 +135,10 @@ async def test1():
     
     # Update the values in the lto_list
     for i, lto in enumerate(lto_list):
-        if lto['status'] == 'open_enter':
-            lto_list_updated[i]['status'] = 'open_exit'
-        elif lto['status'] == 'open_exit':
-            lto_list_updated[i]['status'] = 'closed'
+        if lto['status'] == STAT_OPEN_ENTER:
+            lto_list_updated[i]['status'] = STAT_OPEN_EXIT
+        elif lto['status'] == STAT_OPEN_EXIT:
+            lto_list_updated[i]['status'] = STAT_CLOSED
         pass
 
     
@@ -153,7 +153,7 @@ async def test1():
     
     
     # Delete
-    result_delete = await mongocli.do_delete_many('live-trades',{'status':'closed'})
+    result_delete = await mongocli.do_delete_many('live-trades',{'status':STAT_CLOSED})
     
     return True
 

@@ -153,7 +153,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                 if orders_dict[enter_orderId]['status'] == 'FILLED':
 
                     # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
-                    lto_list[i]['status'] = 'waiting_exit'
+                    lto_list[i]['status'] = STAT_WAITING_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time

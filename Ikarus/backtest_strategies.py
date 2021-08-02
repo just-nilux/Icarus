@@ -124,21 +124,21 @@ class OCOBackTest(StrategyBase):
         """        
         skip_calculation = False
         
-        if lto['status'] == 'enter_expire':            
-            if self.config['action_mapping']['enter_expire'] == 'cancel' or lto['history'].count('enter_expire') > 1:
+        if lto['status'] == STAT_ENTER_EXP:            
+            if self.config['action_mapping'][STAT_ENTER_EXP] == 'cancel' or lto['history'].count(STAT_ENTER_EXP) > 1:
                 lto['action'] = 'cancel'
-                lto['result']['cause'] = 'enter_expire'
+                lto['result']['cause'] = STAT_ENTER_EXP
 
-            elif self.config['action_mapping']['enter_expire'] == 'postpone' and lto['history'].count('enter_expire') <= 1:
+            elif self.config['action_mapping'][STAT_ENTER_EXP] == 'postpone' and lto['history'].count(STAT_ENTER_EXP) <= 1:
                 lto = await self._postpone(lto,'enter', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # Postpone 3 x 15 min
                 skip_calculation = True
             else: pass
 
-        elif lto['status'] == 'exit_expire':                
-            if self.config['action_mapping']['exit_expire'] == 'market_exit' or lto['history'].count('exit_expire') > 1:
+        elif lto['status'] == STAT_EXIT_EXP:                
+            if self.config['action_mapping'][STAT_EXIT_EXP] == 'market_exit' or lto['history'].count(STAT_EXIT_EXP) > 1:
                 lto = await self._do_market_exit(lto)
 
-            elif self.config['action_mapping']['exit_expire'] == 'postpone' and lto['history'].count('exit_expire') <= 1:
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == 'postpone' and lto['history'].count(STAT_EXIT_EXP) <= 1:
                 lto = await self._postpone(lto,'exit', self._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
                 skip_calculation = True
             else: pass
@@ -147,16 +147,16 @@ class OCOBackTest(StrategyBase):
             # Postpone the expiration
             #lto_dict[pair] = await self._postpone(lto_dict[pair],'exit', exit_type, bson.Int64(dt_index + 2*15*60*1000))
 
-        elif lto['status'] == 'waiting_exit':
+        elif lto['status'] == STAT_WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # TODO: expire of the exit_module can be calculated after the trade entered
 
             lto['action'] = 'execute_exit'
             skip_calculation = True
 
-        elif lto['status'] != 'closed':
+        elif lto['status'] != STAT_CLOSED:
             # If the status is not closed, just skip the iteration. otherwise go on to make a decision
-            # NOTE: This logic contains the status: 'open_exit', 'open_enter', 'partially_closed_enter', 'partially_closed_exit'
+            # NOTE: This logic contains the status: STAT_OPEN_EXIT, STAT_OPEN_ENTER, STAT_PART_CLOSED_ENTER, STAT_PART_CLOSED_EXIT
             skip_calculation = True
 
         return skip_calculation, lto
@@ -228,7 +228,7 @@ class OCOBackTest(StrategyBase):
             if trange_mean5 < trange_mean20:
                 self.logger.info(f"{ao_pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
-                trade_obj['status'] = 'open_enter'
+                trade_obj['status'] = STAT_OPEN_ENTER
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
                 trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline
