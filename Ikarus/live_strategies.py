@@ -119,6 +119,67 @@ class AlwaysEnter(StrategyBase):
         return exit_module
 
 
+    async def apply_exchange_filters(self, to, phase):
+        """
+        - Call this method prior to any order placement
+
+        - Apply the filter of exchange pair
+
+        - This methhod does not check if the current conditiones are good to go.
+            If a filter is not satisfied then it would create an exception. Validation
+            costs time. Maybe in future 
+
+        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
+        Returns:
+            dict: [description]
+        """ 
+        '''
+        if free_ref_asset > self.symbol_info[]:
+            if free_ref_asset < enter_ref_amount:
+                enter_ref_amount = free_ref_asset
+        else:
+            # TODO: ERROR: NO free asset
+            return {}
+        '''
+
+        if phase == 'enter':
+            # Fixing PRICE_FILTER: tickSize
+            to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
+                                                                                    float(self.symbol_info['filters'][0]['tickSize'])) 
+            # Fixing LOT_SIZE: minQty
+            to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
+                                                                                    float(self.symbol_info['filters'][2]['minQty']))
+
+        elif phase == 'exit':
+            if self.config[phase]['type'] == 'oco':
+                # Fixing PRICE_FILTER: tickSize
+                # TODO: NEXT: Optimize the this mess
+                to[phase][self.config[phase]['type']]['limitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['limitPrice'], 
+                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
+
+                to[phase][self.config[phase]['type']]['stopPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopPrice'], 
+                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
+
+                to[phase][self.config[phase]['type']]['stopLimitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopLimitPrice'], 
+                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
+
+                # Fixing LOT_SIZE: minQty
+                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['limitPrice'], 
+                                                                                        float(self.symbol_info['filters'][2]['minQty']))
+                # TODO: NEXT: How to define quantity: use the quantity in the enter phase
+            
+            elif self.config[phase]['type'] == 'limit':
+                to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
+                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
+                # Fixing LOT_SIZE: minQty
+                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
+                                                                                        float(self.symbol_info['filters'][2]['minQty']))
+
+        # NOTE: Doing if else is for exit types are annoying
+
+        return to
+
+
     async def _handle_lto(self, lto, dt_index):
         skip_calculation = False
         
@@ -152,6 +213,7 @@ class AlwaysEnter(StrategyBase):
             # TODO: expire of the exit_module can be calculated after the trade entered
 
             lto['action'] = 'execute_exit'
+            lto = await self.apply_exchange_filters(lto, phase='exit')
             skip_calculation = True
 
         elif lto['status'] != 'closed':
@@ -160,40 +222,6 @@ class AlwaysEnter(StrategyBase):
             skip_calculation = True
 
         return skip_calculation, lto
-
-    
-    async def apply_exchange_filters(self, to, phase):
-        """
-        - Call this method prior to any order placement
-
-        - Apply the filter of exchange pair
-
-        - This methhod does not check if the current conditiones are good to go.
-            If a filter is not satisfied then it would create an exception. Validation
-            costs time. Maybe in future 
-
-        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
-        Returns:
-            dict: [description]
-        """ 
-        '''
-        if free_ref_asset > self.symbol_info[]:
-            if free_ref_asset < enter_ref_amount:
-                enter_ref_amount = free_ref_asset
-        else:
-            # TODO: ERROR: NO free asset
-            return {}
-        '''
-
-        # Fixing PRICE_FILTER: tickSize
-        to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                float(self.symbol_info['filters'][0]['tickSize']))
-        
-        # Fixing LOT_SIZE: minQty
-        to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
-                                                                                float(self.symbol_info['filters'][2]['minQty']))
-
-        return to
 
 
     async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):

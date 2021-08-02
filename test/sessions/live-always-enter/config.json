@@ -15,7 +15,7 @@
             "type": "limit"
         },
         "exit": {
-            "type": "limit"
+            "type": "oco"
         },
         "action_mapping": {
             "enter_expire": "postpone",
