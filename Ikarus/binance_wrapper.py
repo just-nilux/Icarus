@@ -1,6 +1,7 @@
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
+from Ikarus.enums import *
 import asyncio
 import pandas as pd
 import logging
@@ -135,7 +136,7 @@ class BinanceWrapper():
         """
         This functions gathers the corresponding order objects of LTOs from the brokers
         
-        If the status is 'open_exit', then open enter is taken and no need to get the enter order.
+        If the status is STAT_OPEN_EXIT, then open enter is taken and no need to get the enter order.
         Thus, the order gathering logic, checks the state and decides which orders to be gathered such as:
         limit enter or limit exit or oco_limit exit andoco_stoploss exit. Whatever that is not gathered should already be FILLED
 
@@ -151,14 +152,14 @@ class BinanceWrapper():
         coroutines = []
         for lto in lto_list:
 
-            if lto['status'] == 'open_enter':
-                coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter']['limit']['orderId']))
-            elif lto['status'] == 'open_exit':
-                if self.config['strategy']['exit']['type'] == 'limit':
-                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit']['limit']['orderId']))
-                elif self.config['strategy']['exit']['type'] == 'oco':
-                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit']['oco']['orderId']))
-                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit']['oco']['stopLimit_orderId']))
+            if lto['status'] == STAT_OPEN_ENTER:
+                coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter'][TYPE_LIMIT]['orderId']))
+            elif lto['status'] == STAT_OPEN_EXIT:
+                if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
+                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_LIMIT]['orderId']))
+                elif self.config['strategy']['exit']['type'] == TYPE_OCO:
+                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['orderId']))
+                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['stopLimit_orderId']))
             else: pass
 
         lto_orders_dict = {}
@@ -231,14 +232,14 @@ class BinanceWrapper():
             if 'action' in lto_list[i].keys():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
-                if lto_list[i]['action'] == 'cancel':
+                if lto_list[i]['action'] == ACTN_CANCEL:
                     # TODO: NEXT: Add cancel for EXIT
                     # NOTE: if the status enter expire and the action is cancel than cancel the exit order. vice versa
 
                     try:
                         response = await self.client.cancel_order(
                             symbol=lto_list[i]['pair'],
-                            orderId=lto_list[i]['enter']['limit']['orderId'])
+                            orderId=lto_list[i]['enter'][TYPE_LIMIT]['orderId'])
                         if response['status'] != 'CANCELED': raise Exception('Response status is not "CANCELED"')
 
                     except Exception as e:
@@ -247,66 +248,66 @@ class BinanceWrapper():
 
                     else:
                         self.logger.info(f'LTO Canceled: {response["orderId"]}')
-                        lto_list[i]['status'] = 'closed'
+                        lto_list[i]['status'] = STAT_CLOSED
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         # TODO: Notification
             
-                elif lto_list[i]['action'] == 'update':
+                elif lto_list[i]['action'] == ACTN_UPDATE:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_enter':
+                elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_exit':
+                elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
 
                     # TODO: DEPLOY: Execute Market Order in Binance
                     '''
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'exit_expire'
+                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
                     last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
-                    lto_list[i]['result']['exit']['type'] = 'market'
+                    lto_list[i]['result']['exit']['type'] = TYPE_MARKET
                     lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
                     lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['market']['quantity']
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     '''
                     pass
             
-                elif lto_list[i]['action'] == 'execute_exit':
+                elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
                     # TODO: Test the OCO
                     try:
-                        if self.config['strategy']['exit']['type'] == 'limit':
+                        if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
                             response = await self.client.order_limit_sell(
                                 symbol=lto_list[i]['pair'],
-                                quantity=lto_list[i]['exit']['limit']['quantity'],
-                                price=lto_list[i]['exit']['limit']['price'])
+                                quantity=lto_list[i]['exit'][TYPE_LIMIT]['quantity'],
+                                price=lto_list[i]['exit'][TYPE_LIMIT]['price'])
                             if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
                             self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
-                            lto_list[i]['exit']['limit']['orderId'] = response['orderId']
+                            lto_list[i]['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
 
-                        elif self.config['strategy']['exit']['type'] == 'oco':
+                        elif self.config['strategy']['exit']['type'] == TYPE_OCO:
                             response = await self.client.create_oco_order(
                                 symbol=lto_list[i]['pair'],
                                 side=SIDE_SELL,
-                                quantity=lto_list[i]['exit']['oco']['quantity'],
-                                price=lto_list[i]['exit']['oco']['limitPrice'],
-                                stopPrice=lto_list[i]['exit']['oco']['stopPrice'],
-                                stopLimitPrice=lto_list[i]['exit']['oco']['stopLimitPrice'],
+                                quantity=lto_list[i]['exit'][TYPE_OCO]['quantity'],
+                                price=lto_list[i]['exit'][TYPE_OCO]['limitPrice'],
+                                stopPrice=lto_list[i]['exit'][TYPE_OCO]['stopPrice'],
+                                stopLimitPrice=lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice'],
                                 stopLimitTimeInForce=TIME_IN_FORCE_GTC)
 
                             if response['orderReports'][0]['status'] != 'NEW' or response['orderReports'][1]['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
                             response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
 
-                            lto_list[i]['exit']['oco']['orderId'] = response_limit_maker['orderId']
+                            lto_list[i]['exit'][TYPE_OCO]['orderId'] = response_limit_maker['orderId']
                             self.logger.info(f'LTO {response_limit_maker["orderId"]}: {response_limit_maker["side"]} {response_limit_maker["type"]} order placed')
 
-                            lto_list[i]['exit']['oco']['stopLimit_orderId'] = response_stoploss['orderId']
+                            lto_list[i]['exit'][TYPE_OCO]['stopLimit_orderId'] = response_stoploss['orderId']
                             self.logger.info(f'LTO {response_stoploss["orderId"]}: {response_stoploss["side"]} {response_stoploss["type"]} order placed')
 
                         else: pass
@@ -315,19 +316,19 @@ class BinanceWrapper():
                         # TODO: Notification
 
                     else:
-                        lto_list[i]['status'] = 'open_exit'
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == 'postpone':
 
-                    if lto_list[i]['status'] == 'enter_expire':
-                        lto_list[i]['status'] = 'open_enter'
+                    if lto_list[i]['status'] == STAT_ENTER_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_ENTER
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         self.logger.info(f'LTO {lto_list[i]["enter"]["limit"]["orderId"]}: postponed the ENTER to {lto_list[i]["enter"]["limit"]["expire"]}')
 
-                    elif lto_list[i]['status'] == 'exit_expire':
-                        lto_list[i]['status'] = 'open_exit'
+                    elif lto_list[i]['status'] == STAT_EXIT_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         self.logger.info(f'LTO {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["expire"]}')
 
@@ -358,19 +359,19 @@ class BinanceWrapper():
         # TODO: HIGH: Should we check the keys of an module and use the priorities or should we only use config file enter/exit types?
         nto_list_len = len(nto_list)
         for i in range(nto_list_len):
-            # NOTE: The status values other than 'open_enter' is here for lto update
-            if nto_list[i]['status'] == 'open_enter':
+            # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
+            if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
-                if 'market' in nto_list[i]['enter'].keys():
+                if TYPE_MARKET in nto_list[i]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
-                elif 'limit' in nto_list[i]['enter'].keys():
+                elif TYPE_LIMIT in nto_list[i]['enter'].keys():
                     try:
                         response = await self.client.order_limit_buy(
                             symbol=nto_list[i]['pair'],
-                            quantity=nto_list[i]['enter']['limit']['quantity'],
-                            price=nto_list[i]['enter']['limit']['price'])
+                            quantity=nto_list[i]['enter'][TYPE_LIMIT]['quantity'],
+                            price=nto_list[i]['enter'][TYPE_LIMIT]['price'])
                         if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
                     except Exception as e:
@@ -379,7 +380,7 @@ class BinanceWrapper():
                         # TODO: Notification
 
                     else:
-                        nto_list[i]['enter']['limit']['orderId'] = int(response['orderId'])
+                        nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
                         self.logger.info(f'NTO limit order placed: {response["orderId"]}')
                         # TODO: Notification
 
@@ -674,40 +675,40 @@ class TestBinanceWrapper():
             if 'action' in lto_list[i].keys():
 
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
-                if lto_list[i]['action'] == 'cancel':
-                    # TODO: 'cancel' action currently only used for enter phase, exit phase cancel can be added
+                if lto_list[i]['action'] == ACTN_CANCEL:
+                    # TODO: ACTN_CANCEL action currently only used for enter phase, exit phase cancel can be added
                     # (This requires other updates for TEST)
                     # TODO: DEPLOY: Binance cancel the order
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
                     # TEST: Update df_balance
-                    # No need to check the enter type because lto do not contain 'market'. It only contains 'limit'
-                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['enter']['limit']['amount']
-                    df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter']['limit']['amount']
+                    # No need to check the enter type because lto do not contain TYPE_MARKET. It only contains TYPE_LIMIT
+                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['enter'][TYPE_LIMIT]['amount']
+                    df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
             
-                elif lto_list[i]['action'] == 'update':
+                elif lto_list[i]['action'] == ACTN_UPDATE:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_enter':
+                elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
                 
-                elif lto_list[i]['action'] == 'market_exit':
+                elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
                     # TODO: DEPLOY: Execute Market Order in Bnance
 
-                    lto_list[i]['status'] = 'closed'
+                    lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = 'exit_expire'
+                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
                     last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
                     #             For the sake of simplicity closed price of the last candle is used in the market sell
                     #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
-                    lto_list[i]['result']['exit']['type'] = 'market'
+                    lto_list[i]['result']['exit']['type'] = TYPE_MARKET
                     lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
                     lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit']['market']['quantity']
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
@@ -720,25 +721,25 @@ class TestBinanceWrapper():
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
-                elif lto_list[i]['action'] == 'execute_exit':
+                elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
                     # TODO: DEPLOY: Place the exit order to Binance: oco or limit
                     #       No need to fill anything in 'result' or 'exit' sections.
 
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
 
-                    lto_list[i]['status'] = 'open_exit'
+                    lto_list[i]['status'] = STAT_OPEN_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     pass
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == 'postpone':
-                    if lto_list[i]['status'] == 'enter_expire':
-                        lto_list[i]['status'] = 'open_enter'
+                    if lto_list[i]['status'] == STAT_ENTER_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_ENTER
                         lto_list[i]['history'].append(lto_list[i]['status'])
 
-                    elif lto_list[i]['status'] == 'exit_expire':
-                        lto_list[i]['status'] = 'open_exit'
+                    elif lto_list[i]['status'] == STAT_EXIT_EXP:
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         pass
                     else: pass
@@ -774,20 +775,20 @@ class TestBinanceWrapper():
             [type]: [description]
         """
         for i in range(len(nto_list)):
-            # NOTE: The status values other than 'open_enter' is here for lto update
-            if nto_list[i]['status'] == 'open_enter':
+            # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
+            if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
-                if 'market' in nto_list[i]['enter'].keys():
+                if TYPE_MARKET in nto_list[i]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
                     pass
 
-                elif 'limit' in nto_list[i]['enter'].keys():
+                elif TYPE_LIMIT in nto_list[i]['enter'].keys():
                     # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
                     #       timestamp values
 
-                    nto_list[i]['enter']['limit']['orderId'] = int(time.time() * 1000) # Get the order id from the broker
-                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['enter']['limit']['amount']
-                    df_balance.loc[self.quote_currency,'locked'] += nto_list[i]['enter']['limit']['amount']
+                    nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
+                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['enter'][TYPE_LIMIT]['amount']
+                    df_balance.loc[self.quote_currency,'locked'] += nto_list[i]['enter'][TYPE_LIMIT]['amount']
 
                 else: pass # TODO: Internal Error
 

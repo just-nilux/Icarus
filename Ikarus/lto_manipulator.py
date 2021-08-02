@@ -3,6 +3,7 @@ from binance import AsyncClient
 from datetime import datetime
 import json
 from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -35,7 +36,7 @@ async def change_order_to_filled(lto, orders):
         "fills": []
     }
     '''
-    orders[lto['enter']['limit']['orderId']]['status'] = 'FILLED'
-    orders[lto['enter']['limit']['orderId']]['executedQty'] = str(lto['enter']['limit']['quantity'])
+    orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] = 'FILLED'
+    orders[lto['enter'][TYPE_LIMIT]['orderId']]['executedQty'] = str(lto['enter'][TYPE_LIMIT]['quantity'])
 
     return orders
