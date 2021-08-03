@@ -2,6 +2,7 @@ import pymongo
 import logging
 import asyncio
 import motor.motor_asyncio
+from Ikarus.enums import *
 from time import time, sleep
 import copy
 import bson

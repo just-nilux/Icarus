@@ -1,4 +1,3 @@
-# TODO: NEXT: Place all constants here
 TYPE_LIMIT = 'limit'
 TYPE_OCO = 'oco'
 TYPE_MARKET = 'market'

@@ -260,21 +260,31 @@ class BinanceWrapper():
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
 
-                    # TODO: DEPLOY: Execute Market Order in Binance
-                    '''
+                    response = await self.client.order_market_sell(
+                        symbol=lto_list[i]['pair'],
+                        quantity=lto_list[i]['pair'])
+
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
-                    last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
+                    lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['fills']
 
                     lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
-                    lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
+
+                    # TODO: Multiple time scale is not supported
+                    current_time = int(response['transactTime']/1000)                                               # exact second
+                    current_time -= (current_time % 60)                                                             # exact minute
+                    current_time -= (current_time % (self.config['data_input']['scales_in_minute'][0]*60))          # exact scale
+                    current_time -= (self.config['data_input']['scales_in_minute'][0]*60)                           # -scale
+
+                    lto_list[i]['result']['exit']['time'] = bson.Int64(current_time)
+                    # NOTE: Sum of fills
+                    lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]))
+                    lto_list[i]['result']['exit']['quantity'] = float(sum([float(fill['qty']) for fill in response['fills']]))
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
-                    '''
+                    lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                     pass
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
@@ -830,11 +840,5 @@ class TestBinanceWrapper():
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
-
-        # TODO: Consider returning trade_dict, because:
-        #   - orders may not be accepted by the broker
-        #       - In this case this side where to handle the issue: here or the main script
-        #   - market sell causes instant fill
-        #   - market enter causes instant fill
 
         return result, df_balance, lto_list

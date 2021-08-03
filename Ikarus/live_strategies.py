@@ -164,19 +164,14 @@ class AlwaysEnter(StrategyBase):
                 to[phase][self.config[phase]['type']]['stopLimitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopLimitPrice'], 
                                                                                         float(self.symbol_info['filters'][0]['tickSize']))
 
-                # Fixing LOT_SIZE: minQty
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['limitPrice'], 
-                                                                                        float(self.symbol_info['filters'][2]['minQty']))
-                # TODO: NEXT: How to define quantity: use the quantity in the enter phase
+                # NOTE: Enter quantity will be used to exit
+                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
             
             elif self.config[phase]['type'] == TYPE_LIMIT:
                 to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
                                                                                         float(self.symbol_info['filters'][0]['tickSize']))
-                # Fixing LOT_SIZE: minQty
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
-                                                                                        float(self.symbol_info['filters'][2]['minQty']))
-
-        # NOTE: Doing if else is for exit types are annoying
+                # NOTE: Enter quantity will be used to exit
+                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
 
         return to
 

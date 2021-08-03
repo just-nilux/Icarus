@@ -244,7 +244,6 @@ async def update_ltos(lto_list, data_dict, df_balance):
         dict: lto_dict
     """
 
-    # TODO: NEXT: What is the use of dicts? Think about it
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
@@ -449,7 +448,7 @@ async def application(bwrapper, pair_list, df_list):
 
     if len(nto_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        result = await mongocli.do_insert_many("live-trades",nto_list) # TODO: NEXT: Check if it works
+        result = await mongocli.do_insert_many("live-trades",nto_list)
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_list, lto_list_original)

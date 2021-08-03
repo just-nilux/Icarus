@@ -148,11 +148,7 @@ DATA_INPUT:
 # NOTE: There are more than 300 USDT pairs and it is cumbursome to do so. Current apporach will continue (the matrix: pairs x scales)
 
 
-# TODO: NEXT: Check what happens if an unused scale and length is given
 # TODO: NEXT: Check binance package to see if there is a limit (it is written 500) for receiving some number of candles
-# TODO: NEXT: Check binance package to see if there the received last candle is the current newly open candle or not.
-              If so, TEST module should be updated to behave the same.
-# TODO: NEXT: Check the effect of timezone. If needed it can be added
 
 # TODO: FUTURE: There should be mapping such as: 
 #               feature                | strategy   | indicators
