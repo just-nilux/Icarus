@@ -435,7 +435,7 @@ async def application(bwrapper, pair_list, df_list):
 
     # 2.2: Algorithm is the only authority to make decision
     # NOTE: Execution of multiple strategy is possible, if 'strategy': 'sample_oco_strategy' like items added to the TOs
-    nto_list = await asyncio.create_task(strategy.run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
+    nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -554,7 +554,8 @@ if __name__ == '__main__':
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy = backtest_strategies.OCOBackTest(config)
+    strategy_manager = backtest_strategies.StrategyManager(config)
+    strategy_list = strategy_manager.get_strategies()
 
     # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global
     # Available strategies, can be kept in a 'strategies_list' variable instead of single object

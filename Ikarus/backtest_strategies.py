@@ -8,8 +8,28 @@ import copy
 import abc
 import time
 
-class StrategyBase(metaclass=abc.ABCMeta):
+class StrategyManager():
 
+    def __init__(self, _config) -> None:
+
+        self.strategies = {
+            "OCOBackTest": OCOBackTest,
+            "FallingKnifeCatcher": FallingKnifeCatcher,
+        }
+
+        self.strategy_list = []
+        for strategy in _config['strategy']:
+            strategy_class = self.strategies[strategy['name']]
+            self.strategy_list.append(strategy_class(_config))
+        pass
+
+    def get_strategies(self): return self.strategy_list
+
+    def remove_strategy(self): return True
+
+    def add_strategy(self): return True
+
+class StrategyBase(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def __init__(self):
@@ -28,20 +48,31 @@ class StrategyBase(metaclass=abc.ABCMeta):
         """Load in the data set"""
         raise NotImplementedError
 
-    abc.abstractmethod
-    async def dump_to(self, js_obj: dict):
-        js_file = open("run-time-objs/trade.json", "w")
-        json.dump(js_obj, js_file, indent=4, cls=ObjectEncoder)
-        js_file.close()
-        self.logger.debug("trade.json file created")
 
+class FallingKnifeCatcher(StrategyBase):
+
+    def __init__(self,_config):
+        self.logger = logging.getLogger('app.{}'.format(__name__))
+        self.config = _config['strategy']
+        self.quote_currency = _config['broker']['quote_currency']
+        self.scales_in_minute = _config['data_input']['scales_in_minute']
+
+        return
+
+    async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):
         return True
+
 
 class OCOBackTest(StrategyBase):
 
     def __init__(self,_config):
         self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.config = _config['strategy']
+        self.config = {}
+        # TODO: NEXT: Find a more beautiful way to implemetn this logic
+        for conf in _config['strategy']:
+            if conf['name'] == "OCOBackTest":
+                self.config = conf
+                break
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
 
