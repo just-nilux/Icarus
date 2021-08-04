@@ -42,20 +42,6 @@
                 "exit_expire": "market_exit"
             },
             "max_lto": 1
-        },
-        {
-            "name": "FallingKnifeCatcher",
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "oco"
-            },
-            "action_mapping": {
-                "enter_expire": "postpone",
-                "exit_expire": "market_exit"
-            },
-            "max_lto": 1
         }
     ],
     "analysis": {
@@ -67,7 +53,7 @@
     "data_input": {
         "pairs": ["BTCUSDT"],
         "scale":["15m"],
-        "length_str":[ "1 day" ],
+        "length_str":[ "12 hours" ],
         "length_int":[ 96 ]
     }
 }

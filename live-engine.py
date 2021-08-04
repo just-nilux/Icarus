@@ -2,7 +2,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils, lto_manipulator
+from Ikarus import strategies, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -298,7 +298,7 @@ async def application(bwrapper, telbot):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2 started')
 
-    nto_list = await strategy.run(analysis_dict, lto_list, df_balance, current_ts)
+    nto_list = await strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -335,7 +335,7 @@ async def main(smallest_interval):
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    strategy.symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+    strategy_list[0].symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
     bwrapper = binance_wrapper.BinanceWrapper(client, config)
     telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
 
@@ -414,7 +414,8 @@ if __name__ == "__main__":
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy = live_strategies.AlwaysEnter(config)
+    strategy_manager = strategies.StrategyManager(config)
+    strategy_list = strategy_manager.get_strategies()
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")

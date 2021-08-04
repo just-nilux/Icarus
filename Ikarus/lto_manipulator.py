@@ -1,20 +1,4 @@
-import asyncio
-from binance import AsyncClient
-from datetime import datetime
-import json
-from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
-import logging
-from logging.handlers import TimedRotatingFileHandler
-import pandas as pd
-import sys
-import copy
-import bson
-import time
-
-# Global Variables
-SYSTEM_STATUS = 0
-STATUS_TIMEOUT = 0
 
 async def change_order_to_filled(lto, orders):
 

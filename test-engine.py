@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, backtest_strategies, live_strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, strategies, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -556,7 +556,7 @@ if __name__ == '__main__':
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy_manager = backtest_strategies.StrategyManager(config)
+    strategy_manager = strategies.StrategyManager(config)
     strategy_list = strategy_manager.get_strategies()
 
     # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global
