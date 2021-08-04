@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, backtest_strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, backtest_strategies, live_strategies, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -172,14 +172,14 @@ async def evaluate_stats():
         {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
     ]
     exit_expire_profit = await mongocli.do_find("hist-trades", exit_expire_pipe)
-    logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
+    if len(exit_expire_profit): logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
     
     closed_pipe = [
         {"$match":{"result.cause":{"$eq":"closed"}}},
         {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
     ]
     closed_profit = await mongocli.do_find("hist-trades", closed_pipe)
-    logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
+    if len(closed_profit):  logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
 
     last_balance = await mongocli.get_last_doc("observer")
     for balance in last_balance['balances']:
@@ -463,10 +463,12 @@ async def application(bwrapper, pair_list, df_list):
 async def main():
 
     # NOTE: Temporary hack for yesting without internet connection
-    #client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
-    #                                  api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+    client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
+                                      api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    client = 'mock_client'
+    #client = 'mock_client'
+    strategy_list[0].symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+
 
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 

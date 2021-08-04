@@ -30,6 +30,7 @@ class MongoClient():
             col ([type]): [description]
             item ([type]): [description]
         """
+        docs = []
         if type(query) == dict:
             result = self.db_bot[col].find(query)
             docs = await result.to_list(None)
