@@ -30,6 +30,20 @@
     },
     "strategy": [
         {
+            "name": "AlwaysEnter",
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "postpone"
+            },
+            "max_lto": 1
+        },
+        {
             "name": "FallingKnifeCatcher",
             "enter": {
                 "type": "limit"
@@ -66,7 +80,7 @@
     },
     "data_input": {
         "pairs": ["BTCUSDT"],
-        "scale":["15m"],
+        "scale":["1m"],
         "length_str":[ "12 hours" ],
         "length_int":[ 96 ]
     }

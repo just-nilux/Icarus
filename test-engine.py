@@ -403,7 +403,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
     return lto_list
 
 
-async def application(bwrapper, pair_list, df_list):
+async def application(strategy_list, bwrapper, pair_list, df_list):
 
     #################### Phase 1: Perform pre-calculation tasks ####################
     #current_ts = int(df_list[0].index[-1])
@@ -466,9 +466,10 @@ async def main():
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    #client = 'mock_client'
-    strategy_list[0].symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+    symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
 
+    strategy_manager = strategies.StrategyManager(config, symbol_info)
+    strategy_list = strategy_manager.get_strategies()
 
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
@@ -511,7 +512,7 @@ async def main():
         df_list = []
         for df in df_csv_list:
             df_list.append(df.iloc[i:i+hist_data_length])
-        await application(bwrapper, pair_list, df_list)
+        await application(strategy_list, bwrapper, pair_list, df_list)
 
     # Get [hist-trades] docs to visualize the session
     df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
@@ -556,8 +557,6 @@ if __name__ == '__main__':
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy_manager = strategies.StrategyManager(config)
-    strategy_list = strategy_manager.get_strategies()
 
     # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global
     # Available strategies, can be kept in a 'strategies_list' variable instead of single object

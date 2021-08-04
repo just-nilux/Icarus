@@ -9,9 +9,11 @@ import copy
 import abc
 import time
 
+# TODO: NEXT: Add strategy name to logs 
+
 class StrategyManager():
 
-    def __init__(self, _config) -> None:
+    def __init__(self, _config , _symbol_info) -> None:
 
         self.strategies = {
             "OCOBackTest": OCOBackTest,
@@ -22,7 +24,7 @@ class StrategyManager():
         self.strategy_list = []
         for strategy in _config['strategy']:
             strategy_class = self.strategies[strategy['name']]
-            self.strategy_list.append(strategy_class(_config))
+            self.strategy_list.append(strategy_class(_config, _symbol_info))
         pass
 
     def get_strategies(self): return self.strategy_list
@@ -127,7 +129,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 class FallingKnifeCatcher(StrategyBase):
 
-    def __init__(self,_config):
+    def __init__(self, _config, _symbol_info={}):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.name = "FallingKnifeCatcher"
         # TODO: Find a more beautiful way to implemetn this logic
@@ -140,7 +142,7 @@ class FallingKnifeCatcher(StrategyBase):
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
         # TODO: Make proper handling for symbol_info
-        self.symbol_info = dict()
+        self.symbol_info = _symbol_info
 
         return
 
@@ -366,7 +368,7 @@ class FallingKnifeCatcher(StrategyBase):
 
 class OCOBackTest(StrategyBase):
 
-    def __init__(self,_config):
+    def __init__(self, _config, _symbol_info={}):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.name = "OCOBackTest"
         # TODO: Find a more beautiful way to implemetn this logic
@@ -379,7 +381,7 @@ class OCOBackTest(StrategyBase):
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
         # TODO: Make proper handling for symbol_info
-        self.symbol_info = dict()
+        self.symbol_info = _symbol_info
 
         return
 
@@ -606,7 +608,7 @@ class OCOBackTest(StrategyBase):
 
 class AlwaysEnter(StrategyBase):
 
-    def __init__(self, _config):
+    def __init__(self, _config, _symbol_info={}):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.name = "AlwaysEnter"
         # TODO: Find a more beautiful way to implemetn this logic
@@ -619,7 +621,7 @@ class AlwaysEnter(StrategyBase):
         self.scales_in_minute = _config['data_input']['scales_in_minute']
 
         # TODO: Make proper handling for symbol_info
-        self.symbol_info = dict()
+        self.symbol_info = _symbol_info
         return
 
 

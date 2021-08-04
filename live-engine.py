@@ -260,7 +260,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     return lto_list
 
 
-async def application(bwrapper, telbot):
+async def application(strategy_list, bwrapper, telbot):
 
     # NOTE: current_ts is the open time of the current live candle (open time)
     # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
@@ -335,7 +335,11 @@ async def main(smallest_interval):
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    strategy_list[0].symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+    symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+
+    strategy_manager = strategies.StrategyManager(config, symbol_info)
+    strategy_list = strategy_manager.get_strategies()
+
     bwrapper = binance_wrapper.BinanceWrapper(client, config)
     telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
 
@@ -366,7 +370,7 @@ async def main(smallest_interval):
             # NOTE: The logic below, executes the app default per minute. This should be generalized
             start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1  # (x minute) * (60 sec) + (1 second) ahead
             logger.info(f'Cycle start time: {start_ts}')
-            result = await asyncio.create_task(run_at(start_ts, application(bwrapper, telbot)))
+            result = await asyncio.create_task(run_at(start_ts, application(strategy_list, bwrapper, telbot)))
             
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
@@ -414,8 +418,6 @@ if __name__ == "__main__":
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy_manager = strategies.StrategyManager(config)
-    strategy_list = strategy_manager.get_strategies()
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")
