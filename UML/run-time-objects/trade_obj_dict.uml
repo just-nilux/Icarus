@@ -2,6 +2,7 @@
 [{
     "_id": "current timestamp",
     "decision_time": "[dt index of obj creation]",
+    "strategy": "['strategy name']",
     "status": "",
     "enter": {
       "limit": {

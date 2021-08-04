@@ -526,7 +526,7 @@ async def main():
     await evaluate_stats()
 
     # Visualize the test session
-    fp.buy_sell(df_csv_list[0], df_closed_hto, df_enter_expire, df_exit_expire)
+    fp.buy_sell(df=df_csv_list[0], df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
 if __name__ == '__main__':
     

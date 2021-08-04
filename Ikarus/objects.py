@@ -21,6 +21,7 @@ class GenericObject():
     templates = dict()
     
     trade = {
+        "strategy": "",
         "status": "",
         "decision_time": "",
         "enter": {

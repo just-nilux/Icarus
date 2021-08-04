@@ -30,6 +30,20 @@
     },
     "strategy": [
         {
+            "name": "FallingKnifeCatcher",
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "postpone"
+            },
+            "max_lto": 1
+        },
+        {
             "name": "OCOBackTest",
             "enter": {
                 "type": "limit"
