@@ -11,7 +11,8 @@ import sys
 from scripts import fplot as fp
 import copy
 import bson
-import time
+from itertools import chain, groupby
+import operator
 
 # Global Variables
 SYSTEM_STATUS = 0
@@ -166,6 +167,7 @@ async def evaluate_stats():
     logger.info('Total enter_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_ENTER_EXP})))
     logger.info('Total exit_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_EXIT_EXP})))
     logger.info('Total closed trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_CLOSED})))
+    logger.info('Total open trades: {}'.format(await mongocli.count("live-trades", {})))
     
     exit_expire_pipe = [
         {"$match":{"result.cause":{"$eq":"exit_expire"}}},
@@ -434,8 +436,20 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
-    # NOTE: Execution of multiple strategy is possible, if 'strategy': 'sample_oco_strategy' like items added to the TOs
-    nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
+    #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
+    #nto_list = []
+
+    # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
+    grouped_ltos = {}
+    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
+        grouped_ltos[strategy] = list(lto)
+
+    strategy_tasks = []
+    for strategy in strategy_list:
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+    
+    strategy_decisions = list(await asyncio.gather(*strategy_tasks))
+    nto_list = list(chain(*strategy_decisions))
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -466,7 +480,7 @@ async def main():
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
 
     strategy_manager = strategies.StrategyManager(config, symbol_info)
     strategy_list = strategy_manager.get_strategies()
@@ -558,13 +572,10 @@ if __name__ == '__main__':
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
 
-    # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global
-    # Available strategies, can be kept in a 'strategies_list' variable instead of single object
-    #
-    # NOTE: Multiple analyzers not needed because an analyzer can be configured to work with multiple 'scales' and 'pairs'.
+    # NOTE: Multiple analyzers not needed because an analyzer can be configured to work with multiple 'scales' and 'all_pairs'.
     #       It may provide different analysis results as an item in the analysis objects.
     # NOTE: Suppose there are multiple 'time scales' for a 'pair'. In this case, the output of all of the 'scales' are used to generate a common analysis for a 'pair'
-    #       In other words, there will one-to-one mapping between 'pairs' and the analysis items.
+    #       In other words, there will one-to-one mapping between 'all_pairs' and the analysis items.
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")
