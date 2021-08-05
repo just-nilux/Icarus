@@ -259,33 +259,38 @@ class BinanceWrapper():
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
+                    
+                    try:
+                        response = await self.client.order_market_sell(
+                            symbol=lto_list[i]['pair'],
+                            quantity=lto_list[i]['pair'])
 
-                    response = await self.client.order_market_sell(
-                        symbol=lto_list[i]['pair'],
-                        quantity=lto_list[i]['pair'])
+                    except Exception as e:
+                        self.logger.error(e)
+                        # TODO: Notification
 
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
-                    lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['fills']
+                    else:
+                        lto_list[i]['status'] = STAT_CLOSED
+                        lto_list[i]['history'].append(lto_list[i]['status'])
+                        lto_list[i]['result']['cause'] = STAT_EXIT_EXP
+                        lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['fills']
 
-                    lto_list[i]['result']['exit']['type'] = TYPE_MARKET
+                        lto_list[i]['result']['exit']['type'] = TYPE_MARKET
 
-                    # TODO: Multiple time scale is not supported
-                    current_time = int(response['transactTime']/1000)                                               # exact second
-                    current_time -= (current_time % 60)                                                             # exact minute
-                    current_time -= (current_time % (self.config['data_input']['scales_in_minute'][0]*60))          # exact scale
-                    current_time -= (self.config['data_input']['scales_in_minute'][0]*60)                           # -scale
+                        # TODO: Multiple time scale is not supported
+                        current_time = int(response['transactTime']/1000)                                               # exact second
+                        current_time -= (current_time % 60)                                                             # exact minute
+                        current_time -= (current_time % (self.config['data_input']['scales_in_minute'][0]*60))          # exact scale
+                        current_time -= (self.config['data_input']['scales_in_minute'][0]*60)                           # -scale
 
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(current_time)
-                    # NOTE: Sum of fills
-                    lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]))
-                    lto_list[i]['result']['exit']['quantity'] = float(sum([float(fill['qty']) for fill in response['fills']]))
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                        lto_list[i]['result']['exit']['time'] = bson.Int64(current_time)
+                        # NOTE: Sum of fills
+                        lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]))
+                        lto_list[i]['result']['exit']['quantity'] = float(sum([float(fill['qty']) for fill in response['fills']]))
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
-                    lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
-                    pass
+                        lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                        lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order

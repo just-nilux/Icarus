@@ -29,5 +29,3 @@ order2 = client.get_order(symbol='BTCUSDT', orderId=response['orderReports'][1][
 cancel_order1 = client.cancel_order(symbol='BTCUSDT', orderId=response['orderReports'][0]['orderId'])
 
 cancel_order2 = client.cancel_order(symbol='BTCUSDT', orderId=response['orderReports'][1]['orderId'])
-
-# TODO: NEXT: Place the test OCO order here / then cancel it and see responses

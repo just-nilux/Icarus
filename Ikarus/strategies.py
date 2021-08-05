@@ -130,8 +130,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
 class FallingKnifeCatcher(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.name = "FallingKnifeCatcher"
+        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
         # TODO: Find a more beautiful way to implemetn this logic
         self.config = {}
         for conf in _config['strategy']:
@@ -161,14 +161,6 @@ class FallingKnifeCatcher(StrategyBase):
         Returns:
             dict: [description]
         """ 
-        '''
-        if free_ref_asset > self.symbol_info[]:
-            if free_ref_asset < enter_ref_amount:
-                enter_ref_amount = free_ref_asset
-        else:
-            # TODO: ERROR: NO free asset
-            return {}
-        '''
 
         if phase == 'enter':
             # Fixing PRICE_FILTER: tickSize
@@ -263,15 +255,20 @@ class FallingKnifeCatcher(StrategyBase):
             analysis_dict (dict): analysis.json
             - analysis objects contains where to buy and and where to sell
 
-            lto_dict (dict): live-trade-objects coming from the [live-trades]
+            lto_list (list): only the ltos that belongs to this strategy
 
             df_balance (pd.DataFrame): live-trade-objects coming from the [live-trades]
 
             dt_index (int): timestamp in ms for trade_object identifier
             
         Returns:
-            dict: trade.json
+            list: nto_list
         """
+        # Preliminary condition: all of the config['pairs'] exist in analysis_dict
+        if not set(self.config['pairs']).issubset(analysis_dict.keys()):
+            self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
+            return []
+
         # Initialize trade_dict to be filled
         trade_objects = []
 
@@ -286,8 +283,8 @@ class FallingKnifeCatcher(StrategyBase):
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
-        # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
-        for ao_pair in analysis_dict.keys():
+        # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
+        for ao_pair in self.config['pairs']:
 
             # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
             if ao_pair in pair_key_mapping.keys():
@@ -356,9 +353,9 @@ class FallingKnifeCatcher(StrategyBase):
                 # Fill exit module
                 trade_obj['exit'] = await OCOBackTest._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, OCOBackTest._eval_future_candle_time(dt_index,9,self.scales_in_minute[0]))
 
-                trade_obj['_id'] = int(time.time() * 1000)
+                #trade_obj['_id'] = int(time.time() * 1000)
 
-                trade_objects.append(trade_obj) # Use the mongo _id as the key since it does not matter until it becomes an LTO
+                trade_objects.append(trade_obj)
 
             else:
                 self.logger.info(f"{ao_pair}: NO SIGNAL")
@@ -369,8 +366,9 @@ class FallingKnifeCatcher(StrategyBase):
 class OCOBackTest(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.name = "OCOBackTest"
+        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
+
         # TODO: Find a more beautiful way to implemetn this logic
         self.config = {}
         for conf in _config['strategy']:
@@ -509,8 +507,13 @@ class OCOBackTest(StrategyBase):
             dt_index (int): timestamp in ms for trade_object identifier
             
         Returns:
-            dict: trade.json
+            list: nto_list
         """
+        # Preliminary condition: all of the config['pairs'] exist in analysis_dict
+        if not set(self.config['pairs']).issubset(analysis_dict.keys()):
+            self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
+            return []
+
         # Initialize trade_dict to be filled
         trade_objects = []
 
@@ -525,8 +528,8 @@ class OCOBackTest(StrategyBase):
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
-        # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
-        for ao_pair in analysis_dict.keys():
+        # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
+        for ao_pair in self.config['pairs']:
 
             # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
             if ao_pair in pair_key_mapping.keys():
@@ -596,9 +599,9 @@ class OCOBackTest(StrategyBase):
                 # Fill exit module
                 trade_obj['exit'] = await OCOBackTest._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, OCOBackTest._eval_future_candle_time(dt_index,9,self.scales_in_minute[0]))
 
-                trade_obj['_id'] = int(time.time() * 1000)
+                #trade_obj['_id'] = int(time.time() * 1000)
 
-                trade_objects.append(trade_obj) # Use the mongo _id as the key since it does not matter until it becomes an LTO
+                trade_objects.append(trade_obj)
 
             else:
                 self.logger.info(f"{ao_pair}: NO SIGNAL")
@@ -609,8 +612,9 @@ class OCOBackTest(StrategyBase):
 class AlwaysEnter(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.name = "AlwaysEnter"
+        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
+
         # TODO: Find a more beautiful way to implemetn this logic
         self.config = {}
         for conf in _config['strategy']:
@@ -742,30 +746,35 @@ class AlwaysEnter(StrategyBase):
             dt_index (int): timestamp in ms for trade_object identifier
             
         Returns:
-            dict: trade.json
+            list: nto_list
         """
+        # Preliminary condition: all of the config['pairs'] exist in analysis_dict
+        if not set(self.config['pairs']).issubset(analysis_dict.keys()):
+            self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
+            return []
+
         # Initialize trade_dict to be filled
         trade_objects = []
 
-        # Create a mapping between the pair and index such as {'BTCUSDT':[0,3]}
-        pair_index_mapping = {}
+        # Create a mapping between the pair and orderId such as {'BTCUSDT':['123','456']}
+        pair_key_mapping = {}
         for i, lto in enumerate(lto_list):
             pair = lto['pair']
-            if pair not in pair_index_mapping.keys():
-                pair_index_mapping[pair] = []
+            if pair not in pair_key_mapping.keys():
+                pair_key_mapping[pair] = []
 
-            pair_index_mapping[pair].append(i)
+            pair_key_mapping[pair].append(i)
 
         # This implementation enable to check number of trades and compare the value with the one in the config file.
 
-        # TODO: Consider the fact that an pair have multiple to's going on. Max number can be restricted
-        for ao_pair in analysis_dict.keys():
+        # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
+        for ao_pair in self.config['pairs']:
 
             # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
-            if ao_pair in pair_index_mapping.keys():
+            if ao_pair in pair_key_mapping.keys():
                 
                 # NOTE: If a pair contains multiple LTO then there should be another level of iteration as well
-                skip_calculation, lto_list[pair_index_mapping[ao_pair][0]] = await self._handle_lto(lto_list[pair_index_mapping[ao_pair][0]], dt_index)
+                skip_calculation, lto_list[pair_key_mapping[ao_pair][0]] = await self._handle_lto(lto_list[pair_key_mapping[ao_pair][0]], dt_index)
                 if skip_calculation: continue;
 
             else: pass # Make a brand new decision
@@ -804,7 +813,7 @@ class AlwaysEnter(StrategyBase):
                                                                         AlwaysEnter._eval_future_candle_time(dt_index,0,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
                 trade_obj['exit'] = await AlwaysEnter._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, 
                                                                         AlwaysEnter._eval_future_candle_time(dt_index,0,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
-                trade_obj['_id'] = int(time.time() * 1000)
+                #trade_obj['_id'] = int(time.time() * 1000)
 
                 # TODO: Check the free amount of quote currency
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']

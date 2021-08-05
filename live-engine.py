@@ -269,7 +269,7 @@ async def application(strategy_list, bwrapper, telbot):
     current_ts *= 1000                  # Make the resolution milisecond
     logger.info(f'Ikarus Time: [{current_ts}]')
 
-    pair_list = config['data_input']['pairs']
+    pair_list = config['data_input']['all_pairs']
     
     #################### Phase 1: Perform pre-calculation tasks ####################
     logger.debug('Phase 1 started')
@@ -335,7 +335,7 @@ async def main(smallest_interval):
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
 
     strategy_manager = strategies.StrategyManager(config, symbol_info)
     strategy_list = strategy_manager.get_strategies()

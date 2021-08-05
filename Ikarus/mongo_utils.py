@@ -47,12 +47,7 @@ class MongoClient():
             col (str): Name of the collection: [live-trade | hist-trade | observer]
             item (dict): Dictionary item
         """
-        
-        # Add timestamp as the "_id" of the document if there is already
-        if '_id' not in item.keys():
-            item['_id'] = int(time() * 1000)
-        else:
-            item['_id'] = bson.Int64(item['_id'])
+
 
         result = await self.db_bot[col].insert_one(item)
         

@@ -31,6 +31,7 @@
     "strategy": [
         {
             "name": "AlwaysEnter",
+            "pairs": ["BTCUSDT"],
             "enter": {
                 "type": "limit"
             },
@@ -45,6 +46,7 @@
         },
         {
             "name": "FallingKnifeCatcher",
+            "pairs": ["BTCUSDT"],
             "enter": {
                 "type": "limit"
             },
@@ -59,6 +61,7 @@
         },
         {
             "name": "OCOBackTest",
+            "pairs": ["BTCUSDT"],
             "enter": {
                 "type": "limit"
             },
@@ -67,7 +70,7 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "market_exit"
+                "exit_expire": "postpone"
             },
             "max_lto": 1
         }
@@ -79,9 +82,9 @@
         }
     },
     "data_input": {
-        "pairs": ["BTCUSDT"],
-        "scale":["1m"],
-        "length_str":[ "12 hours" ],
+        "all_pairs": ["BTCUSDT"],
+        "scale":["15m"],
+        "length_str":[ "1 day" ],
         "length_int":[ 96 ]
     }
 }

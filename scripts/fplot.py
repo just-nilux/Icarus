@@ -147,72 +147,82 @@ def fplot(filename=None):
     fplt.show()
 
 
-def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame(), df_oco_stoploss=pd.DataFrame()):
+def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame()):
     
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
 
     # Add period separator lines
-    #periods = pd.to_datetime(df.index, unit='ms').strftime('%H')
-    #last_period = ''
-    #for x,(period,price) in enumerate(zip(periods, df.close)):
-    #    if period != last_period:
-    #        fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
-    #    last_period = period
-
-    # Closed trade visualization (result.exit.type: limit or oco_limit)
-    if not df_closed.empty:
-        for idx, row in df_closed.iterrows():
-            # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
-            profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-
-            # Stoploss taken
-            if profit_perc < 0:
-                trade_color = '#FF9090'
-                rect_lower_limit = row['sellPrice']
-
-            # Limit taken
-            else:
-                trade_color = '#60FF60'
-                rect_lower_limit = row['enterPrice']
-
-            fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
-            fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
-            fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-
-        df_closed.set_index('decision_time',inplace=True)
-        df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_decision_time')
-
-        df_closed.set_index('exitTime',inplace=True)
-        df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
-
-        df_closed.set_index('enterTime',inplace=True)
-        df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
-        # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+    #_add_time_separator(df)
 
     # Enter expired trade visualization
     if not df_enter_expire.empty:
-        for idx, row in df_enter_expire.iterrows():
-            fplt.add_line((row['decision_time'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
+        _add_enter_expire_tos(df_enter_expire)
 
     # Exit expired trade visualization
     if not df_exit_expire.empty:
-        for idx, row in df_exit_expire.iterrows():
-            fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
-            profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-            fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
-            fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-            fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
+        _add_exit_expire_tos(df_exit_expire)
+    
+    if not df_closed.empty:
+        _add_closed_tos(ax, df_closed) # NOTE: Plot the closed ones last to make sure they are in front
 
-    #TODO: Print prices and trade id
     fplt.add_legend('', ax=ax)
     fplt.show()
 
 
-    # TODO: Improve the visualization:
-    # - exit_expire square can be laydown starting from the limit.price to stop loss if the exit type is oco
+def _add_time_separator(df):
+    periods = pd.to_datetime(df.index, unit='ms').strftime('%H')
+    last_period = ''
+    for x,(period,price) in enumerate(zip(periods, df.close)):
+        if period != last_period:
+            fplt.add_line((x-0.5, price*0.5), (x-0.5, price*2), color='#bbb', style='--')
+        last_period = period
 
-# Helper Functions
+
+def _add_enter_expire_tos(df_enter_expire):
+    for idx, row in df_enter_expire.iterrows():
+        fplt.add_line((row['decision_time'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
+
+
+def _add_exit_expire_tos(df_exit_expire):
+    for idx, row in df_exit_expire.iterrows():
+        fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
+        profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
+        fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+        fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
+        fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
+
+
+def _add_closed_tos(ax, df_closed):
+    # Closed trade visualization (result.exit.type: limit or oco_limit)
+    for idx, row in df_closed.iterrows():
+        # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
+        profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
+
+        # Stoploss taken
+        if profit_perc < 0:
+            trade_color = '#FF9090'
+            rect_lower_limit = row['sellPrice']
+
+        # Limit taken
+        else:
+            trade_color = '#60FF60'
+            rect_lower_limit = row['enterPrice']
+
+        fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
+        fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+        fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
+
+    df_closed.set_index('decision_time',inplace=True)
+    df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_decision_time')
+
+    df_closed.set_index('exitTime',inplace=True)
+    df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
+
+    df_closed.set_index('enterTime',inplace=True)
+    df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+    # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+
 
 if __name__ == '__main__':
 
