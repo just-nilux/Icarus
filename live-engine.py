@@ -11,6 +11,8 @@ import sys
 import copy
 import bson
 import time
+from itertools import chain, groupby
+import operator
 
 # Global Variables
 SYSTEM_STATUS = 0
@@ -285,8 +287,10 @@ async def application(strategy_list, bwrapper, telbot):
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     # NOTE: Only works once
-    #if len(lto_list):
-    #    orders = await lto_manipulator.change_order_to_filled(lto_list[0], orders)
+    # TODO: NEXT: Retest here
+    if len(lto_list) and lto_list[0]['']:
+        for lto in lto_list:
+            orders = await lto_manipulator.change_order_to_filled(lto, orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
@@ -298,7 +302,18 @@ async def application(strategy_list, bwrapper, telbot):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2 started')
 
-    nto_list = await strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)
+    #nto_list = await strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)
+    # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
+    grouped_ltos = {}
+    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
+        grouped_ltos[strategy] = list(lto)
+
+    strategy_tasks = []
+    for strategy in strategy_list:
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+
+    strategy_decisions = list(await asyncio.gather(*strategy_tasks))
+    nto_list = list(chain(*strategy_decisions))
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -306,7 +321,6 @@ async def application(strategy_list, bwrapper, telbot):
         nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
-    
     #################### Phase 3: Perform post-calculation tasks ####################
     logger.debug('Phase 3 started')
 

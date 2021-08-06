@@ -414,7 +414,8 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
     current_ts = int(df_list[0]['close_time'].iloc[-1] + 1) 
-
+    logger.info(f'Ikarus Time: [{current_ts}]')
+    
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
 
@@ -437,8 +438,6 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
 
     # 2.2: Algorithm is the only authority to make decision
     #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
-    #nto_list = []
-
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     grouped_ltos = {}
     for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):

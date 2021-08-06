@@ -21,8 +21,8 @@ class StrategyManager():
         }
 
         self.strategy_list = []
-        for strategy in _config['strategy']:
-            strategy_class = self.strategies[strategy['name']]
+        for strategy_name in _config['strategy'].keys():
+            strategy_class = self.strategies[strategy_name]
             self.strategy_list.append(strategy_class(_config, _symbol_info))
         pass
 
@@ -167,12 +167,7 @@ class FallingKnifeCatcher(StrategyBase):
     def __init__(self, _config, _symbol_info={}):
         self.name = "FallingKnifeCatcher"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
-        # TODO: Find a more beautiful way to implemetn this logic
-        self.config = {}
-        for conf in _config['strategy']:
-            if conf['name'] == self.name:
-                self.config = conf
-                break
+        self.config = _config['strategy'][self.name]
 
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
@@ -361,12 +356,7 @@ class OCOBackTest(StrategyBase):
         self.name = "OCOBackTest"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 
-        # TODO: Find a more beautiful way to implemetn this logic
-        self.config = {}
-        for conf in _config['strategy']:
-            if conf['name'] == self.name:
-                self.config = conf
-                break
+        self.config = _config['strategy'][self.name]
 
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
@@ -568,11 +558,8 @@ class AlwaysEnter(StrategyBase):
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 
         # TODO: Find a more beautiful way to implemetn this logic
-        self.config = {}
-        for conf in _config['strategy']:
-            if conf['name'] == self.name:
-                self.config = conf
-                break
+        self.config = _config['strategy'][self.name]
+
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
 
@@ -743,12 +730,7 @@ class AlwaysEnter90(StrategyBase):
         self.name = "AlwaysEnter90"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 
-        # TODO: Find a more beautiful way to implemetn this logic
-        self.config = {}
-        for conf in _config['strategy']:
-            if conf['name'] == self.name:
-                self.config = conf
-                break
+        self.config = _config['strategy'][self.name]
         self.quote_currency = _config['broker']['quote_currency']
         self.scales_in_minute = _config['data_input']['scales_in_minute']
 

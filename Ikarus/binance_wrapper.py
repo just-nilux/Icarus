@@ -155,9 +155,9 @@ class BinanceWrapper():
             if lto['status'] == STAT_OPEN_ENTER:
                 coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter'][TYPE_LIMIT]['orderId']))
             elif lto['status'] == STAT_OPEN_EXIT:
-                if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
+                if self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_LIMIT:
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_LIMIT]['orderId']))
-                elif self.config['strategy']['exit']['type'] == TYPE_OCO:
+                elif self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_OCO:
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['orderId']))
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['stopLimit_orderId']))
             else: pass
@@ -294,9 +294,8 @@ class BinanceWrapper():
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
-                    # TODO: Test the OCO
                     try:
-                        if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
+                        if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
                             response = await self.client.order_limit_sell(
                                 symbol=lto_list[i]['pair'],
                                 quantity=lto_list[i]['exit'][TYPE_LIMIT]['quantity'],
@@ -305,7 +304,7 @@ class BinanceWrapper():
                             self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
                             lto_list[i]['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
 
-                        elif self.config['strategy']['exit']['type'] == TYPE_OCO:
+                        elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
                             response = await self.client.create_oco_order(
                                 symbol=lto_list[i]['pair'],
                                 side=SIDE_SELL,

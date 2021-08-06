@@ -28,9 +28,8 @@
         "quote_currency": "USDT",
         "credit_currency": "TRY"
     },
-    "strategy": [
-        {
-            "name": "AlwaysEnter",
+    "strategy": {
+        "AlwaysEnter": {
             "pairs": ["BTCUSDT"],
             "enter": {
                 "type": "limit"
@@ -44,8 +43,7 @@
             },
             "max_lto": 1
         },
-        {
-            "name": "FallingKnifeCatcher",
+        "FallingKnifeCatcher": {
             "pairs": ["BTCUSDT"],
             "enter": {
                 "type": "limit"
@@ -59,8 +57,7 @@
             },
             "max_lto": 1
         },
-        {
-            "name": "OCOBackTest",
+        "OCOBackTest": {
             "pairs": ["BTCUSDT"],
             "enter": {
                 "type": "limit"
@@ -74,7 +71,7 @@
             },
             "max_lto": 1
         }
-    ],
+    },
     "analysis": {
         "indicators": ["low","high","llow", "hhigh", "trange", "moving_average"],
         "params": {
