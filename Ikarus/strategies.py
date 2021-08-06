@@ -125,6 +125,42 @@ class StrategyBase(metaclass=abc.ABCMeta):
         else: pass # Internal Error
         return exit_module
 
+    @staticmethod
+    async def apply_exchange_filters(phase, type, module, symbol_info, exit_qty=0):
+        """
+        - Call this method prior to any order placement
+        - Apply the filter of exchange pair
+        - This methhod does not check if the current conditiones are good to go.
+            If a filter is not satisfied then it would create an exception. Validation
+            costs time. Maybe in future 
+        - Separating enter and exit does not make any sense since the filters are valid for both side.
+        Returns:
+            dict: enter or exit module
+        """ 
+        
+        if phase == 'enter':
+            module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                            # Fixing PRICE_FILTER: tickSize
+            module['quantity'] = round_step_size(module['amount'] /module['price'], float(symbol_info['filters'][2]['minQty']))         # Fixing LOT_SIZE: minQty
+
+        elif phase == 'exit':
+            if type == TYPE_OCO:
+                module['limitPrice'] = round_step_size(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
+                module['stopPrice'] = round_step_size(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
+                module['stopLimitPrice'] = round_step_size(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
+                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+            
+            elif type == TYPE_LIMIT:
+                module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))
+                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+
+        else: pass
+
+        return module
+
+
+    @staticmethod
+    async def check_min_notional(price, quantity, symbol_info): return ((price*quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False
+
 
 class FallingKnifeCatcher(StrategyBase):
 
@@ -144,56 +180,6 @@ class FallingKnifeCatcher(StrategyBase):
         self.symbol_info = _symbol_info
 
         return
-
-
-    async def apply_exchange_filters(self, to, phase):
-        """
-        - Call this method prior to any order placement
-
-        - Apply the filter of exchange pair
-
-        - This methhod does not check if the current conditiones are good to go.
-            If a filter is not satisfied then it would create an exception. Validation
-            costs time. Maybe in future 
-
-        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
-        Returns:
-            dict: [description]
-        """ 
-        # TODO: NEXT: make it static
-        # TODO: NEXT: apply min notional
-        
-        if phase == 'enter':
-            # Fixing PRICE_FILTER: tickSize
-            to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][0]['tickSize'])) 
-            # Fixing LOT_SIZE: minQty
-            to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][2]['minQty']))
-
-        elif phase == 'exit':
-            if self.config[phase]['type'] == TYPE_OCO:
-                # Fixing PRICE_FILTER: tickSize
-                # TODO: NEXT: Optimize the this mess
-                to[phase][self.config[phase]['type']]['limitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['limitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopLimitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopLimitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-            
-            elif self.config[phase]['type'] == TYPE_LIMIT:
-                to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-
-        return to
 
 
     async def _handle_lto(self, lto, dt_index):
@@ -226,16 +212,16 @@ class FallingKnifeCatcher(StrategyBase):
                 skip_calculation = True
             else: pass
 
-            # NOTE: In order to use the action postpone, history should be used. Otherwise it is not known if the trade is already postponed before
-            # Postpone the expiration
-            #lto_dict[pair] = await self._postpone(lto_dict[pair],'exit', exit_type, bson.Int64(dt_index + 2*15*60*1000))
-
         elif lto['status'] == STAT_WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # TODO: expire of the exit_module can be calculated after the trade entered
 
             lto['action'] = ACTN_EXEC_EXIT
-            lto = await self.apply_exchange_filters(lto, phase='exit')
+            lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                self.config['exit']['type'], 
+                                                                                                lto['exit'][self.config['exit']['type']], 
+                                                                                                self.symbol_info, 
+                                                                                                exit_qty=lto['result']['enter']['quantity'])
             skip_calculation = True
 
         elif lto['status'] != STAT_CLOSED:
@@ -341,12 +327,26 @@ class FallingKnifeCatcher(StrategyBase):
                 #   exit_ref_amount = 151,4 * 0.70 = 105.98
                 exit_ref_amount = enter_quantity * exit_price
 
-                # Fill enter module
-                trade_obj['enter'] = await StrategyBase._create_enter_module(self.config['enter']['type'], enter_price, enter_quantity, enter_ref_amount, StrategyBase._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
+                # Fill enter and exit modules
+                enter_type = self.config['enter']['type']
+                exit_type = self.config['exit']['type']
 
-                # Fill exit module
-                trade_obj['exit'] = await StrategyBase._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, StrategyBase._eval_future_candle_time(dt_index,9,self.scales_in_minute[0]))
+                trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
+                                                                        StrategyBase._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
+                trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
+                                                                        StrategyBase._eval_future_candle_time(dt_index,9,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
 
+                # TODO: Check the free amount of quote currency
+                free_ref_asset = df_balance.loc[self.quote_currency,'free']
+
+                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
+                                                                                                            enter_type, 
+                                                                                                            trade_obj['enter'][enter_type], 
+                                                                                                            self.symbol_info)
+
+                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
+                    # TODO: Notification about min_notional
+                    continue
                 trade_objects.append(trade_obj)
 
             else:
@@ -374,62 +374,6 @@ class OCOBackTest(StrategyBase):
         self.symbol_info = _symbol_info
 
         return
-
-
-    async def apply_exchange_filters(self, to, phase):
-        """
-        - Call this method prior to any order placement
-
-        - Apply the filter of exchange pair
-
-        - This methhod does not check if the current conditiones are good to go.
-            If a filter is not satisfied then it would create an exception. Validation
-            costs time. Maybe in future 
-
-        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
-        Returns:
-            dict: [description]
-        """ 
-        '''
-        if free_ref_asset > self.symbol_info[]:
-            if free_ref_asset < enter_ref_amount:
-                enter_ref_amount = free_ref_asset
-        else:
-            # TODO: ERROR: NO free asset
-            return {}
-        '''
-
-        if phase == 'enter':
-            # Fixing PRICE_FILTER: tickSize
-            to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][0]['tickSize'])) 
-            # Fixing LOT_SIZE: minQty
-            to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][2]['minQty']))
-
-        elif phase == 'exit':
-            if self.config[phase]['type'] == TYPE_OCO:
-                # Fixing PRICE_FILTER: tickSize
-                # TODO: NEXT: Optimize the this mess
-                to[phase][self.config[phase]['type']]['limitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['limitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopLimitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopLimitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-            
-            elif self.config[phase]['type'] == TYPE_LIMIT:
-                to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-
-        return to
 
 
     async def _handle_lto(self, lto, dt_index):
@@ -471,7 +415,11 @@ class OCOBackTest(StrategyBase):
             # TODO: expire of the exit_module can be calculated after the trade entered
 
             lto['action'] = ACTN_EXEC_EXIT
-            lto = await self.apply_exchange_filters(lto, phase='exit')
+            lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                self.config['exit']['type'], 
+                                                                                                lto['exit'][self.config['exit']['type']], 
+                                                                                                self.symbol_info, 
+                                                                                                exit_qty=lto['result']['enter']['quantity'])
             skip_calculation = True
 
         elif lto['status'] != STAT_CLOSED:
@@ -585,12 +533,26 @@ class OCOBackTest(StrategyBase):
                 #   exit_ref_amount = 151,4 * 0.70 = 105.98
                 exit_ref_amount = enter_quantity * exit_price
 
-                # Fill enter module
-                trade_obj['enter'] = await StrategyBase._create_enter_module(self.config['enter']['type'], enter_price, enter_quantity, enter_ref_amount, StrategyBase._eval_future_candle_time(dt_index,2,self.scales_in_minute[0]))
+                # Fill enter and exit modules
+                enter_type = self.config['enter']['type']
+                exit_type = self.config['exit']['type']
 
-                # Fill exit module
-                trade_obj['exit'] = await StrategyBase._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, StrategyBase._eval_future_candle_time(dt_index,9,self.scales_in_minute[0]))
+                trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
+                                                                        StrategyBase._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
+                trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
+                                                                        StrategyBase._eval_future_candle_time(dt_index,9,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
 
+                # TODO: Check the free amount of quote currency
+                free_ref_asset = df_balance.loc[self.quote_currency,'free']
+
+                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
+                                                                                                            enter_type, 
+                                                                                                            trade_obj['enter'][enter_type], 
+                                                                                                            self.symbol_info)
+
+                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
+                    # TODO: Notification about min_notional
+                    continue
                 trade_objects.append(trade_obj)
 
             else:
@@ -617,62 +579,6 @@ class AlwaysEnter(StrategyBase):
         # TODO: Make proper handling for symbol_info
         self.symbol_info = _symbol_info
         return
-
-
-    async def apply_exchange_filters(self, to, phase):
-        """
-        - Call this method prior to any order placement
-
-        - Apply the filter of exchange pair
-
-        - This methhod does not check if the current conditiones are good to go.
-            If a filter is not satisfied then it would create an exception. Validation
-            costs time. Maybe in future 
-
-        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
-        Returns:
-            dict: [description]
-        """ 
-        '''
-        if free_ref_asset > self.symbol_info[]:
-            if free_ref_asset < enter_ref_amount:
-                enter_ref_amount = free_ref_asset
-        else:
-            # TODO: ERROR: NO free asset
-            return {}
-        '''
-
-        if phase == 'enter':
-            # Fixing PRICE_FILTER: tickSize
-            to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][0]['tickSize'])) 
-            # Fixing LOT_SIZE: minQty
-            to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][2]['minQty']))
-
-        elif phase == 'exit':
-            if self.config[phase]['type'] == TYPE_OCO:
-                # Fixing PRICE_FILTER: tickSize
-                # TODO: NEXT: Optimize the this mess
-                to[phase][self.config[phase]['type']]['limitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['limitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopLimitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopLimitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-            
-            elif self.config[phase]['type'] == TYPE_LIMIT:
-                to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-
-        return to
 
 
     async def _handle_lto(self, lto, dt_index):
@@ -708,7 +614,11 @@ class AlwaysEnter(StrategyBase):
             # TODO: expire of the exit_module can be calculated after the trade entered
 
             lto['action'] = ACTN_EXEC_EXIT
-            lto = await self.apply_exchange_filters(lto, phase='exit')
+            lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                self.config['exit']['type'], 
+                                                                                                lto['exit'][self.config['exit']['type']], 
+                                                                                                self.symbol_info, 
+                                                                                                exit_qty=lto['result']['enter']['quantity'])
             skip_calculation = True
 
         elif lto['status'] != STAT_CLOSED:
@@ -798,17 +708,25 @@ class AlwaysEnter(StrategyBase):
                 exit_ref_amount = enter_quantity * exit_price
 
                 # Fill enter and exit modules
-                # TODO: Expire calculation should be based on the 'scale'. It should not be hardcoded '15'
-                trade_obj['enter'] = await StrategyBase._create_enter_module(self.config['enter']['type'], enter_price, enter_quantity, enter_ref_amount, 
+                enter_type = self.config['enter']['type']
+                exit_type = self.config['exit']['type']
+
+                trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
                                                                         StrategyBase._eval_future_candle_time(dt_index,0,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
-                trade_obj['exit'] = await StrategyBase._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, 
+                trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
                                                                         StrategyBase._eval_future_candle_time(dt_index,0,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
 
                 # TODO: Check the free amount of quote currency
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']
 
-                # TODO: Apply filter function needs to be added to met the pair-exchange requirements
-                trade_obj = await self.apply_exchange_filters(trade_obj, phase='enter')
+                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
+                                                                                                            enter_type, 
+                                                                                                            trade_obj['enter'][enter_type], 
+                                                                                                            self.symbol_info)
+
+                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
+                    # TODO: Notification about min_notional
+                    continue
 
                 # Normally trade id should be unique and be given by the broker. Until it is executed assign the current ts. It will be updated at execution anyway
                 trade_objects.append(trade_obj)
@@ -837,62 +755,6 @@ class AlwaysEnter90(StrategyBase):
         # TODO: Make proper handling for symbol_info
         self.symbol_info = _symbol_info
         return
-
-
-    async def apply_exchange_filters(self, to, phase):
-        """
-        - Call this method prior to any order placement
-
-        - Apply the filter of exchange pair
-
-        - This methhod does not check if the current conditiones are good to go.
-            If a filter is not satisfied then it would create an exception. Validation
-            costs time. Maybe in future 
-
-        - When it is time to place the exit order, exit price might be updated, so this method shpudl be called
-        Returns:
-            dict: [description]
-        """ 
-        '''
-        if free_ref_asset > self.symbol_info[]:
-            if free_ref_asset < enter_ref_amount:
-                enter_ref_amount = free_ref_asset
-        else:
-            # TODO: ERROR: NO free asset
-            return {}
-        '''
-
-        if phase == 'enter':
-            # Fixing PRICE_FILTER: tickSize
-            to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][0]['tickSize'])) 
-            # Fixing LOT_SIZE: minQty
-            to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to[phase][self.config[phase]['type']]['amount'] / to[phase][self.config[phase]['type']]['price'], 
-                                                                                    float(self.symbol_info['filters'][2]['minQty']))
-
-        elif phase == 'exit':
-            if self.config[phase]['type'] == TYPE_OCO:
-                # Fixing PRICE_FILTER: tickSize
-                # TODO: NEXT: Optimize the this mess
-                to[phase][self.config[phase]['type']]['limitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['limitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                to[phase][self.config[phase]['type']]['stopLimitPrice'] = round_step_size(to[phase][self.config[phase]['type']]['stopLimitPrice'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-            
-            elif self.config[phase]['type'] == TYPE_LIMIT:
-                to[phase][self.config[phase]['type']]['price'] = round_step_size(to[phase][self.config[phase]['type']]['price'], 
-                                                                                        float(self.symbol_info['filters'][0]['tickSize']))
-                # NOTE: Enter quantity will be used to exit
-                to[phase][self.config[phase]['type']]['quantity'] = round_step_size(to['result']['enter']['quantity'], float(self.symbol_info['filters'][2]['minQty']))
-
-        return to
 
 
     async def _handle_lto(self, lto, dt_index):
@@ -928,7 +790,11 @@ class AlwaysEnter90(StrategyBase):
             # TODO: expire of the exit_module can be calculated after the trade entered
 
             lto['action'] = ACTN_EXEC_EXIT
-            lto = await self.apply_exchange_filters(lto, phase='exit')
+            lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                self.config['exit']['type'], 
+                                                                                                lto['exit'][self.config['exit']['type']], 
+                                                                                                self.symbol_info, 
+                                                                                                exit_qty=lto['result']['enter']['quantity'])
             skip_calculation = True
 
         elif lto['status'] != STAT_CLOSED:
@@ -1018,17 +884,26 @@ class AlwaysEnter90(StrategyBase):
                 #   exit_ref_amount = 151,4 * 0.70 = 105.98
                 exit_ref_amount = enter_quantity * exit_price
 
+                enter_type = self.config['enter']['type']
+                exit_type = self.config['exit']['type']
+
                 # Fill enter and exit modules
                 # TODO: Expire calculation should be based on the 'scale'. It should not be hardcoded '15'
-                trade_obj['enter'] = await StrategyBase._create_enter_module(self.config['enter']['type'], enter_price, enter_quantity, enter_ref_amount, 
+                trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
                                                                         StrategyBase._eval_future_candle_time(dt_index,0,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
-                trade_obj['exit'] = await StrategyBase._create_exit_module(self.config['exit']['type'], enter_price, enter_quantity, exit_price, exit_ref_amount, 
+                trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
                                                                         StrategyBase._eval_future_candle_time(dt_index,0,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
                 # TODO: Check the free amount of quote currency
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']
 
-                # TODO: Apply filter function needs to be added to met the pair-exchange requirements
-                trade_obj = await self.apply_exchange_filters(trade_obj, phase='enter')
+                trade_obj['enter'][enter_type] = await StrategyBase.apply_exchange_filters('enter', 
+                                                                                            enter_type, 
+                                                                                            trade_obj['enter'][enter_type], 
+                                                                                            self.symbol_info)
+
+                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
+                    # TODO: Notification about min_notional
+                    continue
 
                 # Normally trade id should be unique and be given by the broker. Until it is executed assign the current ts. It will be updated at execution anyway
                 trade_objects.append(trade_obj)
