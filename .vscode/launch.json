@@ -49,7 +49,7 @@
             "program": ".\\live-engine.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\live-always-enter\\config.json"
+                ".\\test\\sessions\\live\\config.json"
             ]
         }
     ]

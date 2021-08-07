@@ -206,7 +206,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
 
             elif TYPE_OCO in lto_list[i]['exit'].keys():
                 oco_limit_orderId = lto_list[i]['exit'][TYPE_OCO]['orderId'] # Get the orderId of the enter module
-                oco_stopLoss_orderId = lto_list[i]['exit'][TYPE_OCO]['stopLoss_orderId'] # Get the orderId of the enter module
+                oco_stopLimit_orderId = lto_list[i]['exit'][TYPE_OCO]['stopLimit_orderId'] # Get the orderId of the enter module
 
                 if orders_dict[oco_limit_orderId]['status'] == 'EXPIRED':
 
@@ -216,8 +216,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['cause'] = STAT_CLOSED
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLoss_orderId]['price'])
-                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_stopLoss_orderId]['executedQty'])
+                    lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLimit_orderId]['price'])
+                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_stopLimit_orderId]['executedQty'])
                     lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
@@ -288,9 +288,11 @@ async def application(strategy_list, bwrapper, telbot):
 
     # NOTE: Only works once
     # TODO: NEXT: Retest here
-    if len(lto_list) and lto_list[0]['']:
-        for lto in lto_list:
-            orders = await lto_manipulator.change_order_to_filled(lto, orders)
+    if len(lto_list): 
+        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
+        orders = await lto_manipulator.limit_maker_taken_oco([lto_list[0]], orders)
+        orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),

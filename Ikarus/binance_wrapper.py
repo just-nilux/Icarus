@@ -344,7 +344,8 @@ class BinanceWrapper():
                     elif lto_list[i]['status'] == STAT_EXIT_EXP:
                         lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
-                        self.logger.info(f'LTO {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["expire"]}')
+                        exit_type = self.config["strategy"][lto_list[i]['strategy']]["exit"]["type"]
+                        self.logger.info(f'LTO {lto_list[i]["exit"][exit_type]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][exit_type]["expire"]}')
 
                     else: pass
 

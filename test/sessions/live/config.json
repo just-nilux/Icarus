@@ -1,5 +1,5 @@
 {
-    "tag": "test-bot",
+    "tag": "bot",
     "log-level": "INFO",
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
@@ -17,7 +17,7 @@
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -31,7 +31,7 @@
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
