@@ -2,7 +2,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils, lto_manipulator
+from Ikarus import strategies, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -11,6 +11,8 @@ import sys
 import copy
 import bson
 import time
+from itertools import chain, groupby
+import operator
 
 # Global Variables
 SYSTEM_STATUS = 0
@@ -204,7 +206,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
 
             elif TYPE_OCO in lto_list[i]['exit'].keys():
                 oco_limit_orderId = lto_list[i]['exit'][TYPE_OCO]['orderId'] # Get the orderId of the enter module
-                oco_stopLoss_orderId = lto_list[i]['exit'][TYPE_OCO]['stopLoss_orderId'] # Get the orderId of the enter module
+                oco_stopLimit_orderId = lto_list[i]['exit'][TYPE_OCO]['stopLimit_orderId'] # Get the orderId of the enter module
 
                 if orders_dict[oco_limit_orderId]['status'] == 'EXPIRED':
 
@@ -214,8 +216,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['cause'] = STAT_CLOSED
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLoss_orderId]['price'])
-                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_stopLoss_orderId]['executedQty'])
+                    lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLimit_orderId]['price'])
+                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_stopLimit_orderId]['executedQty'])
                     lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
@@ -260,7 +262,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     return lto_list
 
 
-async def application(bwrapper, telbot):
+async def application(strategy_list, bwrapper, telbot):
 
     # NOTE: current_ts is the open time of the current live candle (open time)
     # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
@@ -269,7 +271,7 @@ async def application(bwrapper, telbot):
     current_ts *= 1000                  # Make the resolution milisecond
     logger.info(f'Ikarus Time: [{current_ts}]')
 
-    pair_list = config['data_input']['pairs']
+    pair_list = config['data_input']['all_pairs']
     
     #################### Phase 1: Perform pre-calculation tasks ####################
     logger.debug('Phase 1 started')
@@ -285,8 +287,12 @@ async def application(bwrapper, telbot):
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     # NOTE: Only works once
-    #if len(lto_list):
-    #    orders = await lto_manipulator.change_order_to_filled(lto_list[0], orders)
+    # TODO: NEXT: Retest here
+    if len(lto_list): 
+        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
+        orders = await lto_manipulator.limit_maker_taken_oco([lto_list[0]], orders)
+        orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
@@ -298,7 +304,18 @@ async def application(bwrapper, telbot):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2 started')
 
-    nto_list = await strategy.run(analysis_dict, lto_list, df_balance, current_ts)
+    #nto_list = await strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)
+    # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
+    grouped_ltos = {}
+    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
+        grouped_ltos[strategy] = list(lto)
+
+    strategy_tasks = []
+    for strategy in strategy_list:
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+
+    strategy_decisions = list(await asyncio.gather(*strategy_tasks))
+    nto_list = list(chain(*strategy_decisions))
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -306,7 +323,6 @@ async def application(bwrapper, telbot):
         nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
         # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
-    
     #################### Phase 3: Perform post-calculation tasks ####################
     logger.debug('Phase 3 started')
 
@@ -335,7 +351,11 @@ async def main(smallest_interval):
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    strategy.symbol_info = await client.get_symbol_info(config['data_input']['pairs'][0]) # NOTE: Multiple pair not supported
+    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
+
+    strategy_manager = strategies.StrategyManager(config, symbol_info)
+    strategy_list = strategy_manager.get_strategies()
+
     bwrapper = binance_wrapper.BinanceWrapper(client, config)
     telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
 
@@ -366,7 +386,7 @@ async def main(smallest_interval):
             # NOTE: The logic below, executes the app default per minute. This should be generalized
             start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1  # (x minute) * (60 sec) + (1 second) ahead
             logger.info(f'Cycle start time: {start_ts}')
-            result = await asyncio.create_task(run_at(start_ts, application(bwrapper, telbot)))
+            result = await asyncio.create_task(run_at(start_ts, application(strategy_list, bwrapper, telbot)))
             
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
@@ -414,7 +434,6 @@ if __name__ == "__main__":
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy = live_strategies.AlwaysEnter(config)
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")

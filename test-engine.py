@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, backtest_strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, strategies, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -11,7 +11,8 @@ import sys
 from scripts import fplot as fp
 import copy
 import bson
-import time
+from itertools import chain, groupby
+import operator
 
 # Global Variables
 SYSTEM_STATUS = 0
@@ -166,20 +167,21 @@ async def evaluate_stats():
     logger.info('Total enter_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_ENTER_EXP})))
     logger.info('Total exit_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_EXIT_EXP})))
     logger.info('Total closed trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_CLOSED})))
+    logger.info('Total open trades: {}'.format(await mongocli.count("live-trades", {})))
     
     exit_expire_pipe = [
         {"$match":{"result.cause":{"$eq":"exit_expire"}}},
         {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
     ]
     exit_expire_profit = await mongocli.do_find("hist-trades", exit_expire_pipe)
-    logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
+    if len(exit_expire_profit): logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
     
     closed_pipe = [
         {"$match":{"result.cause":{"$eq":"closed"}}},
         {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
     ]
     closed_profit = await mongocli.do_find("hist-trades", closed_pipe)
-    logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
+    if len(closed_profit):  logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
 
     last_balance = await mongocli.get_last_doc("observer")
     for balance in last_balance['balances']:
@@ -403,7 +405,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
     return lto_list
 
 
-async def application(bwrapper, pair_list, df_list):
+async def application(strategy_list, bwrapper, pair_list, df_list):
 
     #################### Phase 1: Perform pre-calculation tasks ####################
     #current_ts = int(df_list[0].index[-1])
@@ -412,7 +414,8 @@ async def application(bwrapper, pair_list, df_list):
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
     current_ts = int(df_list[0]['close_time'].iloc[-1] + 1) 
-
+    logger.info(f'Ikarus Time: [{current_ts}]')
+    
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
 
@@ -434,8 +437,18 @@ async def application(bwrapper, pair_list, df_list):
     analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
 
     # 2.2: Algorithm is the only authority to make decision
-    # NOTE: Execution of multiple strategy is possible, if 'strategy': 'sample_oco_strategy' like items added to the TOs
-    nto_list = await asyncio.create_task(strategy.run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
+    #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
+    # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
+    grouped_ltos = {}
+    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
+        grouped_ltos[strategy] = list(lto)
+
+    strategy_tasks = []
+    for strategy in strategy_list:
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+    
+    strategy_decisions = list(await asyncio.gather(*strategy_tasks))
+    nto_list = list(chain(*strategy_decisions))
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -463,10 +476,13 @@ async def application(bwrapper, pair_list, df_list):
 async def main():
 
     # NOTE: Temporary hack for yesting without internet connection
-    #client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
-    #                                  api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+    client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
+                                      api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
 
-    client = 'mock_client'
+    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
+
+    strategy_manager = strategies.StrategyManager(config, symbol_info)
+    strategy_list = strategy_manager.get_strategies()
 
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
@@ -509,7 +525,7 @@ async def main():
         df_list = []
         for df in df_csv_list:
             df_list.append(df.iloc[i:i+hist_data_length])
-        await application(bwrapper, pair_list, df_list)
+        await application(strategy_list, bwrapper, pair_list, df_list)
 
     # Get [hist-trades] docs to visualize the session
     df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
@@ -524,7 +540,7 @@ async def main():
     await evaluate_stats()
 
     # Visualize the test session
-    fp.buy_sell(df_csv_list[0], df_closed_hto, df_enter_expire, df_exit_expire)
+    fp.buy_sell(df=df_csv_list[0], df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
 if __name__ == '__main__':
     
@@ -554,15 +570,11 @@ if __name__ == '__main__':
     # Setup initial objects
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-    strategy = backtest_strategies.OCOBackTest(config)
 
-    # TODO: In case of multiple strategies, there should be a list of strategy to be given to app or it the strategy list can be global
-    # Available strategies, can be kept in a 'strategies_list' variable instead of single object
-    #
-    # NOTE: Multiple analyzers not needed because an analyzer can be configured to work with multiple 'scales' and 'pairs'.
+    # NOTE: Multiple analyzers not needed because an analyzer can be configured to work with multiple 'scales' and 'all_pairs'.
     #       It may provide different analysis results as an item in the analysis objects.
     # NOTE: Suppose there are multiple 'time scales' for a 'pair'. In this case, the output of all of the 'scales' are used to generate a common analysis for a 'pair'
-    #       In other words, there will one-to-one mapping between 'pairs' and the analysis items.
+    #       In other words, there will one-to-one mapping between 'all_pairs' and the analysis items.
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")

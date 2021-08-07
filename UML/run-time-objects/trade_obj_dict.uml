@@ -2,6 +2,7 @@
 [{
     "_id": "current timestamp",
     "decision_time": "[dt index of obj creation]",
+    "strategy": "['strategy name']",
     "status": "",
     "enter": {
       "limit": {
@@ -172,4 +173,4 @@ market-------/         \-----market
 
 NOTE: OCO has 2 orderId:
     - orderId: orderId of the orders with the type LIMIT_MAKER
-    - stopLoss_orderId: orderId of the orders with the type STOP_LOSS_LIMIT
+    - stopLimit_orderId: orderId of the orders with the type STOP_LOSS_LIMIT

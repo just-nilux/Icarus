@@ -155,9 +155,9 @@ class BinanceWrapper():
             if lto['status'] == STAT_OPEN_ENTER:
                 coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter'][TYPE_LIMIT]['orderId']))
             elif lto['status'] == STAT_OPEN_EXIT:
-                if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
+                if self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_LIMIT:
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_LIMIT]['orderId']))
-                elif self.config['strategy']['exit']['type'] == TYPE_OCO:
+                elif self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_OCO:
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['orderId']))
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['stopLimit_orderId']))
             else: pass
@@ -259,39 +259,43 @@ class BinanceWrapper():
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
+                    
+                    try:
+                        response = await self.client.order_market_sell(
+                            symbol=lto_list[i]['pair'],
+                            quantity=lto_list[i]['pair'])
 
-                    response = await self.client.order_market_sell(
-                        symbol=lto_list[i]['pair'],
-                        quantity=lto_list[i]['pair'])
+                    except Exception as e:
+                        self.logger.error(e)
+                        # TODO: Notification
 
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
-                    lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['fills']
+                    else:
+                        lto_list[i]['status'] = STAT_CLOSED
+                        lto_list[i]['history'].append(lto_list[i]['status'])
+                        lto_list[i]['result']['cause'] = STAT_EXIT_EXP
+                        lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['fills']
 
-                    lto_list[i]['result']['exit']['type'] = TYPE_MARKET
+                        lto_list[i]['result']['exit']['type'] = TYPE_MARKET
 
-                    # TODO: Multiple time scale is not supported
-                    current_time = int(response['transactTime']/1000)                                               # exact second
-                    current_time -= (current_time % 60)                                                             # exact minute
-                    current_time -= (current_time % (self.config['data_input']['scales_in_minute'][0]*60))          # exact scale
-                    current_time -= (self.config['data_input']['scales_in_minute'][0]*60)                           # -scale
+                        # TODO: Multiple time scale is not supported
+                        current_time = int(response['transactTime']/1000)                                               # exact second
+                        current_time -= (current_time % 60)                                                             # exact minute
+                        current_time -= (current_time % (self.config['data_input']['scales_in_minute'][0]*60))          # exact scale
+                        current_time -= (self.config['data_input']['scales_in_minute'][0]*60)                           # -scale
 
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(current_time)
-                    # NOTE: Sum of fills
-                    lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]))
-                    lto_list[i]['result']['exit']['quantity'] = float(sum([float(fill['qty']) for fill in response['fills']]))
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                        lto_list[i]['result']['exit']['time'] = bson.Int64(current_time)
+                        # NOTE: Sum of fills
+                        lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]))
+                        lto_list[i]['result']['exit']['quantity'] = float(sum([float(fill['qty']) for fill in response['fills']]))
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
-                    lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
-                    pass
+                        lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                        lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
-                    # TODO: Test the OCO
                     try:
-                        if self.config['strategy']['exit']['type'] == TYPE_LIMIT:
+                        if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
                             response = await self.client.order_limit_sell(
                                 symbol=lto_list[i]['pair'],
                                 quantity=lto_list[i]['exit'][TYPE_LIMIT]['quantity'],
@@ -300,7 +304,7 @@ class BinanceWrapper():
                             self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
                             lto_list[i]['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
 
-                        elif self.config['strategy']['exit']['type'] == TYPE_OCO:
+                        elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
                             response = await self.client.create_oco_order(
                                 symbol=lto_list[i]['pair'],
                                 side=SIDE_SELL,
@@ -340,7 +344,8 @@ class BinanceWrapper():
                     elif lto_list[i]['status'] == STAT_EXIT_EXP:
                         lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
-                        self.logger.info(f'LTO {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][self.config["strategy"]["exit"]["type"]]["expire"]}')
+                        exit_type = self.config["strategy"][lto_list[i]['strategy']]["exit"]["type"]
+                        self.logger.info(f'LTO {lto_list[i]["exit"][exit_type]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][exit_type]["expire"]}')
 
                     else: pass
 

@@ -1,0 +1,56 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Geçerli Dosya",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "test-binance-api",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\scripts\\test-binance-api.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "mongo_utils",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\Ikarus\\mongo_utils.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "visualize_test_session",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\scripts\\visualize_test_session.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "test-engine",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\test-engine.py",
+            "console": "integratedTerminal",
+            "args": [
+                ".\\test\\sessions\\multi_strategy\\config.json"
+            ]
+        },
+        {
+            "name": "live-engine",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\live-engine.py",
+            "console": "integratedTerminal",
+            "args": [
+                ".\\test\\sessions\\live\\config.json"
+            ]
+        }
+    ]
+}

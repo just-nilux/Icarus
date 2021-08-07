@@ -1,42 +1,41 @@
-import asyncio
-from binance import AsyncClient
-from datetime import datetime
-import json
-from Ikarus import binance_wrapper, live_strategies, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
-import logging
-from logging.handlers import TimedRotatingFileHandler
-import pandas as pd
-import sys
-import copy
-import bson
-import time
 
-# Global Variables
-SYSTEM_STATUS = 0
-STATUS_TIMEOUT = 0
+async def fill_open_enter(lto_list, orders):
 
-async def change_order_to_filled(lto, orders):
+    for lto in lto_list:
+        if lto['status'] == 'open_enter': 
+            orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] = 'FILLED'
+            orders[lto['enter'][TYPE_LIMIT]['orderId']]['executedQty'] = str(lto['enter'][TYPE_LIMIT]['quantity'])
 
-    '''
-    {
-        "symbol": "BTCUSDT",
-        "orderId": 6953206668,
-        "orderListId": -1,
-        "clientOrderId": "ICPxru6UnQNL3EVAeMjoGi",
-        "transactTime": 1627394453186,
-        "price": "19245.54000000",
-        "origQty": "0.00519600",
-        "executedQty": "0.00000000",
-        "cummulativeQuoteQty": "0.00000000",
-        "status": "NEW",
-        "timeInForce": "GTC",
-        "type": "LIMIT",
-        "side": "BUY",
-        "fills": []
-    }
-    '''
-    orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] = 'FILLED'
-    orders[lto['enter'][TYPE_LIMIT]['orderId']]['executedQty'] = str(lto['enter'][TYPE_LIMIT]['quantity'])
+    return orders
+
+async def fill_open_exit_limit(lto_list, orders):
+
+    for lto in lto_list:
+        if lto['status'] == 'open_exit': 
+            orders[lto['exit'][TYPE_LIMIT]['orderId']]['status'] = 'FILLED'
+            orders[lto['exit'][TYPE_LIMIT]['orderId']]['executedQty'] = str(lto['exit'][TYPE_LIMIT]['quantity'])
+
+    return orders
+
+async def stoploss_taken_oco(lto_list, orders):
+
+    for lto in lto_list:
+        if lto['status'] == 'open_exit': 
+            stopLimit_orderId = lto['exit'][TYPE_OCO]['stopLimit_orderId']
+            orders[lto['exit'][TYPE_OCO]['orderId']]['status'] = 'EXPIRED'
+            orders[stopLimit_orderId]['status'] = 'FILLED'
+            orders[stopLimit_orderId]['executedQty'] = str(lto['exit'][TYPE_OCO]['quantity'])
+            # NOTE: No need to update the limit_maker to expired
+
+    return orders
+
+async def limit_maker_taken_oco(lto_list, orders):
+
+    for lto in lto_list:
+        if lto['status'] == 'open_exit': 
+            orders[lto['exit'][TYPE_OCO]['orderId']]['status'] = 'FILLED'
+            orders[lto['exit'][TYPE_OCO]['orderId']]['executedQty'] = str(lto['exit'][TYPE_OCO]['quantity'])
+            # NOTE: No need to update the stop_limit to expired
 
     return orders
