@@ -12,7 +12,7 @@ class MongoClient():
     
     def __init__(self, _host, _port, _db='bot', clean=False) -> None:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
-        self.logger = logging.getLogger('app.{}'.format(__name__))
+        self.logger = logging.getLogger('{}'.format(__name__))
 
         # Drop the db if it is no the main one
         if clean:

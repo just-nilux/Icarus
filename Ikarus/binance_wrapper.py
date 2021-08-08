@@ -112,7 +112,7 @@ class BinanceWrapper():
         Returns:
             dict: [description]
         """
-        self.logger.info('get_data_dict started')
+        self.logger.debug('get_data_dict started')
 
         tasks_klines_scales = []
         for pair in pairs:
@@ -120,15 +120,13 @@ class BinanceWrapper():
                 tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
 
         #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))
-        self.logger.info('composit_klines started')
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
-        self.logger.info('composit_klines ended')
 
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
         #await self.dump_data_obj(data_dict)
         # NOTE: Keep in mind that the last row is the current candle that has not been completed
-        self.logger.info('get_data_dict ended')
+        self.logger.debug('get_data_dict ended')
         return data_dict
 
 
@@ -146,7 +144,7 @@ class BinanceWrapper():
         Returns:
             list: lto_list
         """
-        self.logger.info('get_lto_orders started')
+        self.logger.debug('get_lto_orders started')
 
         # Check the status of LTOs:
         coroutines = []
@@ -167,40 +165,9 @@ class BinanceWrapper():
             for order in list(await asyncio.gather(*coroutines)):
                 lto_orders_dict[order['orderId']] = order
         
-        #await self.get_open_orders()
-        self.logger.info('get_lto_orders started')
+        self.logger.debug('get_lto_orders started')
 
         return lto_orders_dict
-
-
-    async def get_open_orders(self):
-        """
-        This method returns all the open orders. 
-        It might be useful to detect if there is an external source of order and keep track
-
-        Returns:
-            [type]: [description]
-        """
-        # NOTE: Currently it is not needed to take the external orders in account.
-        # TODO: Decide what to do with all orders or all open orders
-        orders = await self.client.get_order(symbol='BLZUSDT', orderId=173122044) # OCO-LIMIT SUCCESFULL / MULTIPLE COMISSION
-        orders = await self.client.get_order(symbol='BLZUSDT', orderId=173122043) # OCO-STOPLOSS EXPIRED
-
-        orders = await self.client.get_order(symbol='BTCUSDT', orderId=6002017720) # SUCCESFUL
-        orders = await self.client.get_order(symbol='AVAXUSDT', orderId=340304592) # CANCEL
-        orders = await self.client.get_order(symbol='DOGETRY', orderId=67156655) # OCO-STOPLOSS
-        orders = await self.client.get_order(symbol='DOGETRY', orderId=67156656) # OCO-LIMIT EXPIRED
-
-
-        orders = await self.client.get_open_orders(symbol='BTCUSDT')         
-        orders = await self.client.get_open_orders(symbol='XRPUSDT')
-        orders = await self.client.get_open_orders(symbol='AVAXUSDT')
-
-        orders = await self.client.get_all_orders(symbol='BTCUSDT')
-        orders = await self.client.get_all_orders(symbol='AVAXUSDT')
-        orders = await self.client.get_all_orders(symbol='XRPUSDT')
-
-        return orders
 
 
     async def monitor_account(self):
@@ -334,7 +301,7 @@ class BinanceWrapper():
                         lto_list[i]['history'].append(lto_list[i]['status'])
 
                 # Postpone can be for the enter or the exit phase
-                elif lto_list[i]['action'] == 'postpone':
+                elif lto_list[i]['action'] == ACTN_POSTPONE:
 
                     if lto_list[i]['status'] == STAT_ENTER_EXP:
                         lto_list[i]['status'] = STAT_OPEN_ENTER
@@ -703,6 +670,17 @@ class TestBinanceWrapper():
                     df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
             
                 elif lto_list[i]['action'] == ACTN_UPDATE:
+                    lto_list[i]['status'] = STAT_OPEN_EXIT
+                    '''
+                    - Since the enter is succesful, the quantity to exit is already determined.
+                    - Uptate operation will cause the locked base asset to go to free and locked again since the quantity will not change
+                    - Thus no need to update df_balance
+                    '''
+                    
+                    # Cancel the order
+
+                    # Place the order
+                    # NOTE: No need to do anything for backtest
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
@@ -748,7 +726,7 @@ class TestBinanceWrapper():
                     pass
 
                 # Postpone can be for the enter or the exit phase
-                elif lto_list[i]['action'] == 'postpone':
+                elif lto_list[i]['action'] == ACTN_POSTPONE:
                     if lto_list[i]['status'] == STAT_ENTER_EXP:
                         lto_list[i]['status'] = STAT_OPEN_ENTER
                         lto_list[i]['history'].append(lto_list[i]['status'])
@@ -767,27 +745,12 @@ class TestBinanceWrapper():
 
     async def _execute_nto(self, nto_list, df_balance):
         """
-        for i in range(len(nto_list)):
-            1. open_enter
-                a. market
-                    - Get the 'result'
-                b. limit
-            2. partially_closed_enter
-                -
-            3. open_exit
-                a. market
-                    - Get the 'result'
-                b. limit
-                c. oco
-            4. partially_closed_exit
-            -
-
         Args:
-            trade_dict (dict): [description]
+            nto_list (list): [description]
             df_balances (pd.DataFrame): [description]
 
         Returns:
-            [type]: [description]
+            tuple: nto_list, df_balance
         """
         for i in range(len(nto_list)):
             # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update

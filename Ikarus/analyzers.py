@@ -61,7 +61,6 @@ class Analyzer():
 
             analysis_dict[pair] = analysis_obj
 
-        # await self.dump(analysis_dict)
         return analysis_dict
 
 

@@ -148,7 +148,7 @@ def fplot(filename=None):
 
 
 def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame()):
-    
+
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
 
@@ -162,7 +162,7 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
     # Exit expired trade visualization
     if not df_exit_expire.empty:
         _add_exit_expire_tos(df_exit_expire)
-    
+
     if not df_closed.empty:
         _add_closed_tos(ax, df_closed) # NOTE: Plot the closed ones last to make sure they are in front
 
@@ -214,13 +214,25 @@ def _add_closed_tos(ax, df_closed):
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
 
     df_closed.set_index('decision_time',inplace=True)
-    df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_decision_time')
+    if len(df_closed.index) == len(set(df_closed.index)):
+        #df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_decision_time')
+        fplt.plot(df_closed['enterPrice'], color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
+
+    else:
+        print("Duplicate index on df_closed decision_time")
 
     df_closed.set_index('exitTime',inplace=True)
-    df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
+    if len(df_closed.index) == len(set(df_closed.index)):
+        #df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
+        fplt.plot(df_closed['sellPrice'], color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
+    else:
+        print("Duplicate index on df_closed exitTime")
 
     df_closed.set_index('enterTime',inplace=True)
-    df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+    if len(df_closed.index) == len(set(df_closed.index)):
+        df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+    else:
+        print("Duplicate index on df_closed exitTime")
     # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
 
 

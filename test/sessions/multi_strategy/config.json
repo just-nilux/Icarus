@@ -39,7 +39,7 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
+                "exit_expire": "update"
             },
             "max_lto": 1
         },
@@ -53,7 +53,7 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
+                "exit_expire": "update"
             },
             "max_lto": 1
         },
@@ -67,7 +67,7 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
+                "exit_expire": "update"
             },
             "max_lto": 1
         }
