@@ -174,6 +174,61 @@ class BinanceWrapper():
         return True
 
 
+    async def _execute_oco_sell(self, lto):
+        try:
+            response = await self.client.create_oco_order(
+                symbol=lto['pair'],
+                side=SIDE_SELL,
+                quantity=lto['exit'][TYPE_OCO]['quantity'],
+                price=lto['exit'][TYPE_OCO]['limitPrice'],
+                stopPrice=lto['exit'][TYPE_OCO]['stopPrice'],
+                stopLimitPrice=lto['exit'][TYPE_OCO]['stopLimitPrice'],
+                stopLimitTimeInForce=TIME_IN_FORCE_GTC)
+
+            if response['orderReports'][0]['status'] != 'NEW' or response['orderReports'][1]['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+
+        except Exception as e:
+            self.logger.error(e)
+            return lto
+
+        else:
+            response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
+            self.logger.info(f'LTO {response_limit_maker["orderId"]}: {response_limit_maker["side"]} {response_limit_maker["type"]} order placed')
+            self.logger.info(f'LTO {response_stoploss["orderId"]}: {response_stoploss["side"]} {response_stoploss["type"]} order placed')
+
+            lto['exit'][TYPE_OCO]['orderId'] = response_limit_maker['orderId']
+            lto['exit'][TYPE_OCO]['stopLimit_orderId'] = response_stoploss['orderId']
+
+            lto['status'] = STAT_OPEN_EXIT
+            lto['history'].append(lto['status'])
+
+            return lto
+
+
+    async def _execute_limit_sell(self, lto):
+        try:
+            response = await self.client.order_limit_sell(
+                symbol=lto['pair'],
+                quantity=lto['exit'][TYPE_LIMIT]['quantity'],
+                price=lto['exit'][TYPE_LIMIT]['price'])
+
+            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+
+        except Exception as e:
+            self.logger.error(e)
+            return lto
+
+        else:
+            self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
+
+            lto['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
+
+            lto['status'] = STAT_OPEN_EXIT
+            lto['history'].append(lto['status'])
+
+            return lto
+
+
     async def _execute_lto(self, lto_list):
         """
         Execution Logic:
@@ -197,7 +252,7 @@ class BinanceWrapper():
         """
         for i in range(len(lto_list)):
             if 'action' in lto_list[i].keys():
-
+                self.logger.info(f"Handling action: \"{lto_list[i]['action']}\" for lto: \"{lto_list[i]['_id']}\"")
                 # NOTE: Consider the fact that each pair may contain more than 1 trade in future
                 if lto_list[i]['action'] == ACTN_CANCEL:
                     # TODO: NEXT: Add cancel for EXIT
@@ -220,8 +275,26 @@ class BinanceWrapper():
                         # TODO: Notification
             
                 elif lto_list[i]['action'] == ACTN_UPDATE:
-                    pass
-                
+                    '''
+                    ACTN_UPDATE can only exist in the exit phase, thus no check for status
+                    '''
+                    exit_type = self.config['strategy'][lto_list[i]['strategy']]['exit']['type']
+                    # Cancel the order
+                    response = await self.client.cancel_order(
+                        symbol=lto_list[i]['pair'],
+                        orderId=lto_list[i]['exit'][exit_type]['orderId'])
+                        
+                    # Place the order
+                    '''
+                    No need to check the error case because if the order could not be placed due to some reason,
+                    there is no way other then retry. Status will stay like 'STAT_EXIT_EXP', lto_update will not do anything,
+                    strategy will create a new update action and send it here in the next cycle
+                    '''
+                    if exit_type == TYPE_OCO:
+                        lto_list[i] = await self._execute_oco_sell(lto_list[i])
+                    elif exit_type == TYPE_LIMIT:
+                        lto_list[i] = await self._execute_limit_sell(lto_list[i])
+
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
                 
@@ -261,44 +334,21 @@ class BinanceWrapper():
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
-                    try:
-                        if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
-                            response = await self.client.order_limit_sell(
-                                symbol=lto_list[i]['pair'],
-                                quantity=lto_list[i]['exit'][TYPE_LIMIT]['quantity'],
-                                price=lto_list[i]['exit'][TYPE_LIMIT]['price'])
-                            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-                            self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
-                            lto_list[i]['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
+                    
+                    '''
+                    No need to check the error case because if the order could not be placed due to some reason,
+                    there is no way other then retry. Status will stay like 'STAT_WAITING_EXIT', lto_update will not do anything,
+                    strategy will not do anything and the flow will come here to do the same execution again
 
-                        elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
-                            response = await self.client.create_oco_order(
-                                symbol=lto_list[i]['pair'],
-                                side=SIDE_SELL,
-                                quantity=lto_list[i]['exit'][TYPE_OCO]['quantity'],
-                                price=lto_list[i]['exit'][TYPE_OCO]['limitPrice'],
-                                stopPrice=lto_list[i]['exit'][TYPE_OCO]['stopPrice'],
-                                stopLimitPrice=lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice'],
-                                stopLimitTimeInForce=TIME_IN_FORCE_GTC)
-
-                            if response['orderReports'][0]['status'] != 'NEW' or response['orderReports'][1]['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-
-                            response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
-
-                            lto_list[i]['exit'][TYPE_OCO]['orderId'] = response_limit_maker['orderId']
-                            self.logger.info(f'LTO {response_limit_maker["orderId"]}: {response_limit_maker["side"]} {response_limit_maker["type"]} order placed')
-
-                            lto_list[i]['exit'][TYPE_OCO]['stopLimit_orderId'] = response_stoploss['orderId']
-                            self.logger.info(f'LTO {response_stoploss["orderId"]}: {response_stoploss["side"]} {response_stoploss["type"]} order placed')
-
-                        else: pass
-                    except Exception as e:
-                        self.logger.error(e)
-                        # TODO: Notification
-
-                    else:
-                        lto_list[i]['status'] = STAT_OPEN_EXIT
-                        lto_list[i]['history'].append(lto_list[i]['status'])
+                    An alternative solution might be changing the status as 'open_exit', so that in the next iteration, exit module might be
+                    updated to fix the problems such as filters etc. In this case the question is: Then what was wrong with the first time?
+                    '''
+                    # TODO: NEXT: Where is this error coming from:
+                    # [APIError(code=-1100): Illegal characters found in parameter 'quantity'; legal range is '^([0-9]{1,20})(\.[0-9]{1,20})?$'.]
+                    if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
+                        lto_list[i] = await self._execute_limit_sell(lto_list[i])
+                    elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
+                        lto_list[i] = await self._execute_oco_sell(lto_list[i])
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == ACTN_POSTPONE:

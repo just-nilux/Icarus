@@ -70,7 +70,10 @@ async def run_at(dt, coro):
 
 
 async def write_updated_ltos_to_db(lto_list, lto_list_original):
-
+    '''
+    Consider the fact that if one of the lto execution does not work such as 'waiting_exit' execution or 
+    'update' action due to 'exit_expire' which was 'open_exit' previously,
+    '''
     for lto in lto_list:
 
         # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
@@ -81,9 +84,13 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] == STAT_OPEN_EXIT:
-            # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
-            # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
+        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP] :
+            '''
+            STAT_OPEN_EXIT:     Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec succesful,
+            STAT_WAITING_EXIT:  Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec unsuccesful,
+            STAT_EXIT_EXP:      Exit_expired occured and 'update' or 'market_exit' actions are not succesfully executed
+            '''
+            # TODO: NEXT: Retest these 3 section
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
@@ -91,7 +98,8 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
                         lto['status'],
                         'exit':lto['exit'],
                         'result.enter':lto['result']['enter'],
-                        'history':lto['history'] 
+                        'history':lto['history'],
+                        'update_history':lto['update_history'],
                     }})
                 
         elif lto['status'] == STAT_OPEN_ENTER:
@@ -284,8 +292,8 @@ async def application(strategy_list, bwrapper, telbot):
     if len(lto_list): 
         orders = await lto_manipulator.fill_open_enter(lto_list, orders)
         #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
-        orders = await lto_manipulator.limit_maker_taken_oco([lto_list[0]], orders)
-        orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
+        #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
+        #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),

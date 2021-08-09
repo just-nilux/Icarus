@@ -222,6 +222,14 @@ class FallingKnifeCatcher(StrategyBase):
                     lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
                 skip_calculation = True
 
+                # Apply the filters
+                # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
+                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                    self.config['exit']['type'], 
+                                                                                                    lto['exit'][self.config['exit']['type']], 
+                                                                                                    self.symbol_info, 
+                                                                                                    exit_qty=lto['result']['enter']['quantity'])
+
             else: pass
 
         elif lto['status'] == STAT_WAITING_EXIT:
@@ -425,6 +433,14 @@ class OCOBackTest(StrategyBase):
                     lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
                 skip_calculation = True
 
+                # Apply the filters
+                # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
+                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                    self.config['exit']['type'], 
+                                                                                                    lto['exit'][self.config['exit']['type']], 
+                                                                                                    self.symbol_info, 
+                                                                                                    exit_qty=lto['result']['enter']['quantity'])
+
             else: pass
 
         elif lto['status'] == STAT_WAITING_EXIT:
@@ -626,13 +642,21 @@ class AlwaysEnter(StrategyBase):
                 if self.config['exit']['type'] == TYPE_LIMIT:
                     lto['exit'][TYPE_LIMIT]['price'] *= 0.99
                     lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
-                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,self.scales_in_minute[0])
 
                 elif self.config['exit']['type'] == TYPE_OCO:
                     lto['exit'][TYPE_OCO]['limitPrice'] *= 0.99
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
-                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,self.scales_in_minute[0])
                 skip_calculation = True
+
+                # Apply the filters
+                # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
+                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                    self.config['exit']['type'], 
+                                                                                                    lto['exit'][self.config['exit']['type']], 
+                                                                                                    self.symbol_info, 
+                                                                                                    exit_qty=lto['result']['enter']['quantity'])
 
             else: pass
 
@@ -813,14 +837,21 @@ class AlwaysEnter90(StrategyBase):
                 if self.config['exit']['type'] == TYPE_LIMIT:
                     lto['exit'][TYPE_LIMIT]['price'] *= 0.99
                     lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
-                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,self.scales_in_minute[0])
 
                 elif self.config['exit']['type'] == TYPE_OCO:
                     lto['exit'][TYPE_OCO]['limitPrice'] *= 0.99
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
-                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,self.scales_in_minute[0])
                 skip_calculation = True
 
+                # Apply the filters
+                # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
+                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+                                                                                                    self.config['exit']['type'], 
+                                                                                                    lto['exit'][self.config['exit']['type']], 
+                                                                                                    self.symbol_info, 
+                                                                                                    exit_qty=lto['result']['enter']['quantity'])
             else: pass
 
         elif lto['status'] == STAT_WAITING_EXIT:
