@@ -213,27 +213,32 @@ def _add_closed_tos(ax, df_closed):
         fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
 
-    df_closed.set_index('decision_time',inplace=True)
-    if len(df_closed.index) == len(set(df_closed.index)):
-        #df_closed['enterPrice'].plot(kind='scatter', color='#0000ff', width=2, ax=ax, zoomscale=False, style="t2", legend='closed_decision_time')
-        fplt.plot(df_closed['enterPrice'], color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
 
-    else:
-        print("Duplicate index on df_closed decision_time")
+    # TODO: NEXT: Visualiztion of updated order, exit target price and sel price become the same if it is updated
+    #               # sellPrice and exitPrice become the same and the rectangle does not appear
+    df_closed.set_index('decision_time',inplace=True)
+    duplicate_filter = df_closed.index.duplicated(keep=False)
+    plot_spec = {'color':'#0000ff','style':'t2', 'ax':ax}
+    _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
 
     df_closed.set_index('exitTime',inplace=True)
-    if len(df_closed.index) == len(set(df_closed.index)):
-        #df_closed['sellPrice'].plot(kind='scatter', color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
-        fplt.plot(df_closed['sellPrice'], color='#ff0000', width=2, ax=ax, zoomscale=False, style='v', legend='sellLimit')
-    else:
-        print("Duplicate index on df_closed exitTime")
+    duplicate_filter = df_closed.index.duplicated(keep=False)
+    plot_spec = {'color':'#ff0000','style':'v', 'ax':ax}
+    _scatter_wrapper(serie=df_closed['sellPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
 
     df_closed.set_index('enterTime',inplace=True)
-    if len(df_closed.index) == len(set(df_closed.index)):
-        df_closed['enterPrice'].plot(kind='scatter', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
-    else:
-        print("Duplicate index on df_closed exitTime")
-    # NOTE: Sample use: df_closed.plot.scatter(x='enterTime', y='enterPrice', color='#00ff00', width=2, ax=ax, zoomscale=False, style='^', legend='buyLimit')
+    duplicate_filter = df_closed.index.duplicated(keep=False)
+    plot_spec = {'color':'#00ff00','style':'^', 'ax':ax}
+    _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
+
+
+def _scatter_wrapper(serie, duplicate_filter, plot_spec):
+    # Visualize Non-duplicates
+    serie[~duplicate_filter].plot(kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'])
+
+    # Visualize Duplicates
+    for row in serie[duplicate_filter].to_frame().iterrows():
+        fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'])
 
 
 if __name__ == '__main__':
