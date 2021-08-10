@@ -197,16 +197,8 @@ class FallingKnifeCatcher(StrategyBase):
             else: pass
 
         elif lto['status'] == STAT_EXIT_EXP:
-            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
-                postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
-                skip_calculation = True
-
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
+            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
                 # TODO: Give a call to methods that calculates exit point
                 # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
                 lto['action'] = ACTN_UPDATE 
@@ -229,6 +221,15 @@ class FallingKnifeCatcher(StrategyBase):
                                                                                                     lto['exit'][self.config['exit']['type']], 
                                                                                                     self.symbol_info, 
                                                                                                     exit_qty=lto['result']['enter']['quantity'])
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
+                postponed_candles = 1
+                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
+                skip_calculation = True
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
+                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
+                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
             else: pass
 
@@ -408,16 +409,8 @@ class OCOBackTest(StrategyBase):
             else: pass
 
         elif lto['status'] == STAT_EXIT_EXP:
-            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
-                postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
-                skip_calculation = True
-
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
+            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
                 # TODO: Give a call to methods that calculates exit point
                 # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
                 lto['action'] = ACTN_UPDATE 
@@ -440,6 +433,15 @@ class OCOBackTest(StrategyBase):
                                                                                                     lto['exit'][self.config['exit']['type']], 
                                                                                                     self.symbol_info, 
                                                                                                     exit_qty=lto['result']['enter']['quantity'])
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
+                postponed_candles = 1
+                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
+                skip_calculation = True
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
+                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
+                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
             else: pass
 
@@ -625,16 +627,8 @@ class AlwaysEnter(StrategyBase):
             else: pass
 
         elif lto['status'] == STAT_EXIT_EXP:
-            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
-                postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
-                skip_calculation = True
-
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
+            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
                 # TODO: Give a call to methods that calculates exit point
                 # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
                 lto['action'] = ACTN_UPDATE 
@@ -657,6 +651,15 @@ class AlwaysEnter(StrategyBase):
                                                                                                     lto['exit'][self.config['exit']['type']], 
                                                                                                     self.symbol_info, 
                                                                                                     exit_qty=lto['result']['enter']['quantity'])
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
+                postponed_candles = 1
+                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
+                skip_calculation = True
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
+                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
+                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
             else: pass
 
@@ -820,16 +823,8 @@ class AlwaysEnter90(StrategyBase):
             else: pass
 
         elif lto['status'] == STAT_EXIT_EXP:
-            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
 
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
-                postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
-                skip_calculation = True
-
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
+            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
                 # TODO: Give a call to methods that calculates exit point
                 # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
                 lto['action'] = ACTN_UPDATE 
@@ -852,6 +847,16 @@ class AlwaysEnter90(StrategyBase):
                                                                                                     lto['exit'][self.config['exit']['type']], 
                                                                                                     self.symbol_info, 
                                                                                                     exit_qty=lto['result']['enter']['quantity'])
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
+                postponed_candles = 1
+                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
+                skip_calculation = True
+
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
+                lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
+                self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
+
             else: pass
 
         elif lto['status'] == STAT_WAITING_EXIT:

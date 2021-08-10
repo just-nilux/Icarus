@@ -84,7 +84,7 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP] :
+        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
             '''
             STAT_OPEN_EXIT:     Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec succesful,
             STAT_WAITING_EXIT:  Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec unsuccesful,

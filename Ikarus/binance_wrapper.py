@@ -189,19 +189,20 @@ class BinanceWrapper():
 
         except Exception as e:
             self.logger.error(e)
+            # TODO: Notification: ERROR
             return lto
 
         else:
             response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
-            self.logger.info(f'LTO {response_limit_maker["orderId"]}: {response_limit_maker["side"]} {response_limit_maker["type"]} order placed')
-            self.logger.info(f'LTO {response_stoploss["orderId"]}: {response_stoploss["side"]} {response_stoploss["type"]} order placed')
+            self.logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order placed: {response_limit_maker["orderId"]}')
+            self.logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order placed: {response_stoploss["orderId"]}')
 
             lto['exit'][TYPE_OCO]['orderId'] = response_limit_maker['orderId']
             lto['exit'][TYPE_OCO]['stopLimit_orderId'] = response_stoploss['orderId']
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-
+            # TODO: Notification: INFO
             return lto
 
 
@@ -216,64 +217,69 @@ class BinanceWrapper():
 
         except Exception as e:
             self.logger.error(e)
+            # TODO: Notification: ERROR
             return lto
 
         else:
-            self.logger.info(f'LTO {response["orderId"]}: exit {response["orderId"]} order placed')
-
+            self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
+            # TODO: Notification: INFO
+            return lto
 
+
+    async def _execute_cancel(self, lto):
+        try:
+            response = await self.client.cancel_order(
+                symbol=lto['pair'],
+                orderId=lto['enter'][TYPE_LIMIT]['orderId'])
+            if response['status'] != 'CANCELED': raise Exception('Response status is not "CANCELED"')
+
+        except Exception as e:
+            self.logger.error(e)
+            # TODO: Notification: ERROR
+            return lto
+
+        else:
+            # TODO: NEXT: Generalize the functio to be used in exit as well in 'update' cases
+            self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
+            #if response["side"] == "SELL" and response["type"] == "LIMIT_MAKER":
+            #    self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "STOP_LOSS_LIMIT" order automatically canceled: {lto["exit"][TYPE_OCO]["stopLimit_orderId"]}')
+                
+            lto['status'] = STAT_CLOSED
+            lto['history'].append(lto['status'])
+            # TODO: Notification: INFO
             return lto
 
 
     async def _execute_lto(self, lto_list):
         """
-        Execution Logic:
-        for i in range(len(lto_list):
-            if 'action' in lto_list[i].keys():
-                1. cancel
-                    In case of enter expire, it might be decided to cancel the order
-                2. update
-                    cancel the prev order and place the same type of order with updated values
-                3. market_enter
-                    In case of enter expire, it might be decided to enter with market order
-                4. market_exit
-                    In case of exit expire, it might be decided to exit with market order
+        The errors during execution of exit orders will left the status:
+        STAT_WAITING_EXIT 
+            write_updated_ltos_to_db will write the status to db,
+            strategy will add the action ACTN_EXEC_EXIT so that LTO will be executed again
+
+        STAT_EXIT_EXP:
+            write_updated_ltos_to_db will write the status to db,
+            strategy will add the action ACTN_UPDATE or ACTN_MARKET_EXIT, so that LTO will be executed again
 
         Args:
-            lto_dict (dict): [description]
-            df_balance (pd.DataFrame): [description]
+            lto_list (list): [description]
 
         Returns:
-            tuple: lto_dict, df_balance
+            tuple: lto_dict
         """
         for i in range(len(lto_list)):
             if 'action' in lto_list[i].keys():
                 self.logger.info(f"Handling action: \"{lto_list[i]['action']}\" for lto: \"{lto_list[i]['_id']}\"")
-                # NOTE: Consider the fact that each pair may contain more than 1 trade in future
                 if lto_list[i]['action'] == ACTN_CANCEL:
                     # TODO: NEXT: Add cancel for EXIT
                     # NOTE: if the status enter expire and the action is cancel than cancel the exit order. vice versa
+                    lto_list[i] = await self._execute_cancel(lto_list[i])
 
-                    try:
-                        response = await self.client.cancel_order(
-                            symbol=lto_list[i]['pair'],
-                            orderId=lto_list[i]['enter'][TYPE_LIMIT]['orderId'])
-                        if response['status'] != 'CANCELED': raise Exception('Response status is not "CANCELED"')
 
-                    except Exception as e:
-                        self.logger.error(e)
-                        # TODO: Notification
-
-                    else:
-                        self.logger.info(f'LTO Canceled: {response["orderId"]}')
-                        lto_list[i]['status'] = STAT_CLOSED
-                        lto_list[i]['history'].append(lto_list[i]['status'])
-                        # TODO: Notification
-            
                 elif lto_list[i]['action'] == ACTN_UPDATE:
                     '''
                     ACTN_UPDATE can only exist in the exit phase, thus no check for status
@@ -283,7 +289,8 @@ class BinanceWrapper():
                     response = await self.client.cancel_order(
                         symbol=lto_list[i]['pair'],
                         orderId=lto_list[i]['exit'][exit_type]['orderId'])
-                        
+                    self.logger.info(f'LTO "{lto_list[i]["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
+                    # TODO: NEXT: Move the cancel to _execute_cancel function
                     # Place the order
                     '''
                     No need to check the error case because if the order could not be placed due to some reason,
@@ -297,13 +304,14 @@ class BinanceWrapper():
 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
-                
+
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
                     
                     try:
+                        raise Exception('Market Exit is not supported')
                         response = await self.client.order_market_sell(
                             symbol=lto_list[i]['pair'],
-                            quantity=lto_list[i]['pair'])
+                            quantity=lto_list[i]['pair']) # TODO: left with typo to not to execute
 
                     except Exception as e:
                         self.logger.error(e)
@@ -331,7 +339,7 @@ class BinanceWrapper():
 
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                         lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
-            
+
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
                     
@@ -343,8 +351,6 @@ class BinanceWrapper():
                     An alternative solution might be changing the status as 'open_exit', so that in the next iteration, exit module might be
                     updated to fix the problems such as filters etc. In this case the question is: Then what was wrong with the first time?
                     '''
-                    # TODO: NEXT: Where is this error coming from:
-                    # [APIError(code=-1100): Illegal characters found in parameter 'quantity'; legal range is '^([0-9]{1,20})(\.[0-9]{1,20})?$'.]
                     if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
                         lto_list[i] = await self._execute_limit_sell(lto_list[i])
                     elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
@@ -705,12 +711,8 @@ class TestBinanceWrapper():
         """
         for i in range(len(lto_list)):
             if 'action' in lto_list[i].keys():
-
-                # NOTE: Consider the fact that each pair may contain more than 1 trade in future
                 if lto_list[i]['action'] == ACTN_CANCEL:
                     # TODO: ACTN_CANCEL action currently only used for enter phase, exit phase cancel can be added
-                    # (This requires other updates for TEST)
-                    # TODO: DEPLOY: Binance cancel the order
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
