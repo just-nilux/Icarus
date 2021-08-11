@@ -232,26 +232,27 @@ class BinanceWrapper():
 
     async def _execute_cancel(self, lto):
         try:
+            phase = get_lto_phase(lto)
+            type = self.config['strategy'][lto['strategy']][phase]['type']
             response = await self.client.cancel_order(
                 symbol=lto['pair'],
-                orderId=lto['enter'][TYPE_LIMIT]['orderId'])
-            if response['status'] != 'CANCELED': raise Exception('Response status is not "CANCELED"')
+                orderId=lto[phase][type]['orderId'])
 
         except Exception as e:
             self.logger.error(e)
             # TODO: Notification: ERROR
-            return lto
+            return False
 
         else:
-            # TODO: NEXT: Generalize the functio to be used in exit as well in 'update' cases
-            self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
-            #if response["side"] == "SELL" and response["type"] == "LIMIT_MAKER":
-            #    self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "STOP_LOSS_LIMIT" order automatically canceled: {lto["exit"][TYPE_OCO]["stopLimit_orderId"]}')
-                
-            lto['status'] = STAT_CLOSED
-            lto['history'].append(lto['status'])
+            if phase == PHASE_EXIT and type == TYPE_OCO:
+                response_stoploss, response_limit_maker = response['orderReports'][0], response['orderReports'][1]
+                self.logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
+                self.logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
+            else:
+                self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
+
             # TODO: Notification: INFO
-            return lto
+            return True
 
 
     async def _execute_lto(self, lto_list):
@@ -275,32 +276,34 @@ class BinanceWrapper():
             if 'action' in lto_list[i].keys():
                 self.logger.info(f"Handling action: \"{lto_list[i]['action']}\" for lto: \"{lto_list[i]['_id']}\"")
                 if lto_list[i]['action'] == ACTN_CANCEL:
-                    # TODO: NEXT: Add cancel for EXIT
-                    # NOTE: if the status enter expire and the action is cancel than cancel the exit order. vice versa
-                    lto_list[i] = await self._execute_cancel(lto_list[i])
-
+                    # NOTE: Assuming that the phase: enter
+                    if await self._execute_cancel(lto_list[i]): # Close the LTO if the enter order canceled
+                        lto_list[i]['status'] = STAT_CLOSED
+                        lto_list[i]['history'].append(lto_list[i]['status'])
 
                 elif lto_list[i]['action'] == ACTN_UPDATE:
                     '''
                     ACTN_UPDATE can only exist in the exit phase, thus no check for status
                     '''
-                    exit_type = self.config['strategy'][lto_list[i]['strategy']]['exit']['type']
+                    exit_type = self.config['strategy'][lto_list[i]['strategy']][PHASE_EXIT]['type']
                     # Cancel the order
-                    response = await self.client.cancel_order(
-                        symbol=lto_list[i]['pair'],
-                        orderId=lto_list[i]['exit'][exit_type]['orderId'])
-                    self.logger.info(f'LTO "{lto_list[i]["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
-                    # TODO: NEXT: Move the cancel to _execute_cancel function
-                    # Place the order
-                    '''
-                    No need to check the error case because if the order could not be placed due to some reason,
-                    there is no way other then retry. Status will stay like 'STAT_EXIT_EXP', lto_update will not do anything,
-                    strategy will create a new update action and send it here in the next cycle
-                    '''
-                    if exit_type == TYPE_OCO:
-                        lto_list[i] = await self._execute_oco_sell(lto_list[i])
-                    elif exit_type == TYPE_LIMIT:
-                        lto_list[i] = await self._execute_limit_sell(lto_list[i])
+                    if await self._execute_cancel(lto_list[i]):
+                        '''
+                        No need to check the error case because if the order could not be placed due to some reason,
+                        there is no way other then retry. Status will stay like 'STAT_EXIT_EXP', lto_update will not do anything,
+                        strategy will create a new update action and send it here in the next cycle
+                        '''
+                        # Place the order
+                        if exit_type == TYPE_OCO:
+                            lto_list[i] = await self._execute_oco_sell(lto_list[i])
+                        elif exit_type == TYPE_LIMIT:
+                            lto_list[i] = await self._execute_limit_sell(lto_list[i])
+                    else:
+                        '''
+                        If the cancel failed, then the exit orders are still there.
+                        So do not create new order and keep the status as exit_expired
+                        '''
+                        pass
 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
