@@ -2,7 +2,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import strategies, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
+from Ikarus import strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -353,8 +353,8 @@ async def main(smallest_interval):
 
     symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
 
-    strategy_manager = strategies.StrategyManager(config, symbol_info)
-    strategy_list = strategy_manager.get_strategies()
+    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
+    strategy_list = strategy_mgr.get_strategies()
 
     bwrapper = binance_wrapper.BinanceWrapper(client, config)
     telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])

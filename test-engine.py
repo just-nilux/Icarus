@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, strategies, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -482,8 +482,8 @@ async def main():
 
     symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
 
-    strategy_manager = strategies.StrategyManager(config, symbol_info)
-    strategy_list = strategy_manager.get_strategies()
+    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
+    strategy_list = strategy_mgr.get_strategies()
 
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
