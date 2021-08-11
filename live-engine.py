@@ -142,6 +142,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     # NOTE: Expiration: Normally bson.Int64(last_kline.index.values): denotes the 'open_time' of last closed kline.
     #       However, in live-trading the last kline is the newly opened kline. Keep that in mind.
 
+    # NOTE: Check for
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
@@ -150,6 +151,24 @@ async def update_ltos(lto_list, orders_dict, data_dict):
         #new_candle_open_time = bson.Int64(data_dict[pair][scale].tail(1).index.values)  # current_candle open_time
         last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].tail(2).index.values[0])  # current_candle open_time
         # NOTE: last_closed_candle_open_time is used because for the anything that happens: it happend in the last closed kline
+
+        phase_lto = get_lto_phase(lto_list[i])
+        type = config['strategy'][lto_list[i]['strategy']][phase_lto]['type']
+        orderId = lto_list[i][phase_lto][type]['orderId'] # Get the orderId of the exit module
+
+        if orders_dict[orderId]['status'] == 'CANCELED':
+            logger.info(f'LTO: "{lto_list[i]["_id"]}": manually changed (canceled), closing the LTO')
+            # NOTE: In case of Manual Interventions, close the LTO without any change
+            # NOTE: Backtest section does not require this feature
+            lto_list[i]['status'] = STAT_CLOSED
+            lto_list[i]['result']['cause'] = CAUSE_MANUAL_CHANGE
+            lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
+
+            if lto_list[i]['result']['enter']['time'] != '':
+                lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+
+            # Skip the rest of the evaluation since the LTO exposed to manual change
+            continue
 
         if lto_list[i]['status'] == STAT_OPEN_ENTER:
             if TYPE_LIMIT in lto_list[i]['enter'].keys():
@@ -182,7 +201,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
         elif lto_list[i]['status'] == STAT_OPEN_EXIT:
 
             if TYPE_LIMIT in lto_list[i]['exit'].keys():
-                exit_orderId = lto_list[i]['exit'][TYPE_LIMIT]['orderId'] # Get the orderId of the enter module
+                exit_orderId = lto_list[i]['exit'][TYPE_LIMIT]['orderId'] # Get the orderId of the exit module
                 # Check if the open sell trade is filled or stoploss is taken
                 if orders_dict[exit_orderId]['status'] == 'FILLED':
 
@@ -211,7 +230,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                 oco_limit_orderId = lto_list[i]['exit'][TYPE_OCO]['orderId'] # Get the orderId of the enter module
                 oco_stopLimit_orderId = lto_list[i]['exit'][TYPE_OCO]['stopLimit_orderId'] # Get the orderId of the enter module
 
-                if orders_dict[oco_limit_orderId]['status'] == 'EXPIRED':
+                if orders_dict[oco_limit_orderId]['status'] == 'EXPIRED' and orders_dict[oco_stopLimit_orderId]['status'] == 'FILLED':
 
                     # Stop Loss takens
                     lto_list[i]['status'] = STAT_CLOSED
@@ -226,7 +245,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                 
-                elif orders_dict[oco_limit_orderId]['status'] == 'FILLED':
+                elif orders_dict[oco_limit_orderId]['status'] == 'FILLED' and orders_dict[oco_stopLimit_orderId]['status'] == 'EXPIRED':
 
                     # Limit taken
                     lto_list[i]['status'] = STAT_CLOSED
@@ -248,13 +267,14 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
                 else:
+                    # TODO: NEXT: LOG WARNING
                     pass
 
             else:
                 # TODO: Internal Error
                 pass
                 
-        elif lto_list[i]['status'] == 'STAT_PART_CLOSED_EXIT':
+        elif lto_list[i]['status'] == STAT_PART_CLOSED_EXIT:
             # Ignore for the tests
             pass
 
@@ -290,10 +310,11 @@ async def application(strategy_list, bwrapper, telbot):
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     if len(lto_list): 
-        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
         #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
         #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
         #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
+        pass
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),

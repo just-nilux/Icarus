@@ -21,6 +21,8 @@ ACTN_MARKET_ENTER = 'market_enter'
 ACTN_MARKET_EXIT = 'market_exit'
 ACTN_EXEC_EXIT = 'execute_exit'
 
+CAUSE_MANUAL_CHANGE = 'manual_change'
+
 def get_lto_phase(lto):
 
     if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP]:
