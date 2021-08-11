@@ -59,9 +59,9 @@
         "amount": ""
       },
       "profit": 0,
-      "liveTime": 0,
-      "history":["open_enter", "open_exit", "closed"]
+      "liveTime": 0
     },
+    "history":["open_enter", "open_exit", "closed"],
     "action": "[optional and transitory]"
   },
   {}
@@ -91,8 +91,8 @@ MAIN MODULE:
                                                     lto and the action is executed.
 
     - cancel                                        Cancel lto
-    - update [TODO]                                 Cancel and update
-      - if status:STAT_ENTER_EXP, it may cancel the old order and create a new one with the current values
+    - updated                                       Cancel and update
+      - NOTE: In case of STAT_ENTER_EXP no need to update. Instead of update just cancel the current one and create a new trade.
       - if status:STAT_EXIT_EXP, it may cancel the old order(limit or oco) and create a new one with the current values
     - market_enter                                  Cancel the previous one and market enter
     - market_exit                                   Cancel the previous one and market exit

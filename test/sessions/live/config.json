@@ -21,9 +21,8 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
-            },
-            "max_lto": 1
+                "exit_expire": "update"
+            }
         },
         "AlwaysEnter90": {
             "pairs": ["BTCUSDT"],
@@ -31,13 +30,12 @@
                 "type": "limit"
             },
             "exit": {
-                "type": "oco"
+                "type": "limit"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
-            },
-            "max_lto": 1
+                "exit_expire": "update"
+            }
         }
     },
     "analysis": {

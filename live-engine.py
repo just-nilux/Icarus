@@ -70,7 +70,10 @@ async def run_at(dt, coro):
 
 
 async def write_updated_ltos_to_db(lto_list, lto_list_original):
-
+    '''
+    Consider the fact that if one of the lto execution does not work such as 'waiting_exit' execution or 
+    'update' action due to 'exit_expire' which was 'open_exit' previously,
+    '''
     for lto in lto_list:
 
         # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
@@ -81,9 +84,13 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] == STAT_OPEN_EXIT:
-            # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
-            # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
+        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
+            '''
+            STAT_OPEN_EXIT:     Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec succesful,
+            STAT_WAITING_EXIT:  Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec unsuccesful,
+            STAT_EXIT_EXP:      Exit_expired occured and 'update' or 'market_exit' actions are not succesfully executed
+            '''
+            # TODO: NEXT: Retest these 3 section
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},
@@ -91,7 +98,8 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
                         lto['status'],
                         'exit':lto['exit'],
                         'result.enter':lto['result']['enter'],
-                        'history':lto['history'] 
+                        'history':lto['history'],
+                        'update_history':lto['update_history'],
                     }})
                 
         elif lto['status'] == STAT_OPEN_ENTER:
@@ -113,12 +121,12 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
 async def update_ltos(lto_list, orders_dict, data_dict):
     """
     Args:
-        lto_dict (dict): will be updated (status, result, exit sections)
-        df_balance (pd.DataFrame): When a lto go from STAT_OPEN_EXIT to STAT_CLOSED or STAT_OPEN_ENTER to STAT_OPEN_EXIT
-        it needs to be updated in terms of 'free' and 'locked'                                               
+        lto_list (list): will be updated (status, result, exit sections)
+        orders_dict (dict): 
+        data_dict (dict): 
 
     Returns:
-        dict: lto_dict
+        list: lto_list
     """
 
     # NOTE: In broker, an OCO order actually 2 different orders. The solution might be:
@@ -143,18 +151,13 @@ async def update_ltos(lto_list, orders_dict, data_dict):
         last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].tail(2).index.values[0])  # current_candle open_time
         # NOTE: last_closed_candle_open_time is used because for the anything that happens: it happend in the last closed kline
 
-        # 1.2.1: Check trades and update status
-
-        # TODO: A mock might be needed to simulate live orders
         if lto_list[i]['status'] == STAT_OPEN_ENTER:
-            # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
             if TYPE_LIMIT in lto_list[i]['enter'].keys():
                 
                 enter_orderId = lto_list[i]['enter'][TYPE_LIMIT]['orderId'] # Get the orderId of the enter module
                 # Check if the open enter trade is filled else if the trade is expired
                 if orders_dict[enter_orderId]['status'] == 'FILLED':
 
-                    # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
                     lto_list[i]['status'] = STAT_WAITING_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
@@ -286,13 +289,11 @@ async def application(strategy_list, bwrapper, telbot):
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
-    # NOTE: Only works once
-    # TODO: NEXT: Retest here
     if len(lto_list): 
         orders = await lto_manipulator.fill_open_enter(lto_list, orders)
         #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
-        orders = await lto_manipulator.limit_maker_taken_oco([lto_list[0]], orders)
-        orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
+        #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
+        #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
@@ -304,7 +305,6 @@ async def application(strategy_list, bwrapper, telbot):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2 started')
 
-    #nto_list = await strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     grouped_ltos = {}
     for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
@@ -370,7 +370,6 @@ async def main(smallest_interval):
                 if SYSTEM_STATUS != 1:
                     SYSTEM_STATUS = 1
                     #telbot.send('Exception: SYSTEM_STATUS')
-                #await asyncio.sleep(period)
                 # TODO: If status is not 0 than ping the server with a certain time-interval
                 # TODO: NOTIFICATION: Send notification when the connection changed to up or down
                 # TODO: LOG:
@@ -380,10 +379,8 @@ async def main(smallest_interval):
 
             STATUS_TIMEOUT = 0
             
-            
             # NOTE: The smallest time interval is 1 minute
             start_ts = int(server_time['serverTime']/1000)
-            # NOTE: The logic below, executes the app default per minute. This should be generalized
             start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1  # (x minute) * (60 sec) + (1 second) ahead
             logger.info(f'Cycle start time: {start_ts}')
             result = await asyncio.create_task(run_at(start_ts, application(strategy_list, bwrapper, telbot)))

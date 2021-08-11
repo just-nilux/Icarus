@@ -205,7 +205,7 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] == STAT_OPEN_EXIT:
+        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
             # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
             # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
             result_update = await mongocli.do_update( 
@@ -214,7 +214,8 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
                 {'$set': {'status': lto['status'],
                         'exit':lto['exit'],
                         'result.enter':lto['result']['enter'],
-                        'history':lto['history'] 
+                        'history':lto['history'],
+                        'update_history':lto['update_history']
                     }})
                 
         elif lto['status'] == STAT_OPEN_ENTER:

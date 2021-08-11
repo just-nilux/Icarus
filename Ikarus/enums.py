@@ -13,6 +13,7 @@ STAT_PART_CLOSED_EXIT = 'partially_closed_exit'
 
 ACTN_CANCEL = 'cancel'
 ACTN_UPDATE = 'update'
+ACTN_POSTPONE = 'postpone'
 ACTN_MARKET_ENTER = 'market_enter'
 ACTN_MARKET_EXIT = 'market_exit'
 ACTN_EXEC_EXIT = 'execute_exit'

@@ -39,9 +39,8 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
-            },
-            "max_lto": 1
+                "exit_expire": "update"
+            }
         },
         "FallingKnifeCatcher": {
             "pairs": ["BTCUSDT"],
@@ -53,9 +52,8 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
-            },
-            "max_lto": 1
+                "exit_expire": "update"
+            }
         },
         "OCOBackTest": {
             "pairs": ["BTCUSDT"],
@@ -67,9 +65,8 @@
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "postpone"
-            },
-            "max_lto": 1
+                "exit_expire": "update"
+            }
         }
     },
     "analysis": {
