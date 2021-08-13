@@ -90,7 +90,6 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
             STAT_WAITING_EXIT:  Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec unsuccesful,
             STAT_EXIT_EXP:      Exit_expired occured and 'update' or 'market_exit' actions are not succesfully executed
             '''
-            # TODO: NEXT: Retest these 3 section
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': lto['_id']},

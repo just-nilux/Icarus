@@ -2,7 +2,7 @@ import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, strategy_manager, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -155,42 +155,6 @@ async def get_exit_expire_hto(df):
     df = pd.DataFrame(hto_closed_list)
 
     return df
-
-
-async def evaluate_stats():
-
-    # Evaluate Statistics
-    logger.info("---------------------------------------------------------")
-    logger.info("---------------------- Statistics -----------------------")
-    logger.info("---------------------------------------------------------")
-
-    logger.info('Total enter_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_ENTER_EXP})))
-    logger.info('Total exit_expire trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_EXIT_EXP})))
-    logger.info('Total closed trades: {}'.format(await mongocli.count("hist-trades", {'result.cause':STAT_CLOSED})))
-    logger.info('Total open trades: {}'.format(await mongocli.count("live-trades", {})))
-    
-    exit_expire_pipe = [
-        {"$match":{"result.cause":{"$eq":"exit_expire"}}},
-        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
-    ]
-    exit_expire_profit = await mongocli.do_find("hist-trades", exit_expire_pipe)
-    if len(exit_expire_profit): logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
-    
-    closed_pipe = [
-        {"$match":{"result.cause":{"$eq":"closed"}}},
-        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
-    ]
-    closed_profit = await mongocli.do_find("hist-trades", closed_pipe)
-    if len(closed_profit):  logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
-
-    last_balance = await mongocli.get_last_doc("observer")
-    for balance in last_balance['balances']:
-        if balance['asset'] == 'USDT':
-            usdt_balance = balance['total']
-            break
-    logger.info('Final equity : {}'.format(usdt_balance))
-
-    pass
 
 
 async def write_updated_ltos_to_db(lto_list, lto_dict_original):
@@ -422,10 +386,11 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
 
     lto_list_original = copy.deepcopy(lto_list)
 
-    # 1.2 Get balance and datadict
-    info = await mongocli.get_last_doc('observer',{})
+    # 1.2 Get balance and datadict,
+    # TODO: NEXT: give index paramter to retrieve a single object instead of a list
+    info = await mongocli.get_n_docs('observer') # Default is the last doc
     # NOTE:info given to the get_current_balance only for test-engine.py
-    tasks_pre_calc = bwrapper.get_current_balance(info), bwrapper.get_data_dict(pair_list, input_data_config, df_list)
+    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(pair_list, input_data_config, df_list)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.3: Query the status of LTOs from the Broker
@@ -469,7 +434,8 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
 
     # 3.3: Get the onserver
     observation_obj = await observer.sample_observer(df_balance)
-    await mongocli.do_insert_one("observer",observation_obj.get())   
+    observation_obj.load('timestamp',current_ts)
+    await mongocli.do_insert_one("observer",observation_obj.get())
 
     pass
 
@@ -538,7 +504,8 @@ async def main():
     #f = open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
 
     # Evaluate the statistics
-    await evaluate_stats()
+    stats = performance.Statistics(config, mongocli) 
+    await stats.evaluate_stats()
 
     # Visualize the test session
     fp.buy_sell(df=df_csv_list[0], df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
