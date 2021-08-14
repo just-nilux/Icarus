@@ -138,18 +138,8 @@ class Statistics():
     async def write_stats(self):
         """
         Iterate over the stat dict and print in a proper format
-        I need everythoing in list of list
-
-        []
-        """
-        write_location = pathlib.Path(config_file_path.name).parent.joinpath('stat.txt')
-        print(write_location.name)
-
-        with write_location.open(mode='w') as fid:
-            fid.write("sdaasda")
-            fid.close()
-        print(write_location)
-        f = open(write_location,'w')
+        """        
+        f = open(self.config['statistics']['report_path'],'w')
         for key, item in self.stat.items():
             if type(item) != list:
                 f.write(key + "\n" )

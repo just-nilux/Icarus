@@ -80,5 +80,8 @@
         "scale":["15m"],
         "length_str":[ "1 day" ],
         "length_int":[ 96 ]
+    },
+    "statistics": {
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/multi_strategy/stat.txt"
     }
 }
