@@ -18,7 +18,7 @@
             "program": ".\\Ikarus\\performance.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\multi_strategy\\config.json"
+                "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/multi_strategy/config.json"
             ]
         },
         {
