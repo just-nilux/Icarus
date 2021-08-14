@@ -93,7 +93,7 @@ class MongoClient():
         return result
 
 # Specific Methods:
-    async def get_last_doc(self, col, query={}) -> None:
+    async def get_n_docs(self, col, query={}, order=pymongo.DESCENDING, n=1) -> None:
         """
         This function reads the selected item from the given collection
 
@@ -101,12 +101,14 @@ class MongoClient():
             col ([type]): [description]
             item ([type]): [description]
         """
-        result = self.db_bot[col].find(query).sort('_id', pymongo.DESCENDING).limit(1)
+        result = self.db_bot[col].find(query).sort('_id', order).limit(n)
+        doc_list = []
         async for document in result:
-            last_doc = dict(document)
+            doc_list.append(dict(document))
 
-        assert 'last_doc' in locals(), "No last document!"
-        return last_doc
+        assert 'doc_list' in locals(), "No last document!"
+        assert len(doc_list) > 0, "No document"
+        return doc_list
 
 
 async def test1():
@@ -171,7 +173,7 @@ async def test2():
     closed_profit = await mongocli.do_find("hist-trades", pipe)
     print('observer.result.profit: closed : {}'.format(closed_profit['sum']))
 
-    last_balance = await mongocli.get_last_doc("observer")
+    last_balance = await mongocli.get_n_doc("observer")
     for balance in last_balance['balances']:
         if balance['asset'] == 'USDT':
             usdt_balance = balance['total']

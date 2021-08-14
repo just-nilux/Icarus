@@ -12,6 +12,16 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "performance",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\Ikarus\\performance.py",
+            "console": "integratedTerminal",
+            "args": [
+                "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/multi_strategy/config.json"
+            ]
+        },
+        {
             "name": "test-binance-api",
             "type": "python",
             "request": "launch",
