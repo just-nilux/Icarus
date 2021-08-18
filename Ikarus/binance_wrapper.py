@@ -2,6 +2,7 @@ from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
 from Ikarus.enums import *
+from Ikarus import notifications
 import asyncio
 import pandas as pd
 import logging
@@ -15,13 +16,14 @@ class BinanceWrapper():
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
                         "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
-    def __init__(self, _client, _config):
+    def __init__(self, _client, _config, _telbot):
         # TODO: Think about the binance.exceptions.BinanceAPIException: APIError(code=-1021): Timestamp for this request was 1000ms ahead of the server's time.
         #       The alternative slution (the wrapper for the binane client can be added to here):
         #       https://github.com/sammchardy/python-binance/issues/249
 
         self.client = _client
         self.config = _config
+        self.telbot = _telbot
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
 
@@ -202,7 +204,8 @@ class BinanceWrapper():
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-            # TODO: Notification: INFO
+            self.telbot.send_constructed_msg('to', [lto['_id'], 'exit', response_limit_maker["orderId"], 'placed'])
+
             return lto
 
 
@@ -226,7 +229,7 @@ class BinanceWrapper():
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-            # TODO: Notification: INFO
+            self.telbot.send_constructed_msg('to', [lto['_id'], 'exit', response["orderId"], 'placed'])
             return lto
 
 
@@ -248,10 +251,11 @@ class BinanceWrapper():
                 response_stoploss, response_limit_maker = response['orderReports'][0], response['orderReports'][1]
                 self.logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
                 self.logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
+                self.telbot.send_constructed_msg('to', [lto['_id'], phase, response_limit_maker["orderId"], 'canceled'])
+
             else:
                 self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
-
-            # TODO: Notification: INFO
+                self.telbot.send_constructed_msg('to', [lto['_id'], phase, response["orderId"], 'canceled'])
             return True
 
 
@@ -342,6 +346,10 @@ class BinanceWrapper():
 
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                         lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+                        self.telbot.send_constructed_msg('to', [ lto_list[i]['_id'], 'exit', response["orderId"], 'placed'])
+                        self.telbot.send_constructed_msg('to', [ lto_list[i]['_id'], 'exit', response["orderId"], 'filled'])
+
+
 
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
@@ -405,7 +413,7 @@ class BinanceWrapper():
                 
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
                     # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
-                    pass
+                    raise Exception('Market Enter is not supported')
 
                 elif TYPE_LIMIT in nto_list[i]['enter'].keys():
                     try:
@@ -423,7 +431,7 @@ class BinanceWrapper():
                     else:
                         nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
                         self.logger.info(f'NTO limit order placed: {response["orderId"]}')
-                        # TODO: Notification
+                        self.telbot.send_constructed_msg('to', [nto_list[i]['_id'], 'enter', response["orderId"], 'placed'])
 
                 else: pass # TODO: Internal Error
 

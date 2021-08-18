@@ -12,6 +12,16 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "notification",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/live/config.json"
+            ]
+        },
+        {
             "name": "performance",
             "type": "python",
             "request": "launch",
