@@ -204,7 +204,7 @@ class BinanceWrapper():
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('to', [lto['_id'], 'exit', response_limit_maker["orderId"], 'placed'])
+            self.telbot.send_constructed_msg('to', *[lto['_id'], 'exit', response_limit_maker["orderId"], 'placed'])
 
             return lto
 
@@ -229,7 +229,7 @@ class BinanceWrapper():
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('to', [lto['_id'], 'exit', response["orderId"], 'placed'])
+            self.telbot.send_constructed_msg('to', *[lto['_id'], 'exit', response["orderId"], 'placed'])
             return lto
 
 
@@ -251,11 +251,11 @@ class BinanceWrapper():
                 response_stoploss, response_limit_maker = response['orderReports'][0], response['orderReports'][1]
                 self.logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
                 self.logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
-                self.telbot.send_constructed_msg('to', [lto['_id'], phase, response_limit_maker["orderId"], 'canceled'])
+                self.telbot.send_constructed_msg('to', *[lto['_id'], phase, response_limit_maker["orderId"], 'canceled'])
 
             else:
                 self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
-                self.telbot.send_constructed_msg('to', [lto['_id'], phase, response["orderId"], 'canceled'])
+                self.telbot.send_constructed_msg('to', *[lto['_id'], phase, response["orderId"], 'canceled'])
             return True
 
 
@@ -346,8 +346,8 @@ class BinanceWrapper():
 
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                         lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
-                        self.telbot.send_constructed_msg('to', [ lto_list[i]['_id'], 'exit', response["orderId"], 'placed'])
-                        self.telbot.send_constructed_msg('to', [ lto_list[i]['_id'], 'exit', response["orderId"], 'filled'])
+                        self.telbot.send_constructed_msg('to', *[ lto_list[i]['_id'], 'exit', response["orderId"], 'placed'])
+                        self.telbot.send_constructed_msg('to', *[ lto_list[i]['_id'], 'exit', response["orderId"], 'filled'])
 
 
 
@@ -431,7 +431,8 @@ class BinanceWrapper():
                     else:
                         nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
                         self.logger.info(f'NTO limit order placed: {response["orderId"]}')
-                        self.telbot.send_constructed_msg('to', [nto_list[i]['_id'], 'enter', response["orderId"], 'placed'])
+                        self.telbot.send_constructed_msg('to', *['_id', 'enter', response["orderId"], 'placed']) # '_id' is not given yet
+                        self.logger.info(f'after message')
 
                 else: pass # TODO: Internal Error
 
@@ -469,10 +470,11 @@ class BinanceWrapper():
         # TODO: _execute_lto cannot decide to not to enter if there is not enough balance. This check should be done in strategy.
         # NOTE: _execute_lto tries to execute, if things fails then it creates an error log, notification etc.
         lto_list = await self._execute_lto(lto_list)
-
+        self.logger.debug('lto handling completed')
         # Execute new trade objects
         nto_list = await self._execute_nto(nto_list)      
-            
+        self.logger.debug('nto handling completed')
+
         # TODO: Consider returning trade_dict, because:
         #   - orders may not be accepted by the broker
         #       - In this case this side where to handle the issue: here or the main script

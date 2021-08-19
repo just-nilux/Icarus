@@ -13,16 +13,30 @@ class TelegramBot():
         #self.updater.start_polling()
         #self.updater.idle()
         self.templates = {
-            'to': 'LTO {}: {} order {} {}'.format,
+            'to': 'LTO {}:\n        {} order {} {}'.format,
             # {_id} {phase} {orderId} {event}
             'app': 'Application {}'.format,
             'error': 'Error Occured: {}'.format,
             'stat': 'STAT {}: {} order {} placed'.format,
         }
-
+        '''
+        TODO: Some queries would be fine
+              - Get all LTOs
+              - Get a specific LTO/HTO from DB
+                  - current status
+                  - stats (for HTO)
+            \lto _id
+            \hto _id
+        
+        TODO: Commandline tool:
+            \cmd closeall
+            \cmd stop
+            \cmd start
+            \cmd restart
+        '''
 
     def send_constructed_msg(self, type, *args) -> None:
-        text = telbot.templates[type](*args)
+        text = self.templates[type](*args)
         self.send_raw(text)
 
 
@@ -31,8 +45,8 @@ class TelegramBot():
 
 
 def test1():
-    args = ['b2e4a6', 'enter', '123'] 
-    telbot.send_constructed_msg('app', 'deneme')
+    args = ['611eb00fe9350843f569a567', 'enter', 7237001592, 'closed'] 
+    telbot.send_constructed_msg('to', *args )
     pass
 
 
