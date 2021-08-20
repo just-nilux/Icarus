@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 from Ikarus import strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
-from Ikarus.exceptions import SysStatDownException
+from Ikarus.exceptions import SysStatDownException, NotImplementedException
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -147,7 +147,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
-        assert len(data_dict[pair].keys()) == 1, "Multiple time scale is not supported"
+        if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
+
         scale = list(data_dict[pair].keys())[0]
         #new_candle_open_time = bson.Int64(data_dict[pair][scale].tail(1).index.values)  # current_candle open_time
         last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].tail(2).index.values[0])  # current_candle open_time
@@ -387,7 +388,7 @@ async def main(smallest_interval):
 
     bwrapper = binance_wrapper.BinanceWrapper(client, config, telbot)
 
-    telbot.send_constructed_msg('app', 'started')
+    telbot.send_constructed_msg('app', 'started!')
     while True:
         try:
             sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=10)
@@ -395,11 +396,11 @@ async def main(smallest_interval):
             if sys_stat['status'] != 0:
                 if FLAG_SYSTEM_STATUS != False:
                     FLAG_SYSTEM_STATUS = False
-                    raise Exception('FLAG_SYSTEM_STATUS set to {FLAG_SYSTEM_STATUS}')
+                    raise SysStatDownException()
             else:
                 if FLAG_SYSTEM_STATUS != True:
                     FLAG_SYSTEM_STATUS = True
-                    logger.info(f'FLAG_SYSTEM_STATUS set to {FLAG_SYSTEM_STATUS}')
+                    logger.info(f'Broker is up!')
                     telbot.send_constructed_msg('app', f'FLAG_SYSTEM_STATUS set to {FLAG_SYSTEM_STATUS}')
             
 

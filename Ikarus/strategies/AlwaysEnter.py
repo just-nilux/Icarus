@@ -3,6 +3,7 @@ from ..objects import GenericObject
 from ..enums import *
 from .StrategyBase import StrategyBase
 import copy
+from ..exceptions import NotImplementedException
 
 
 class AlwaysEnter(StrategyBase):
@@ -145,7 +146,8 @@ class AlwaysEnter(StrategyBase):
 
             else: pass # Make a brand new decision
             
-            assert len(analysis_dict[ao_pair].keys()) == 1, "Multiple time scale is not supported"
+            if len(analysis_dict[ao_pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
+
             scale = list(analysis_dict[ao_pair].keys())[0]
 
             # Make decision to enter or not

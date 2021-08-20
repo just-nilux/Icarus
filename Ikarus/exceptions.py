@@ -12,7 +12,7 @@ class IkarusException(Exception):
 class SysStatDownException(IkarusException):
 
     def __init__(self):
-        super().__init__('FLAG_SYSTEM_STATUS set to False')
+        super().__init__('Broker is down!')
 
 
 class NotImplementedException(IkarusException):

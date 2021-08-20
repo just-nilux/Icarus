@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
+from Ikarus.exceptions import NotImplementedException
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -216,7 +217,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
 
         # 1.2.1: Check trades and update status
         # TODO: Update the following patch for the multi scale
-        assert len(data_dict[pair].keys()) == 1, "Multiple time scale is not supported"
+        if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
         scale = list(data_dict[pair].keys())[0]
         last_kline = data_dict[pair][scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])  # current_candle open_time
