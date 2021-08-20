@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 from Ikarus import strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
+from Ikarus.exceptions import SysStatDownException, NotImplementedException
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -15,8 +16,7 @@ from itertools import chain, groupby
 import operator
 
 # Global Variables
-SYSTEM_STATUS = 0
-STATUS_TIMEOUT = 0
+FLAG_SYSTEM_STATUS = True
 
 def generate_scales_in_minute(config_dict):
     scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
@@ -29,6 +29,7 @@ def generate_scales_in_minute(config_dict):
     return config_dict
 
 def setup_logger(_log_lvl):
+    # TODO: Logger can be directed to tel
     global logger
     log_filename = 'log/ikarus-app.log'
     logger = logging.getLogger('app')
@@ -45,7 +46,8 @@ def setup_logger(_log_lvl):
     ch = logging.StreamHandler()
     ch.setLevel(logging.ERROR)
 
-    # create formatter and add it to the handlers
+    # create formatter and add it to the handle
+    # rs
     formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
     formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
@@ -145,7 +147,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
-        assert len(data_dict[pair].keys()) == 1, "Multiple time scale is not supported"
+        if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
+
         scale = list(data_dict[pair].keys())[0]
         #new_candle_open_time = bson.Int64(data_dict[pair][scale].tail(1).index.values)  # current_candle open_time
         last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].tail(2).index.values[0])  # current_candle open_time
@@ -183,6 +186,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['enter']['price'] = float(orders_dict[enter_orderId]['price'])
                     lto_list[i]['result']['enter']['quantity'] = float(orders_dict[enter_orderId]['executedQty'])
                     lto_list[i]['result']['enter']['amount'] = float(lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity'])
+                    telbot.send_constructed_msg('to', *[lto_list[i]['_id'], 'enter', enter_orderId, 'filled'])
+
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -217,6 +222,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
+                    telbot.send_constructed_msg('to', *[lto_list[i]['_id'], 'exit', exit_orderId, 'filled'])
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -243,7 +249,9 @@ async def update_ltos(lto_list, orders_dict, data_dict):
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
-                
+                    
+                    telbot.send_constructed_msg('to', *[lto_list[i]['_id'], 'exit', oco_stopLimit_orderId, 'filled'])
+
                 elif orders_dict[oco_limit_orderId]['status'] == 'FILLED' and orders_dict[oco_stopLimit_orderId]['status'] == 'EXPIRED':
 
                     # Limit taken
@@ -257,9 +265,11 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_limit_orderId]['executedQty'])
                     lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
 
-
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+                    
+                    telbot.send_constructed_msg('to', *[lto_list[i]['_id'], 'exit', oco_limit_orderId, 'filled'])
+
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -284,7 +294,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     return lto_list
 
 
-async def application(strategy_list, bwrapper, telbot):
+async def application(strategy_list, bwrapper):
 
     # NOTE: current_ts is the open time of the current live candle (open time)
     # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
@@ -309,9 +319,9 @@ async def application(strategy_list, bwrapper, telbot):
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     if len(lto_list): 
-        #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
-        #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
-        #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
+        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
+        orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
         #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
         pass
 
@@ -366,7 +376,7 @@ async def application(strategy_list, bwrapper, telbot):
 
 
 async def main(smallest_interval):
-    global SYSTEM_STATUS, STATUS_TIMEOUT
+    global FLAG_SYSTEM_STATUS
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
@@ -376,34 +386,30 @@ async def main(smallest_interval):
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
     strategy_list = strategy_mgr.get_strategies()
 
-    bwrapper = binance_wrapper.BinanceWrapper(client, config)
-    telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
+    bwrapper = binance_wrapper.BinanceWrapper(client, config, telbot)
 
+    telbot.send_constructed_msg('app', 'started!')
     while True:
         try:
-            sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=5)
-            server_time = await client.get_server_time()
-            # sys_stat ve server time can be gathered
-            logger.info(f'System time: {server_time["serverTime"]}')
-            # Check system status
-            if sys_stat['status'] != 0:
-                if SYSTEM_STATUS != 1:
-                    SYSTEM_STATUS = 1
-                    #telbot.send('Exception: SYSTEM_STATUS')
-                # TODO: If status is not 0 than ping the server with a certain time-interval
-                # TODO: NOTIFICATION: Send notification when the connection changed to up or down
-                # TODO: LOG:
-                continue
-            else:
-                SYSTEM_STATUS = 0
+            sys_stat = await asyncio.wait_for(client.get_system_status(), timeout=10)
 
-            STATUS_TIMEOUT = 0
+            if sys_stat['status'] != 0:
+                if FLAG_SYSTEM_STATUS != False:
+                    FLAG_SYSTEM_STATUS = False
+                    raise SysStatDownException()
+            else:
+                if FLAG_SYSTEM_STATUS != True:
+                    FLAG_SYSTEM_STATUS = True
+                    logger.info(f'Broker is up!')
+                    telbot.send_constructed_msg('app', f'FLAG_SYSTEM_STATUS set to {FLAG_SYSTEM_STATUS}')
             
-            # NOTE: The smallest time interval is 1 minute
-            start_ts = int(server_time['serverTime']/1000)
-            start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1  # (x minute) * (60 sec) + (1 second) ahead
-            logger.info(f'Cycle start time: {start_ts}')
-            result = await asyncio.create_task(run_at(start_ts, application(strategy_list, bwrapper, telbot)))
+
+            server_time = await client.get_server_time()
+            logger.debug(f'System time: {server_time["serverTime"]}')
+            start_ts = int(server_time['serverTime']/1000)                      # NOTE: The smallest time interval is 1 minute
+            start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1    # (x minute) * (60 sec) + (1 second) ahead
+            logger.debug(f'Cycle start time: {start_ts}')
+            result = await asyncio.create_task(run_at(start_ts, application(strategy_list, bwrapper)))
             
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
@@ -412,12 +418,17 @@ async def main(smallest_interval):
                 application(bwrapper, telbot),
             )
             '''
-        except Exception as e:
-            if STATUS_TIMEOUT != 1:
-                logger.error(str(e))
-                STATUS_TIMEOUT = 1
-                #telbot.send('Exception: STATUS_TIMEOUT')
+        # TODO: NEXT: Test theexception cases
+        except SysStatDownException as e:
+            logger.error(str(e))
+            telbot.send_constructed_msg('error', str(e))
+            await asyncio.sleep(60)
 
+        except Exception as e:
+            logger.error(str(e))
+            telbot.send_constructed_msg('error', str(e))
+            
+            
     await client.close_connection()
 
 if __name__ == "__main__":
@@ -432,6 +443,8 @@ if __name__ == "__main__":
         cred_info = json.load(cred_file)
 
     logger = logging.getLogger('app')
+    telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
+    # TODO: NEXT: Test the applicable telbot points
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],
