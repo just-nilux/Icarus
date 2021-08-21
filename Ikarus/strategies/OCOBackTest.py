@@ -164,7 +164,7 @@ class OCOBackTest(StrategyBase):
                 trade_obj['strategy'] = self.name
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
-                trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline
+                trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices

@@ -515,6 +515,13 @@ class BinanceWrapper():
                 df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
                 df.columns = BinanceWrapper.kline_column_names
                 df = df.set_index(['open_time'])
+                # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
+                #       Since it requires closed candles.
+                df.drop(df.index[-1], inplace=True)
+                # It is accepted that the number of line will be 1 less then it should be
+                # NOTE: This should not be a problem because if the analysis affected by this missing value,
+                #       then the length should be greater.
+                #       On the other hand, the lackness of the oldest value may help or not who knows?
                 do[row["scale"]] = df
             do_dict[pair] = do
             self.logger.debug("decompose ended [{}]:".format(pair))

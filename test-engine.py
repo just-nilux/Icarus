@@ -220,7 +220,7 @@ async def update_ltos(lto_list, data_dict, df_balance):
         if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
         scale = list(data_dict[pair].keys())[0]
         last_kline = data_dict[pair][scale].tail(1)
-        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])  # current_candle open_time
+        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
         if lto_list[i]['status'] == STAT_OPEN_ENTER:
             # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
@@ -379,7 +379,9 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    current_ts = int(df_list[0]['close_time'].iloc[-1] + 1) 
+    current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
+    # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
+    #       In this case +1 will be the start time of the next candle which is the current candle for the application
     logger.info(f'Ikarus Time: [{current_ts}]')
     
     # 1.1 Get live trade objects (LTOs)
@@ -492,7 +494,7 @@ async def main():
         # Create the df_list
         df_list = []
         for df in df_csv_list:
-            df_list.append(df.iloc[i:i+hist_data_length])
+            df_list.append(df.iloc[i:i+hist_data_length-1]) # NOTE: -1 comes from the missing candle in live-engine
         await application(strategy_list, bwrapper, pair_list, df_list)
 
     # Get [hist-trades] docs to visualize the session

@@ -150,8 +150,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
         if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
 
         scale = list(data_dict[pair].keys())[0]
-        #new_candle_open_time = bson.Int64(data_dict[pair][scale].tail(1).index.values)  # current_candle open_time
-        last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].tail(2).index.values[0])  # current_candle open_time
+        last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].index[-1])  # current_candle open_time
         # NOTE: last_closed_candle_open_time is used because for the anything that happens: it happend in the last closed kline
 
         phase_lto = get_lto_phase(lto_list[i])
