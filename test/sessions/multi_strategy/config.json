@@ -48,11 +48,11 @@
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "update"
+                "exit_expire": "market_exit"
             }
         },
         "OCOBackTest": {
@@ -70,9 +70,14 @@
         }
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange", "moving_average"],
+        "indicators": ["low","high","llow", "hhigh", "trange", "ma", "bband"],
         "params": {
-            "moving_average": [5,20]
+            "ma": [5,20],
+            "bband":{
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
+            }
         }
     },
     "data_input": {

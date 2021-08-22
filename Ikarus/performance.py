@@ -135,6 +135,7 @@ class Statistics():
         self.stat['strategies'].append(strategy_stats)
         pass
 
+
     async def write_stats(self):
         """
         Iterate over the stat dict and print in a proper format
@@ -165,6 +166,28 @@ class Statistics():
             print(strategy)
             await self._eval_strategy_stats(strategy)
         pass
+
+
+    async def eval_hto_stat(self, hto):
+        """
+        start_date
+        end_date
+        strategy
+        absolute profit
+        total profit
+
+
+        Args:
+            hto ([type]): [description]
+        """
+        hto_stat = [ 
+            hto['_id'],
+            hto['result']['enter']['time'],
+            hto['result']['exit']['time'],
+            hto['result']['exit']['price'] - hto['result']['enter']['price']
+        ]
+        return hto_stat
+
 
     async def main(self):
 

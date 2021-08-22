@@ -1,6 +1,6 @@
 {
     "tag": "bot",
-    "log-level": "INFO",
+    "log-level": "DEBUG",
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
         "host": "localhost",

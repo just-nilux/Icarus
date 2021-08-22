@@ -2,7 +2,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
+from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
 import logging
@@ -84,7 +84,10 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
-
+            # TODO: NEXT: Send stat for the closed TO
+            hto_stat = await stats.eval_hto_stat(lto)
+            telbot.send_constructed_msg('hto',hto_stat)
+            
         # NOTE: Manual trade option is omitted, needs to be added
         elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
             '''
@@ -461,6 +464,7 @@ if __name__ == "__main__":
     config = generate_scales_in_minute(config)
 
     # Setup initial objects
+    stats = performance.Statistics(config, mongocli) 
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
 

@@ -168,7 +168,8 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
-
+            hto_stat = await stats.eval_hto_stat(lto)
+            
         # NOTE: Manual trade option is omitted, needs to be added
         elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
             # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
@@ -507,7 +508,6 @@ async def main():
     #f = open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
 
     # Evaluate the statistics
-    stats = performance.Statistics(config, mongocli) 
     await stats.main()
 
     # Visualize the test session
@@ -539,6 +539,7 @@ if __name__ == '__main__':
     config = generate_scales_in_minute(config)
 
     # Setup initial objects
+    stats = performance.Statistics(config, mongocli) 
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
 
