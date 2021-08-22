@@ -31,7 +31,7 @@ class Analyzer():
             'llow': asyncio.create_task(self._ind_llow()),
             'hhigh': asyncio.create_task(self._ind_hhigh()),
             'trange': asyncio.create_task(self._ind_trange()),
-            'moving_average': asyncio.create_task(self._ind_moving_average()),
+            'ma': asyncio.create_task(self._ind_ma()),
             'bband': asyncio.create_task(self._ind_bband()),
         }
         return all_indicators
@@ -75,12 +75,11 @@ class Analyzer():
         return True
 
     # TODO: NEXT: If the received data contains the newly started candle, consider this when giving index
+    # Custom Indicators
     async def _ind_low(self): return list(self.current_time_df['low'])
     async def _ind_high(self): return list(self.current_time_df['high'])
     async def _ind_llow(self): return self.current_time_df['low'].min()
     async def _ind_hhigh(self): return self.current_time_df['high'].max()
-    async def _ind_trange(self): return list(ta.TRANGE( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
-    async def _ind_obv(self): return list(ta.OBV(self.current_time_df['close'], self.current_time_df['volume']))
 
 
     # Overlap Studies
@@ -97,7 +96,7 @@ class Analyzer():
     async def _ind_kama(self): raise NotImplementedException('indicator')
     async def _ind_ma(self):
         ma = {}
-        for param in self.config['analysis']['params']['moving_average']:
+        for param in self.config['analysis']['params']['ma']:
             ma[param] = list(ta.MA(self.current_time_df['close'], timeperiod=param, matype=0))
         return ma
     async def _ind_mama(self): raise NotImplementedException('indicator')
@@ -151,9 +150,97 @@ class Analyzer():
     async def _ind_ultosc(self): raise NotImplementedException('indicator')
     async def _ind_willr(self): raise NotImplementedException('indicator')
 
+
     # Volume indicators
+    async def _ind_ad(self): raise NotImplementedException('indicator')
+    async def _ind_adosc(self): raise NotImplementedException('indicator')
+    async def _ind_obv(self): return list(ta.OBV(self.current_time_df['close'], self.current_time_df['volume']))
+
+
     # Volatility indicators
+    async def _ind_atr(self): raise NotImplementedException('indicator')
+    async def _ind_natr(self): raise NotImplementedException('indicator')
+    async def _ind_trange(self): return list(ta.TRANGE( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
+
+
     # Price Transform
+    async def _ind_avgprice(self): raise NotImplementedException('indicator')
+    async def _ind_medprice(self): raise NotImplementedException('indicator')
+    async def _ind_typprice(self): raise NotImplementedException('indicator')
+    async def _ind_wclprice(self): raise NotImplementedException('indicator')
+
+
     # Cycle Indicators
+    async def _ind_ht_dcperiod(self): raise NotImplementedException('indicator')
+    async def _ind_ht_dcphase(self): raise NotImplementedException('indicator')
+    async def _ind_ht_phasor(self): raise NotImplementedException('indicator')
+    async def _ind_sine(self): raise NotImplementedException('indicator')
+    async def _ind_trendmode(self): raise NotImplementedException('indicator')
+
+
     # Pattern Recognition
+    async def _pat_trendmode(self): raise NotImplementedException('indicator')
+    async def _pat_cdl2crows(self): raise NotImplementedException('indicator')
+    async def _pat_cdl3blackcrows(self): raise NotImplementedException('indicator')
+    async def _pat_cdl3inside(self): raise NotImplementedException('indicator')
+    async def _pat_cdl3linestrike(self): raise NotImplementedException('indicator')
+    async def _pat_cdl3outside(self): raise NotImplementedException('indicator')
+    async def _pat_cdl3starsinsouth(self): raise NotImplementedException('indicator')
+    async def _pat_cdl3whitesoldiers(self): raise NotImplementedException('indicator')
+    async def _pat_cdlabandonedbaby(self): raise NotImplementedException('indicator')
+    async def _pat_cdladvanceblock(self): raise NotImplementedException('indicator')
+    async def _pat_cdlbelthold(self): raise NotImplementedException('indicator')
+    async def _pat_cdlbreakaway(self): raise NotImplementedException('indicator')
+    async def _pat_closingmarubozu(self): raise NotImplementedException('indicator')
+    async def _pat_cdlconcealbabyswall(self): raise NotImplementedException('indicator')
+    async def _pat_cdlcounterattack(self): raise NotImplementedException('indicator')
+    async def _pat_cdldarkcloudcover(self): raise NotImplementedException('indicator')
+    async def _pat_cdldoji(self): raise NotImplementedException('indicator')
+    async def _pat_cdldojistart(self): raise NotImplementedException('indicator')
+    async def _pat_cdldragonflydoji(self): raise NotImplementedException('indicator')
+    async def _pat_cdlenfulging(self): raise NotImplementedException('indicator')
+    async def _pat_cdleveningdojistar(self): raise NotImplementedException('indicator')
+    async def _pat_cdleveningstar(self): raise NotImplementedException('indicator')
+    async def _pat_cdlgapsidesidewhite(self): raise NotImplementedException('indicator')
+    async def _pat_cdlgravestonedoji(self): raise NotImplementedException('indicator')
+    async def _pat_cdlhammer(self): raise NotImplementedException('indicator')
+    async def _pat_cdlhanginman(self): raise NotImplementedException('indicator')
+    async def _pat_cdlharami(self): raise NotImplementedException('indicator')
+    async def _pat_cdlharamicross(self): raise NotImplementedException('indicator')
+    async def _pat_cdlhighwave(self): raise NotImplementedException('indicator')
+    async def _pat_cdlhikkake(self): raise NotImplementedException('indicator')
+    async def _pat_cdlhikkakemod(self): raise NotImplementedException('indicator')
+    async def _pat_cdlhomingpigeon(self): raise NotImplementedException('indicator')
+    async def _pat_cdlidentical3crows(self): raise NotImplementedException('indicator')
+    async def _pat_cdlinneck(self): raise NotImplementedException('indicator')
+    async def _pat_cdlinvertedhammer(self): raise NotImplementedException('indicator')
+    async def _pat_cdlkicking(self): raise NotImplementedException('indicator')
+    async def _pat_cdlkickingbylength(self): raise NotImplementedException('indicator')
+    async def _pat_cdlladderbottom(self): raise NotImplementedException('indicator')
+    async def _pat_cdllongleggeddoji(self): raise NotImplementedException('indicator')
+    async def _pat_cdllongline(self): raise NotImplementedException('indicator')
+    async def _pat_cdlmarubozu(self): raise NotImplementedException('indicator')
+    async def _pat_cdlmatchinglow(self): raise NotImplementedException('indicator')
+    async def _pat_cdlmathold(self): raise NotImplementedException('indicator')
+    async def _pat_cdlmorningdojistar(self): raise NotImplementedException('indicator')
+    async def _pat_cdlmorningstar(self): raise NotImplementedException('indicator')
+    async def _pat_cdlonneck(self): raise NotImplementedException('indicator')
+    async def _pat_cdlpiercing(self): raise NotImplementedException('indicator')
+    async def _pat_cdlrickshawman(self): raise NotImplementedException('indicator')
+    async def _pat_cdlrisefall3methods(self): raise NotImplementedException('indicator')
+    async def _pat_cdlseparatinglines(self): raise NotImplementedException('indicator')
+    async def _pat_cdlshootingstar(self): raise NotImplementedException('indicator')
+    async def _pat_cdlshortline(self): raise NotImplementedException('indicator')
+    async def _pat_cdlspinningtop(self): raise NotImplementedException('indicator')
+    async def _pat_cdlstalledpattern(self): raise NotImplementedException('indicator')
+    async def _pat_cdlsticksandwich(self): raise NotImplementedException('indicator')
+    async def _pat_cdltakuri(self): raise NotImplementedException('indicator')
+    async def _pat_cdltasukigap(self): raise NotImplementedException('indicator')
+    async def _pat_cdlthrusting(self): raise NotImplementedException('indicator')
+    async def _pat_cdltristar(self): raise NotImplementedException('indicator')
+    async def _pat_cdlunique3river(self): raise NotImplementedException('indicator')
+    async def _pat_cdlupsidegap2crows(self): raise NotImplementedException('indicator')
+    async def _pat_cdlxsidegap3methods(self): raise NotImplementedException('indicator')
+
     # Statistic Functions
+    # Not needed
