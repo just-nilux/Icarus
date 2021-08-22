@@ -168,8 +168,11 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
-            hto_stat = await stats.eval_hto_stat(lto)
-            
+
+            if lto['result']['cause'] == STAT_CLOSED:
+                hto_stat = await stats.eval_hto_stat(lto)
+                pass
+
         # NOTE: Manual trade option is omitted, needs to be added
         elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
             # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
@@ -282,8 +285,9 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['result']['exit']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_LIMIT]['price']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit'][TYPE_LIMIT]['amount']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_LIMIT]['quantity']
+                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_LIMIT]['quantity'] 
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                    # NOTE: Exit quantity and the enter quantity is assumed to be the same
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -313,8 +317,8 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit'][TYPE_OCO]['amount']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -336,8 +340,8 @@ async def update_ltos(lto_list, data_dict, df_balance):
                     lto_list[i]['result']['exit']['type'] = 'oco_limit'
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['limitPrice']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['exit'][TYPE_OCO]['amount']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
+                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -525,7 +529,7 @@ if __name__ == '__main__':
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],
-        clean=True)
+        clean=config['mongodb']['clean'])
 
     input_data_config = pd.DataFrame({
         "scale":config['data_input']['scale'],

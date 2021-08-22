@@ -169,22 +169,13 @@ class Statistics():
 
 
     async def eval_hto_stat(self, hto):
-        """
-        start_date
-        end_date
-        strategy
-        absolute profit
-        total profit
 
-
-        Args:
-            hto ([type]): [description]
-        """
         hto_stat = [ 
             hto['_id'],
-            hto['result']['enter']['time'],
-            hto['result']['exit']['time'],
-            hto['result']['exit']['price'] - hto['result']['enter']['price']
+            datetime.fromtimestamp(hto['result']['enter']['time']/1000),
+            datetime.fromtimestamp(hto['result']['exit']['time']/1000),
+            hto['result']['exit']['price'] - hto['result']['enter']['price'],
+            100*(hto['result']['exit']['price'] - hto['result']['enter']['price'])/hto['result']['enter']['price']
         ]
         return hto_stat
 

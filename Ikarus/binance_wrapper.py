@@ -764,6 +764,7 @@ class TestBinanceWrapper():
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
+                    # TODO: NEXT: Fix the 15m
                     last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,

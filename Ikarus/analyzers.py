@@ -51,7 +51,8 @@ class Analyzer():
                 for ind in self.config['analysis']['indicators']:
                     if ind in all_indicators.keys(): indicator_coroutines.append(all_indicators[ind])
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
-
+                all_indicators['bband'].cancel()
+                # TODO: NEXT: Handle this fucking gather issue
                 analysis_output = list(await asyncio.gather(*indicator_coroutines))
 
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
@@ -122,13 +123,7 @@ class Analyzer():
     async def _ind_cci(self): raise NotImplementedException('indicator')
     async def _ind_cmo(self): raise NotImplementedException('indicator')
     async def _ind_dx(self): raise NotImplementedException('indicator')
-    async def _ind_macd(self):
-        upperband, middleband, lowerband = ta.BBANDS(self.current_time_df['close'], 
-                                                        timeperiod=self.config['analysis']['params']['bband']['timeperiod'], 
-                                                        nbdevup=self.config['analysis']['params']['bband']['nbdevup'], 
-                                                        nbdevdn=self.config['analysis']['params']['bband']['nbdevdn'], 
-                                                        matype=0) # No config option for matype yet!
-        return {'upper':list(upperband), 'middle': list(middleband), 'lower':list(lowerband)}
+    async def _ind_macd(self): raise NotImplementedException('indicator')
     async def _ind_macdext(self): raise NotImplementedException('indicator')
     async def _ind_macdfix(self): raise NotImplementedException('indicator')
     async def _ind_mfi(self): raise NotImplementedException('indicator')

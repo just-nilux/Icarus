@@ -2,7 +2,7 @@ from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import json
 import sys
-
+from datetime import datetime
 class TelegramBot():
 
     def __init__(self, _token, _chatId):
@@ -15,6 +15,11 @@ class TelegramBot():
         self.templates = {
             'to': 'LTO {}:\n        {} order {} {}'.format,
             # {_id} {phase} {orderId} {event}
+            'hto': 'HTO {}:\n\
+    Start Time: {}\n\
+    End Time: {}\n\
+    Absolute Profit: {:.2f}\n\
+    Total Profit: %{:.2f}'.format,
             'app': 'Application {}'.format,
             'error': 'Error Occured: {}'.format,
             'stat': 'STAT {}: {} order {} placed'.format,
@@ -44,9 +49,14 @@ class TelegramBot():
         self.updater.bot.send_message(self.chatId, text=msg)
 
 
-def test1():
+def test_lto():
     args = ['611eb00fe9350843f569a567', 'enter', 7237001592, 'closed'] 
     telbot.send_constructed_msg('to', *args )
+    pass
+
+def test_hto():
+    args = ['611eb00fe9350843f569a567', datetime.fromtimestamp(1589418000), 1589426100000, 27.75, 0.29951430113329736]
+    telbot.send_constructed_msg('hto', *args )
     pass
 
 
@@ -58,4 +68,4 @@ if __name__ == '__main__':
         cred_info = json.load(cred_file)
 
     telbot = TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
-    test1()
+    test_hto()

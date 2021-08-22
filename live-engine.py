@@ -84,10 +84,11 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongocli.do_insert_one("hist-trades",lto)
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
-            # TODO: NEXT: Send stat for the closed TO
-            hto_stat = await stats.eval_hto_stat(lto)
-            telbot.send_constructed_msg('hto',hto_stat)
-            
+
+            if lto['result']['cause'] == STAT_CLOSED:
+                hto_stat = await stats.eval_hto_stat(lto)
+                telbot.send_constructed_msg('hto', hto_stat)
+
         # NOTE: Manual trade option is omitted, needs to be added
         elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
             '''
@@ -218,8 +219,8 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['result']['exit']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['price'])
-                    lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['executedQty'])
-                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['price'])
+                    lto_list[i]['result']['exit']['quantity'] = float(orders_dict[exit_orderId]['executedQty'])
+                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
 
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
@@ -450,7 +451,7 @@ if __name__ == "__main__":
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],
-        clean=True) # NOTE: Normally it is False
+        clean=config['mongodb']['clean']) # NOTE: Normally it is False
 
     input_data_config = pd.DataFrame({
         "scale":config['data_input']['scale'],
