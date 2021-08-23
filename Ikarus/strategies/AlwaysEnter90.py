@@ -45,12 +45,12 @@ class AlwaysEnter90(StrategyBase):
                 lto['action'] = ACTN_UPDATE 
                 lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']])) # This is good for debugging and will be good for perf. evaluation in future
                 if self.config['exit']['type'] == TYPE_LIMIT:
-                    lto['exit'][TYPE_LIMIT]['price'] *= 0.99
+                    lto['exit'][TYPE_LIMIT]['price'] *= 1 # NOTE: Do not change the price 
                     lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
                     lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,self.scales_in_minute[0])
 
                 elif self.config['exit']['type'] == TYPE_OCO:
-                    lto['exit'][TYPE_OCO]['limitPrice'] *= 0.99
+                    lto['exit'][TYPE_OCO]['limitPrice'] *= 1
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
                     lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,self.scales_in_minute[0])
                 skip_calculation = True

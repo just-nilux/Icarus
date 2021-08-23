@@ -22,19 +22,6 @@ class Analyzer():
         self.current_time_df={}
         return
 
-    async def generate_coroutines(self):
-        # NOTE: Coroutine objects creates Runtime warning when they are not called.
-        #       But tasks do not create warning when they are not called
-        all_indicators = {
-            'low': asyncio.create_task(self._ind_low()),
-            'high': asyncio.create_task(self._ind_high()),
-            'llow': asyncio.create_task(self._ind_llow()),
-            'hhigh': asyncio.create_task(self._ind_hhigh()),
-            'trange': asyncio.create_task(self._ind_trange()),
-            'ma': asyncio.create_task(self._ind_ma()),
-            'bband': asyncio.create_task(self._ind_bband()),
-        }
-        return all_indicators
 
     async def sample_analyzer(self, data_dict):
         analysis_dict=dict()
@@ -45,14 +32,13 @@ class Analyzer():
                 self.current_time_df = copy.deepcopy(time_df)
 
                 # Generate coroutines
-                # NOTE: live-engine contains the newly created candle as well
-                all_indicators = await self.generate_coroutines()
                 indicator_coroutines = []
-                for ind in self.config['analysis']['indicators']:
-                    if ind in all_indicators.keys(): indicator_coroutines.append(all_indicators[ind])
+                header = '_ind_'
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['analysis']['indicators']))
+                for ind in indicator_method_names:
+                    if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
-                all_indicators['bband'].cancel()
-                # TODO: NEXT: Handle this fucking gather issue
+
                 analysis_output = list(await asyncio.gather(*indicator_coroutines))
 
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
@@ -75,7 +61,6 @@ class Analyzer():
 
         return True
 
-    # TODO: NEXT: If the received data contains the newly started candle, consider this when giving index
     # Custom Indicators
     async def _ind_low(self): return list(self.current_time_df['low'])
     async def _ind_high(self): return list(self.current_time_df['high'])

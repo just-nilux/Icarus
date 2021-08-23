@@ -13,7 +13,7 @@ class TelegramBot():
         #self.updater.start_polling()
         #self.updater.idle()
         self.templates = {
-            'to': 'LTO {}:\n        {} order {} {}'.format,
+            'lto': 'LTO {}:\n        {} order {} {}'.format,
             # {_id} {phase} {orderId} {event}
             'hto': 'HTO {}:\n\
     Start Time: {}\n\
@@ -51,7 +51,7 @@ class TelegramBot():
 
 def test_lto():
     args = ['611eb00fe9350843f569a567', 'enter', 7237001592, 'closed'] 
-    telbot.send_constructed_msg('to', *args )
+    telbot.send_constructed_msg('lto', *args )
     pass
 
 def test_hto():
