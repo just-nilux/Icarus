@@ -10,6 +10,7 @@ class Analyzer():
     """
     The duty of Analyzer class is to provide analysis objects.
     It is configurable via the config file
+    Use case does not require multiple instance
     """
 
     # This initiation may not be needed

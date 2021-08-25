@@ -492,14 +492,15 @@ async def main():
     hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
     total_len = len(df_csv_list[0]) - hist_data_length
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
+
+    # TODO: NEXT: Prior to this point all the pairs and scales should be merged together:
+    #       - The smallest time_scale will be the app-work-period
+    #       - Strategies will work only if their time has come. 
+    #           - Each strategy will have a strategy-work-period which is the smallest time_scale
     for i in range(total_len):
         logger.debug(f'Iteration {i}:')
         printProgressBar(i + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
-        # TODO: Consider the fact that last candle can be newly opened candle and the analysis shouold be performed based on the last closed candle
-        # Create the df_list
-        df_list = []
-        for df in df_csv_list:
-            df_list.append(df.iloc[i:i+hist_data_length-1]) # NOTE: -1 comes from the missing candle in live-engine
+
         await application(strategy_list, bwrapper, pair_list, df_list)
 
     # Get [hist-trades] docs to visualize the session
@@ -531,6 +532,7 @@ if __name__ == '__main__':
         config['tag'],
         clean=config['mongodb']['clean'])
 
+    # TODO: NEXT: after the data_input deleted, handle all the points it is called
     input_data_config = pd.DataFrame({
         "scale":config['data_input']['scale'],
         "length_str":config['data_input']['length_str'],
@@ -547,8 +549,6 @@ if __name__ == '__main__':
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
 
-    # NOTE: Multiple analyzers not needed because an analyzer can be configured to work with multiple 'scales' and 'all_pairs'.
-    #       It may provide different analysis results as an item in the analysis objects.
     # NOTE: Suppose there are multiple 'time scales' for a 'pair'. In this case, the output of all of the 'scales' are used to generate a common analysis for a 'pair'
     #       In other words, there will one-to-one mapping between 'all_pairs' and the analysis items.
 

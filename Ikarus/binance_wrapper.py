@@ -760,12 +760,12 @@ class TestBinanceWrapper():
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
-                    # TODO: DEPLOY: Execute Market Order in Bnance
 
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
                     # TODO: NEXT: Fix the 15m
+
                     last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
