@@ -59,7 +59,7 @@
             "program": ".\\test-engine.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\multi_strategy\\config.json"
+                ".\\test\\sessions\\test-fly-integ\\config.json"
             ]
         },
         {

@@ -6,18 +6,22 @@ from .StrategyBase import StrategyBase
 import copy
 import itertools
 
-class FallingKnifeCatcher(StrategyBase):
+
+class NewStrategy(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        self.name = "FallingKnifeCatcher"
+        self.name = "NewStrategy"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
+
         self.config = _config['strategy'][self.name]
 
         self.quote_currency = _config['broker']['quote_currency']
         #self.scales_in_minute = _config['data_input']['scales_in_minute']
         # TODO: Make proper handling for symbol_info
         self.symbol_info = _symbol_info
-        self.time_scales = ['1m', '15m']
+
+        # NOTE: Hardcoded time-scales list (scales should be in ascending order)
+        self.time_scales = ['15m']
         self.min_period = self.time_scales[0]
         self.meta_do = list(itertools.product(self.time_scales, self.config['pairs']))
         return
@@ -109,7 +113,7 @@ class FallingKnifeCatcher(StrategyBase):
             analysis_dict (dict): analysis.json
             - analysis objects contains where to buy and and where to sell
 
-            lto_list (list): only the ltos that belongs to this strategy
+            lto_dict (dict): live-trade-objects coming from the [live-trades]
 
             df_balance (pd.DataFrame): live-trade-objects coming from the [live-trades]
 
@@ -142,7 +146,7 @@ class FallingKnifeCatcher(StrategyBase):
 
             # Check if there is already an LTO that has that 'pair' item. If so skip the evaluation (one pair one LTO rule)
             if ao_pair in pair_key_mapping.keys():
-
+                
                 # NOTE: If a pair contains multiple LTO then there should be another level of iteration as well
                 skip_calculation, lto_list[pair_key_mapping[ao_pair][0]] = await self._handle_lto(lto_list[pair_key_mapping[ao_pair][0]], dt_index)
                 if skip_calculation: continue;
@@ -165,21 +169,29 @@ class FallingKnifeCatcher(StrategyBase):
                 trade_obj['strategy'] = self.name
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
-                trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline
+                trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict['15m']['low'][-10:]) * 0.99
+                enter_price = min(time_dict['15m']['low'][-10:])
                 exit_price = max(time_dict['15m']['high'][-10:])
+
                 # Calculate enter/exit amount value
 
                 #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
                 # the base asset will be used.
-                
+
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']
 
                 # Example: Buy XRP with 100$ in your account
                 enter_ref_amount=20
+                # TODO: HIGH: Check mininum amount to trade and add this section to here
+                if free_ref_asset > 10:
+                    if free_ref_asset < enter_ref_amount:
+                        enter_ref_amount = free_ref_asset
+                else:
+                    # TODO: Add error logs and send notification
+                    return {}
 
                 # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
                 # Example:
@@ -207,7 +219,7 @@ class FallingKnifeCatcher(StrategyBase):
                                                                                                             enter_type, 
                                                                                                             trade_obj['enter'][enter_type], 
                                                                                                             self.symbol_info)
-
+                # TODO: NEXT: A strategy may contain multiple pair thus the related symbol info should be given each time as argument
                 if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
                     # TODO: Notification about min_notional
                     continue
@@ -217,3 +229,4 @@ class FallingKnifeCatcher(StrategyBase):
                 self.logger.info(f"{ao_pair}: NO SIGNAL")
 
         return trade_objects
+

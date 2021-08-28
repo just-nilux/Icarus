@@ -14,12 +14,14 @@ import copy
 import bson
 from itertools import chain, groupby
 import operator
+import itertools
 
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
 def generate_scales_in_minute(config_dict):
+    # TODO: add the key: 'M'
     scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
     scales_in_minute = []
     for scale in config_dict['data_input']['scale']:
@@ -453,32 +455,50 @@ async def main():
     # NOTE: Temporary hack for yesting without internet connection
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
-    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
+    all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
+    all_pairs = list(set(itertools.chain(*all_pairs)))
+    symbol_info = bwrapper.get_all_symbol_info(all_pairs)
+    #all_symbol_info = await client.get_symbol_info(all_pairs) # NOTE: Multiple pair not supported
 
+    # TODO: Actually no need to make symbol_info a member of the instances, it is better to have it as 
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
     strategy_list = strategy_mgr.get_strategies()
 
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    strategy_periods = set()
+    for strategy in strategy_list:
+        if strategy.name in config['strategy'].keys():
+            strategy_periods.add(strategy.min_period)
+
+    strategy_periods = list(strategy_periods)
+    ikarus_cycle_period = ''
+    for scale in config['time_scale'].keys():
+        if scale in strategy_periods:
+            ikarus_cycle_period = scale
+            break
+
+    if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration
     binance_wrapper.TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
-    observation_item = {
+    initial_observation_item = {
         'balances': config['balances']
     }
-    await mongocli.do_insert_one("observer",observation_item)   
+    await mongocli.do_insert_one("observer", initial_observation_item)   
 
     # Obtain the pairs and the time scales of the input data
-    pair_list = []
+    #pair_list = []
     # NOTE: Normally the pair list is obtained from the config, but for testing it is coming from the data files.
-    time_scale_list = []
-    df_csv_list = []
+    #time_scale_list = []
+    #df_csv_list = []
 
     # Iterate over the given files
     # TODO: To simulate live-trade, include the next candle as the current candle
 
+    '''
     for file in config['files']:
         filename = file.split('\\')[-1]
         pair_list.append(filename.split('_')[0].upper())
@@ -486,11 +506,18 @@ async def main():
         df = pd.read_csv(file)
         df = df.set_index(['open_time'])
         df_csv_list.append(df)
+    '''
 
-    # TODO: Multiple pairs, or multiple timescale for a pair logic, requires some generalizations
-    #       This changes can be handled after the app is confident about working 1 pair and 1 scale
-    hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
-    total_len = len(df_csv_list[0]) - hist_data_length
+    #hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
+    #total_len = len(df_csv_list[0]) - hist_data_length
+
+    # NOTE: Until this point ikarus_operation_period should be evaluated
+    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    start_timestamp = datetime.timestamp(start_time)
+
+    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    end_timestamp = datetime.timestamp(end_time)
+
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
     # TODO: NEXT: Prior to this point all the pairs and scales should be merged together:
@@ -533,16 +560,21 @@ if __name__ == '__main__':
         clean=config['mongodb']['clean'])
 
     # TODO: NEXT: after the data_input deleted, handle all the points it is called
-    input_data_config = pd.DataFrame({
-        "scale":config['data_input']['scale'],
-        "length_str":config['data_input']['length_str'],
-        "length_int":config['data_input']['length_int']})
+    #input_data_config = pd.DataFrame({
+    #    "scale":config['data_input']['scale'],
+    #    "length_str":config['data_input']['length_str'],
+    #    "length_int":config['data_input']['length_int']})
 
+    # TODO: Gather all the Pairs
+
+    # TODO: By using name of the given Strategies get all the timescales
+    
     # Initialize and configure objects
     setup_logger(config['log-level'])
 
     # Add scales_in_minute to the config to be used in strategy etc.
-    config = generate_scales_in_minute(config)
+    #config = generate_scales_in_minute(config)
+    # TODO: NEXT: What you're gonna do about that
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 

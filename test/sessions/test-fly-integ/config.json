@@ -30,8 +30,21 @@
         "credit_currency": "TRY"
     },
     "strategy": {
-        "OCOBackTest": {
+        "FallingKnifeCatcher": {
             "pairs": ["BTCUSDT"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            }
+        },
+        "NewStrategy": {
+            "pairs": ["XRPUSDT"],
             "enter": {
                 "type": "limit"
             },

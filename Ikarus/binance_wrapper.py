@@ -9,7 +9,8 @@ import logging
 import json
 import bson
 import time
-
+from itertools import chain, groupby
+import operator
 
 class BinanceWrapper():
 
@@ -632,6 +633,18 @@ class TestBinanceWrapper():
         df.astype(float)
         return df
 
+
+    async def get_all_symbol_info(self, all_pairs):
+        all_info = await self.client.get_exchange_info()
+
+        selected_info = {}
+        for item in all_info['symbols']:
+            if item['symbol'] in all_pairs:
+                selected_info[item['symbol']] = item
+
+        return selected_info
+
+
     async def get_current_balance(self,last_observer_item):
         '''
         Get all assets with 'free' and 'locked' parts
@@ -671,7 +684,7 @@ class TestBinanceWrapper():
 
         return df_balance
 
-    async def get_data_dict(self, pairs, time_df, df_list):
+    async def get_data_dict_from_file(self, pairs, time_df, df_list):
         '''
         time_df:
         ---------------------------------------
@@ -691,8 +704,35 @@ class TestBinanceWrapper():
             do_dict[pair] = do
         
         # await self.dump_data_obj(do_dict)
-        return do_dict    
+        return do_dict
 
+
+    async def get_data_dict(self, meta_do, start_time):
+        """
+        meta_do = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
+        (time_scale, pair)
+        length = meta_do['time_scale']
+        """
+        self.logger.debug('get_data_dict started')
+
+        tasks_klines_scales = []
+        for meta in meta_do:
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_do[0], meta_do[1], start_str="{} ago UTC".format(row["length_str"]))))
+
+
+        #for pair in pairs:
+        #    for index, row in time_df.iterrows():
+        #        tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
+
+        #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+
+        data_dict = await self.decompose(pairs, time_df, composit_klines)
+
+        #await self.dump_data_obj(data_dict)
+        # NOTE: Keep in mind that the last row is the current candle that has not been completed
+        self.logger.debug('get_data_dict ended')
+        return data_dict
 
     async def dump_data_obj(self, js_obj):
 
