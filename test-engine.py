@@ -5,6 +5,7 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
+from Ikarus.helpers import time_scale_to_second
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -22,7 +23,7 @@ STATUS_TIMEOUT = 0
 
 def generate_scales_in_minute(config_dict):
     # TODO: add the key: 'M'
-    scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
+    scales_to_minute = {'m':1, 'h':60, 'd':24*60, 'w':10080}  # Hardcoded scales in minute
     scales_in_minute = []
     for scale in config_dict['data_input']['scale']:
         scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
@@ -95,7 +96,7 @@ async def run_at(dt, coro):
     return await coro
 
 
-async def get_closed_hto(df):
+async def get_closed_hto():
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
     hto_closed = []
@@ -118,7 +119,7 @@ async def get_closed_hto(df):
     return df
 
 
-async def get_enter_expire_hto(df):
+async def get_enter_expire_hto():
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
     hto_ent_exp_list = []
@@ -136,7 +137,7 @@ async def get_enter_expire_hto(df):
     return df
 
 
-async def get_exit_expire_hto(df):
+async def get_exit_expire_hto():
     # Read Database to get hist-trades and dump to a DataFrame
     
     hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
@@ -489,52 +490,27 @@ async def main():
     }
     await mongocli.do_insert_one("observer", initial_observation_item)   
 
-    # Obtain the pairs and the time scales of the input data
-    #pair_list = []
-    # NOTE: Normally the pair list is obtained from the config, but for testing it is coming from the data files.
-    #time_scale_list = []
-    #df_csv_list = []
-
-    # Iterate over the given files
-    # TODO: To simulate live-trade, include the next candle as the current candle
-
-    '''
-    for file in config['files']:
-        filename = file.split('\\')[-1]
-        pair_list.append(filename.split('_')[0].upper())
-        time_scale_list.append(filename.split('_')[1])
-        df = pd.read_csv(file)
-        df = df.set_index(['open_time'])
-        df_csv_list.append(df)
-    '''
-
-    #hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
-    #total_len = len(df_csv_list[0]) - hist_data_length
-
-    # NOTE: Until this point ikarus_operation_period should be evaluated
+    # Evaluate start and end times
     start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    start_timestamp = datetime.timestamp(start_time)
-
+    start_timestamp = int(datetime.timestamp(start_time))
     end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
-    end_timestamp = datetime.timestamp(end_time)
+    end_timestamp = int(datetime.timestamp(end_time))
 
+    # Iterate through the time stamps
+    total_len = int((end_timestamp - start_timestamp) / time_scale_to_second(ikarus_cycle_period)) # length = Second / Min*60
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-    # TODO: NEXT: Prior to this point all the pairs and scales should be merged together:
-    #       - The smallest time_scale will be the app-work-period
-    #       - Strategies will work only if their time has come. 
-    #           - Each strategy will have a strategy-work-period which is the smallest time_scale
-    for i in range(total_len):
-        logger.debug(f'Iteration {i}:')
-        printProgressBar(i + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
+    for idx, start_time in enumerate(range(start_timestamp, end_timestamp, time_scale_to_second(ikarus_cycle_period))):
+        logger.debug(f'Iteration {idx}:')
+        printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
         await application(strategy_list, bwrapper, pair_list, df_list)
 
     # Get [hist-trades] docs to visualize the session
     df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
-        get_closed_hto(df_csv_list[0]), 
-        get_enter_expire_hto(df_csv_list[0]), 
-        get_exit_expire_hto(df_csv_list[0]))
+        get_closed_hto(), 
+        get_enter_expire_hto(), 
+        get_exit_expire_hto())
 
     # Dump df_csv_list[0] to a file for debug purposes
     #f = open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
