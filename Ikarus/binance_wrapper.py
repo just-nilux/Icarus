@@ -1,3 +1,4 @@
+from Ikarus.exceptions import NotImplementedException
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
@@ -11,6 +12,8 @@ import bson
 import time
 from itertools import chain, groupby
 import operator
+from .helpers import time_scale_to_second
+
 
 class BinanceWrapper():
 
@@ -707,7 +710,7 @@ class TestBinanceWrapper():
         return do_dict
 
 
-    async def get_data_dict(self, meta_do, start_time):
+    async def get_data_dict(self, meta_data_pool, start_time):
         """
         meta_do = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
         (time_scale, pair)
@@ -716,8 +719,14 @@ class TestBinanceWrapper():
         self.logger.debug('get_data_dict started')
 
         tasks_klines_scales = []
-        for meta in meta_do:
-            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_do[0], meta_do[1], start_str="{} ago UTC".format(row["length_str"]))))
+        for meta_data in meta_data_pool:
+
+            if type(start_time) == int:
+                end_time = start_time + time_scale_to_second(meta_data[0]) * self.config['time_scale'][meta_data[0]][1] # ms = start_time + x sec * y times
+            else:
+                raise NotImplementedException('start_time is not integer')
+
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=start_time*1000, end_str=end_time*1000 )))
 
 
         #for pair in pairs:
@@ -727,12 +736,35 @@ class TestBinanceWrapper():
         #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
 
-        data_dict = await self.decompose(pairs, time_df, composit_klines)
+        data_dict = await self.decompose(meta_data_pool, composit_klines)
 
         #await self.dump_data_obj(data_dict)
         # NOTE: Keep in mind that the last row is the current candle that has not been completed
         self.logger.debug('get_data_dict ended')
         return data_dict
+
+
+    async def decompose(self, meta_data_pool, composit_klines):
+
+        self.logger.debug("decompose started")
+        do_dict = dict()
+        for idx, meta_data in enumerate(meta_data_pool):
+            
+            if not meta_data[0] in do_dict.keys():
+                do_dict[meta_data[0]] = dict()
+            
+            df = pd.DataFrame(composit_klines[idx])
+            df.columns = BinanceWrapper.kline_column_names
+            df = df.set_index(['open_time'])
+            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
+            #       Since it requires closed candles.
+            df.drop(df.index[-1], inplace=True)
+            df = df.astype(float)
+            do_dict[meta_data[0]][meta_data[1]] = df
+
+        self.logger.debug("decompose ended")
+        return do_dict
+
 
     async def dump_data_obj(self, js_obj):
 

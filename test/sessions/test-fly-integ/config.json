@@ -44,7 +44,7 @@
             }
         },
         "NewStrategy": {
-            "pairs": ["XRPUSDT"],
+            "pairs": ["XRPUSDT","BTCUSDT"],
             "enter": {
                 "type": "limit"
             },
@@ -80,7 +80,7 @@
         "1M": ["1 year", 12]
     },
     "backtest":{
-        "start_time": "2020-05-12 12:12:00",
-        "end_time": "2020-05-19 12:13:00"
+        "start_time": "2020-05-12 12:15:00",
+        "end_time": "2020-05-12 13:00:00"
     }
 }

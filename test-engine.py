@@ -379,18 +379,18 @@ async def update_ltos(lto_list, data_dict, df_balance):
     return lto_list
 
 
-async def application(strategy_list, bwrapper, pair_list, df_list):
-
+async def application(strategy_list, bwrapper, start_time):
+    # NOTE: 'ikarus-time' denotes the current_time in old implementation
     #################### Phase 1: Perform pre-calculation tasks ####################
     #current_ts = int(df_list[0].index[-1])
     
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
+    #current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
     # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
     #       In this case +1 will be the start time of the next candle which is the current candle for the application
-    logger.info(f'Ikarus Time: [{current_ts}]')
+    logger.info(f'Ikarus Time: [{start_time}]')
     
     # 1.1 Get live trade objects (LTOs)
     lto_list = await mongocli.do_find('live-trades',{})
@@ -400,8 +400,21 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
     # 1.2 Get balance and datadict,
     # TODO: NEXT: give index paramter to retrieve a single object instead of a list
     info = await mongocli.get_n_docs('observer') # Default is the last doc
-    # NOTE:info given to the get_current_balance only for test-engine.py
-    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(pair_list, input_data_config, df_list)
+    # NOTE:info given to the get_current_balance only for test-engine.p
+    
+    # NOTE: Prior to this point, some preparations should be made:
+    #       1. Gather all the used timescales from the configured strategies
+    #       2. Grouped the pairs based on the time_scales. The output should look like this:
+
+    # Each strategy ha a min_period. Thus I can iterate over it to see the matches between the current time and their period
+    meta_data_pool = []
+    for strategy_obj in strategy_list:
+        if start_time % time_scale_to_second(strategy_obj.min_period) == 0:
+            meta_data_pool.append(strategy_obj.meta_do)
+
+    meta_data_pool = set(chain(*meta_data_pool))
+    # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
+    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, start_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.3: Query the status of LTOs from the Broker
@@ -504,7 +517,7 @@ async def main():
         logger.debug(f'Iteration {idx}:')
         printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-        await application(strategy_list, bwrapper, pair_list, df_list)
+        await application(strategy_list, bwrapper, start_time)
 
     # Get [hist-trades] docs to visualize the session
     df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
