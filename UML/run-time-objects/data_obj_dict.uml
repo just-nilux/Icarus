@@ -1,11 +1,11 @@
 @startjson
 {
-  "1m": {
-    "BTCUSDT": "pd.DataFrame"
+  "BTCUSDT": {
+    "15m": "pd.DataFrame"
   },
-  "15m": {
-    "BTCUSDT": "pd.DataFrame",
-    "USDT": "pd.DataFrame"
+  "XRPUSDT": {
+    "1m": "pd.DataFrame",
+    "15m": "pd.DataFrame"
   }
 }
 @endjson

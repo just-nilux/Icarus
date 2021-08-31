@@ -161,7 +161,7 @@ async def get_exit_expire_hto():
     return df
 
 
-async def write_updated_ltos_to_db(lto_list, lto_dict_original):
+async def write_updated_ltos_to_db(lto_list):
 
     for lto in lto_list:
 
@@ -206,7 +206,7 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
             pass
 
 
-async def update_ltos(lto_list, data_dict, df_balance):
+async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
     """
     Args:
         lto_dict (dict): will be updated (status, result, exit sections)
@@ -219,14 +219,21 @@ async def update_ltos(lto_list, data_dict, df_balance):
         dict: lto_dict
     """
 
+    # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
+    # TODO: NEXT: From the data_dict, kline information only handles from the smallest time_scale. Find a way to get the smallest kline
+
+
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
         # 1.2.1: Check trades and update status
         # TODO: Update the following patch for the multi scale
-        if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
+        #if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
         scale = list(data_dict[pair].keys())[0]
-        last_kline = data_dict[pair][scale].tail(1)
+
+        # TODO: NEXT: Get the last kline
+        strategy_min_scale = strategy_period_mapping[lto_list[i]['strategy']]
+        last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
         if lto_list[i]['status'] == STAT_OPEN_ENTER:
@@ -391,13 +398,8 @@ async def application(strategy_list, bwrapper, start_time):
     # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
     #       In this case +1 will be the start time of the next candle which is the current candle for the application
     logger.info(f'Ikarus Time: [{start_time}]')
-    
-    # 1.1 Get live trade objects (LTOs)
-    lto_list = await mongocli.do_find('live-trades',{})
 
-    lto_list_original = copy.deepcopy(lto_list)
-
-    # 1.2 Get balance and datadict,
+    # 1.1 Get balance and datadict,
     # TODO: NEXT: give index paramter to retrieve a single object instead of a list
     info = await mongocli.get_n_docs('observer') # Default is the last doc
     # NOTE:info given to the get_current_balance only for test-engine.p
@@ -408,19 +410,28 @@ async def application(strategy_list, bwrapper, start_time):
 
     # Each strategy ha a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
+    #active_strategies = []
+    strategy_period_mapping = {}
+    # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
         if start_time % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
+            strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
+
 
     meta_data_pool = set(chain(*meta_data_pool))
     # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
     tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, start_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
+    # 1.2 Get live trade objects (LTOs)
+    # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
+    lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
+
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    lto_list = await update_ltos(lto_list, data_dict, df_balance)
-
+    lto_list = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
+    # TODO: NEXT: Resolve why the NewStrategy creates 2 LTO (probably 1 for each time_scale)
     #################### Phase 2: Perform calculation tasks ####################
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
@@ -435,7 +446,7 @@ async def application(strategy_list, bwrapper, start_time):
 
     strategy_tasks = []
     for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, start_time)))
     
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
@@ -454,11 +465,11 @@ async def application(strategy_list, bwrapper, start_time):
         result = await mongocli.do_insert_many("live-trades",nto_list)
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
-    await write_updated_ltos_to_db(lto_list, lto_list_original)
+    await write_updated_ltos_to_db(lto_list)
 
     # 3.3: Get the onserver
     observation_obj = await observer.sample_observer(df_balance)
-    observation_obj.load('timestamp',current_ts)
+    observation_obj.load('timestamp',start_time)
     await mongocli.do_insert_one("observer",observation_obj.get())
 
     pass
@@ -473,7 +484,7 @@ async def main():
 
     all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
-    symbol_info = bwrapper.get_all_symbol_info(all_pairs)
+    symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
     #all_symbol_info = await client.get_symbol_info(all_pairs) # NOTE: Multiple pair not supported
 
     # TODO: Actually no need to make symbol_info a member of the instances, it is better to have it as 
@@ -547,12 +558,6 @@ if __name__ == '__main__':
         config['mongodb']['port'], 
         config['tag'],
         clean=config['mongodb']['clean'])
-
-    # TODO: NEXT: after the data_input deleted, handle all the points it is called
-    #input_data_config = pd.DataFrame({
-    #    "scale":config['data_input']['scale'],
-    #    "length_str":config['data_input']['length_str'],
-    #    "length_int":config['data_input']['length_int']})
 
     # TODO: Gather all the Pairs
 

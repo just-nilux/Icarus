@@ -750,8 +750,8 @@ class TestBinanceWrapper():
         do_dict = dict()
         for idx, meta_data in enumerate(meta_data_pool):
             
-            if not meta_data[0] in do_dict.keys():
-                do_dict[meta_data[0]] = dict()
+            if not meta_data[1] in do_dict.keys():
+                do_dict[meta_data[1]] = dict()
             
             df = pd.DataFrame(composit_klines[idx])
             df.columns = BinanceWrapper.kline_column_names
@@ -760,7 +760,7 @@ class TestBinanceWrapper():
             #       Since it requires closed candles.
             df.drop(df.index[-1], inplace=True)
             df = df.astype(float)
-            do_dict[meta_data[0]][meta_data[1]] = df
+            do_dict[meta_data[1]][meta_data[0]] = df
 
         self.logger.debug("decompose ended")
         return do_dict

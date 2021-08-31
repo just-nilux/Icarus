@@ -1,3 +1,4 @@
+from Ikarus.exceptions import NotImplementedException
 import pymongo
 import logging
 import asyncio
@@ -38,6 +39,16 @@ class MongoClient():
         elif type(query) == list:
             async for doc in self.db_bot[col].aggregate(query):
                 docs=doc
+        return docs
+
+
+    async def do_aggregate(self, col, query) -> None:
+        docs = []
+        if type(query) == list:
+            async for doc in self.db_bot[col].aggregate(query):
+                docs.append(doc)
+        else:
+            raise NotImplementedException('do_aggregate requires type list as input')
         return docs
 
 

@@ -5,7 +5,7 @@ from ..enums import *
 from .StrategyBase import StrategyBase
 import copy
 import itertools
-
+from ..helpers import time_scale_to_minute
 
 class NewStrategy(StrategyBase):
 
@@ -21,7 +21,7 @@ class NewStrategy(StrategyBase):
         self.symbol_info = _symbol_info
 
         # NOTE: Hardcoded time-scales list (scales should be in ascending order)
-        self.time_scales = ['15m']
+        self.time_scales = ['1m','15m']
         self.min_period = self.time_scales[0]
         self.meta_do = list(itertools.product(self.time_scales, self.config['pairs']))
         return
@@ -158,8 +158,8 @@ class NewStrategy(StrategyBase):
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]
 
-            trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
-            trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
+            trange_mean5 = st.mean(time_dict[self.min_period]['trange'][-5:])
+            trange_mean20 = st.mean(time_dict[self.min_period]['trange'][-20:])
 
             # Make decision to enter or not
             if trange_mean5 < trange_mean20:
@@ -173,8 +173,8 @@ class NewStrategy(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict['15m']['low'][-10:])
-                exit_price = max(time_dict['15m']['high'][-10:])
+                enter_price = min(time_dict[self.min_period]['low'][-10:])
+                exit_price = max(time_dict[self.min_period]['high'][-10:])
 
                 # Calculate enter/exit amount value
 
@@ -208,9 +208,9 @@ class NewStrategy(StrategyBase):
                 exit_type = self.config['exit']['type']
 
                 trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
+                                                                        StrategyBase._eval_future_candle_time(dt_index,2,time_scale_to_minute(self.min_period))) # NOTE: Multiple scale is not supported
                 trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,9,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
+                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period))) # NOTE: Multiple scale is not supported
 
                 # TODO: Check the free amount of quote currency
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']
@@ -218,9 +218,9 @@ class NewStrategy(StrategyBase):
                 trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
                                                                                                             enter_type, 
                                                                                                             trade_obj['enter'][enter_type], 
-                                                                                                            self.symbol_info)
+                                                                                                            self.symbol_info[ao_pair])
                 # TODO: NEXT: A strategy may contain multiple pair thus the related symbol info should be given each time as argument
-                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
+                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
                     # TODO: Notification about min_notional
                     continue
                 trade_objects.append(trade_obj)
