@@ -354,6 +354,8 @@ async def application(strategy_list, bwrapper, start_time):
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
 
 
+    start_time = start_time * 1000 # Convert to ms
+ 
     meta_data_pool = set(chain(*meta_data_pool))
     # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
     tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, start_time)
@@ -471,7 +473,7 @@ async def main():
         get_exit_expire_hto(mongocli))
 
     # TODO: NEXT: Find a way to visualization logic
-    df = await bwrapper.get_historical_klines(start_timestamp, end_timestamp, 'BTCUSDT', '15m')
+    df = await bwrapper.get_historical_klines(start_timestamp, end_timestamp, 'BTCUSDT', ikarus_cycle_period)
 
     # Evaluate the statistics
     await stats.main()

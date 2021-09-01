@@ -716,17 +716,23 @@ class TestBinanceWrapper():
         (time_scale, pair)
         length = meta_do['time_scale']
         """
+        # NOTE: NEXT: Just an idea:
+        #       When it is time to improve test performance and use the csv files, instead of implementing old logic again,
+        #       1. Let an initial method to download klines at once to a variable or folder in different files, then let
+        #       2. If the klines stored in a variable (df), then simply read until etc.
+        #           NOTE: Do it using a function of bwrapper with only 1 call. Do not reflect anything to test-engine
+        #       3. If the klines saved to a file, then reading same silly data would be cumbersome, dont know what to do :D
         self.logger.debug('get_data_dict started')
 
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
             if type(start_time) == int:
-                end_time = start_time + time_scale_to_second(meta_data[0]) * self.config['time_scale'][meta_data[0]][1] # ms = start_time + x sec * y times
+                end_time = start_time + time_scale_to_second(meta_data[0]) * self.config['time_scale'][meta_data[0]][1] * 1000 # ms = start_time + x sec * y times
             else:
                 raise NotImplementedException('start_time is not integer')
 
-            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=start_time*1000, end_str=end_time*1000 )))
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=start_time, end_str=end_time )))
 
 
         #for pair in pairs:

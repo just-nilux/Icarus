@@ -1,107 +1,82 @@
 import asyncio
-from Ikarus import mongo_utils
+from Ikarus import mongo_utils, binance_wrapper
 from Ikarus.enums import *
-
+from Ikarus.utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto
+from binance import AsyncClient
 import pandas as pd
 import argparse
 import fplot as fp
+import json
+import sys
+from datetime import datetime
 
-async def get_enter_expire(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
-    hto_ent_exp_list = []
-    for hto in hto_list:
-        # NOTE: HIGH: We dont know it the exit type is limit or not
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-        }
-        hto_ent_exp_list.append(hto_dict)
-
-    df = pd.DataFrame(hto_ent_exp_list)
-    return df
-
-
-async def get_closed(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
-    hto_closed = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price']
-        }
-        hto_closed.append(hto_dict)
-
-
-    df = pd.DataFrame(hto_closed)
-
-    return df
-
-
-async def get_exit_expire(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
-    hto_closed_list = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit'][plannedExitType]['expire']
-        }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
-
-    return df
-
-
-async def visualize_db():
+async def visualize_offline():
     # Read Database to get hist-trades and dump to a DataFrame
 
-    df = pd.read_csv(args.filename)
+    df = pd.read_csv(config['files'][0])
     df = df.set_index(['open_time'])
 
-    #df = await add_observer_columns(df)
-    df_enter_expire = await get_enter_expire(df)
-    df_exit_expire = await get_exit_expire(df)
-    df_closed = await get_closed(df)
+    #df_enter_expire = await get_enter_expire_hto(mongocli)
+    #df_exit_expire = await get_exit_expire_hto(mongocli)
+    #df_closed = await get_closed_hto(mongocli)
 
-    fp.buy_sell(df, df_closed, df_enter_expire, df_exit_expire)
+    fp.buy_sell(df)
 
     pass
+
+
+async def visualize_online():
+
+    client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
+                                      api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+
+    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    start_timestamp = int(datetime.timestamp(start_time))*1000
+    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    end_timestamp = int(datetime.timestamp(end_time))*1000
+
+    # NOTE: Here is the problem, when you hardcode the time_scales in the strategies, it is no more available from the outside
+    #       - As a separate tool, there is no way for an outsider to reach that info without doing cumbersome work with strategy manager
+    #       - In fact, think about the 'live session visualization', it is not possible to get the time_scale info. Thus it might be a better
+    #       idea to expose the time_scales to config file. By doing so, 3rd party components such as visualizer have a change to evaluate
+    #       the smallest scale for each pair by checking each strategy pairs and
+
+    # TODO: NEXT: Make the scales configurable just like pairs(considering the discussion above). However it is not planned to be change quite often
+
+    bwrapper.get_historical_klines(start_timestamp, end_timestamp, )
+    #df_enter_expire = await get_enter_expire_hto(mongocli)
+    #df_exit_expire = await get_exit_expire_hto(mongocli)
+    #df_closed = await get_closed_hto(mongocli)
+
+    fp.buy_sell(df, df_enter_expire=df_enter_expire)
+
+    pass
+
+
+async def main():
+
+    if config['backtest']['online']:
+        await visualize_online()
+    else:
+        await visualize_offline()
 
 
 if __name__ == '__main__':
     
     # python.exe .\scripts\visualize_test_session.py --filename .\test\data\btcusdt_15m_202005121212_202005191213.csv
 
-    parser = argparse.ArgumentParser(description='Optional app description')
-    parser.add_argument('--host', type=str, default='localhost')
-    parser.add_argument('--port', type=str, default=27017)
-    parser.add_argument('--db', type=str, default='test-bot')
-    parser.add_argument('--filename', type=str, default=r'.\\test\\data\\btcusdt_15m_202005121212_202005191213.csv')
-    args = parser.parse_args()
-    print(args.host, args.port, args.db)
-    mongocli = mongo_utils.MongoClient(args.host, args.port, args.db, clean=False)
+    f = open(str(sys.argv[1]),'r')
+    config = json.load(f)
+    
+    with open(config['credential_file'], 'r') as cred_file:
+        cred_info = json.load(cred_file)
 
+    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
+        config['mongodb']['port'], 
+        config['tag'],
+        clean=False)
+    
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(visualize_db())
+    loop.run_until_complete(main())
 
