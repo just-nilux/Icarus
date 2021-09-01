@@ -5,7 +5,7 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
-from Ikarus.helpers import time_scale_to_second
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -94,71 +94,6 @@ async def wait_until(dt):
 async def run_at(dt, coro):
     await wait_until(dt)
     return await coro
-
-
-async def get_closed_hto():
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
-    hto_closed = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price']
-        }
-        hto_closed.append(hto_dict)
-
-    df = pd.DataFrame(hto_closed)
-    return df
-
-
-async def get_enter_expire_hto():
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
-    hto_ent_exp_list = []
-    for hto in hto_list:
-        # NOTE: HIGH: We dont know it the exit type is limit or not
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-        }
-        hto_ent_exp_list.append(hto_dict)
-
-    df = pd.DataFrame(hto_ent_exp_list)
-    return df
-
-
-async def get_exit_expire_hto():
-    # Read Database to get hist-trades and dump to a DataFrame
-    
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
-    hto_closed_list = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit'][plannedExitType]['expire']
-        }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
-
-    return df
 
 
 async def write_updated_ltos_to_db(lto_list):
@@ -431,7 +366,6 @@ async def application(strategy_list, bwrapper, start_time):
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
     lto_list = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
-    # TODO: NEXT: Resolve why the NewStrategy creates 2 LTO (probably 1 for each time_scale)
     #################### Phase 2: Perform calculation tasks ####################
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
@@ -448,6 +382,7 @@ async def application(strategy_list, bwrapper, start_time):
     for strategy in strategy_list:
         strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, start_time)))
     
+    # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
 
@@ -485,7 +420,6 @@ async def main():
     all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
-    #all_symbol_info = await client.get_symbol_info(all_pairs) # NOTE: Multiple pair not supported
 
     # TODO: Actually no need to make symbol_info a member of the instances, it is better to have it as 
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
@@ -532,18 +466,20 @@ async def main():
 
     # Get [hist-trades] docs to visualize the session
     df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
-        get_closed_hto(), 
-        get_enter_expire_hto(), 
-        get_exit_expire_hto())
+        get_closed_hto(mongocli), 
+        get_enter_expire_hto(mongocli), 
+        get_exit_expire_hto(mongocli))
 
-    # Dump df_csv_list[0] to a file for debug purposes
-    #f = open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
+    # TODO: NEXT: Find a way to visualization logic
+    df = await bwrapper.get_historical_klines(start_timestamp, end_timestamp, 'BTCUSDT', '15m')
 
     # Evaluate the statistics
     await stats.main()
 
     # Visualize the test session
-    fp.buy_sell(df=df_csv_list[0], df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
+    # TODO: Get the df
+    fp.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
+
 
 if __name__ == '__main__':
     
@@ -558,17 +494,9 @@ if __name__ == '__main__':
         config['mongodb']['port'], 
         config['tag'],
         clean=config['mongodb']['clean'])
-
-    # TODO: Gather all the Pairs
-
-    # TODO: By using name of the given Strategies get all the timescales
     
     # Initialize and configure objects
     setup_logger(config['log-level'])
-
-    # Add scales_in_minute to the config to be used in strategy etc.
-    #config = generate_scales_in_minute(config)
-    # TODO: NEXT: What you're gonna do about that
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 

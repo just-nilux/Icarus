@@ -5,7 +5,7 @@ from ..enums import *
 from .StrategyBase import StrategyBase
 import copy
 import itertools
-from ..helpers import time_scale_to_minute
+from ..utils import time_scale_to_minute
 
 class NewStrategy(StrategyBase):
 
@@ -42,7 +42,7 @@ class NewStrategy(StrategyBase):
                 # NOTE: postponed_candles = 1 means 2 candle
                 #       If only 1 candle is desired to be postponed, then it means we will wait for newly started candle to close so postponed_candles will be 0
                 postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'enter', self.config['enter']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0])) 
+                lto = await StrategyBase._postpone(lto,'enter', self.config['enter']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,time_scale_to_minute(self.min_period))) 
                 skip_calculation = True
             else: pass
 
@@ -56,12 +56,12 @@ class NewStrategy(StrategyBase):
                 if self.config['exit']['type'] == TYPE_LIMIT:
                     lto['exit'][TYPE_LIMIT]['price'] *= 0.99
                     lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
-                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
 
                 elif self.config['exit']['type'] == TYPE_OCO:
                     lto['exit'][TYPE_OCO]['limitPrice'] *= 0.99
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
-                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
                 skip_calculation = True
 
                 # Apply the filters
@@ -69,12 +69,12 @@ class NewStrategy(StrategyBase):
                 lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
                                                                                                     self.config['exit']['type'], 
                                                                                                     lto['exit'][self.config['exit']['type']], 
-                                                                                                    self.symbol_info, 
+                                                                                                    self.symbol_info[lto['pair']], 
                                                                                                     exit_qty=lto['result']['enter']['quantity'])
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
                 postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
+                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,time_scale_to_minute(self.min_period)))
                 skip_calculation = True
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
@@ -91,7 +91,7 @@ class NewStrategy(StrategyBase):
             lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
                                                                                                 self.config['exit']['type'], 
                                                                                                 lto['exit'][self.config['exit']['type']], 
-                                                                                                self.symbol_info, 
+                                                                                                self.symbol_info[lto['pair']], 
                                                                                                 exit_qty=lto['result']['enter']['quantity'])
             skip_calculation = True
 

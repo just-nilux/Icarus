@@ -12,7 +12,7 @@ import bson
 import time
 from itertools import chain, groupby
 import operator
-from .helpers import time_scale_to_second
+from .utils import time_scale_to_second
 
 
 class BinanceWrapper():
@@ -733,7 +733,7 @@ class TestBinanceWrapper():
         #    for index, row in time_df.iterrows():
         #        tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
 
-        #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))
+        #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row[f"length_str"]))
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
 
         data_dict = await self.decompose(meta_data_pool, composit_klines)
@@ -742,6 +742,15 @@ class TestBinanceWrapper():
         # NOTE: Keep in mind that the last row is the current candle that has not been completed
         self.logger.debug('get_data_dict ended')
         return data_dict
+
+
+    async def get_historical_klines(self, start_time, end_time, pair, time_scale):
+
+        hist_klines = await self.client.get_historical_klines(pair, time_scale, start_str=start_time*1000, end_str=end_time*1000 )
+        df = pd.DataFrame(hist_klines, columns=TestBinanceWrapper.kline_column_names)
+        df = df.set_index(['open_time'])
+        df = df.astype(float)
+        return df
 
 
     async def decompose(self, meta_data_pool, composit_klines):
@@ -753,8 +762,7 @@ class TestBinanceWrapper():
             if not meta_data[1] in do_dict.keys():
                 do_dict[meta_data[1]] = dict()
             
-            df = pd.DataFrame(composit_klines[idx])
-            df.columns = BinanceWrapper.kline_column_names
+            df = pd.DataFrame(composit_klines[idx], columns=TestBinanceWrapper.kline_column_names)
             df = df.set_index(['open_time'])
             # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
             #       Since it requires closed candles.
