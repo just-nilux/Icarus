@@ -155,18 +155,11 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
     """
 
     # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
-    # TODO: NEXT: From the data_dict, kline information only handles from the smallest time_scale. Find a way to get the smallest kline
-
 
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
         # 1.2.1: Check trades and update status
-        # TODO: Update the following patch for the multi scale
-        #if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
-        scale = list(data_dict[pair].keys())[0]
-
-        # TODO: NEXT: Get the last kline
         strategy_min_scale = strategy_period_mapping[lto_list[i]['strategy']]
         last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])

@@ -20,7 +20,6 @@ class OCOBackTest(StrategyBase):
         self.symbol_info = _symbol_info
 
         # NOTE: Hardcoded time-scales list (scales should be in ascending order)
-        self.time_scales = ['15m']
         return
 
 

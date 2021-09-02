@@ -30,21 +30,9 @@
         "credit_currency": "TRY"
     },
     "strategy": {
-        "FallingKnifeCatcher": {
-            "pairs": ["BTCUSDT"],
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "limit"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            }
-        },
         "NewStrategy": {
-            "pairs": ["XRPUSDT","BTCUSDT"],
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1m","15m"],
             "enter": {
                 "type": "limit"
             },
@@ -81,6 +69,7 @@
     },
     "backtest":{
         "start_time": "2020-05-12 12:15:00",
-        "end_time": "2020-05-12 13:00:00"
+        "end_time": "2020-05-12 13:00:00",
+        "online": false
     }
 }

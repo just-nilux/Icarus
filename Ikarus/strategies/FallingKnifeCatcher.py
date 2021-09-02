@@ -15,12 +15,10 @@ class FallingKnifeCatcher(StrategyBase):
         self.config = _config['strategy'][self.name]
 
         self.quote_currency = _config['broker']['quote_currency']
-        #self.scales_in_minute = _config['data_input']['scales_in_minute']
         # TODO: Make proper handling for symbol_info
         self.symbol_info = _symbol_info
-        self.time_scales = ['1m', '15m']
-        self.min_period = self.time_scales[0]
-        self.meta_do = list(itertools.product(self.time_scales, self.config['pairs']))
+        self.min_period = self.config['time_scales'][0]
+        self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
         return
 
 
