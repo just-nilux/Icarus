@@ -16,9 +16,9 @@ def time_scale_to_minute(interval: str):
 def time_scale_to_second(interval: str):
         return time_scale_to_minute(interval) * 60
 
-async def get_closed_hto(mongocli):
+async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
     # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
+    hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed = []
     for hto in hto_list:
         if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
@@ -39,9 +39,9 @@ async def get_closed_hto(mongocli):
     return df
 
 
-async def get_enter_expire_hto(mongocli):
+async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
     # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
+    hto_list = await mongocli.do_find('hist-trades',query)
     hto_ent_exp_list = []
     for hto in hto_list:
         # NOTE: HIGH: We dont know it the exit type is limit or not
@@ -57,10 +57,10 @@ async def get_enter_expire_hto(mongocli):
     return df
 
 
-async def get_exit_expire_hto(mongocli):
+async def get_exit_expire_hto(mongocli, query={'result.cause':STAT_EXIT_EXP}):
     # Read Database to get hist-trades and dump to a DataFrame
     
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
+    hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed_list = []
     for hto in hto_list:
         if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
@@ -80,3 +80,21 @@ async def get_exit_expire_hto(mongocli):
 
     return df
 
+
+async def get_pair_min_period_mapping(config):
+    
+    pair_scale_set_mapping = {}
+    for name, strategy in config['strategy'].items():
+        for pair in strategy['pairs']:
+            if pair not in pair_scale_set_mapping.keys():
+                pair_scale_set_mapping[pair] = set()
+            pair_scale_set_mapping[pair].add(strategy['time_scales'][0])
+
+    pair_min_period_mapping = {}
+    for pair, scale_set in pair_scale_set_mapping.items():
+        for scale in config['time_scales'].keys():
+            if scale in scale_set:
+                pair_min_period_mapping[pair] = scale
+                break
+
+    return pair_min_period_mapping

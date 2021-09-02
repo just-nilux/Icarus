@@ -710,7 +710,7 @@ class TestBinanceWrapper():
         return do_dict
 
 
-    async def get_data_dict(self, meta_data_pool, start_time):
+    async def get_data_dict(self, meta_data_pool, ikarus_time):
         """
         meta_do = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
         (time_scale, pair)
@@ -727,12 +727,12 @@ class TestBinanceWrapper():
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
-            if type(start_time) == int:
-                end_time = start_time + time_scale_to_second(meta_data[0]) * self.config['time_scale'][meta_data[0]][1] * 1000 # ms = start_time + x sec * y times
+            if type(ikarus_time) == int:
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * self.config['time_scales'][meta_data[0]][1] * 1000 # ms = start_time + x sec * y times
             else:
                 raise NotImplementedException('start_time is not integer')
 
-            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=start_time, end_str=end_time )))
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=ikarus_time )))
 
 
         #for pair in pairs:
@@ -752,7 +752,7 @@ class TestBinanceWrapper():
 
     async def get_historical_klines(self, start_time, end_time, pair, time_scale):
 
-        hist_klines = await self.client.get_historical_klines(pair, time_scale, start_str=start_time*1000, end_str=end_time*1000 )
+        hist_klines = await self.client.get_historical_klines(pair, time_scale, start_str=start_time, end_str=end_time )
         df = pd.DataFrame(hist_klines, columns=TestBinanceWrapper.kline_column_names)
         df = df.set_index(['open_time'])
         df = df.astype(float)

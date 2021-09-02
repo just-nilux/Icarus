@@ -10,12 +10,13 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
 import sys
-from scripts import fplot as fp
 import copy
 import bson
 from itertools import chain, groupby
 import operator
 import itertools
+from scripts import finplot_wrapper as fplot
+from scripts.visualize_test_session import visualize_online
 
 # Global Variables
 SYSTEM_STATUS = 0
@@ -314,7 +315,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
     return lto_list
 
 
-async def application(strategy_list, bwrapper, start_time):
+async def application(strategy_list, bwrapper, ikarus_time):
     # NOTE: 'ikarus-time' denotes the current_time in old implementation
     #################### Phase 1: Perform pre-calculation tasks ####################
     #current_ts = int(df_list[0].index[-1])
@@ -325,7 +326,7 @@ async def application(strategy_list, bwrapper, start_time):
     #current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
     # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
     #       In this case +1 will be the start time of the next candle which is the current candle for the application
-    logger.info(f'Ikarus Time: [{start_time}]')
+    logger.info(f'Ikarus Time: [{ikarus_time}]')
 
     # 1.1 Get balance and datadict,
     # TODO: NEXT: give index paramter to retrieve a single object instead of a list
@@ -342,16 +343,16 @@ async def application(strategy_list, bwrapper, start_time):
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
-        if start_time % time_scale_to_second(strategy_obj.min_period) == 0:
+        if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
 
 
-    start_time = start_time * 1000 # Convert to ms
+    ikarus_time = ikarus_time * 1000 # Convert to ms
  
     meta_data_pool = set(chain(*meta_data_pool))
     # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
-    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, start_time)
+    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, ikarus_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.2 Get live trade objects (LTOs)
@@ -375,7 +376,7 @@ async def application(strategy_list, bwrapper, start_time):
 
     strategy_tasks = []
     for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, start_time)))
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
     
     # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
@@ -399,7 +400,7 @@ async def application(strategy_list, bwrapper, start_time):
 
     # 3.3: Get the onserver
     observation_obj = await observer.sample_observer(df_balance)
-    observation_obj.load('timestamp',start_time)
+    observation_obj.load('timestamp',ikarus_time)
     await mongocli.do_insert_one("observer",observation_obj.get())
 
     pass
@@ -425,9 +426,9 @@ async def main():
         if strategy.name in config['strategy'].keys():
             strategy_periods.add(strategy.min_period)
 
-    strategy_periods = list(strategy_periods)
+
     ikarus_cycle_period = ''
-    for scale in config['time_scale'].keys():
+    for scale in config['time_scales'].keys():
         if scale in strategy_periods:
             ikarus_cycle_period = scale
             break
@@ -444,36 +445,30 @@ async def main():
     await mongocli.do_insert_one("observer", initial_observation_item)   
 
     # Evaluate start and end times
-    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    start_timestamp = int(datetime.timestamp(start_time))
-    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
-    end_timestamp = int(datetime.timestamp(end_time))
+    session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    session_start_timestamp = int(datetime.timestamp(session_start_time))
+    session_end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    session_end_timestamp = int(datetime.timestamp(session_end_time))
 
     # Iterate through the time stamps
-    total_len = int((end_timestamp - start_timestamp) / time_scale_to_second(ikarus_cycle_period)) # length = Second / Min*60
+    total_len = int((session_end_timestamp - session_start_timestamp) / time_scale_to_second(ikarus_cycle_period)) # length = Second / Min*60
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-    for idx, start_time in enumerate(range(start_timestamp, end_timestamp, time_scale_to_second(ikarus_cycle_period))):
+    for idx, start_time in enumerate(range(session_start_timestamp, session_end_timestamp, time_scale_to_second(ikarus_cycle_period))):
         logger.debug(f'Iteration {idx}:')
         printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
         await application(strategy_list, bwrapper, start_time)
 
-    # Get [hist-trades] docs to visualize the session
-    df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
-        get_closed_hto(mongocli), 
-        get_enter_expire_hto(mongocli), 
-        get_exit_expire_hto(mongocli))
-
-    # TODO: NEXT: Find a way to visualization logic
-    df = await bwrapper.get_historical_klines(start_timestamp, end_timestamp, 'BTCUSDT', ikarus_cycle_period)
-
     # Evaluate the statistics
     await stats.main()
 
+    # Get [hist-trades] docs to visualize the session
+    await visualize_online(bwrapper, mongocli, config)
+    pass
     # Visualize the test session
     # TODO: Get the df
-    fp.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
+    #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
 
 if __name__ == '__main__':

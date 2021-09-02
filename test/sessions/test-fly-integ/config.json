@@ -31,7 +31,7 @@
     },
     "strategy": {
         "NewStrategy": {
-            "pairs": ["BTCUSDT"],
+            "pairs": ["BTCUSDT", "XRPUSDT"],
             "time_scales": ["1m","15m"],
             "enter": {
                 "type": "limit"
@@ -54,7 +54,7 @@
     "statistics": {
         "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
     },
-    "time_scale": {
+    "time_scales": {
         "1m": ["12 hours", 720],
         "5m": ["1 day", 480],
         "15m": ["1 day", 96],
@@ -70,6 +70,6 @@
     "backtest":{
         "start_time": "2020-05-12 12:15:00",
         "end_time": "2020-05-12 13:00:00",
-        "online": false
+        "online": true
     }
 }
