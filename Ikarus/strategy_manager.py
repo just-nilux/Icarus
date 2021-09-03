@@ -12,6 +12,7 @@ class StrategyManager():
             "AlwaysEnter": strategies.AlwaysEnter.AlwaysEnter,
             "AlwaysEnter90": strategies.AlwaysEnter90.AlwaysEnter90,
             "FallingKnifeCatcher": strategies.FallingKnifeCatcher.FallingKnifeCatcher,
+            "NewStrategy": strategies.NewStrategy.NewStrategy,
         }
 
         self.strategy_list = []

@@ -5,22 +5,26 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
 import sys
-from scripts import fplot as fp
 import copy
 import bson
 from itertools import chain, groupby
 import operator
+import itertools
+from scripts import finplot_wrapper as fplot
+from scripts.visualize_test_session import visualize_online
 
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
 def generate_scales_in_minute(config_dict):
-    scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
+    # TODO: add the key: 'M'
+    scales_to_minute = {'m':1, 'h':60, 'd':24*60, 'w':10080}  # Hardcoded scales in minute
     scales_in_minute = []
     for scale in config_dict['data_input']['scale']:
         scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
@@ -93,72 +97,7 @@ async def run_at(dt, coro):
     return await coro
 
 
-async def get_closed_hto(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
-    hto_closed = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price']
-        }
-        hto_closed.append(hto_dict)
-
-    df = pd.DataFrame(hto_closed)
-    return df
-
-
-async def get_enter_expire_hto(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
-    hto_ent_exp_list = []
-    for hto in hto_list:
-        # NOTE: HIGH: We dont know it the exit type is limit or not
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-        }
-        hto_ent_exp_list.append(hto_dict)
-
-    df = pd.DataFrame(hto_ent_exp_list)
-    return df
-
-
-async def get_exit_expire_hto(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
-    hto_closed_list = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit'][plannedExitType]['expire']
-        }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
-
-    return df
-
-
-async def write_updated_ltos_to_db(lto_list, lto_dict_original):
+async def write_updated_ltos_to_db(lto_list):
 
     for lto in lto_list:
 
@@ -203,7 +142,7 @@ async def write_updated_ltos_to_db(lto_list, lto_dict_original):
             pass
 
 
-async def update_ltos(lto_list, data_dict, df_balance):
+async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
     """
     Args:
         lto_dict (dict): will be updated (status, result, exit sections)
@@ -216,14 +155,14 @@ async def update_ltos(lto_list, data_dict, df_balance):
         dict: lto_dict
     """
 
+    # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
+
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
         # 1.2.1: Check trades and update status
-        # TODO: Update the following patch for the multi scale
-        if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
-        scale = list(data_dict[pair].keys())[0]
-        last_kline = data_dict[pair][scale].tail(1)
+        strategy_min_scale = strategy_period_mapping[lto_list[i]['strategy']]
+        last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
         if lto_list[i]['status'] == STAT_OPEN_ENTER:
@@ -376,35 +315,53 @@ async def update_ltos(lto_list, data_dict, df_balance):
     return lto_list
 
 
-async def application(strategy_list, bwrapper, pair_list, df_list):
-
+async def application(strategy_list, bwrapper, ikarus_time):
+    # NOTE: 'ikarus-time' denotes the current_time in old implementation
     #################### Phase 1: Perform pre-calculation tasks ####################
     #current_ts = int(df_list[0].index[-1])
     
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
+    #current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
     # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
     #       In this case +1 will be the start time of the next candle which is the current candle for the application
-    logger.info(f'Ikarus Time: [{current_ts}]')
-    
-    # 1.1 Get live trade objects (LTOs)
-    lto_list = await mongocli.do_find('live-trades',{})
+    logger.info(f'Ikarus Time: [{ikarus_time}]')
 
-    lto_list_original = copy.deepcopy(lto_list)
-
-    # 1.2 Get balance and datadict,
+    # 1.1 Get balance and datadict,
     # TODO: NEXT: give index paramter to retrieve a single object instead of a list
     info = await mongocli.get_n_docs('observer') # Default is the last doc
-    # NOTE:info given to the get_current_balance only for test-engine.py
-    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(pair_list, input_data_config, df_list)
+    # NOTE:info given to the get_current_balance only for test-engine.p
+    
+    # NOTE: Prior to this point, some preparations should be made:
+    #       1. Gather all the used timescales from the configured strategies
+    #       2. Grouped the pairs based on the time_scales. The output should look like this:
+
+    # Each strategy ha a min_period. Thus I can iterate over it to see the matches between the current time and their period
+    meta_data_pool = []
+    #active_strategies = []
+    strategy_period_mapping = {}
+    # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
+    for strategy_obj in strategy_list:
+        if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
+            meta_data_pool.append(strategy_obj.meta_do)
+            strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
+
+
+    ikarus_time = ikarus_time * 1000 # Convert to ms
+ 
+    meta_data_pool = set(chain(*meta_data_pool))
+    # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
+    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, ikarus_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
+
+    # 1.2 Get live trade objects (LTOs)
+    # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
+    lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    lto_list = await update_ltos(lto_list, data_dict, df_balance)
-
+    lto_list = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
     #################### Phase 2: Perform calculation tasks ####################
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
@@ -419,8 +376,9 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
 
     strategy_tasks = []
     for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
     
+    # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
 
@@ -438,11 +396,11 @@ async def application(strategy_list, bwrapper, pair_list, df_list):
         result = await mongocli.do_insert_many("live-trades",nto_list)
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
-    await write_updated_ltos_to_db(lto_list, lto_list_original)
+    await write_updated_ltos_to_db(lto_list)
 
     # 3.3: Get the onserver
     observation_obj = await observer.sample_observer(df_balance)
-    observation_obj.load('timestamp',current_ts)
+    observation_obj.load('timestamp',ikarus_time)
     await mongocli.do_insert_one("observer",observation_obj.get())
 
     pass
@@ -453,69 +411,59 @@ async def main():
     # NOTE: Temporary hack for yesting without internet connection
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
-    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
+    all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
+    all_pairs = list(set(itertools.chain(*all_pairs)))
+    symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
+    # TODO: Actually no need to make symbol_info a member of the instances, it is better to have it as 
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
     strategy_list = strategy_mgr.get_strategies()
 
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    strategy_periods = set()
+    for strategy in strategy_list:
+        if strategy.name in config['strategy'].keys():
+            strategy_periods.add(strategy.min_period)
+
+    ikarus_cycle_period = await get_min_scale(config['time_scales'].keys(), strategy_periods)
+    if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration
     binance_wrapper.TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
-    observation_item = {
+    initial_observation_item = {
         'balances': config['balances']
     }
-    await mongocli.do_insert_one("observer",observation_item)   
+    await mongocli.do_insert_one("observer", initial_observation_item)   
 
-    # Obtain the pairs and the time scales of the input data
-    pair_list = []
-    # NOTE: Normally the pair list is obtained from the config, but for testing it is coming from the data files.
-    time_scale_list = []
-    df_csv_list = []
+    # Evaluate start and end times
+    session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    session_start_timestamp = int(datetime.timestamp(session_start_time))
+    session_end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    session_end_timestamp = int(datetime.timestamp(session_end_time))
 
-    # Iterate over the given files
-    # TODO: To simulate live-trade, include the next candle as the current candle
-
-    for file in config['files']:
-        filename = file.split('\\')[-1]
-        pair_list.append(filename.split('_')[0].upper())
-        time_scale_list.append(filename.split('_')[1])
-        df = pd.read_csv(file)
-        df = df.set_index(['open_time'])
-        df_csv_list.append(df)
-
-    # TODO: Multiple pairs, or multiple timescale for a pair logic, requires some generalizations
-    #       This changes can be handled after the app is confident about working 1 pair and 1 scale
-    hist_data_length = int(input_data_config[ input_data_config['scale']==time_scale_list[0] ]['length_int'].values)
-    total_len = len(df_csv_list[0]) - hist_data_length
+    # Iterate through the time stamps
+    total_len = int((session_end_timestamp - session_start_timestamp) / time_scale_to_second(ikarus_cycle_period)) # length = Second / Min*60
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
-    for i in range(total_len):
-        logger.debug(f'Iteration {i}:')
-        printProgressBar(i + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
-        # TODO: Consider the fact that last candle can be newly opened candle and the analysis shouold be performed based on the last closed candle
-        # Create the df_list
-        df_list = []
-        for df in df_csv_list:
-            df_list.append(df.iloc[i:i+hist_data_length-1]) # NOTE: -1 comes from the missing candle in live-engine
-        await application(strategy_list, bwrapper, pair_list, df_list)
 
-    # Get [hist-trades] docs to visualize the session
-    df_closed_hto, df_enter_expire, df_exit_expire = await asyncio.gather( 
-        get_closed_hto(df_csv_list[0]), 
-        get_enter_expire_hto(df_csv_list[0]), 
-        get_exit_expire_hto(df_csv_list[0]))
+    for idx, start_time in enumerate(range(session_start_timestamp, session_end_timestamp, time_scale_to_second(ikarus_cycle_period))):
+        logger.debug(f'Iteration {idx}:')
+        printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-    # Dump df_csv_list[0] to a file for debug purposes
-    #f = open('out','w'); f.write(df_csv_list[0].to_string()); f.close()
+        await application(strategy_list, bwrapper, start_time)
 
     # Evaluate the statistics
     await stats.main()
 
+    # Get [hist-trades] docs to visualize the session
+    await visualize_online(bwrapper, mongocli, config)
+    pass
     # Visualize the test session
-    fp.buy_sell(df=df_csv_list[0], df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
+    # TODO: Get the df
+    #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
+
 
 if __name__ == '__main__':
     
@@ -530,25 +478,15 @@ if __name__ == '__main__':
         config['mongodb']['port'], 
         config['tag'],
         clean=config['mongodb']['clean'])
-
-    input_data_config = pd.DataFrame({
-        "scale":config['data_input']['scale'],
-        "length_str":config['data_input']['length_str'],
-        "length_int":config['data_input']['length_int']})
-
+    
     # Initialize and configure objects
     setup_logger(config['log-level'])
-
-    # Add scales_in_minute to the config to be used in strategy etc.
-    config = generate_scales_in_minute(config)
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
 
-    # NOTE: Multiple analyzers not needed because an analyzer can be configured to work with multiple 'scales' and 'all_pairs'.
-    #       It may provide different analysis results as an item in the analysis objects.
     # NOTE: Suppose there are multiple 'time scales' for a 'pair'. In this case, the output of all of the 'scales' are used to generate a common analysis for a 'pair'
     #       In other words, there will one-to-one mapping between 'all_pairs' and the analysis items.
 

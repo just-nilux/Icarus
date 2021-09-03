@@ -4,7 +4,8 @@
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
-        "port": 27017
+        "port": 27017,
+        "clean": false
     },
     "broker": {
         "quote_currency": "USDT",
@@ -39,9 +40,9 @@
         }
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange", "moving_average"],
+        "indicators": ["low","high","llow", "hhigh", "trange", "ma"],
         "params": {
-            "moving_average": [5,20]
+            "ma": [5,20]
         }
     },
     "data_input": {

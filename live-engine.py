@@ -281,7 +281,7 @@ async def update_ltos(lto_list, orders_dict, data_dict):
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
                 else:
-                    # TODO: NEXT: LOG WARNING
+                    # TODO: LOG WARNING
                     pass
 
             else:

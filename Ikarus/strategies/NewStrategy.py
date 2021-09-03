@@ -4,22 +4,24 @@ from ..objects import GenericObject
 from ..enums import *
 from .StrategyBase import StrategyBase
 import copy
+import itertools
+from ..utils import time_scale_to_minute
 
-
-class OCOBackTest(StrategyBase):
+class NewStrategy(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        self.name = "OCOBackTest"
+        self.name = "NewStrategy"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 
         self.config = _config['strategy'][self.name]
 
         self.quote_currency = _config['broker']['quote_currency']
-        self.scales_in_minute = _config['data_input']['scales_in_minute']
         # TODO: Make proper handling for symbol_info
         self.symbol_info = _symbol_info
 
         # NOTE: Hardcoded time-scales list (scales should be in ascending order)
+        self.min_period = self.config['time_scales'][0]
+        self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
         return
 
 
@@ -38,7 +40,7 @@ class OCOBackTest(StrategyBase):
                 # NOTE: postponed_candles = 1 means 2 candle
                 #       If only 1 candle is desired to be postponed, then it means we will wait for newly started candle to close so postponed_candles will be 0
                 postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'enter', self.config['enter']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0])) 
+                lto = await StrategyBase._postpone(lto,'enter', self.config['enter']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,time_scale_to_minute(self.min_period))) 
                 skip_calculation = True
             else: pass
 
@@ -50,14 +52,17 @@ class OCOBackTest(StrategyBase):
                 lto['action'] = ACTN_UPDATE 
                 lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']])) # This is good for debugging and will be good for perf. evaluation in future
                 if self.config['exit']['type'] == TYPE_LIMIT:
-                    lto['exit'][TYPE_LIMIT]['price'] *= 0.99
+                    lto['exit'][TYPE_LIMIT]['price'] *= 1
                     lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
-                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
 
                 elif self.config['exit']['type'] == TYPE_OCO:
-                    lto['exit'][TYPE_OCO]['limitPrice'] *= 0.99
+                    lto['exit'][TYPE_OCO]['limitPrice'] *= 1
+                    # TODO: NEXT: Fix this OCO update issue in all strategies
+                    lto['exit'][TYPE_OCO]['stopPrice'] *= 1
+                    lto['exit'][TYPE_OCO]['stopLimitPrice'] *= 1
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
-                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,self.scales_in_minute[0])
+                    lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
                 skip_calculation = True
 
                 # Apply the filters
@@ -65,12 +70,12 @@ class OCOBackTest(StrategyBase):
                 lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
                                                                                                     self.config['exit']['type'], 
                                                                                                     lto['exit'][self.config['exit']['type']], 
-                                                                                                    self.symbol_info, 
+                                                                                                    self.symbol_info[lto['pair']], 
                                                                                                     exit_qty=lto['result']['enter']['quantity'])
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
                 postponed_candles = 1
-                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,self.scales_in_minute[0]))
+                lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,time_scale_to_minute(self.min_period)))
                 skip_calculation = True
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
@@ -87,7 +92,7 @@ class OCOBackTest(StrategyBase):
             lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
                                                                                                 self.config['exit']['type'], 
                                                                                                 lto['exit'][self.config['exit']['type']], 
-                                                                                                self.symbol_info, 
+                                                                                                self.symbol_info[lto['pair']], 
                                                                                                 exit_qty=lto['result']['enter']['quantity'])
             skip_calculation = True
 
@@ -154,8 +159,8 @@ class OCOBackTest(StrategyBase):
             # there needs to be different handlers for each type of indicator
             # TODO: Create a list of indicator handlers: [atr_handler()]
 
-            trange_mean5 = st.mean(time_dict['15m']['trange'][-5:])
-            trange_mean20 = st.mean(time_dict['15m']['trange'][-20:])
+            trange_mean5 = st.mean(time_dict[self.min_period]['trange'][-5:])
+            trange_mean20 = st.mean(time_dict[self.min_period]['trange'][-20:])
 
             # Make decision to enter or not
             if trange_mean5 < trange_mean20:
@@ -169,8 +174,8 @@ class OCOBackTest(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict['15m']['low'][-10:])
-                exit_price = max(time_dict['15m']['high'][-10:])
+                enter_price = min(time_dict[self.min_period]['low'][-10:])
+                exit_price = max(time_dict[self.min_period]['high'][-10:])
 
                 # Calculate enter/exit amount value
 
@@ -204,9 +209,9 @@ class OCOBackTest(StrategyBase):
                 exit_type = self.config['exit']['type']
 
                 trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,2,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
+                                                                        StrategyBase._eval_future_candle_time(dt_index,2,time_scale_to_minute(self.min_period))) # NOTE: Multiple scale is not supported
                 trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,9,self.scales_in_minute[0])) # NOTE: Multiple scale is not supported
+                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period))) # NOTE: Multiple scale is not supported
 
                 # TODO: Check the free amount of quote currency
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']
@@ -214,9 +219,9 @@ class OCOBackTest(StrategyBase):
                 trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
                                                                                                             enter_type, 
                                                                                                             trade_obj['enter'][enter_type], 
-                                                                                                            self.symbol_info)
-
-                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info):
+                                                                                                            self.symbol_info[ao_pair])
+                # TODO: NEXT: A strategy may contain multiple pair thus the related symbol info should be given each time as argument
+                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
                     # TODO: Notification about min_notional
                     continue
                 trade_objects.append(trade_obj)

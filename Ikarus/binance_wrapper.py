@@ -1,3 +1,4 @@
+from Ikarus.exceptions import NotImplementedException
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
@@ -9,6 +10,9 @@ import logging
 import json
 import bson
 import time
+from itertools import chain, groupby
+import operator
+from .utils import time_scale_to_second, get_min_scale
 
 
 class BinanceWrapper():
@@ -523,6 +527,7 @@ class BinanceWrapper():
                 # NOTE: This should not be a problem because if the analysis affected by this missing value,
                 #       then the length should be greater.
                 #       On the other hand, the lackness of the oldest value may help or not who knows?
+                df = df.astype(float)
                 do[row["scale"]] = df
             do_dict[pair] = do
             self.logger.debug("decompose ended [{}]:".format(pair))
@@ -631,6 +636,18 @@ class TestBinanceWrapper():
         df.astype(float)
         return df
 
+
+    async def get_all_symbol_info(self, all_pairs):
+        all_info = await self.client.get_exchange_info()
+
+        selected_info = {}
+        for item in all_info['symbols']:
+            if item['symbol'] in all_pairs:
+                selected_info[item['symbol']] = item
+
+        return selected_info
+
+
     async def get_current_balance(self,last_observer_item):
         '''
         Get all assets with 'free' and 'locked' parts
@@ -670,7 +687,7 @@ class TestBinanceWrapper():
 
         return df_balance
 
-    async def get_data_dict(self, pairs, time_df, df_list):
+    async def get_data_dict_from_file(self, pairs, time_df, df_list):
         '''
         time_df:
         ---------------------------------------
@@ -690,7 +707,69 @@ class TestBinanceWrapper():
             do_dict[pair] = do
         
         # await self.dump_data_obj(do_dict)
-        return do_dict    
+        return do_dict
+
+
+    async def get_data_dict(self, meta_data_pool, ikarus_time):
+        """
+        meta_do = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
+        (time_scale, pair)
+        length = meta_do['time_scale']
+        """
+        # NOTE: NEXT: Just an idea:
+        #       When it is time to improve test performance and use the csv files, instead of implementing old logic again,
+        #       1. Let an initial method to download klines at once to a variable or folder in different files, then let
+        #       2. If the klines stored in a variable (df), then simply read until etc.
+        #           NOTE: Do it using a function of bwrapper with only 1 call. Do not reflect anything to test-engine
+        #       3. If the klines saved to a file, then reading same silly data would be cumbersome, dont know what to do :D
+        self.logger.debug('get_data_dict started')
+
+        tasks_klines_scales = []
+        for meta_data in meta_data_pool:
+
+            if type(ikarus_time) == int:
+                # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
+                # TODO: NEXT: Go to normal BinanceWrapper and adapt it to this start and end time logic. WTF is verbal expresssions
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1] - 1) * 1000 # ms = start_time + x sec * y-1 times * 1000
+            else:
+                raise NotImplementedException('start_time is not integer')
+
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=ikarus_time )))
+
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+        data_dict = await self.decompose(meta_data_pool, composit_klines)
+        self.logger.debug('get_data_dict ended')
+        return data_dict
+
+
+    async def get_historical_klines(self, start_time, end_time, pair, time_scale):
+
+        hist_klines = await self.client.get_historical_klines(pair, time_scale, start_str=start_time, end_str=end_time )
+        df = pd.DataFrame(hist_klines, columns=TestBinanceWrapper.kline_column_names)
+        df = df.set_index(['open_time'])
+        df = df.astype(float)
+        return df
+
+
+    async def decompose(self, meta_data_pool, composit_klines):
+
+        self.logger.debug("decompose started")
+        do_dict = dict()
+        for idx, meta_data in enumerate(meta_data_pool):
+            
+            if not meta_data[1] in do_dict.keys():
+                do_dict[meta_data[1]] = dict()
+            
+            df = pd.DataFrame(composit_klines[idx], columns=TestBinanceWrapper.kline_column_names)
+            df = df.set_index(['open_time'])
+            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
+            #       Since it requires closed candles.
+            df.drop(df.index[-1], inplace=True)
+            df = df.astype(float)
+            do_dict[meta_data[1]][meta_data[0]] = df
+
+        self.logger.debug("decompose ended")
+        return do_dict
 
 
     async def dump_data_obj(self, js_obj):
@@ -760,13 +839,13 @@ class TestBinanceWrapper():
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
-                    # TODO: DEPLOY: Execute Market Order in Bnance
 
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
-                    # TODO: NEXT: Fix the 15m
-                    last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
+
+                    min_scale = await get_min_scale(self.config['time_scales'].keys(), data_dict[lto_list[i]['pair']].keys())
+                    last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
                     #             For the sake of simplicity closed price of the last candle is used in the market sell

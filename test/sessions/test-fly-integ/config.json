@@ -30,21 +30,9 @@
         "credit_currency": "TRY"
     },
     "strategy": {
-        "FallingKnifeCatcher": {
-            "pairs": ["BTCUSDT"],
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "oco"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "market_exit"
-            }
-        },
-        "OCOBackTest": {
-            "pairs": ["BTCUSDT"],
+        "NewStrategy": {
+            "pairs": ["BTCUSDT", "XRPUSDT"],
+            "time_scales": ["1m","15m"],
             "enter": {
                 "type": "limit"
             },
@@ -63,16 +51,10 @@
             "ma": [5,20]
         }
     },
-    "data_input": {
-        "all_pairs": ["BTCUSDT"],
-        "scale":["15m"],
-        "length_str":[ "1 day" ],
-        "length_int":[ 96 ]
-    },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/multi_strategy/stat.txt"
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
     },
-    "time_scale": {
+    "time_scales": {
         "1m": ["12 hours", 720],
         "5m": ["1 day", 480],
         "15m": ["1 day", 96],
@@ -84,5 +66,10 @@
         "1d": ["3 months", 90],
         "1w": ["1 year", 52],
         "1M": ["1 year", 12]
+    },
+    "backtest":{
+        "start_time": "2020-05-12 12:15:00",
+        "end_time": "2020-05-12 13:00:00",
+        "online": true
     }
 }

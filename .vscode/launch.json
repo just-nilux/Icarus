@@ -50,7 +50,10 @@
             "type": "python",
             "request": "launch",
             "program": ".\\scripts\\visualize_test_session.py",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "args": [
+                ".\\test\\sessions\\test-fly-integ\\config.json"
+            ]
         },
         {
             "name": "test-engine",
@@ -59,7 +62,7 @@
             "program": ".\\test-engine.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\multi_strategy\\config.json"
+                ".\\test\\sessions\\test-fly-integ\\config.json"
             ]
         },
         {
