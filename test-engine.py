@@ -333,11 +333,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     info = await mongocli.get_n_docs('observer') # Default is the last doc
     # NOTE:info given to the get_current_balance only for test-engine.p
     
-    # NOTE: Prior to this point, some preparations should be made:
-    #       1. Gather all the used timescales from the configured strategies
-    #       2. Grouped the pairs based on the time_scales. The output should look like this:
-
-    # Each strategy ha a min_period. Thus I can iterate over it to see the matches between the current time and their period
+    # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
     #active_strategies = []
     strategy_period_mapping = {}
@@ -347,10 +343,9 @@ async def application(strategy_list, bwrapper, ikarus_time):
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
 
-
     ikarus_time = ikarus_time * 1000 # Convert to ms
- 
     meta_data_pool = set(chain(*meta_data_pool))
+
     # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
     tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, ikarus_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
@@ -486,9 +481,6 @@ if __name__ == '__main__':
     stats = performance.Statistics(config, mongocli) 
     observer = observers.Observer()
     analyzer = analyzers.Analyzer(config)
-
-    # NOTE: Suppose there are multiple 'time scales' for a 'pair'. In this case, the output of all of the 'scales' are used to generate a common analysis for a 'pair'
-    #       In other words, there will one-to-one mapping between 'all_pairs' and the analysis items.
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")

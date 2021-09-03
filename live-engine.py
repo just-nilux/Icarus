@@ -5,6 +5,7 @@ import json
 from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
+from Ikarus.utils import time_scale_to_minute, time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -14,6 +15,8 @@ import bson
 import time
 from itertools import chain, groupby
 import operator
+import itertools
+
 
 # Global Variables
 FLAG_SYSTEM_STATUS = True
@@ -299,26 +302,33 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     return lto_list
 
 
-async def application(strategy_list, bwrapper):
+async def application(strategy_list, bwrapper, ikarus_time):
 
-    # NOTE: current_ts is the open time of the current live candle (open time)
-    # NOTE: current_ts is equal to the beginning of the the current minute (assuming that a cycle will not take more than a minute)
-    current_ts = int(time.time())       # Get the timestamp in gmt=0
-    current_ts -= int(current_ts % 60)  # Round the current_ts to backward (to the beginning of the current minute)
-    current_ts *= 1000                  # Make the resolution milisecond
-    logger.info(f'Ikarus Time: [{current_ts}]')
-
-    pair_list = config['data_input']['all_pairs']
+    logger.info(f'Ikarus Time: [{ikarus_time}]')
     
     #################### Phase 1: Perform pre-calculation tasks ####################
     logger.debug('Phase 1 started')
-    # 1.1 Get live trade objects (LTOs)
-    lto_list = await mongocli.do_find('live-trades',{})
 
-    lto_list_original = copy.deepcopy(lto_list)
+    # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
+    meta_data_pool = []
+    #active_strategies = []
+    strategy_period_mapping = {}
+    # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
+    for strategy_obj in strategy_list:
+        if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
+            meta_data_pool.append(strategy_obj.meta_do)
+            strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
+
+    ikarus_time = ikarus_time * 1000 # Convert to ms
+    meta_data_pool = set(chain(*meta_data_pool))
+
+    # 1.1 Get live trade objects (LTOs)
+    #lto_list = await mongocli.do_find('live-trades',{})
+    # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
+    lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
     # 1.2 Get datadict and orders
-    pre_calc_1_coroutines = [ bwrapper.get_data_dict(pair_list, input_data_config),
+    pre_calc_1_coroutines = [ bwrapper.get_data_dict(meta_data_pool, ikarus_time),
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
@@ -380,18 +390,28 @@ async def application(strategy_list, bwrapper):
     return True
 
 
-async def main(smallest_interval):
+async def main():
     global FLAG_SYSTEM_STATUS
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
+    bwrapper = binance_wrapper.BinanceWrapper(client, config, telbot)
 
-    symbol_info = await client.get_symbol_info(config['data_input']['all_pairs'][0]) # NOTE: Multiple pair not supported
+    all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
+    all_pairs = list(set(itertools.chain(*all_pairs)))
+    symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
     strategy_list = strategy_mgr.get_strategies()
 
-    bwrapper = binance_wrapper.BinanceWrapper(client, config, telbot)
+    strategy_periods = set()
+    for strategy in strategy_list:
+        if strategy.name in config['strategy'].keys():
+            strategy_periods.add(strategy.min_period)
+
+    ikarus_cycle_period = await get_min_scale(config['time_scales'].keys(), strategy_periods)
+    if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
+    ikarus_cycle_period_in_sec = time_scale_to_second(ikarus_cycle_period)
 
     telbot.send_constructed_msg('app', 'started!')
     while True:
@@ -411,10 +431,13 @@ async def main(smallest_interval):
 
             server_time = await client.get_server_time()
             logger.debug(f'System time: {server_time["serverTime"]}')
-            start_ts = int(server_time['serverTime']/1000)                      # NOTE: The smallest time interval is 1 minute
-            start_ts = start_ts - (start_ts % 60) + smallest_interval*60 + 1    # (x minute) * (60 sec) + (1 second) ahead
-            logger.debug(f'Cycle start time: {start_ts}')
-            result = await asyncio.create_task(run_at(start_ts, application(strategy_list, bwrapper)))
+            current_time = int(server_time['serverTime']/1000)                                                  # exact second
+            current_time -= (current_time % 60)                                                                 # exact minute
+            current_time -= (current_time % ikarus_cycle_period_in_sec )                                          # exact scale
+            next_start_time = current_time + ikarus_cycle_period_in_sec + 1 
+
+            logger.debug(f'Cycle start time: {next_start_time}')
+            result = await asyncio.create_task(run_at(next_start_time, application(strategy_list, bwrapper, next_start_time-1)))
             
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
@@ -453,16 +476,8 @@ if __name__ == "__main__":
         config['tag'],
         clean=config['mongodb']['clean']) # NOTE: Normally it is False
 
-    input_data_config = pd.DataFrame({
-        "scale":config['data_input']['scale'],
-        "length_str":config['data_input']['length_str'],
-        "length_int":config['data_input']['length_int']})
-
     # Initialize and configure objects
     setup_logger(config['log-level'])
-
-    # Add scales_in_minute to the config to be used in strategy etc.
-    config = generate_scales_in_minute(config)
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 
@@ -474,5 +489,5 @@ if __name__ == "__main__":
     logger.info("---------------------------------------------------------")
     loop = asyncio.get_event_loop()
 
-    loop.run_until_complete( main( min( config['data_input']['scales_in_minute'])))
+    loop.run_until_complete( main())
     print("Completed")
