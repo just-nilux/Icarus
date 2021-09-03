@@ -147,9 +147,6 @@ DATA_INPUT:
 #               No need for hard coded following statement: "data_dict[pair]['15m'].tail(1)" since the '15m' will be mapped to a specific pair
 # NOTE: There are more than 300 USDT pairs and it is cumbursome to do so. Current apporach will continue (the matrix: pairs x scales)
 
-
-# TODO: NEXT: Check binance package to see if there is a limit (it is written 500) for receiving some number of candles
-
 # TODO: FUTURE: There should be mapping such as: 
 #               feature                | strategy   | indicators
 #               falling knife catching | x          | y,z

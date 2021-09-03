@@ -12,7 +12,7 @@ import bson
 import time
 from itertools import chain, groupby
 import operator
-from .utils import time_scale_to_second
+from .utils import time_scale_to_second, get_min_scale
 
 
 class BinanceWrapper():
@@ -728,24 +728,16 @@ class TestBinanceWrapper():
         for meta_data in meta_data_pool:
 
             if type(ikarus_time) == int:
-                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * self.config['time_scales'][meta_data[0]][1] * 1000 # ms = start_time + x sec * y times
+                # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
+                # TODO: NEXT: Go to normal BinanceWrapper and adapt it to this start and end time logic. WTF is verbal expresssions
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1] - 1) * 1000 # ms = start_time + x sec * y-1 times * 1000
             else:
                 raise NotImplementedException('start_time is not integer')
 
             tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=ikarus_time )))
 
-
-        #for pair in pairs:
-        #    for index, row in time_df.iterrows():
-        #        tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
-
-        #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row[f"length_str"]))
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
-
         data_dict = await self.decompose(meta_data_pool, composit_klines)
-
-        #await self.dump_data_obj(data_dict)
-        # NOTE: Keep in mind that the last row is the current candle that has not been completed
         self.logger.debug('get_data_dict ended')
         return data_dict
 
@@ -851,9 +843,9 @@ class TestBinanceWrapper():
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
-                    # TODO: NEXT: Fix the 15m
 
-                    last_kline = data_dict[lto_list[i]['pair']]['15m'].tail(1)
+                    min_scale = await get_min_scale(self.config['time_scales'].keys(), data_dict[lto_list[i]['pair']].keys())
+                    last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
                     #             For the sake of simplicity closed price of the last candle is used in the market sell

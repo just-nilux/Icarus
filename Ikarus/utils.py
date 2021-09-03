@@ -98,3 +98,12 @@ async def get_pair_min_period_mapping(config):
                 break
 
     return pair_min_period_mapping
+
+
+async def get_min_scale(ordered_scales, pool):
+    
+    for scale in ordered_scales:
+        if scale in pool:
+            return scale
+
+    return None

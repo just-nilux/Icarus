@@ -5,7 +5,7 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -426,13 +426,7 @@ async def main():
         if strategy.name in config['strategy'].keys():
             strategy_periods.add(strategy.min_period)
 
-
-    ikarus_cycle_period = ''
-    for scale in config['time_scales'].keys():
-        if scale in strategy_periods:
-            ikarus_cycle_period = scale
-            break
-
+    ikarus_cycle_period = await get_min_scale(config['time_scales'].keys(), strategy_periods)
     if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration
