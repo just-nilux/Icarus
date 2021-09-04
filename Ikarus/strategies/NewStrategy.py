@@ -14,7 +14,7 @@ class NewStrategy(StrategyBase):
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 
         self.config = _config['strategy'][self.name]
-
+        # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
         # TODO: Make proper handling for symbol_info
         self.symbol_info = _symbol_info
@@ -22,6 +22,10 @@ class NewStrategy(StrategyBase):
         # NOTE: Hardcoded time-scales list (scales should be in ascending order)
         self.min_period = self.config['time_scales'][0]
         self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
+        
+        # TODO: Put the strategies in an structure so that the architecture would be solid
+        #       Then assign functions in each implementation such as: on_STAT_EXIT_EXP() etc
+        
         return
 
 
@@ -123,6 +127,7 @@ class NewStrategy(StrategyBase):
         Returns:
             list: nto_list
         """
+        # TODO: Rename dt_index. Why it is default None
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
             self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
@@ -209,9 +214,9 @@ class NewStrategy(StrategyBase):
                 exit_type = self.config['exit']['type']
 
                 trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,2,time_scale_to_minute(self.min_period))) # NOTE: Multiple scale is not supported
+                                                                        StrategyBase._eval_future_candle_time(dt_index,2,time_scale_to_minute(self.min_period)))
                 trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period))) # NOTE: Multiple scale is not supported
+                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
 
                 # TODO: Check the free amount of quote currency
                 free_ref_asset = df_balance.loc[self.quote_currency,'free']

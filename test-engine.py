@@ -357,10 +357,11 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
     lto_list = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
-    #################### Phase 2: Perform calculation tasks ####################
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
-    analysis_dict = await asyncio.create_task(analyzer.sample_analyzer(data_dict))
+    analysis_dict = await analyzer.sample_analyzer(data_dict)
+
+    #################### Phase 2: Perform calculation tasks ####################
 
     # 2.2: Algorithm is the only authority to make decision
     #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index

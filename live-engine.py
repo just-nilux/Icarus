@@ -65,7 +65,7 @@ def setup_logger(_log_lvl):
 async def wait_until(dt):
     now = int(datetime.timestamp(datetime.now()))
     sleep_time = dt - now
-    print("dt:{}, now:{}, sleeptime:{}".format(dt,now,sleep_time))
+    print("Next Start Time: {} [{}]\n            Now: {} [{}]\nSleeptime: {}\n".format(datetime.fromtimestamp(dt), dt, datetime.fromtimestamp(now), now, sleep_time))
     await asyncio.sleep(dt - now)
 
 
@@ -74,7 +74,7 @@ async def run_at(dt, coro):
     return await coro
 
 
-async def write_updated_ltos_to_db(lto_list, lto_list_original):
+async def write_updated_ltos_to_db(lto_list):
     '''
     Consider the fact that if one of the lto execution does not work such as 'waiting_exit' execution or 
     'update' action due to 'exit_expire' which was 'open_exit' previously,
@@ -120,13 +120,13 @@ async def write_updated_ltos_to_db(lto_list, lto_list_original):
         # NOTE: These two below are not applicable
         elif lto['status'] == STAT_PART_CLOSED_ENTER:
             pass
-        elif lto['status'] == 'STAT_PART_CLOSED_EXIT':
+        elif lto['status'] == STAT_PART_CLOSED_EXIT:
             pass
         else:
             pass
 
 
-async def update_ltos(lto_list, orders_dict, data_dict):
+async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict):
     """
     Args:
         lto_list (list): will be updated (status, result, exit sections)
@@ -147,18 +147,16 @@ async def update_ltos(lto_list, orders_dict, data_dict):
     # NOTE: Each lto with enter/exit type TYPE_LIMIT has 1 order in orders_dict. However, each OCO exit has 2 orders in orders dict.
     #       len(orders_dict) >= len(lto_dict)
 
-    # NOTE: Expiration: Normally bson.Int64(last_kline.index.values): denotes the 'open_time' of last closed kline.
-    #       However, in live-trading the last kline is the newly opened kline. Keep that in mind.
-
-    # NOTE: Check for
     for i in range(len(lto_list)):
         pair = lto_list[i]['pair']
 
-        if len(data_dict[pair].keys()) != 1: raise NotImplementedException("Multiple time scale!")
-
-        scale = list(data_dict[pair].keys())[0]
-        last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].index[-1])  # current_candle open_time
+        #scale = list(data_dict[pair].keys())[0]
+        #last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].index[-1])  # current_candle open_time
         # NOTE: last_closed_candle_open_time is used because for the anything that happens: it happend in the last closed kline
+
+        strategy_min_scale = strategy_period_mapping[lto_list[i]['strategy']]
+        last_kline = data_dict[pair][strategy_min_scale].tail(1)
+        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
         phase_lto = get_lto_phase(lto_list[i])
         type = config['strategy'][lto_list[i]['strategy']][phase_lto]['type']
@@ -328,6 +326,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
     # 1.2 Get datadict and orders
+    logger.debug('Phase 1.2 started')
     pre_calc_1_coroutines = [ bwrapper.get_data_dict(meta_data_pool, ikarus_time),
                               bwrapper.get_lto_orders(lto_list)]
 
@@ -341,8 +340,10 @@ async def application(strategy_list, bwrapper, ikarus_time):
         pass
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
+    logger.debug('Phase 1.3 started')
+    # TODO: NEXT: There is a bug with handling canceled LTOs and orders. Fix it
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
-                              update_ltos(lto_list, orders, data_dict),
+                              update_ltos(lto_list, data_dict, strategy_period_mapping, orders),
                               analyzer.sample_analyzer(data_dict)]
 
     df_balance, lto_list, analysis_dict = await asyncio.gather(*pre_calc_2_coroutines)
@@ -357,7 +358,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     strategy_tasks = []
     for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, current_ts)))
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
@@ -376,7 +377,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
         await mongocli.do_insert_many("live-trades", nto_list)     
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
-    await write_updated_ltos_to_db(lto_list, lto_list_original)
+    await write_updated_ltos_to_db(lto_list)
 
     # 3.3: Get the observer
 

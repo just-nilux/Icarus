@@ -420,7 +420,8 @@ class BinanceWrapper():
                     No need to check the error case because if the order could not be placed due to some reason,
                     there is no way other then retry. Status will stay like 'STAT_WAITING_EXIT', lto_update will not do anything,
                     strategy will not do anything and the flow will come here to do the same execution again
-
+                    NOTE: This scenario above is not tested
+                    
                     An alternative solution might be changing the status as 'open_exit', so that in the next iteration, exit module might be
                     updated to fix the problems such as filters etc. In this case the question is: Then what was wrong with the first time?
                     '''
@@ -527,10 +528,11 @@ class BinanceWrapper():
         """
         result = True
         # TODO: These two execution can be done in paralel from the main script. No need for execute_decision (at least for the live-trading)
-
-        # Execute decsisions about ltos
+        #       Free quote currency check should be done prior to this point, If this logic should be implemented
         # TODO: _execute_lto cannot decide to not to enter if there is not enough balance. This check should be done in strategy.
         # NOTE: _execute_lto tries to execute, if things fails then it creates an error log, notification etc.
+        
+        # Execute decsisions about ltos
         lto_list = await self._execute_lto(lto_list)
         self.logger.debug('lto handling completed')
         # Execute new trade objects

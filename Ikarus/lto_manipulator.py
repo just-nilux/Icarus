@@ -1,8 +1,9 @@
 from Ikarus.enums import *
-
+# TODO: Test Canceled cases or remove the statment
 async def fill_open_enter(lto_list, orders):
 
     for lto in lto_list:
+        if orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] != 'CANCELED': continue
         if lto['status'] == 'open_enter': 
             orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] = 'FILLED'
             orders[lto['enter'][TYPE_LIMIT]['orderId']]['executedQty'] = str(lto['enter'][TYPE_LIMIT]['quantity'])
@@ -12,6 +13,7 @@ async def fill_open_enter(lto_list, orders):
 async def fill_open_exit_limit(lto_list, orders):
 
     for lto in lto_list:
+        if orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] != 'CANCELED': continue
         if lto['status'] == 'open_exit' and TYPE_LIMIT in list(lto['exit'].keys()): 
             orders[lto['exit'][TYPE_LIMIT]['orderId']]['status'] = 'FILLED'
             orders[lto['exit'][TYPE_LIMIT]['orderId']]['executedQty'] = str(lto['exit'][TYPE_LIMIT]['quantity'])
@@ -21,6 +23,7 @@ async def fill_open_exit_limit(lto_list, orders):
 async def stoploss_taken_oco(lto_list, orders):
 
     for lto in lto_list:
+        if orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] != 'CANCELED': continue
         if lto['status'] == 'open_exit' and TYPE_OCO in list(lto['exit'].keys()): 
             stopLimit_orderId = lto['exit'][TYPE_OCO]['stopLimit_orderId']
             orders[lto['exit'][TYPE_OCO]['orderId']]['status'] = 'EXPIRED'
@@ -33,6 +36,7 @@ async def stoploss_taken_oco(lto_list, orders):
 async def limit_maker_taken_oco(lto_list, orders):
 
     for lto in lto_list:
+        if orders[lto['enter'][TYPE_LIMIT]['orderId']]['status'] != 'CANCELED': continue
         if lto['status'] == 'open_exit' and TYPE_OCO in list(lto['exit'].keys()): 
             orders[lto['exit'][TYPE_OCO]['orderId']]['status'] = 'FILLED'
             orders[lto['exit'][TYPE_OCO]['orderId']]['executedQty'] = str(lto['exit'][TYPE_OCO]['quantity'])
