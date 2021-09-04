@@ -26,6 +26,7 @@ CAUSE_MANUAL_CHANGE = 'manual_change'
 EVENT_CANCELED = 'canceled'
 EVENT_FILLED = 'filled'
 
+# TODO: Move this function to utils
 def get_lto_phase(lto):
 
     if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP]:

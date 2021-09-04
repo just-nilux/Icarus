@@ -5,7 +5,7 @@
     "mongodb":{
         "host": "localhost",
         "port": 27017,
-        "clean": false
+        "clean": true
     },
     "broker": {
         "quote_currency": "USDT",
@@ -14,11 +14,12 @@
     "strategy": {
         "AlwaysEnter": {
             "pairs": ["BTCUSDT"],
+            "time_scales": ["1m","15m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "oco"
+                "type": "limit"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -26,7 +27,8 @@
             }
         },
         "AlwaysEnter90": {
-            "pairs": ["BTCUSDT"],
+            "pairs": ["BNBUSDT", "AVAXUSDT"],
+            "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
             },
@@ -45,10 +47,20 @@
             "ma": [5,20]
         }
     },
-    "data_input": {
-        "all_pairs": ["BTCUSDT"],
-        "scale":["1m"],
-        "length_str":[ "12 hour" ],
-        "length_int":[ 96 ]
+    "statistics": {
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
+    },
+    "time_scales": {
+        "1m": ["12 hours", 720],
+        "5m": ["1 day", 480],
+        "15m": ["1 day", 96],
+        "30m": ["1 week", 336],
+        "1h": ["1 week", 168],
+        "2h": ["1 week", 84],
+        "4h": ["1 week", 42],
+        "12h": ["1 month", 60],
+        "1d": ["3 months", 90],
+        "1w": ["1 year", 52],
+        "1M": ["1 year", 12]
     }
 }

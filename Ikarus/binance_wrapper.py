@@ -87,6 +87,17 @@ class BinanceWrapper():
         return df
 
 
+    async def get_all_symbol_info(self, all_pairs):
+        all_info = await self.client.get_exchange_info()
+
+        selected_info = {}
+        for item in all_info['symbols']:
+            if item['symbol'] in all_pairs:
+                selected_info[item['symbol']] = item
+
+        return selected_info
+
+
     async def get_current_balance(self):
 
         df_balance, df_tickers = await asyncio.gather(
@@ -107,7 +118,54 @@ class BinanceWrapper():
         return df_balance
 
 
-    async def get_data_dict(self, pairs, time_df):
+    async def get_data_dict(self, meta_data_pool, ikarus_time):
+        """
+        meta_do = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
+        (time_scale, pair)
+        length = meta_do['time_scale']
+        """
+        self.logger.debug('get_data_dict started')
+
+        tasks_klines_scales = []
+        for meta_data in meta_data_pool:
+
+            if type(ikarus_time) == int:
+                # NOTE: If you need exactly 720 candles not 719 (unclosed (last) candle removed) then push hist_data_start_time back 1 step
+                # NOTE: The cause of +1 comes from the desire to not the make hist_data_start_time an exact minute, Because when it is an exact 1m or 15m, 1 extra hist_kline is retrived addi
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000 + 1
+            else:
+                raise NotImplementedException('start_time is not integer')
+
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=ikarus_time )))
+
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+        data_dict = await self.decompose(meta_data_pool, composit_klines)
+        self.logger.debug('get_data_dict ended')
+        return data_dict
+
+
+    async def decompose(self, meta_data_pool, composit_klines):
+
+        self.logger.debug("decompose started")
+        do_dict = dict()
+        for idx, meta_data in enumerate(meta_data_pool):
+            
+            if not meta_data[1] in do_dict.keys():
+                do_dict[meta_data[1]] = dict()
+            
+            df = pd.DataFrame(composit_klines[idx], columns=BinanceWrapper.kline_column_names)
+            df = df.set_index(['open_time'])
+            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
+            #       Since it requires closed candles.
+            df.drop(df.index[-1], inplace=True)
+            df = df.astype(float)
+            do_dict[meta_data[1]][meta_data[0]] = df
+
+        self.logger.debug("decompose ended")
+        return do_dict
+
+
+    async def get_data_dict_old(self, pairs, time_df):
         """
         This functions returns the historical kline values in the data_dict format.
 
@@ -130,7 +188,6 @@ class BinanceWrapper():
 
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
-        #await self.dump_data_obj(data_dict)
         # NOTE: Keep in mind that the last row is the current candle that has not been completed
         self.logger.debug('get_data_dict ended')
         return data_dict
@@ -363,7 +420,8 @@ class BinanceWrapper():
                     No need to check the error case because if the order could not be placed due to some reason,
                     there is no way other then retry. Status will stay like 'STAT_WAITING_EXIT', lto_update will not do anything,
                     strategy will not do anything and the flow will come here to do the same execution again
-
+                    NOTE: This scenario above is not tested
+                    
                     An alternative solution might be changing the status as 'open_exit', so that in the next iteration, exit module might be
                     updated to fix the problems such as filters etc. In this case the question is: Then what was wrong with the first time?
                     '''
@@ -470,10 +528,11 @@ class BinanceWrapper():
         """
         result = True
         # TODO: These two execution can be done in paralel from the main script. No need for execute_decision (at least for the live-trading)
-
-        # Execute decsisions about ltos
+        #       Free quote currency check should be done prior to this point, If this logic should be implemented
         # TODO: _execute_lto cannot decide to not to enter if there is not enough balance. This check should be done in strategy.
         # NOTE: _execute_lto tries to execute, if things fails then it creates an error log, notification etc.
+        
+        # Execute decsisions about ltos
         lto_list = await self._execute_lto(lto_list)
         self.logger.debug('lto handling completed')
         # Execute new trade objects
@@ -494,63 +553,6 @@ class BinanceWrapper():
         for idx,kline in enumerate(list_klines):
             self.logger.debug("-->Lenth of kline {}: {}".format(idx, len(kline)))
             self.logger.debug("----> 0:[{}] 1:[{}] ... {}:[{}]".format(kline[0][0],kline[1][0],len(kline)-1,kline[-1][0]))
-
-
-    async def decompose(self, pairs, time_df, list_klines):
-        """
-        decompose is the function that splits the asyncio.gather()
-
-        Args:
-            pairs (list): ["BTCUSDT","XRPUSDT","BTTUSDT"]
-            time_df (pd.DataFrame): pd.DataFrame({"scale":def_time_scales, "length":def_time_lengths_str})
-            list_klines (list): output of asyncio.gather()
-
-        Returns:
-            dict: decomposed list_klines
-        """        
-        self.logger.debug("decompose started")
-        # TODO: Change the GenericObject to dict
-        do_dict = dict()
-        num_of_scale = len(time_df.index)
-        for idx_pair,pair in enumerate(pairs):
-            self.logger.debug("decompose started: [{}]".format(pair))
-            do = dict()
-            for idx_row, row in time_df.iterrows():
-                self.logger.debug("decomposing [{}]: [{}]".format(pair,row["scale"]))
-                df = pd.DataFrame(list_klines[idx_row + idx_pair*num_of_scale])
-                df.columns = BinanceWrapper.kline_column_names
-                df = df.set_index(['open_time'])
-                # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
-                #       Since it requires closed candles.
-                df.drop(df.index[-1], inplace=True)
-                # It is accepted that the number of line will be 1 less then it should be
-                # NOTE: This should not be a problem because if the analysis affected by this missing value,
-                #       then the length should be greater.
-                #       On the other hand, the lackness of the oldest value may help or not who knows?
-                df = df.astype(float)
-                do[row["scale"]] = df
-            do_dict[pair] = do
-            self.logger.debug("decompose ended [{}]:".format(pair))
-            self.logger.debug("{}-{}".format(pair,type(do_dict[pair][row["scale"]])))
-
-        self.logger.debug("decompose ended")
-        return do_dict
-
-
-    async def dump_data_obj(self, js_obj):
-
-        copy_obj = dict()
-        for pair,do in js_obj.items():
-            pair_obj = dict()
-            for k,v in do.items():
-                pair_obj[k] = v.to_string()
-            copy_obj[pair] = pair_obj
-
-        js_file = open("run-time-objs/data_obj.json", "w")
-        json.dump(copy_obj, js_file, indent=4)
-        js_file.close()
-
-        return True
 
 
 class TestBinanceWrapper():
@@ -706,7 +708,6 @@ class TestBinanceWrapper():
 
             do_dict[pair] = do
         
-        # await self.dump_data_obj(do_dict)
         return do_dict
 
 
@@ -770,22 +771,6 @@ class TestBinanceWrapper():
 
         self.logger.debug("decompose ended")
         return do_dict
-
-
-    async def dump_data_obj(self, js_obj):
-
-            copy_obj = dict()
-            for pair,do in js_obj.items():
-                pair_obj = dict()
-                for k,v in do.items():
-                    pair_obj[k] = v.to_string()
-                copy_obj[pair] = pair_obj
-
-            js_file = open("run-time-objs/test-data_obj.json", "w")
-            json.dump(copy_obj, js_file, indent=4)
-            js_file.close()
-
-            return True
 
 
     async def _execute_lto(self, lto_list, df_balance, data_dict):

@@ -14,7 +14,10 @@ def time_scale_to_minute(interval: str):
         return None
 
 def time_scale_to_second(interval: str):
-        return time_scale_to_minute(interval) * 60
+    return time_scale_to_minute(interval) * 60
+
+def time_scale_to_milisecond(interval: str):
+    return time_scale_to_minute(interval) * 60 * 1000
 
 async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
     # Read Database to get hist-trades and dump to a DataFrame
