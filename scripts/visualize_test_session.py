@@ -1,7 +1,7 @@
 import asyncio
 from Ikarus import mongo_utils, binance_wrapper
 #from scripts import finplot_wrapper as fplot
-from scripts import finplot_wrapper as fplot
+import finplot_wrapper as fplot
 from Ikarus.enums import *
 from Ikarus.utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
 from binance import AsyncClient
@@ -46,7 +46,7 @@ async def visualize_online(bwrapper, mongocli, config):
         df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':pair})
         df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':pair})
 
-        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed)
+        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
     pass
 

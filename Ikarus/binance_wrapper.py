@@ -628,12 +628,14 @@ class TestBinanceWrapper():
 
         Returns:
             pd.DataFrame: tickers
-        """
-        # NOTE: Ticker hack for testing
-        f = open('tickers.json','r')
-        tickers_json = json.load(f)
-        tickers = tickers_json['tickers']
-        df = pd.DataFrame(tickers)
+        """       
+
+        #f = open('tickers.json','r')
+        #tickers_json = json.load(f)
+        #tickers = tickers_json['tickers']
+        #df = pd.DataFrame(tickers)
+
+        df = pd.DataFrame(await self.client.get_all_tickers())
         df.set_index('symbol', inplace=True)
         df.astype(float)
         return df

@@ -151,7 +151,6 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
 
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
-    print('aaaaaa')
     # Add period separator lines
     #_add_time_separator(df)
 
