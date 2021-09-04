@@ -305,11 +305,10 @@ async def application(strategy_list, bwrapper, ikarus_time):
     logger.info(f'Ikarus Time: [{ikarus_time}]')
     
     #################### Phase 1: Perform pre-calculation tasks ####################
-    logger.debug('Phase 1 started')
+    logger.debug('Phase 1')
 
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
-    #active_strategies = []
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
@@ -326,21 +325,21 @@ async def application(strategy_list, bwrapper, ikarus_time):
     lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
     # 1.2 Get datadict and orders
-    logger.debug('Phase 1.2 started')
+    logger.debug('Phase 1.2')
     pre_calc_1_coroutines = [ bwrapper.get_data_dict(meta_data_pool, ikarus_time),
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
 
     if len(lto_list): 
-        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
-        orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
-        orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
+        #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
         #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
         pass
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
-    logger.debug('Phase 1.3 started')
+    logger.debug('Phase 1.3')
     # TODO: NEXT: There is a bug with handling canceled LTOs and orders. Fix it
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
                               update_ltos(lto_list, data_dict, strategy_period_mapping, orders),
@@ -349,7 +348,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     df_balance, lto_list, analysis_dict = await asyncio.gather(*pre_calc_2_coroutines)
 
     #################### Phase 2: Perform calculation tasks ####################
-    logger.debug('Phase 2 started')
+    logger.debug('Phase 2')
 
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     grouped_ltos = {}
