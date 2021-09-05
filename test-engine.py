@@ -394,10 +394,12 @@ async def main():
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
     strategy_list = strategy_mgr.get_strategies()
 
+    meta_data_pool = []
     strategy_periods = set()
-    for strategy in strategy_list:
-        if strategy.name in config['strategy'].keys():
-            strategy_periods.add(strategy.min_period)
+    for strategy_obj in strategy_list:
+        strategy_periods.add(strategy_obj.min_period)
+        meta_data_pool.append(strategy_obj.meta_do)
+    meta_data_pool = set(chain(*meta_data_pool))
 
     ikarus_cycle_period = await get_min_scale(config['time_scales'].keys(), strategy_periods)
     if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
@@ -413,13 +415,15 @@ async def main():
 
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    session_start_timestamp = int(datetime.timestamp(session_start_time))
+    session_start_timestamp = int(datetime.timestamp(session_start_time)) # TODO: Check for UTC
     session_end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
     session_end_timestamp = int(datetime.timestamp(session_end_time))
 
     # Iterate through the time stamps
     total_len = int((session_end_timestamp - session_start_timestamp) / time_scale_to_second(ikarus_cycle_period)) # length = Second / Min*60
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
+
+    await bwrapper.download_all_data(meta_data_pool, session_start_timestamp*1000, session_end_timestamp*1000)
 
     for idx, start_time in enumerate(range(session_start_timestamp, session_end_timestamp, time_scale_to_second(ikarus_cycle_period))):
         logger.debug(f'Iteration {idx}:')
