@@ -11,7 +11,7 @@ import json
 import bson
 import time
 from itertools import chain, groupby
-import operator
+import datetime
 from .utils import time_scale_to_second, get_min_scale
 
 
@@ -719,21 +719,16 @@ class TestBinanceWrapper():
         (time_scale, pair)
         length = meta_do['time_scale']
         """
-        # NOTE: NEXT: Just an idea:
-        #       When it is time to improve test performance and use the csv files, instead of implementing old logic again,
-        #       1. Let an initial method to download klines at once to a variable or folder in different files, then let
-        #       2. If the klines stored in a variable (df), then simply read until etc.
-        #           NOTE: Do it using a function of bwrapper with only 1 call. Do not reflect anything to test-engine
-        #       3. If the klines saved to a file, then reading same silly data would be cumbersome, dont know what to do :D
+
         self.logger.debug('get_data_dict started')
 
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
             if type(ikarus_time) == int:
-                # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
-                # TODO: NEXT: Go to normal BinanceWrapper and adapt it to this start and end time logic. WTF is verbal expresssions
-                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1] - 1) * 1000 # ms = start_time + x sec * y-1 times * 1000
+                # NOTE: If you need exactly 720 candles not 719 (unclosed (last) candle removed) then push hist_data_start_time back 1 step
+                # NOTE: The cause of +1 comes from the desire to not the make hist_data_start_time an exact minute, Because when it is an exact 1m or 15m, 1 extra hist_kline is retrived addi
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y-1 times * 1000
             else:
                 raise NotImplementedException('start_time is not integer')
 
@@ -742,6 +737,58 @@ class TestBinanceWrapper():
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         data_dict = await self.decompose(meta_data_pool, composit_klines)
         self.logger.debug('get_data_dict ended')
+
+        return data_dict
+
+
+    async def download_all_data(self, meta_data_pool, session_start_time, session_end_time):
+        """
+        meta_data_pool = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
+        length = meta_do['time_scale']
+        """
+
+        tasks_klines_scales = []
+        for meta_data in meta_data_pool:
+            if type(session_start_time) == int:
+                # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
+                # TODO: NEXT: Go to normal BinanceWrapper and adapt it to this start and end time logic. WTF is verbal expresssions
+                hist_data_start_time = session_start_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000
+            else:
+                raise NotImplementedException('start_time is not integer')
+
+            tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=session_end_time )))
+        composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+        self.downloaded_data = await self.decompose(meta_data_pool, composit_klines)
+        self.logger.debug('download ended')
+        return True
+
+
+    async def get_data_dict_download(self, meta_data_pool, ikarus_time):
+        """
+        meta_do = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
+        (time_scale, pair)
+        length = meta_do['time_scale']
+        """
+        self.logger.debug('get_data_dict started')
+
+        tasks_klines_scales = []
+        data_dict = {}
+        for meta_data in meta_data_pool:
+
+            if type(ikarus_time) == int:
+                # NOTE: If you need exactly 720 candles not 719 (unclosed (last) candle removed) then push hist_data_start_time back 1 step
+                # NOTE: The cause of +1 comes from the desire to not the make hist_data_start_time an exact minute, Because when it is an exact 1m or 15m, 1 extra hist_kline is retrived addi
+                hist_data_end_time = ikarus_time - time_scale_to_second(meta_data[0]) * 1000
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000 + 1
+                if not meta_data[1] in data_dict.keys():
+                    data_dict[meta_data[1]] = dict()
+
+                data_dict[meta_data[1]][meta_data[0]] = self.downloaded_data[meta_data[1]][meta_data[0]].loc[hist_data_start_time:hist_data_end_time]
+            else:
+                raise NotImplementedException('start_time is not integer')
+
+        self.logger.debug('get_data_dict ended')
+
         return data_dict
 
 
