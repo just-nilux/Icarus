@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 from matplotlib.markers import MarkerStyle as MS
+import datetime
 #kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
 #                    "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
@@ -148,6 +149,10 @@ def fplot(filename=None):
 
 
 def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame()):
+
+    if df.empty:
+        print('OCHL is empty')
+        return
 
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)

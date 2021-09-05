@@ -11,29 +11,11 @@ import json
 import sys
 from datetime import datetime
 
-'''
-Consider 2 strategy:
-
-Strategy1
-    [BTCUSDT, XRPUSDT]
-    ['5m']
-Strategy2
-    [BTCUSDT, AVAXUSDT]
-    ['1m', '15m']
-
-3 plot:
-    BTCUSDT: 1m
-    AVAXUSDT: 1m
-    XRPUSDT: 5m
-
-'''
-# TODO: NEXT: Keep continue to adapt visualize live session
-#       Create the logic to have the output above (it has been done in the test engine or live engine somewhere)
 async def visualize_online(bwrapper, mongocli, config):
 
-    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    start_time = datetime.strptime(str(sys.argv[2]), "%Y-%m-%d %H:%M:%S")
     start_timestamp = int(datetime.timestamp(start_time))*1000
-    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    end_time = datetime.strptime(str(sys.argv[3]), "%Y-%m-%d %H:%M:%S")
     end_timestamp = int(datetime.timestamp(end_time))*1000
 
     pair_scale_mapping = await get_pair_min_period_mapping(config)
@@ -45,9 +27,24 @@ async def visualize_online(bwrapper, mongocli, config):
     df_pair_list = list(await asyncio.gather(*df_list))
 
     for idx, pair in enumerate(pair_scale_mapping.keys()):
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':pair})
-        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':pair})
-        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':pair})
+        df_enter_expire = await get_enter_expire_hto(mongocli, {
+            'result.cause':STAT_ENTER_EXP, 
+            'pair':pair, 
+            'decision_time': { '$gte': start_timestamp}, 
+            'enter.limit.expire': { '$lte': end_timestamp}
+            })
+        df_exit_expire = await get_exit_expire_hto(mongocli, {
+            'result.cause':STAT_EXIT_EXP, 
+            'pair':pair, 
+            'decision_time': { '$gte': start_timestamp}, 
+            'result.exit.time': { '$lte': end_timestamp}
+            })
+        df_closed = await get_closed_hto(mongocli, {
+            'result.cause':STAT_CLOSED, 
+            'pair':pair, 
+            'decision_time': { '$gte': start_timestamp}, 
+            'result.exit.time': { '$lte': end_timestamp}
+            })
 
         fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
@@ -71,6 +68,7 @@ async def main():
     end_timestamp = int(datetime.timestamp(end_time))*1000
 
     await visualize_online(bwrapper, mongocli, config)
+    await bwrapper.client.close_connection()
 
 
 if __name__ == '__main__':
@@ -78,6 +76,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 4:
         print("Error")
+        exit()
 
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)

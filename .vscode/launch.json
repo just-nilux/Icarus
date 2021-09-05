@@ -56,6 +56,18 @@
             ]
         },
         {
+            "name": "visualize_live_session",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\scripts\\visualize_live_session.py",
+            "console": "integratedTerminal",
+            "args": [
+                ".\\test\\sessions\\live\\config.json",
+                "2021-08-29 14:45:00",
+                "2021-08-31 05:30:00"
+            ]
+        },
+        {
             "name": "test-engine",
             "type": "python",
             "request": "launch",

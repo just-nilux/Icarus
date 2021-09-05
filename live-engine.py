@@ -302,7 +302,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
 
 async def application(strategy_list, bwrapper, ikarus_time):
 
-    logger.info(f'Ikarus Time: [{ikarus_time}]')
+    logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
     
     #################### Phase 1: Perform pre-calculation tasks ####################
     logger.debug('Phase 1')
@@ -340,7 +340,6 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     logger.debug('Phase 1.3')
-    # TODO: NEXT: There is a bug with handling canceled LTOs and orders. Fix it
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
                               update_ltos(lto_list, data_dict, strategy_period_mapping, orders),
                               analyzer.sample_analyzer(data_dict)]
@@ -429,7 +428,7 @@ async def main():
                     telbot.send_constructed_msg('app', f'FLAG_SYSTEM_STATUS set to {FLAG_SYSTEM_STATUS}')
             
 
-            server_time = await client.get_server_time()
+            server_time = await client.get_server_time() # UTC
             logger.debug(f'System time: {server_time["serverTime"]}')
             current_time = int(server_time['serverTime']/1000)                                                  # exact second
             current_time -= (current_time % 60)                                                                 # exact minute
