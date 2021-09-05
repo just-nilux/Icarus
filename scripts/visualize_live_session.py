@@ -9,14 +9,16 @@ import pandas as pd
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 async def visualize_online(bwrapper, mongocli, config):
 
     start_time = datetime.strptime(str(sys.argv[2]), "%Y-%m-%d %H:%M:%S")
-    start_timestamp = int(datetime.timestamp(start_time))*1000
+    #start_timestamp = int(datetime.timestamp(start_time))*1000
+    start_timestamp = int(start_time.replace(tzinfo=timezone.utc).timestamp())*1000
     end_time = datetime.strptime(str(sys.argv[3]), "%Y-%m-%d %H:%M:%S")
-    end_timestamp = int(datetime.timestamp(end_time))*1000
+    #end_timestamp = int(datetime.timestamp(end_time))*1000
+    end_timestamp = int(end_time.replace(tzinfo=timezone.utc).timestamp())*1000
 
     pair_scale_mapping = await get_pair_min_period_mapping(config)
 

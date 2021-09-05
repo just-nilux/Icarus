@@ -153,6 +153,7 @@ def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_ex
     if df.empty:
         print('OCHL is empty')
         return
+    fplt.display_timezone = datetime.timezone.utc
 
     ax = fplt.create_plot('Buy/Sell')
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)

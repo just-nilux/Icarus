@@ -2,7 +2,7 @@ from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 class TelegramBot():
 
     def __init__(self, _token, _chatId):
@@ -55,7 +55,7 @@ def test_lto():
     pass
 
 def test_hto():
-    args = ['611eb00fe9350843f569a567', datetime.fromtimestamp(1589418000), 1589426100000, 27.75, 0.29951430113329736]
+    args = ['611eb00fe9350843f569a567', datetime.fromtimestamp(1589418000, timezone.utc), datetime.fromtimestamp(1589418000, timezone.utc), 27.75, 0.29951430113329736]
     telbot.send_constructed_msg('hto', *args )
     pass
 

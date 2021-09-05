@@ -21,15 +21,6 @@ import itertools
 # Global Variables
 FLAG_SYSTEM_STATUS = True
 
-def generate_scales_in_minute(config_dict):
-    scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
-    scales_in_minute = []
-    for scale in config_dict['data_input']['scale']:
-        scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
-
-    config_dict['data_input']['scales_in_minute'] = scales_in_minute
-
-    return config_dict
 
 def setup_logger(_log_lvl):
     # TODO: Logger can be directed to tel
@@ -63,9 +54,9 @@ def setup_logger(_log_lvl):
 
 
 async def wait_until(dt):
-    now = int(datetime.timestamp(datetime.now()))
+    now = int(datetime.timestamp(datetime.now())) # UTC
     sleep_time = dt - now
-    print("Next Start Time: {} [{}]\n            Now: {} [{}]\nSleeptime: {}\n".format(datetime.fromtimestamp(dt), dt, datetime.fromtimestamp(now), now, sleep_time))
+    print("Next local start time: {} | [{}] UTC\nNow local: {} | [{}] UTC\nSleeptime: {}\n".format(datetime.fromtimestamp(dt), dt, datetime.fromtimestamp(now), now, sleep_time))
     await asyncio.sleep(dt - now)
 
 

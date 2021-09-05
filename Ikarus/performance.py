@@ -5,7 +5,7 @@ import json
 import sys
 import os
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from tabulate import tabulate
 from itertools import chain, groupby
 import operator
@@ -75,8 +75,8 @@ class Statistics():
         start_obs = await self.mongocli.get_n_docs('observer', order=1, n=2) # pymongo.ASCENDING
         end_obs = await self.mongocli.get_n_docs('observer', order=-1) # pymongo.ASCENDING
 
-        start_dt = datetime.fromtimestamp(start_obs[1]['timestamp']/1000)
-        end_dt = datetime.fromtimestamp(end_obs[0]['timestamp']/1000)
+        start_dt = datetime.fromtimestamp(start_obs[1]['timestamp']/1000, timezone.utc)
+        end_dt = datetime.fromtimestamp(end_obs[0]['timestamp']/1000, timezone.utc)
 
         start_obs[0]['balances']
         start_balance = next(float(item['free'] + item['locked']) for item in start_obs[0]['balances'] if item['asset'] == self.config['broker']['quote_currency'])
@@ -172,8 +172,8 @@ class Statistics():
 
         hto_stat = [ 
             hto['_id'],
-            datetime.fromtimestamp(hto['result']['enter']['time']/1000),
-            datetime.fromtimestamp(hto['result']['exit']['time']/1000),
+            datetime.fromtimestamp(hto['result']['enter']['time']/1000, timezone.utc),
+            datetime.fromtimestamp(hto['result']['exit']['time']/1000, timezone.utc),
             hto['result']['exit']['price'] - hto['result']['enter']['price'],
             100*(hto['result']['exit']['price'] - hto['result']['enter']['price'])/hto['result']['enter']['price']
         ]
