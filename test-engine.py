@@ -22,17 +22,6 @@ from scripts.visualize_test_session import visualize_online
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
-def generate_scales_in_minute(config_dict):
-    # TODO: add the key: 'M'
-    scales_to_minute = {'m':1, 'h':60, 'd':24*60, 'w':10080}  # Hardcoded scales in minute
-    scales_in_minute = []
-    for scale in config_dict['data_input']['scale']:
-        scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
-
-    config_dict['data_input']['scales_in_minute'] = scales_in_minute
-
-    return config_dict
-
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
@@ -83,18 +72,6 @@ def setup_logger(_log_lvl):
     logger.addHandler(ch)
 
     logger.info('logger has been set')
-
-
-async def wait_until(dt):
-    now = int(datetime.timestamp(datetime.now()))
-    sleep_time = dt - now
-    print("dt:{}, now:{}, sleeptime:{}".format(dt,now,sleep_time))
-    await asyncio.sleep(dt - now)
-
-
-async def run_at(dt, coro):
-    await wait_until(dt)
-    return await coro
 
 
 async def write_updated_ltos_to_db(lto_list):

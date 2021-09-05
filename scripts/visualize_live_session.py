@@ -1,108 +1,89 @@
 import asyncio
-from Ikarus import mongo_utils
+from Ikarus import mongo_utils, binance_wrapper
+#from scripts import finplot_wrapper as fplot
+import finplot_wrapper as fplot
 from Ikarus.enums import *
+from Ikarus.utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
+from binance import AsyncClient
 import pandas as pd
 import argparse
-import fplot as fp
+import json
+import sys
+from datetime import datetime, timezone
 
-async def get_enter_expire(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_ENTER_EXP})
-    hto_ent_exp_list = []
-    for hto in hto_list:
-        # NOTE: HIGH: We dont know it the exit type is limit or not
-        hto_dict = {
-            "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-        }
-        hto_ent_exp_list.append(hto_dict)
+async def visualize_online(bwrapper, mongocli, config):
 
-    df = pd.DataFrame(hto_ent_exp_list)
-    return df
+    start_time = datetime.strptime(str(sys.argv[2]), "%Y-%m-%d %H:%M:%S")
+    #start_timestamp = int(datetime.timestamp(start_time))*1000
+    start_timestamp = int(start_time.replace(tzinfo=timezone.utc).timestamp())*1000
+    end_time = datetime.strptime(str(sys.argv[3]), "%Y-%m-%d %H:%M:%S")
+    #end_timestamp = int(datetime.timestamp(end_time))*1000
+    end_timestamp = int(end_time.replace(tzinfo=timezone.utc).timestamp())*1000
 
+    pair_scale_mapping = await get_pair_min_period_mapping(config)
 
-async def get_closed(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_CLOSED})
-    hto_closed = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
+    df_list = []
+    for pair,scale in pair_scale_mapping.items(): 
+        df_list.append(bwrapper.get_historical_klines(start_timestamp, end_timestamp, pair, scale))
 
-        hto_dict = {
-            "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price']
-        }
-        hto_closed.append(hto_dict)
+    df_pair_list = list(await asyncio.gather(*df_list))
 
+    for idx, pair in enumerate(pair_scale_mapping.keys()):
+        df_enter_expire = await get_enter_expire_hto(mongocli, {
+            'result.cause':STAT_ENTER_EXP, 
+            'pair':pair, 
+            'decision_time': { '$gte': start_timestamp}, 
+            'enter.limit.expire': { '$lte': end_timestamp}
+            })
+        df_exit_expire = await get_exit_expire_hto(mongocli, {
+            'result.cause':STAT_EXIT_EXP, 
+            'pair':pair, 
+            'decision_time': { '$gte': start_timestamp}, 
+            'result.exit.time': { '$lte': end_timestamp}
+            })
+        df_closed = await get_closed_hto(mongocli, {
+            'result.cause':STAT_CLOSED, 
+            'pair':pair, 
+            'decision_time': { '$gte': start_timestamp}, 
+            'result.exit.time': { '$lte': end_timestamp}
+            })
 
-    df = pd.DataFrame(hto_closed)
-
-    return df
-
-
-async def get_exit_expire(df):
-    # Read Database to get hist-trades and dump to a DataFrame
-    
-    hto_list = await mongocli.do_find('hist-trades',{'result.cause':STAT_EXIT_EXP})
-    hto_closed_list = []
-    for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
-
-        hto_dict = {
-            "_id": hto['_id'],
-            "tradeid": hto['tradeid'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit'][plannedExitType]['expire']
-        }
-        hto_closed_list.append(hto_dict)
-    df = pd.DataFrame(hto_closed_list)
-
-    return df
-
-
-async def visualize_db():
-    # Read Database to get hist-trades and dump to a DataFrame
-
-    df = pd.read_csv(args.filename)
-    df = df.set_index(['open_time'])
-
-    #df = await add_observer_columns(df)
-    df_enter_expire = await get_enter_expire(df)
-    df_exit_expire = await get_exit_expire(df)
-    df_closed = await get_closed(df)
-
-    fp.buy_sell(df, df_closed, df_enter_expire, df_exit_expire)
+        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
     pass
 
 
+async def main():
+
+
+    client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
+                                    api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
+        config['mongodb']['port'], 
+        config['tag'],
+        clean=False)
+
+    start_time = datetime.strptime(str(sys.argv[2]), "%Y-%m-%d %H:%M:%S")
+    start_timestamp = int(datetime.timestamp(start_time))*1000
+    end_time = datetime.strptime(str(sys.argv[3]), "%Y-%m-%d %H:%M:%S")
+    end_timestamp = int(datetime.timestamp(end_time))*1000
+
+    await visualize_online(bwrapper, mongocli, config)
+    await bwrapper.client.close_connection()
+
+
 if __name__ == '__main__':
     
-    # TODO: In order to visualize test session:
-    #       1. Get the trade data from db
-    #       2. Get the candle data from either file or api. (provide option)
 
-    parser = argparse.ArgumentParser(description='Optional app description')
-    parser.add_argument('--host', type=str, default='localhost')
-    parser.add_argument('--port', type=str, default=27017)
-    parser.add_argument('--db', type=str, default='test-bot')
-    parser.add_argument('--filename', type=str, default=r'.\\test\\data\\btcusdt_15m_202005121212_202005191213.csv')
-    args = parser.parse_args()
-    print(args.host, args.port, args.db)
-    mongocli = mongo_utils.MongoClient(args.host, args.port, args.db, clean=False)
+    if len(sys.argv) < 4:
+        print("Error")
+        exit()
 
+    f = open(str(sys.argv[1]),'r')
+    config = json.load(f)
+    with open(config['credential_file'], 'r') as cred_file:
+        cred_info = json.load(cred_file)
+    
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(visualize_db())
-
+    loop.run_until_complete(main())

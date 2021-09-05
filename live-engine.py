@@ -21,15 +21,6 @@ import itertools
 # Global Variables
 FLAG_SYSTEM_STATUS = True
 
-def generate_scales_in_minute(config_dict):
-    scales_to_minute = {'m':1, 'h':60, 'd':3600, 'w':25200}  # Hardcoded scales in minute
-    scales_in_minute = []
-    for scale in config_dict['data_input']['scale']:
-        scales_in_minute.append(int(scale[:-1]) * scales_to_minute[scale[-1]])
-
-    config_dict['data_input']['scales_in_minute'] = scales_in_minute
-
-    return config_dict
 
 def setup_logger(_log_lvl):
     # TODO: Logger can be directed to tel
@@ -63,9 +54,9 @@ def setup_logger(_log_lvl):
 
 
 async def wait_until(dt):
-    now = int(datetime.timestamp(datetime.now()))
+    now = int(datetime.timestamp(datetime.now())) # UTC
     sleep_time = dt - now
-    print("Next Start Time: {} [{}]\n            Now: {} [{}]\nSleeptime: {}\n".format(datetime.fromtimestamp(dt), dt, datetime.fromtimestamp(now), now, sleep_time))
+    print("Next local start time: {} | [{}] UTC\nNow local: {} | [{}] UTC\nSleeptime: {}\n".format(datetime.fromtimestamp(dt), dt, datetime.fromtimestamp(now), now, sleep_time))
     await asyncio.sleep(dt - now)
 
 
@@ -302,7 +293,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
 
 async def application(strategy_list, bwrapper, ikarus_time):
 
-    logger.info(f'Ikarus Time: [{ikarus_time}]')
+    logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
     
     #################### Phase 1: Perform pre-calculation tasks ####################
     logger.debug('Phase 1')
@@ -340,7 +331,6 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 1.3: Get df_balance, lto_dict, analysis_dict
     logger.debug('Phase 1.3')
-    # TODO: NEXT: There is a bug with handling canceled LTOs and orders. Fix it
     pre_calc_2_coroutines = [ bwrapper.get_current_balance(),
                               update_ltos(lto_list, data_dict, strategy_period_mapping, orders),
                               analyzer.sample_analyzer(data_dict)]
@@ -429,7 +419,7 @@ async def main():
                     telbot.send_constructed_msg('app', f'FLAG_SYSTEM_STATUS set to {FLAG_SYSTEM_STATUS}')
             
 
-            server_time = await client.get_server_time()
+            server_time = await client.get_server_time() # UTC
             logger.debug(f'System time: {server_time["serverTime"]}')
             current_time = int(server_time['serverTime']/1000)                                                  # exact second
             current_time -= (current_time % 60)                                                                 # exact minute
