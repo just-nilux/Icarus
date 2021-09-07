@@ -356,14 +356,23 @@ async def application(strategy_list, bwrapper, ikarus_time):
     if len(nto_list) or len(lto_list):
         # 2.3.1: Execute the TOs
         nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
-        # TODO: Handle exec_status to do sth in case of failure (like sending notification)
 
     #################### Phase 3: Perform post-calculation tasks ####################
     logger.debug('Phase 3 started')
 
     if len(nto_list):
-        # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        await mongocli.do_insert_many("live-trades", nto_list)     
+        # 3.1: Write trade_dict to [live-trades]
+        results = await mongocli.do_insert_many("live-trades", nto_list)
+
+        if len(nto_list) != len(results.inserted_ids):
+            # TODO: Add proper error handling and proper error messages
+            telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
+            logger.error('Some of the NTOs could not be placed to Database')
+            for nto in nto_list:
+                telbot.send_constructed_msg('lto', *['', PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], 'placed'])
+        else:
+            for _id, nto in zip(results.inserted_ids,nto_list):
+                telbot.send_constructed_msg('lto', *[_id, PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], 'placed'])
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_list)

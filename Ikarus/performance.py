@@ -39,7 +39,7 @@ class Statistics():
         self.logger.info('Total exit_expire trades: {}'.format(await self.mongocli.count("hist-trades", {'result.cause':STAT_EXIT_EXP})))
         self.logger.info('Total closed trades: {}'.format(await self.mongocli.count("hist-trades", {'result.cause':STAT_CLOSED})))
         self.logger.info('Total open trades: {}'.format(await self.mongocli.count("live-trades", {})))
-        
+        # TODO: Instead of exit expire find sth else it does not sound right
         exit_expire_pipe = [
             {"$match":{"result.cause":{"$eq":"exit_expire"}}},
             {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
@@ -78,17 +78,31 @@ class Statistics():
         start_dt = datetime.fromtimestamp(start_obs[1]['timestamp']/1000, timezone.utc)
         end_dt = datetime.fromtimestamp(end_obs[0]['timestamp']/1000, timezone.utc)
 
-        start_obs[0]['balances']
         start_balance = next(float(item['free'] + item['locked']) for item in start_obs[0]['balances'] if item['asset'] == self.config['broker']['quote_currency'])
         end_balance = next(float(item['free'] + item['locked']) for item in end_obs[0]['balances'] if item['asset'] == self.config['broker']['quote_currency'])
+
+        # Add the LTO amounts in PHASE_EXIT
+        live_exit_pipe = [
+            {"$match":{"status":{"$in":[STAT_EXIT_EXP, STAT_OPEN_EXIT, STAT_WAITING_EXIT]}}},
+            {"$group": {"_id": "", "sum": {"$sum": '$result.enter.amount'}}},
+        ]
+        live_exit_amount = await self.mongocli.do_aggregate("live-trades", live_exit_pipe)
+        if len(live_exit_amount): end_balance += live_exit_amount[0]['sum']
+
+        # Evaluate absolute profit: 
+        closed_pipe = [
+            {"$match":{"result.cause":{"$in":[STAT_EXIT_EXP, STAT_CLOSED]}}},
+            {"$group": {"_id": "", "sum": {"$sum": '$result.profit'}}},
+        ]
+        absolute_profit = await self.mongocli.do_aggregate("hist-trades", closed_pipe)
 
         general_stats = {
             "Start Time": str(start_dt),
             "End Time": str(end_dt),
-            "Total Time": (end_dt - start_dt).total_seconds() / 60, # In second
+            "Total Time": "{:.2f} days".format((end_dt - start_dt).total_seconds() / (60*60*24)), # In second
             "Start Balance": "{:.2f} {}".format(start_balance, self.config['broker']['quote_currency']),
             "End Balance": "{:.2f} {}".format(end_balance, self.config['broker']['quote_currency']),
-            "Absolute Profit": "{:.2f} {}".format(end_balance - start_balance, self.config['broker']['quote_currency']),
+            "Absolute Profit": "{:.2f} {}".format(absolute_profit[0]['sum'], self.config['broker']['quote_currency']),
             "Total Profit": "% {:.2f}".format((end_balance - start_balance)*100/start_balance),
         }
 
@@ -172,6 +186,8 @@ class Statistics():
 
         hto_stat = [ 
             hto['_id'],
+            hto['strategy'],
+            hto['pair'],
             datetime.fromtimestamp(hto['result']['enter']['time']/1000, timezone.utc),
             datetime.fromtimestamp(hto['result']['exit']['time']/1000, timezone.utc),
             hto['result']['exit']['price'] - hto['result']['enter']['price'],

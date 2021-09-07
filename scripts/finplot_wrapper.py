@@ -148,14 +148,14 @@ def fplot(filename=None):
     fplt.show()
 
 
-def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame()):
+def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame(), title='Buy/Sell Plot'):
 
     if df.empty:
         print('OCHL is empty')
         return
     fplt.display_timezone = datetime.timezone.utc
 
-    ax = fplt.create_plot('Buy/Sell')
+    ax = fplt.create_plot(title)
     fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
     # Add period separator lines
     #_add_time_separator(df)
@@ -223,27 +223,27 @@ def _add_closed_tos(ax, df_closed):
     #               # sellPrice and exitPrice become the same and the rectangle does not appear
     df_closed.set_index('decision_time',inplace=True)
     duplicate_filter = df_closed.index.duplicated(keep=False)
-    plot_spec = {'color':'#0000ff','style':'t2', 'ax':ax}
+    plot_spec = {'color':'#0000ff','style':'t2', 'ax':ax, 'legend':'Decision Point'}
     _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
 
     df_closed.set_index('exitTime',inplace=True)
     duplicate_filter = df_closed.index.duplicated(keep=False)
-    plot_spec = {'color':'#ff0000','style':'v', 'ax':ax}
+    plot_spec = {'color':'#ff0000','style':'v', 'ax':ax, 'legend':'Sell Point'}
     _scatter_wrapper(serie=df_closed['sellPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
 
     df_closed.set_index('enterTime',inplace=True)
     duplicate_filter = df_closed.index.duplicated(keep=False)
-    plot_spec = {'color':'#00ff00','style':'^', 'ax':ax}
+    plot_spec = {'color':'#00ff00','style':'^', 'ax':ax, 'legend':'Buy Point'}
     _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
 
 
 def _scatter_wrapper(serie, duplicate_filter, plot_spec):
     # Visualize Non-duplicates
-    serie[~duplicate_filter].plot(kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'])
+    serie[~duplicate_filter].plot(kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'], legend=plot_spec['legend'])
 
     # Visualize Duplicates
     for row in serie[duplicate_filter].to_frame().iterrows():
-        fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'])
+        fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'], legend=plot_spec['legend'])
 
 
 if __name__ == '__main__':

@@ -98,6 +98,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         else: pass # Internal Error
         return exit_module
 
+
     @staticmethod
     async def apply_exchange_filters(phase, type, module, symbol_info, exit_qty=0):
         """

@@ -13,16 +13,6 @@
             "asset": "USDT", 
             "free": 10000, 
             "locked": 0
-        },
-        {
-            "asset": "TRY", 
-            "free": 1234, 
-            "locked": 0
-        },
-        {
-            "asset": "AVAX", 
-            "free": 345, 
-            "locked": 0
         }
     ],
     "broker": {
@@ -32,12 +22,12 @@
     "strategy": {
         "NewStrategy": {
             "pairs": ["BTCUSDT", "XRPUSDT"],
-            "time_scales": ["1m","15m"],
+            "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "oco"
+                "type": "limit"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -69,7 +59,7 @@
     },
     "backtest":{
         "start_time": "2020-05-12 12:15:00",
-        "end_time": "2020-05-12 13:00:00",
+        "end_time": "2020-05-19 13:00:00",
         "online": true
     }
 }

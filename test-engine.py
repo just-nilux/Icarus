@@ -5,7 +5,7 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale, get_pair_min_period_mapping
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -16,11 +16,35 @@ from itertools import chain, groupby
 import operator
 import itertools
 from scripts import finplot_wrapper as fplot
-from scripts.visualize_test_session import visualize_online
+#from scripts.visualize_test_session import visualize_online
 
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
+
+async def visualize_online(bwrapper, mongocli, config):
+
+    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    start_timestamp = int(datetime.timestamp(start_time))*1000
+    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    end_timestamp = int(datetime.timestamp(end_time))*1000
+
+    pair_scale_mapping = await get_pair_min_period_mapping(config)
+
+    df_list = []
+    for pair,scale in pair_scale_mapping.items(): 
+        df_list.append(bwrapper.get_historical_klines(start_timestamp, end_timestamp, pair, scale))
+
+    df_pair_list = list(await asyncio.gather(*df_list))
+
+    for idx, item in enumerate(pair_scale_mapping.items()):
+        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+
+        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
+
+    pass
 
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
@@ -324,7 +348,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     meta_data_pool = set(chain(*meta_data_pool))
 
     # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
-    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict(meta_data_pool, ikarus_time)
+    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict_download(meta_data_pool, ikarus_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # 1.2 Get live trade objects (LTOs)

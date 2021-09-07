@@ -12,16 +12,23 @@ class TelegramBot():
         # Start the Bot
         #self.updater.start_polling()
         #self.updater.idle()
+        # TODO: Apply alingment to messages
         self.templates = {
             'lto': 'LTO {}:\n        {} order {} {}'.format,
             # {_id} {phase} {orderId} {event}
+
             'hto': 'HTO {}:\n\
-    Start Time: {}\n\
-    End Time: {}\n\
-    Absolute Profit: {:.2f}\n\
-    Total Profit: %{:.2f}'.format,
-            'app': 'Application {}'.format,
-            'error': 'Error Occured: {}'.format,
+         Strategy: {}\n\
+         Pair: {}\n\
+         Start Time: {}\n\
+         End Time: {}\n\
+         Absolute Profit: {:.2f}\n\
+         Total Profit: %{:.2f}'.format,
+
+            'app': 'Application: {}'.format,
+
+            'error': 'Error: {}'.format,
+
             'stat': 'STAT {}: {} order {} placed'.format,
         }
         '''
@@ -55,10 +62,13 @@ def test_lto():
     pass
 
 def test_hto():
-    args = ['611eb00fe9350843f569a567', datetime.fromtimestamp(1589418000, timezone.utc), datetime.fromtimestamp(1589418000, timezone.utc), 27.75, 0.29951430113329736]
+    args = ['611eb00fe9350843f569a567', 'AlwaysEnter', 'AVAXUSDT', datetime.fromtimestamp(1589418000, timezone.utc), datetime.fromtimestamp(1589418000, timezone.utc), 27.75, 0.29951430113329736]
     telbot.send_constructed_msg('hto', *args )
     pass
 
+def test_error():
+    telbot.send_constructed_msg('error', *['message message message message message'] )
+    pass
 
 if __name__ == '__main__':
     f = open(str(sys.argv[1]),'r')
@@ -69,3 +79,4 @@ if __name__ == '__main__':
 
     telbot = TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
     test_hto()
+    test_error()
