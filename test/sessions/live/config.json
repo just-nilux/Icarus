@@ -7,6 +7,18 @@
         "port": 27017,
         "clean": true
     },
+    "notification":{
+        "telegram": {
+            "hto": true,
+            "lto": false,
+            "app": true,
+            "error": true,
+            "daily": true,
+            "stat": true,
+            "market": false
+        },
+        "mail": false
+    },
     "broker": {
         "quote_currency": "USDT",
         "credit_currency": "TRY"

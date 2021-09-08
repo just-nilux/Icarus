@@ -3,11 +3,21 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 import json
 import sys
 from datetime import datetime, timezone
+
+
+class EMail():
+
+    def __init__(self):
+        raise NotImplementedError('Email is not supported yet')
+        pass
+
+
 class TelegramBot():
 
-    def __init__(self, _token, _chatId):
+    def __init__(self, _token, _chatId, _telegram_config):
         self.updater = Updater(_token)
         self.chatId = _chatId
+        self.telegram_config = _telegram_config
 
         # Start the Bot
         #self.updater.start_polling()
@@ -15,7 +25,6 @@ class TelegramBot():
         # TODO: Apply alingment to messages
         self.templates = {
             'lto': 'LTO {}:\n        {} order {} {}'.format,
-            # {_id} {phase} {orderId} {event}
 
             'hto': 'HTO {}:\n\
          Strategy: {}\n\
@@ -31,6 +40,7 @@ class TelegramBot():
 
             'stat': 'STAT {}: {} order {} placed'.format,
         }
+
         '''
         TODO: Some queries would be fine
               - Get all LTOs
@@ -48,8 +58,10 @@ class TelegramBot():
         '''
 
     def send_constructed_msg(self, type, *args) -> None:
-        text = self.templates[type](*args)
-        self.send_raw(text)
+        
+        if type in self.telegram_config.keys() and self.telegram_config[type]:
+            text = self.templates[type](*args)
+            self.send_raw(text)
 
 
     def send_raw(self, msg='Default Message') -> None:  
@@ -70,6 +82,10 @@ def test_error():
     telbot.send_constructed_msg('error', *['message message message message message'] )
     pass
 
+def test_config():
+    telbot.send_constructed_msg('error', *['message message message message message'] )
+    pass
+
 if __name__ == '__main__':
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
@@ -77,6 +93,7 @@ if __name__ == '__main__':
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
 
-    telbot = TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
-    test_hto()
-    test_error()
+    telbot = TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'], config['notification']['telegram'])
+    #test_hto()
+    #test_error()
+    test_config()

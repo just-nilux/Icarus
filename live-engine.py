@@ -469,7 +469,7 @@ if __name__ == "__main__":
         cred_info = json.load(cred_file)
 
     logger = logging.getLogger('app')
-    telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'])
+    telbot = notifications.TelegramBot(cred_info['Telegram']['Token'], cred_info['Telegram']['ChatId'], config['notification']['telegram'])
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],
