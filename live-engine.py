@@ -154,11 +154,10 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
         orderId = lto_list[i][phase_lto][type]['orderId'] # Get the orderId of the exit module
 
         if orders_dict[orderId]['status'] == 'CANCELED':
-            logger.info(f'LTO: "{lto_list[i]["_id"]}": canceled at the phase {phase_lto}. Order ID: {orderId}. Closing the LTO')
-            telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], phase_lto, orderId, EVENT_CANCELED])
+            logger.warning(f'LTO: "{lto_list[i]["_id"]}": canceled at the phase {phase_lto}. Order ID: {orderId}. Closing the LTO')
+            telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], phase_lto, orderId, 'manually canceled'])
 
             # NOTE: In case of Manual Interventions, close the LTO without any change
-            # NOTE: Backtest section does not require this feature
             lto_list[i]['status'] = STAT_CLOSED
             lto_list[i]['result']['cause'] = CAUSE_MANUAL_CHANGE
             lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
@@ -183,7 +182,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['enter']['price'] = float(orders_dict[enter_orderId]['price'])
                     lto_list[i]['result']['enter']['quantity'] = float(orders_dict[enter_orderId]['executedQty'])
                     lto_list[i]['result']['enter']['amount'] = float(lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity'])
-                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], 'enter', enter_orderId, 'filled'])
+                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'enter', enter_orderId, 'filled'])
 
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
@@ -219,7 +218,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], 'exit', exit_orderId, 'filled'])
+                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', exit_orderId, 'filled'])
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -247,7 +246,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                     
-                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], 'exit', oco_stopLimit_orderId, 'filled'])
+                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', oco_stopLimit_orderId, 'filled'])
 
                 elif orders_dict[oco_limit_orderId]['status'] == 'FILLED' and orders_dict[oco_stopLimit_orderId]['status'] == 'EXPIRED':
 
@@ -265,7 +264,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                     
-                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], 'exit', oco_limit_orderId, 'filled'])
+                    telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', oco_limit_orderId, 'filled'])
 
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
@@ -369,10 +368,10 @@ async def application(strategy_list, bwrapper, ikarus_time):
             telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
             logger.error('Some of the NTOs could not be placed to Database')
             for nto in nto_list:
-                telbot.send_constructed_msg('lto', *['', PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], 'placed'])
+                telbot.send_constructed_msg('lto', *['', nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
         else:
             for _id, nto in zip(results.inserted_ids,nto_list):
-                telbot.send_constructed_msg('lto', *[_id, PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], 'placed'])
+                telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_list)

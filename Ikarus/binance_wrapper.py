@@ -266,7 +266,7 @@ class BinanceWrapper():
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('lto', *[lto['_id'], 'exit', response_limit_maker["orderId"], 'placed'])
+            self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response_limit_maker["orderId"], EVENT_PLACED])
 
             return lto
 
@@ -291,7 +291,7 @@ class BinanceWrapper():
 
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('lto', *[lto['_id'], 'exit', response["orderId"], 'placed'])
+            self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response["orderId"], EVENT_PLACED])
             return lto
 
 
@@ -317,7 +317,7 @@ class BinanceWrapper():
 
             else:
                 self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
-                self.telbot.send_constructed_msg('lto', *[lto['_id'], phase, response["orderId"], 'canceled'])
+                self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], phase, response["orderId"], 'canceled'])
             return True
 
 
@@ -408,8 +408,8 @@ class BinanceWrapper():
 
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                         lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
-                        self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], 'exit', response["orderId"], 'placed'])
-                        self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], 'exit', response["orderId"], 'filled'])
+                        self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', response["orderId"], EVENT_PLACED])
+                        self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', response["orderId"], 'filled'])
 
 
 
@@ -494,7 +494,7 @@ class BinanceWrapper():
                     else:
                         nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
                         self.logger.info(f'NTO limit order placed: {response["orderId"]}')
-                        self.telbot.send_constructed_msg('lto', *['_id', 'enter', response["orderId"], 'placed']) # '_id' is not given yet
+                        self.telbot.send_constructed_msg('lto', *['_id', nto_list[i]['strategy'], nto_list[i]['pair'], 'enter', response["orderId"], EVENT_PLACED]) # '_id' is not given yet
                         self.logger.info(f'after message')
 
                 else: pass # TODO: Internal Error

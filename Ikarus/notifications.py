@@ -23,8 +23,13 @@ class TelegramBot():
         #self.updater.start_polling()
         #self.updater.idle()
         # TODO: Apply alingment to messages
+        # TODO: NEXT: Instead of writing 'format', and giving list of values, just give the lto/hto itself and handle the data in function
+        #       Buy doing so you dont need to change much thing if any update is needed
         self.templates = {
-            'lto': 'LTO {}:\n        {} order {} {}'.format,
+            'lto': 'LTO {}:\n\
+        Strategy: {}\n\
+        Pair: {}\n\
+        {} order {} {}'.format,
 
             'hto': 'HTO {}:\n\
          Strategy: {}\n\
@@ -69,7 +74,7 @@ class TelegramBot():
 
 
 def test_lto():
-    args = ['611eb00fe9350843f569a567', 'enter', 7237001592, 'closed'] 
+    args = ['611eb00fe9350843f569a567', 'StrategyName', 'Pair', 'enter', 7237001592, 'closed'] 
     telbot.send_constructed_msg('lto', *args )
     pass
 
