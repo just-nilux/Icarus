@@ -10,7 +10,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
 import sys
-import copy
+import time
 import bson
 from itertools import chain, groupby
 import operator
@@ -87,8 +87,9 @@ def setup_logger(_log_lvl):
     ch.setLevel(logging.ERROR)
 
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
-
+    formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
+        '%(filename)20s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
+    formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
 

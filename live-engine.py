@@ -42,7 +42,9 @@ def setup_logger(_log_lvl):
 
     # create formatter and add it to the handle
     # rs
-    formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
+    #formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
+    formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
+        '%(filename)20s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
     formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
