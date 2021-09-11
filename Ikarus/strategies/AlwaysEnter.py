@@ -54,6 +54,8 @@ class AlwaysEnter(StrategyBase):
 
                 elif self.config['exit']['type'] == TYPE_OCO:
                     lto['exit'][TYPE_OCO]['limitPrice'] *= 1
+                    lto['exit'][TYPE_OCO]['stopPrice'] *= 1
+                    lto['exit'][TYPE_OCO]['stopLimitPrice'] *= 1
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
                     lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,1,time_scale_to_minute(self.min_period))
                 skip_calculation = True

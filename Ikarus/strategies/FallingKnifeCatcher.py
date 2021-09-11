@@ -49,12 +49,14 @@ class FallingKnifeCatcher(StrategyBase):
                 lto['action'] = ACTN_UPDATE 
                 lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']])) # This is good for debugging and will be good for perf. evaluation in future
                 if self.config['exit']['type'] == TYPE_LIMIT:
-                    lto['exit'][TYPE_LIMIT]['price'] *= 0.99
+                    lto['exit'][TYPE_LIMIT]['price'] *= 1
                     lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
                     lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
 
                 elif self.config['exit']['type'] == TYPE_OCO:
-                    lto['exit'][TYPE_OCO]['limitPrice'] *= 0.99
+                    lto['exit'][TYPE_OCO]['limitPrice'] *= 1
+                    lto['exit'][TYPE_OCO]['stopPrice'] *= 1
+                    lto['exit'][TYPE_OCO]['stopLimitPrice'] *= 1
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
                     lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
                 skip_calculation = True
@@ -168,7 +170,7 @@ class FallingKnifeCatcher(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict[self.min_period]['low'][-10:]) * 0.99
+                enter_price = min(time_dict[self.min_period]['low'][-10:]) * 0.95
                 exit_price = max(time_dict[self.min_period]['high'][-10:])
                 # Calculate enter/exit amount value
 

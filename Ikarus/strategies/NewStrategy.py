@@ -62,7 +62,6 @@ class NewStrategy(StrategyBase):
 
                 elif self.config['exit']['type'] == TYPE_OCO:
                     lto['exit'][TYPE_OCO]['limitPrice'] *= 1
-                    # TODO: NEXT: Fix this OCO update issue in all strategies
                     lto['exit'][TYPE_OCO]['stopPrice'] *= 1
                     lto['exit'][TYPE_OCO]['stopLimitPrice'] *= 1
                     lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
