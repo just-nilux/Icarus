@@ -312,7 +312,6 @@ async def application(strategy_list, bwrapper, ikarus_time):
     meta_data_pool = set(chain(*meta_data_pool))
 
     # 1.1 Get live trade objects (LTOs)
-    #lto_list = await mongocli.do_find('live-trades',{})
     # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
     lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
@@ -373,6 +372,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
                 telbot.send_constructed_msg('lto', *['', nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
         else:
             for _id, nto in zip(results.inserted_ids,nto_list):
+                logger.info(f'LTO: "{nto["_id"]}" | {nto["strategy"]} | {nto["pair"]} created with the {PHASE_ENTER} order: {nto["enter"][TYPE_LIMIT]["orderId"]}')
                 telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]

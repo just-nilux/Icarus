@@ -57,10 +57,10 @@ class Statistics():
         # TODO: NEXT: give index as well as a param to retrieve single value
         last_balance = await self.mongocli.get_n_docs("observer")
         for balance in last_balance[0]['balances']:
-            if balance['asset'] == 'USDT':
-                usdt_balance = balance['total']
+            if balance['asset'] == self.config['broker']['quote_currency']:
+                quote_balance = balance['total']
                 break
-        self.logger.info('Final equity : {}'.format(usdt_balance))
+        self.logger.info('Final equity : {}'.format(quote_balance))
 
         pass
 

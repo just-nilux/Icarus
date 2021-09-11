@@ -493,9 +493,8 @@ class BinanceWrapper():
 
                     else:
                         nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
-                        self.logger.info(f'NTO limit order placed: {response["orderId"]}')
+                        self.logger.info(f'NTO ({nto_list[i]["strategy"]},{nto_list[i]["pair"]}) limit order placed: {response["orderId"]}')
                         self.telbot.send_constructed_msg('lto', *['_id', nto_list[i]['strategy'], nto_list[i]['pair'], 'enter', response["orderId"], EVENT_PLACED]) # '_id' is not given yet
-                        self.logger.info(f'after message')
 
                 else: pass # TODO: Internal Error
 
