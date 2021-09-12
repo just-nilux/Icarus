@@ -51,6 +51,39 @@ async def visualize_online(bwrapper, mongocli, config):
     pass
 
 
+async def visualize_dashboard(bwrapper, mongocli, config):
+
+    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    start_timestamp = int(datetime.timestamp(start_time))*1000
+    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    end_timestamp = int(datetime.timestamp(end_time))*1000
+
+    pair_scale_mapping = await get_pair_min_period_mapping(config)
+
+    df_list, dashboard_data_pack = [], {}
+    for pair,scale in pair_scale_mapping.items(): 
+        df_list.append(bwrapper.get_historical_klines(start_timestamp, end_timestamp, pair, scale))
+        dashboard_data_pack[pair]={}
+    
+    df_pair_list = list(await asyncio.gather(*df_list))
+
+    for idx, item in enumerate(pair_scale_mapping.items()):
+        # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
+        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+
+        #fplot.buy_sell_dashboard(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
+        dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
+        dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire
+        dashboard_data_pack[item[0]]['df_exit_expire'] = df_exit_expire
+        dashboard_data_pack[item[0]]['df_closed'] = df_closed
+        
+    fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
+
+    pass
+
+
 async def main():
 
     if config['backtest']['online']:
@@ -61,7 +94,7 @@ async def main():
             config['mongodb']['port'], 
             config['tag'],
             clean=False)
-        await visualize_online(bwrapper, mongocli, config)
+        await visualize_dashboard(bwrapper, mongocli, config)
     else:
         await visualize_offline()
 
