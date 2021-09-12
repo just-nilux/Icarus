@@ -8,7 +8,6 @@ class StrategyManager():
     def __init__(self, _config , _symbol_info) -> None:
 
         self.strategies = {
-            "OCOBackTest": strategies.OCOBackTest.OCOBackTest,
             "AlwaysEnter": strategies.AlwaysEnter.AlwaysEnter,
             "AlwaysEnter90": strategies.AlwaysEnter90.AlwaysEnter90,
             "FallingKnifeCatcher": strategies.FallingKnifeCatcher.FallingKnifeCatcher,

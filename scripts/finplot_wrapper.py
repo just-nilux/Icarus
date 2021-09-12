@@ -10,6 +10,15 @@ import numpy as np
 from collections import defaultdict
 from matplotlib.markers import MarkerStyle as MS
 import datetime
+from functools import lru_cache
+import pandas as pd
+from PyQt5.QtWidgets import QComboBox, QCheckBox, QWidget
+from pyqtgraph import QtGui
+import pyqtgraph as pg
+from copy import deepcopy
+
+dashboard_data = {}
+ax, axo, ctrl_panel = '', '', ''
 #kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
 #                    "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
@@ -73,7 +82,7 @@ def fplot_2row(filename=None):
     fplt.candlestick_ochl(df[['open','close','high','low']], ax=ax, colorfunc=fplt.strength_colorfilter)
     hover_label = fplt.add_legend('', ax=ax)
     axo = ax.overlay()
-    fplt.volume_ocv(df[['open','close','volume']], ax=axo)
+    fplt.volume_ocv(df[['open','close','volume']], ax=axo, colorfunc=fplt.strength_colorfilter)
     fplt.plot(df['volume'].ewm(span=24).mean(), ax=axo, color=1)
     fplt.show()
 
@@ -187,6 +196,8 @@ def _add_time_separator(df):
 def _add_enter_expire_tos(df_enter_expire):
     for idx, row in df_enter_expire.iterrows():
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
+        fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
+
 
 
 def _add_exit_expire_tos(df_exit_expire):
@@ -194,6 +205,7 @@ def _add_exit_expire_tos(df_exit_expire):
         fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
         profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
         fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+        fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
         fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
 
@@ -216,7 +228,10 @@ def _add_closed_tos(ax, df_closed):
 
         fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
         fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+        fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
+    x=0
+    pass
 
 
     # TODO: NEXT: Visualiztion of updated order, exit target price and sel price become the same if it is updated
@@ -244,6 +259,168 @@ def _scatter_wrapper(serie, duplicate_filter, plot_spec):
     # Visualize Duplicates
     for row in serie[duplicate_filter].to_frame().iterrows():
         fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'], legend=plot_spec['legend'])
+
+
+def change_asset():
+    '''Resets and recalculates everything, and plots for the first time.'''
+    '''
+    dashboard_data = {
+        'BTCUSDT':{
+            'df':pd.DataFrame,
+            'df_enter_expire':pd.DataFrame,
+            ...
+        }
+        ...
+    }
+    '''
+    # save window zoom position before resetting
+    #fplt._savewindata(fplt.windows[0])
+
+    symbol = ctrl_panel.symbol.currentText()
+    print(symbol)
+
+    # remove any previous plots
+    ax.reset()
+    axo.reset()
+    # TODO: Fix the QGraphicsScene::removeItem: error
+    #       It is caused by the rectangles in green and red
+
+    fplt.candlestick_ochl(dashboard_data[symbol]['df']['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
+    fplt.volume_ocv(dashboard_data[symbol]['df']['open close volume'.split()], ax=axo)
+    ax.set_visible(xaxis=True)
+
+    if not dashboard_data[symbol]['df_enter_expire'].empty:
+        _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['df_enter_expire']))
+
+    # Exit expired trade visualization
+    if not dashboard_data[symbol]['df_exit_expire'].empty:
+        _add_exit_expire_tos(deepcopy(dashboard_data[symbol]['df_exit_expire']))
+
+    if not dashboard_data[symbol]['df_closed'].empty:
+        _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['df_closed'])) # NOTE: Plot the closed ones last to make sure they are in front
+
+    # restores saved zoom position, if in range
+    fplt.refresh()
+
+
+def dark_mode_toggle(dark):
+    '''Digs into the internals of finplot and pyqtgraph to change the colors of existing
+       plots, axes, backgronds, etc.'''
+    # first set the colors we'll be using
+    
+    # TODO: Get rid of the dark mode redundency
+    if dark:
+        fplt.foreground = '#777'
+        fplt.background = '#090c0e'
+        fplt.candle_bull_color = fplt.candle_bull_body_color = '#0b0'
+        fplt.candle_bear_color = '#a23'
+        volume_transparency = '6'
+    else:
+        fplt.foreground = '#444'
+        fplt.background = fplt.candle_bull_body_color = '#fff'
+        fplt.candle_bull_color = '#380'
+        fplt.candle_bear_color = '#c50'
+        volume_transparency = 'c'
+    fplt.volume_bull_color = fplt.volume_bull_body_color = fplt.candle_bull_color + volume_transparency
+    fplt.volume_bear_color = fplt.candle_bear_color + volume_transparency
+    fplt.cross_hair_color = fplt.foreground+'8'
+    fplt.draw_line_color = '#888'
+    fplt.draw_done_color = '#555'
+
+    pg.setConfigOptions(foreground=fplt.foreground, background=fplt.background)
+    # control panel color
+    if ctrl_panel is not None:
+        p = ctrl_panel.palette()
+        p.setColor(ctrl_panel.darkmode.foregroundRole(), pg.mkColor(fplt.foreground))
+        ctrl_panel.darkmode.setPalette(p)
+
+    # window background
+    for win in fplt.windows:
+        win.setBackground(fplt.background)
+
+    # axis, crosshair, candlesticks, volumes
+    axs = [ax for win in fplt.windows for ax in win.axs]
+    axs += fplt.overlay_axs
+    axis_pen = fplt._makepen(color=fplt.foreground)
+    for ax in axs:
+        ax.axes['left']['item'].setPen(axis_pen)
+        ax.axes['left']['item'].setTextPen(axis_pen)
+        ax.axes['bottom']['item'].setPen(axis_pen)
+        ax.axes['bottom']['item'].setTextPen(axis_pen)
+        if ax.crosshair is not None:
+            ax.crosshair.vline.pen.setColor(pg.mkColor(fplt.foreground))
+            ax.crosshair.hline.pen.setColor(pg.mkColor(fplt.foreground))
+            ax.crosshair.xtext.setColor(fplt.foreground)
+            ax.crosshair.ytext.setColor(fplt.foreground)
+        for item in ax.items:
+            if isinstance(item, fplt.FinPlotItem):
+                isvolume = ax in fplt.overlay_axs
+                if not isvolume:
+                    item.colors.update(
+                        dict(bull_shadow      = fplt.candle_bull_color,
+                             bull_frame       = fplt.candle_bull_color,
+                             bull_body        = fplt.candle_bull_body_color,
+                             bear_shadow      = fplt.candle_bear_color,
+                             bear_frame       = fplt.candle_bear_color,
+                             bear_body        = fplt.candle_bear_color))
+                else:
+                    item.colors.update(
+                        dict(bull_frame       = fplt.volume_bull_color,
+                             bull_body        = fplt.volume_bull_body_color,
+                             bear_frame       = fplt.volume_bear_color,
+                             bear_body        = fplt.volume_bear_color))
+                item.repaint()
+
+
+def create_ctrl_panel(win, pairs):
+    panel = QWidget(win)
+    panel.move(200, 0)
+    win.scene().addWidget(panel)
+    layout = QtGui.QGridLayout(panel)
+
+    panel.symbol = QComboBox(panel)
+    [panel.symbol.addItem(pair) for pair in pairs]
+    panel.symbol.setCurrentIndex(1)
+    layout.addWidget(panel.symbol, 0, 0)
+    panel.symbol.currentTextChanged.connect(change_asset)
+
+    layout.setColumnMinimumWidth(1, 30)
+
+    panel.darkmode = QCheckBox(panel)
+    panel.darkmode.setText('Haxxor mode')
+    panel.darkmode.setCheckState(2)
+    panel.darkmode.toggled.connect(dark_mode_toggle)
+    layout.addWidget(panel.darkmode, 0, 6)
+
+    return panel
+
+
+def buy_sell_dashboard(dashboard_data_pack, title='Buy/Sell Plot'):
+
+    '''
+    data logic of the buy_sell function needs to change since dahs board requires all in once
+    '''
+    # TODO: Find an alternative to this global implementation. This looks ugly
+    global ctrl_panel, ax, axo, dashboard_data
+    dashboard_data = dashboard_data_pack
+
+    print("buy sell dahsboard")
+    
+    # Set dashboard specifics
+    fplt.display_timezone = datetime.timezone.utc
+    fplt.y_pad = 0.07 # pad some extra (for control panel)
+    fplt.max_zoom_points = 7
+    fplt.autoviewrestore()
+
+    ax = fplt.create_plot(title)
+    axo = ax.overlay()
+    ax.set_visible(xaxis=True)
+
+    ctrl_panel = create_ctrl_panel(ax.vb.win,list(dashboard_data.keys()))
+    dark_mode_toggle(False)
+    change_asset()
+
+    fplt.show()
 
 
 if __name__ == '__main__':

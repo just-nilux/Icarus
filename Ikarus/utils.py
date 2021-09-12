@@ -29,6 +29,7 @@ async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
 
         hto_dict = {
             "_id": hto['_id'],
+            "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
@@ -50,6 +51,7 @@ async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
         # NOTE: HIGH: We dont know it the exit type is limit or not
         hto_dict = {
             "_id": hto['_id'],
+            "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
             "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
@@ -71,6 +73,7 @@ async def get_exit_expire_hto(mongocli, query={'result.cause':STAT_EXIT_EXP}):
 
         hto_dict = {
             "_id": hto['_id'],
+            "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
             "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
