@@ -3,13 +3,40 @@ from binance.helpers import round_step_size
 from Ikarus.enums import *
 import bson
 import abc
-
+import itertools
 
 class StrategyBase(metaclass=abc.ABCMeta):
 
-    def __init__(self):
-        # TODO: NEXT Add other trivial assignments to here
+    def __init__(self, _name, _config, _symbol_info):
+        self.name = _name
         self.alloc_perc = 0
+        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
+
+        self.config = _config['strategy'][self.name]
+        # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
+        self.quote_currency = _config['broker']['quote_currency']
+        # TODO: Make proper handling for symbol_info
+        self.symbol_info = _symbol_info
+
+        # NOTE: Hardcoded time-scales list (scales should be in ascending order)
+        self.min_period = self.config['time_scales'][0]
+        self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
+        # TODO: Put the strategies in an structure so that the architecture would be solid
+        #       Then assign functions in each implementation such as: on_STAT_EXIT_EXP() etc
+        # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
+        # Since it facilitates so much new strategy creation and modular implementation
+        
+        # TODO: NEXT: Apply the self.alloc_perc to evaluation phase
+        # TODO: NEXT: Find a way to implement pairwise allocation
+        #       Pairwise allocation can be as follows:
+        #       1. First one use it all,
+        #       2. Share equal each strategy
+        #       3. Adaptiove distribution
+        # TODO: NEXT: How to find the allocated amount? Is it the
+        #       - free amount?
+        #       - free + locked amount?
+        #       - sth else?
+        self.pairwise_allocation = { pair for pair in self.config['pairs']}
         pass
 
     @classmethod

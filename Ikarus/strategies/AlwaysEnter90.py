@@ -11,17 +11,7 @@ from ..utils import time_scale_to_minute
 class AlwaysEnter90(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__()
-        self.name = "AlwaysEnter90"
-        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
-
-        # TODO: Find a more beautiful way to implemetn this logic
-        self.config = _config['strategy'][self.name]
-
-        self.quote_currency = _config['broker']['quote_currency']
-        self.symbol_info = _symbol_info
-        self.min_period = self.config['time_scales'][0]
-        self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
+        super().__init__("AlwaysEnter90", _config, _symbol_info)
         return
 
 

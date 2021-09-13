@@ -10,16 +10,7 @@ from ..utils import time_scale_to_minute
 class FallingKnifeCatcher(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__()
-        self.name = "FallingKnifeCatcher"
-        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
-        self.config = _config['strategy'][self.name]
-
-        self.quote_currency = _config['broker']['quote_currency']
-        # TODO: Make proper handling for symbol_info
-        self.symbol_info = _symbol_info
-        self.min_period = self.config['time_scales'][0]
-        self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
+        super().__init__("FallingKnifeCatcher", _config, _symbol_info)
         return
 
 
