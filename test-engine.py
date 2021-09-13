@@ -16,6 +16,8 @@ from itertools import chain, groupby
 import operator
 import itertools
 from scripts import finplot_wrapper as fplot
+from Ikarus.resource_allocator import ResourceAllocator 
+
 #from scripts.visualize_test_session import visualize_online
 
 # Global Variables
@@ -88,7 +90,7 @@ def setup_logger(_log_lvl):
 
     # create formatter and add it to the handlers
     formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
-        '%(filename)20s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
+        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
     formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
@@ -406,17 +408,26 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
 async def main():
 
-    # NOTE: Temporary hack for yesting without internet connection
+    # Create a Async Binance client and receive initial information
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
-
     all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
-    # TODO: Actually no need to make symbol_info a member of the instances, it is better to have it as 
-    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
+    # Create Resource Allocator and initialize allocation for strategies
+    res_allocater = ResourceAllocator(list(config['strategy'].keys()), mongocli)
+    await res_allocater.allocate()
+    # NOTE: This implementation uses Resource Allocator only in the boot time.
+    #       For dynamic allocation (or at least updating each day/week automatically), allocator needs to
+    #       create a new allocation and strategy manager needs to consume it in an cycle
+
+    # Create Strategy Manager and configure strategies
+    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info, mongocli)
+    await strategy_mgr.source_plugin()
+    # TODO: Receive data from plugin once. This needs to be a periodic operations for each cycle if a new
+    #       resource_allocation object exist
     strategy_list = strategy_mgr.get_strategies()
 
     meta_data_pool = []
@@ -436,11 +447,11 @@ async def main():
     initial_observation_item = {
         'balances': config['balances']
     }
-    await mongocli.do_insert_one("observer", initial_observation_item)   
+    await mongocli.do_insert_one("observer", initial_observation_item)
 
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    session_start_timestamp = int(datetime.timestamp(session_start_time)) # TODO: Check for UTC
+    session_start_timestamp = int(datetime.timestamp(session_start_time)) # UTC
     session_end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
     session_end_timestamp = int(datetime.timestamp(session_end_time))
 

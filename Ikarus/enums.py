@@ -27,6 +27,8 @@ EVENT_CANCELED = 'canceled'
 EVENT_FILLED = 'filled'
 EVENT_PLACED = 'placed'
 
+COLL_STR_MGR_PLUGIN = 'strmgr_plugin'
+# TODO: Add other COLLs
 # TODO: Move this function to utils
 def get_lto_phase(lto):
 

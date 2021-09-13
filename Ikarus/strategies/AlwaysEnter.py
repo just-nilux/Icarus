@@ -11,6 +11,7 @@ from ..utils import time_scale_to_minute
 class AlwaysEnter(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
+        super().__init__()
         self.name = "AlwaysEnter"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 

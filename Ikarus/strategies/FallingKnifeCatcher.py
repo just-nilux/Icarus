@@ -10,6 +10,7 @@ from ..utils import time_scale_to_minute
 class FallingKnifeCatcher(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
+        super().__init__()
         self.name = "FallingKnifeCatcher"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
         self.config = _config['strategy'][self.name]

@@ -7,8 +7,9 @@ import abc
 
 class StrategyBase(metaclass=abc.ABCMeta):
 
-    @abc.abstractmethod
     def __init__(self):
+        # TODO: NEXT Add other trivial assignments to here
+        self.alloc_perc = 0
         pass
 
     @classmethod

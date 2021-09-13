@@ -10,6 +10,7 @@ from ..utils import time_scale_to_minute
 class NewStrategy(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
+        super().__init__()
         self.name = "NewStrategy"
         self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
 
@@ -26,6 +27,7 @@ class NewStrategy(StrategyBase):
         # TODO: Put the strategies in an structure so that the architecture would be solid
         #       Then assign functions in each implementation such as: on_STAT_EXIT_EXP() etc
         
+        # TODO: NEXT: Apply the self.alloc_perc to evaluation phase
         return
 
 
