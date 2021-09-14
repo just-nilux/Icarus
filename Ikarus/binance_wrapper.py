@@ -734,6 +734,7 @@ class TestBinanceWrapper():
             tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=ikarus_time )))
 
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+        # TODO: NEXT: BUG: If a pair does not exist in the given time, then composit kline comes empty: [[], [[...], [...]]
         data_dict = await self.decompose(meta_data_pool, composit_klines)
         self.logger.debug('get_data_dict ended')
 

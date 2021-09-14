@@ -250,6 +250,7 @@ def _add_closed_tos(ax, df_closed):
     duplicate_filter = df_closed.index.duplicated(keep=False)
     plot_spec = {'color':'#00ff00','style':'^', 'ax':ax, 'legend':'Buy Point'}
     _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
+    # TODO: Fix the multiple buy point legend text
 
 
 def _scatter_wrapper(serie, duplicate_filter, plot_spec):

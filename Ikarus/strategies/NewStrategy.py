@@ -11,7 +11,21 @@ class NewStrategy(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
         super().__init__("NewStrategy", _config, _symbol_info)
+        self.logger.info(f'{self.name} initialized')
+        print(f'{self.name} initialized')
         return
+
+
+    async def run_test(self, input1, input2):
+        await super().run_test(self, input1, input2)
+
+
+    async def on_lto_eval(self, _inp1):
+        self.logger.info(f'{self.name} {_inp1}')
+
+
+    async def on_decision(self, _inp2):
+        self.logger.info(f'{self.name} {_inp2}')
 
 
     async def _handle_lto(self, lto, dt_index):
@@ -220,3 +234,32 @@ class NewStrategy(StrategyBase):
 
         return trade_objects
 
+    async def on_lto_eval(self, _inp1):
+        pass
+
+    async def on_decision(self, _inp2):
+        pass
+
+    async def on_handle_lto(self, lto, dt_index):
+        pass
+
+    async def on_enter_expire(self):
+        pass
+
+    async def on_update(self):
+        pass
+
+    async def on_postpone(self):
+        pass
+
+    async def on_market_exit(self):
+        pass
+
+    async def on_waiting_exit(self):
+        pass
+
+    async def on_closed(self):
+        pass
+
+    async def on_make_decision(self, analysis_dict, lto_list, df_balance, dt_index):
+        pass

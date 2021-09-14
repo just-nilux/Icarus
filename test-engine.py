@@ -377,7 +377,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
     strategy_tasks = []
     for strategy in strategy_list:
         strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
-    
+        #strategy_tasks.append(asyncio.create_task(strategy.run_test('data1','data2')))
+
     # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))

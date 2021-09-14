@@ -10,8 +10,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
     def __init__(self, _name, _config, _symbol_info):
         self.name = _name
         self.alloc_perc = 0
-        self.logger = logging.getLogger('{}.{}'.format(__name__,self.name))
-
+        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy'][self.name]
         # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
@@ -32,12 +31,64 @@ class StrategyBase(metaclass=abc.ABCMeta):
         #       1. First one use it all,
         #       2. Share equal each strategy
         #       3. Adaptiove distribution
-        # TODO: NEXT: How to find the allocated amount? Is it the
-        #       - free amount?
-        #       - free + locked amount?
-        #       - sth else?
         self.pairwise_allocation = { pair for pair in self.config['pairs']}
         pass
+
+    @staticmethod
+    async def run_test(self, _input1, _input2):
+        self.logger.info(f'{self.name} run test')
+        await self.on_lto_eval(_input1)
+        await self.on_decision(_input2)
+
+    @abc.abstractclassmethod
+    async def on_lto_eval(self, _inp1):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_decision(self, _inp2):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_handle_lto(self, lto, dt_index):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_enter_expire(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_update(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_postpone(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_market_exit(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_waiting_exit(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_closed(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_make_decision(self, analysis_dict, lto_list, df_balance, dt_index):
+        pass
+
 
     @classmethod
     def __subclasshook__(cls, subclass):
