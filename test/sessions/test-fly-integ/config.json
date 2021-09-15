@@ -1,6 +1,6 @@
 {
     "tag": "test-bot",
-    "log-level": "INFO",
+    "log-level": "DEBUG",
     "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
@@ -21,7 +21,7 @@
     },
     "strategy": {
         "NewStrategy": {
-            "pairs": ["BTCUSDT", "XRPUSDT"],
+            "pairs": ["BTCUSDT", "LTCUSDT"],
             "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
@@ -32,11 +32,12 @@
             "action_mapping": {
                 "enter_expire": "cancel",
                 "exit_expire": "update"
-            }
+            },
+            "max_lto": 3
         }
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange", "ma"],
+        "indicators": ["low","high", "trange"],
         "params": {
             "ma": [5,20]
         }

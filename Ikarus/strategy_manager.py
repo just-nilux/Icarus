@@ -50,7 +50,7 @@ class StrategyManager():
 
         # Feed the config changes to related strategies
         for strategy in self.strategy_list:
-            strategy.alloc_perc = res_alloc[0]['strategy'][strategy.name]
+            strategy.alloc_ratio = res_alloc[0]['strategy'][strategy.name]
 
         self.logger.info(f'Resource allocated: {res_alloc[0]["strategy"]}')
 
