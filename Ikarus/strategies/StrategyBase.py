@@ -58,27 +58,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
         return True
 
 
-
     @staticmethod
     async def run_logic(self, analysis_dict, lto_list, df_balance, dt_index):
-        """
-        It requires to feed analysis_dict and lto_dict so that it may decide to:
-        - not to enter a new trade if there is already an open trade
-        - cancel the trade if an drawdown is detected
 
-        Args:
-            analysis_dict (dict): analysis.json
-            - analysis objects contains where to buy and and where to sell
-
-            lto_dict (dict): live-trade-objects coming from the [live-trades]
-
-            df_balance (pd.DataFrame): live-trade-objects coming from the [live-trades]
-
-            dt_index (int): timestamp in ms for trade_object identifier
-            
-        Returns:
-            list: nto_list
-        """
         # TODO: Rename dt_index
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
@@ -90,11 +72,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # Handle LTOs separately before the new evaluation
         # Create a mapping between the pair and lto such as {'BTCUSDT':{...}, ...}
-        
         pair_grouped_ltos = {}
         alive_lto_counter = 0
         for lto_idx in range(len(lto_list)):
-            lto_list[lto_idx] = await self.on_handle_lto(lto_list[lto_idx], dt_index)
+            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, lto_list[lto_idx], dt_index)
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
@@ -116,105 +97,48 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 if not await StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
                     continue
                 
-            # Start evaluation
-            # TODO: NEXT: Continue from heaer to add on_make_decision or whatever.
-            #       One problem: you need to share trade_objects, empty_lto_slot etc. Find a solution
-            time_dict = analysis_dict[ao_pair]
-            trange_mean5 = st.mean(time_dict[self.min_period]['trange'][-5:])
-            trange_mean20 = st.mean(time_dict[self.min_period]['trange'][-20:])
-
-            # Make decision to enter or not
-            if trange_mean5 < trange_mean20:
-                self.logger.info(f"{ao_pair}: BUY SIGNAL")
-                trade_obj = copy.deepcopy(GenericObject.trade)
-                trade_obj['status'] = STAT_OPEN_ENTER
-                trade_obj['strategy'] = self.name
-                trade_obj['pair'] = ao_pair
-                trade_obj['history'].append(trade_obj['status'])
-                trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
-                # TODO: give proper values to limit
-
-                # Calculate enter/exit prices
-                enter_price = min(time_dict[self.min_period]['low'][-10:])
-                exit_price = max(time_dict[self.min_period]['high'][-10:])
-
-                # Calculate enter/exit amount value
-
-                #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
-                # the base asset will be used.
-
-                free_ref_asset = df_balance.loc[self.quote_currency,'free']
-
-                # Example: Buy XRP with 100$ in your account
-                enter_ref_amount=20
-                # TODO: HIGH: Check mininum amount to trade and add this section to here
-                if free_ref_asset > 10:
-                    if free_ref_asset < enter_ref_amount:
-                        enter_ref_amount = free_ref_asset
-                else:
-                    # TODO: Add error logs and send notification
-                    return {}
-
-                # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
-                # Example:
-                #   Buy XRP from the price XRPUSDT: 0.66 (Price of 1XRP = 0.66$), use 100$ to make the trade
-                #   151,51 = 100$ / 0.66
-                enter_quantity = enter_ref_amount / enter_price
-
-                #   Sell the bought XRP from the price 0.70
-                #   exit_ref_amount = 151,4 * 0.70 = 105.98
-                exit_ref_amount = enter_quantity * exit_price
-
-                # Fill enter and exit modules
-                enter_type = self.config['enter']['type']
-                exit_type = self.config['exit']['type']
-
-                trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,2,time_scale_to_minute(self.min_period)))
-                trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
-
-                # TODO: Check the free amount of quote currency
-                free_ref_asset = df_balance.loc[self.quote_currency,'free']
-
-                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
-                                                                                                            enter_type, 
-                                                                                                            trade_obj['enter'][enter_type], 
-                                                                                                            self.symbol_info[ao_pair])
-                # TODO: NEXT: A strategy may contain multiple pair thus the related symbol info should be given each time as argument
-                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
-                    # TODO: Notification about min_notional
-                    continue
-                trade_objects.append(trade_obj)
+            # Perform evaluation
+            decision = await self.make_decision(analysis_dict, ao_pair, df_balance, dt_index)
+            if decision:
+                trade_objects.append(decision)
                 empty_lto_slot -= 1
-
-            else:
-                self.logger.info(f"{ao_pair}: NO SIGNAL")
 
         return trade_objects
 
 
-    @abc.abstractclassmethod
-    async def on_lto_eval(self, _inp1):
-        pass
+    @staticmethod
+    async def handle_lto_logic(self, lto, dt_index):
 
-    @abc.abstractclassmethod
-    async def on_make_decision(self, analysis_dict, lto_list, df_balance, dt_index):
-        pass
+        """
+        This function decides what to do for the LTOs based on their 'status'
+        """        
+        
+        if lto['status'] == STAT_ENTER_EXP:
+            if self.config['action_mapping'][STAT_ENTER_EXP] == ACTN_CANCEL or lto['history'].count(STAT_ENTER_EXP) > 1:
+                return await self.on_cancel(lto)
 
-    @abc.abstractclassmethod
-    async def on_decision(self, _inp2):
-        pass
+            elif self.config['action_mapping'][STAT_ENTER_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_ENTER_EXP) <= 1:
+                # NOTE: postponed_candles = 1 means 2 candle
+                #       If only 1 candle is desired to be postponed, then it means we will wait for newly started candle to close so postponed_candles will be 0
+                return await self.on_enter_postpone(lto, dt_index)
 
+        elif lto['status'] == STAT_EXIT_EXP:
 
-    @abc.abstractclassmethod
-    async def on_handle_lto(self, lto, dt_index):
-        pass
+            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
+                return await self.on_update(lto, dt_index)
 
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
+                return await self.on_exit_postpone(lto, dt_index)
 
-    @abc.abstractclassmethod
-    async def on_enter_expire(self):
-        pass
+            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
+                return await self.on_market_exit(self, lto)
+
+        elif lto['status'] == STAT_WAITING_EXIT:
+            # LTO is entered succesfully, so exit order should be executed
+            # TODO: expire of the exit_module can be calculated after the trade entered
+            return await self.on_waiting_exit(lto)
+
+        return lto
 
 
     @abc.abstractclassmethod
@@ -223,7 +147,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @abc.abstractclassmethod
-    async def on_postpone(self):
+    async def on_enter_postpone(self):
+        pass
+
+
+    @abc.abstractclassmethod
+    async def on_exit_postpone(self):
         pass
 
 
