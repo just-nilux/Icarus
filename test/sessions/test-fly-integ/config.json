@@ -34,6 +34,21 @@
                 "exit_expire": "update"
             },
             "max_lto": 3
+        },
+        "FallingKnifeCatcher": {
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["15m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 3
         }
     },
     "analysis": {

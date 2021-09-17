@@ -18,16 +18,6 @@ class NewStrategy(StrategyBase):
         return
 
     # TODO: NEXT: Cleanup test stuff and integrate other strategies to this modular structure
-    async def run_test(self, input1, input2):
-        await super().run_test(self, input1, input2)
-
-
-    async def on_lto_eval(self, _inp1):
-        self.logger.info(f'{self.name} {_inp1}')
-
-
-    async def on_decision(self, _inp2):
-        self.logger.info(f'{self.name} {_inp2}')
 
     async def run(self, analysis_dict, lto_list, df_balance, dt_index):
         return await super().run_logic(self, analysis_dict, lto_list, df_balance, dt_index)

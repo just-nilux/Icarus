@@ -40,11 +40,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         self.pairwise_allocation = { pair for pair in self.config['pairs']}
         pass
 
-    @staticmethod
-    async def run_test(self, _input1, _input2):
-        self.logger.info(f'{self.name} run test')
-        await self.on_lto_eval(_input1)
-        await self.on_decision(_input2)
 
     @staticmethod
     async def is_lto_dead(lto):

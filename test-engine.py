@@ -370,14 +370,21 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 2.2: Algorithm is the only authority to make decision
     #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
+    
+    if ikarus_time == 1589302800000:
+        print("HERE")
+
+    # TODO: BUG: NEXT: Check and update other groupby things for this bug
+    #       Here is the source of bug
     grouped_ltos = {}
     for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
-        grouped_ltos[strategy] = list(lto)
+        grouped_ltos.setdefault(strategy, []).append(list(lto)[0])
 
     strategy_tasks = []
     for strategy in strategy_list:
         strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
         #strategy_tasks.append(asyncio.create_task(strategy.run_test('data1','data2')))
+
 
     # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
