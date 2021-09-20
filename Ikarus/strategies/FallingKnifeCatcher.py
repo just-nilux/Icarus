@@ -11,16 +11,14 @@ class FallingKnifeCatcher(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
         super().__init__("FallingKnifeCatcher", _config, _symbol_info)
-        self.logger.info(f'{self.name} initialized')
-        print(f'{self.name} initialized')
         return
 
 
-    async def run(self, analysis_dict, lto_list, df_balance, dt_index):
-        return await super().run_logic(self, analysis_dict, lto_list, df_balance, dt_index)
+    async def run(self, analysis_dict, lto_list, df_balance, dt_index, total_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, df_balance, dt_index, total_qc)
 
 
-    async def make_decision(self, analysis_dict, ao_pair, df_balance, dt_index):
+    async def make_decision(self, analysis_dict, ao_pair, df_balance, dt_index, pairwise_alloc_share):
 
             time_dict = analysis_dict[ao_pair]
             trange_mean5 = st.mean(time_dict[self.min_period]['trange'][-5:])

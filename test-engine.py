@@ -5,7 +5,8 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale, get_pair_min_period_mapping
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
+    get_min_scale, get_pair_min_period_mapping, eval_total_capital
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -327,9 +328,6 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    #current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
-    # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
-    #       In this case +1 will be the start time of the next candle which is the current candle for the application
     logger.info(f'Ikarus Time: [{ikarus_time}]')
 
     # 1.1 Get balance and datadict,
@@ -368,25 +366,19 @@ async def application(strategy_list, bwrapper, ikarus_time):
     #################### Phase 2: Perform calculation tasks ####################
 
     # 2.2: Algorithm is the only authority to make decision
-    #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
-    
-    if ikarus_time == 1589302800000:
-        print("HERE")
 
-    # TODO: BUG: NEXT: Check and update other groupby things for this bug
-    #       Here is the source of bug
+    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'])
+    
     grouped_ltos = {}
-    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
-        grouped_ltos.setdefault(strategy, []).append(list(lto)[0])
+    if len(lto_list):
+        for lto_obj in lto_list:
+            grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
 
     strategy_tasks = []
     for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
-        #strategy_tasks.append(asyncio.create_task(strategy.run_test('data1','data2')))
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time, total_qc)))
 
-
-    # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
 

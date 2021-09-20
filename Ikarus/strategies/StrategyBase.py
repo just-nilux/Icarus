@@ -6,7 +6,7 @@ import abc
 import itertools
 import statistics as st
 from ..objects import GenericObject
-import copy
+import math
 from ..utils import time_scale_to_minute
 
 
@@ -26,18 +26,18 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # NOTE: Hardcoded time-scales list (scales should be in ascending order)
         self.min_period = self.config['time_scales'][0]
         self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
-        # TODO: Put the strategies in an structure so that the architecture would be solid
-        #       Then assign functions in each implementation such as: on_STAT_EXIT_EXP() etc
+
         # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
         # Since it facilitates so much new strategy creation and modular implementation
         
         # TODO: NEXT: Apply the self.alloc_perc to evaluation phase
-        # TODO: NEXT: Find a way to implement pairwise allocation
-        #       Pairwise allocation can be as follows:
-        #       1. First one use it all,
-        #       2. Share equal each strategy
-        #       3. Adaptiove distribution
-        self.pairwise_allocation = { pair for pair in self.config['pairs']}
+
+        # NOTE: strategywise_alloc_rate determines the available rate of use from the main capital
+        #       If self.strategywise_alloc_rate is 0.25 then this strategy can use max %25 of the main capital
+        self.strategywise_alloc_rate = 0 # Will be filled by the strategy manager
+
+        # NOTE: pairwise_alloc_rate determines the available rate of use from the strategywise allocated capital
+        #       If self.strategywise_alloc_rate is 0.25 then this strategy can use max %25 of the main capital
         pass
 
 
@@ -54,10 +54,22 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, lto_list, df_balance, dt_index):
+    async def run_logic(self, analysis_dict, lto_list, df_balance, dt_index, total_qc):
+        """[summary]
 
+        Args:
+            analysis_dict ([type]): [description]
+            lto_list ([type]): [description]
+            df_balance ([type]): [description]
+            dt_index ([type]): [description]
+            total_qc ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
         # TODO: Rename dt_index
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
+        # TODO: NEXT: Solve the WARNING and see if it is some kind of BUG
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
             self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
             return []
@@ -81,6 +93,18 @@ class StrategyBase(metaclass=abc.ABCMeta):
         total_lto_slot = min(self.max_lto, len(self.config['pairs']))
         empty_lto_slot = total_lto_slot - alive_lto_counter
 
+        # Evaluate pairwise_alloc_share
+        strategy_capital = total_qc * self.strategywise_alloc_rate
+        in_trade_capital = 0
+        for lto in lto_list:
+            in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
+        free_strategy_capital = strategy_capital - in_trade_capital
+
+        # TODO: NEXT: Fix the OverflowError: cannot convert float infinity to integer, when empty_slot is 0
+        pairwise_alloc_share = round(math.floor(free_strategy_capital/empty_lto_slot), 4)
+
+        x=6
+        # Iterate over pairs and make decisions about them
         for ao_pair in self.config['pairs']:
 
             # Break if there is no empty_lto_slot left
@@ -91,9 +115,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
             if ao_pair in pair_grouped_ltos.keys():
                 if not await StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
                     continue
-                
+
             # Perform evaluation
-            decision = await self.make_decision(analysis_dict, ao_pair, df_balance, dt_index)
+            decision = await self.make_decision(analysis_dict, ao_pair, df_balance, dt_index, pairwise_alloc_share)
             if decision:
                 trade_objects.append(decision)
                 empty_lto_slot -= 1

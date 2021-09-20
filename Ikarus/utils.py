@@ -19,6 +19,19 @@ def time_scale_to_second(interval: str):
 def time_scale_to_milisecond(interval: str):
     return time_scale_to_minute(interval) * 60 * 1000
 
+def eval_total_capital(df_balance, lto_list, quote_currency):
+    # Toal capital: Free QC + LTO_enter
+    free_qc = df_balance.loc[quote_currency,'free']
+
+    # NOTE: In-trade balance is calculated only by considering the LTOs of the Ikarus
+    #       Using only the df_balance requires live updates and evaluation of each asset in terms of QC
+    in_trade_qc = 0
+    for lto in lto_list:
+        in_trade_qc += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
+
+    total_qc = free_qc + in_trade_qc
+    return total_qc
+
 async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
