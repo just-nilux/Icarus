@@ -28,42 +28,9 @@ class Statistics():
         self.stat['strategies'] = []
         self.stat['strategies'].append(strategy_table_header)
 
-    async def evaluate_stats(self):
 
-        # Evaluate Statistics
-        self.logger.info("---------------------------------------------------------")
-        self.logger.info("---------------------- Statistics -----------------------")
-        self.logger.info("---------------------------------------------------------")
-
-        self.logger.info('Total enter_expire trades: {}'.format(await self.mongocli.count("hist-trades", {'result.cause':STAT_ENTER_EXP})))
-        self.logger.info('Total exit_expire trades: {}'.format(await self.mongocli.count("hist-trades", {'result.cause':STAT_EXIT_EXP})))
-        self.logger.info('Total closed trades: {}'.format(await self.mongocli.count("hist-trades", {'result.cause':STAT_CLOSED})))
-        self.logger.info('Total open trades: {}'.format(await self.mongocli.count("live-trades", {})))
-        # TODO: Instead of exit expire find sth else it does not sound right
-        exit_expire_pipe = [
-            {"$match":{"result.cause":{"$eq":"exit_expire"}}},
-            {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
-        ]
-        exit_expire_profit = await self.mongocli.do_find("hist-trades", exit_expire_pipe)
-        if len(exit_expire_profit): self.logger.info('hist-trades.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
-        
-        closed_pipe = [
-            {"$match":{"result.cause":{"$eq":"closed"}}},
-            {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
-        ]
-        closed_profit = await self.mongocli.do_find("hist-trades", closed_pipe)
-        if len(closed_profit):  self.logger.info('hist-trades.result.profit: closed : {}'.format(closed_profit['sum']))
-
-        # TODO: NEXT: give index as well as a param to retrieve single value
-        last_balance = await self.mongocli.get_n_docs("observer")
-        for balance in last_balance[0]['balances']:
-            if balance['asset'] == self.config['broker']['quote_currency']:
-                quote_balance = balance['total']
-                break
-        self.logger.info('Final equity : {}'.format(quote_balance))
-
-        pass
-
+    async def _initial_config(self):
+        return
 
     async def _eval_general_stats(self):
         """
@@ -72,8 +39,8 @@ class Statistics():
         - total_time: Last - First
         """
 
-        start_obs = await self.mongocli.get_n_docs('observer', order=1, n=2) # pymongo.ASCENDING
-        end_obs = await self.mongocli.get_n_docs('observer', order=-1) # pymongo.ASCENDING
+        start_obs = await self.mongocli.get_n_docs('observer', {'type':'balance'}, order=1, n=2) # pymongo.ASCENDING
+        end_obs = await self.mongocli.get_n_docs('observer', {'type':'balance'}, order=-1) # pymongo.ASCENDING
 
         start_dt = datetime.fromtimestamp(start_obs[1]['timestamp']/1000, timezone.utc)
         end_dt = datetime.fromtimestamp(end_obs[0]['timestamp']/1000, timezone.utc)

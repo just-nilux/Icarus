@@ -80,12 +80,15 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # Create a mapping between the pair and lto such as {'BTCUSDT':{...}, ...}
         pair_grouped_ltos = {}
         alive_lto_counter = 0
+        in_trade_capital = 0
         for lto_idx in range(len(lto_list)):
             lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, lto_list[lto_idx], dt_index)
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
             if not await StrategyBase.is_lto_dead(lto_list[lto_idx]): 
+                # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
+                in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
                 alive_lto_counter += 1
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
@@ -97,15 +100,16 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # Evaluate pairwise_alloc_share
         strategy_capital = total_qc * self.strategywise_alloc_rate
-        in_trade_capital = 0
-        for lto in lto_list:
-            in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
+        
+        #for lto in lto_list:
+        #    in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
         free_strategy_capital = strategy_capital - in_trade_capital
 
-        # TODO: NEXT: Fix the OverflowError: cannot convert float infinity to integer, when empty_slot is 0
         pairwise_alloc_share = round(math.floor(free_strategy_capital/empty_lto_slot), 4)
 
-        x=6
+        #if empty_lto_slot == 1:
+        #    print('HERE')
+
         # Iterate over pairs and make decisions about them
         for ao_pair in self.config['pairs']:
 

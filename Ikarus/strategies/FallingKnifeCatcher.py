@@ -40,21 +40,8 @@ class FallingKnifeCatcher(StrategyBase):
                 exit_price = max(time_dict[self.min_period]['high'][-10:])
 
                 # Calculate enter/exit amount value
-
-                #TODO: Amount calculation is performed to decide how much of the 'free' amount of 
-                # the base asset will be used.
-
-                free_ref_asset = df_balance.loc[self.quote_currency,'free']
-
                 # Example: Buy XRP with 100$ in your account
-                enter_ref_amount=20
-                # TODO: HIGH: Check mininum amount to trade and add this section to here
-                if free_ref_asset > 10:
-                    if free_ref_asset < enter_ref_amount:
-                        enter_ref_amount = free_ref_asset
-                else:
-                    # TODO: Add error logs and send notification
-                    return {}
+                enter_ref_amount = pairwise_alloc_share
 
                 # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
                 # Example:
@@ -75,17 +62,14 @@ class FallingKnifeCatcher(StrategyBase):
                 trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
                                                                         StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
 
-                # TODO: Check the free amount of quote currency
-                free_ref_asset = df_balance.loc[self.quote_currency,'free']
-
                 trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
                                                                                                             enter_type, 
                                                                                                             trade_obj['enter'][enter_type], 
                                                                                                             self.symbol_info[ao_pair])
                 # TODO: NEXT: A strategy may contain multiple pair thus the related symbol info should be given each time as argument
                 if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
-                    # TODO: Notification about min_notional
-                    #continue
+                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter. Enter Ref Amount:\
+                        {(trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
                     return None
                 
                 return trade_obj

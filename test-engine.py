@@ -6,7 +6,7 @@ from Ikarus import binance_wrapper, performance, strategy_manager, notifications
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
 from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
-    get_min_scale, get_pair_min_period_mapping, eval_total_capital
+    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -323,7 +323,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 async def application(strategy_list, bwrapper, ikarus_time):
     # NOTE: 'ikarus-time' denotes the current_time in old implementation
     #################### Phase 1: Perform pre-calculation tasks ####################
-    #current_ts = int(df_list[0].index[-1])
     
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
@@ -332,7 +331,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 1.1 Get balance and datadict,
     # TODO: NEXT: give index paramter to retrieve a single object instead of a list
-    info = await mongocli.get_n_docs('observer') # Default is the last doc
+    info = await mongocli.get_n_docs('observer', {'type':'balance'}) # Default is the last doc
     # NOTE:info given to the get_current_balance only for test-engine.p
     
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
@@ -370,7 +369,9 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
 
     total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'])
-    
+    total_qc_in_lto = eval_total_capital_in_lto(lto_list)
+    logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
+
     grouped_ltos = {}
     if len(lto_list):
         for lto_obj in lto_list:
@@ -400,9 +401,13 @@ async def application(strategy_list, bwrapper, ikarus_time):
     await write_updated_ltos_to_db(lto_list)
 
     # 3.3: Get the onserver
-    observation_obj = await observer.sample_observer(df_balance)
-    observation_obj.load('timestamp',ikarus_time)
-    await mongocli.do_insert_one("observer",observation_obj.get())
+    # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
+    observer_list = [
+        observer.qc_observer(df_balance, lto_list+nto_list, config['broker']['quote_currency'], ikarus_time),
+        observer.sample_observer(df_balance, ikarus_time)
+    ]
+    observer_objs = list(await asyncio.gather(*observer_list))
+    await mongocli.do_insert_many("observer", observer_objs)
 
     pass
 
@@ -446,6 +451,7 @@ async def main():
 
     # Initiate the cash in the [observer]
     initial_observation_item = {
+        'type': 'balance',
         'balances': config['balances']
     }
     await mongocli.do_insert_one("observer", initial_observation_item)
