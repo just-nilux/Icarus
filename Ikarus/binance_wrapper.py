@@ -751,7 +751,6 @@ class TestBinanceWrapper():
         for meta_data in meta_data_pool:
             if type(session_start_time) == int:
                 # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
-                # TODO: NEXT: Go to normal BinanceWrapper and adapt it to this start and end time logic. WTF is verbal expresssions
                 hist_data_start_time = session_start_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000
             else:
                 raise NotImplementedException('start_time is not integer')

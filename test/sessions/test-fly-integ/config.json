@@ -21,7 +21,7 @@
     },
     "strategy": {
         "NewStrategy": {
-            "pairs": ["BTCUSDT", "LTCUSDT"],
+            "pairs": ["BTCUSDT", "LTCUSDT", "XRPUSDT"],
             "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
@@ -36,8 +36,8 @@
             "max_lto": 3
         },
         "FallingKnifeCatcher": {
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["15m"],
+            "pairs": ["BTCUSDT","XRPUSDT"],
+            "time_scales": ["5m","15m"],
             "enter": {
                 "type": "limit"
             },

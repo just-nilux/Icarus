@@ -69,7 +69,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         """
         # TODO: Rename dt_index
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
-        # TODO: NEXT: Solve the WARNING and see if it is some kind of BUG
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
             self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
             return []
@@ -92,6 +91,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
         total_lto_slot = min(self.max_lto, len(self.config['pairs']))
         empty_lto_slot = total_lto_slot - alive_lto_counter
+
+        if empty_lto_slot < 1:
+            return []
 
         # Evaluate pairwise_alloc_share
         strategy_capital = total_qc * self.strategywise_alloc_rate

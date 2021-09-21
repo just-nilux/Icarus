@@ -337,13 +337,14 @@ async def application(strategy_list, bwrapper, ikarus_time):
     
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
-    #active_strategies = []
+    active_strategies = []
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
         if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
+            active_strategies.append(strategy_obj) # Create a copy of each strategy object
 
     ikarus_time = ikarus_time * 1000 # Convert to ms
     meta_data_pool = set(chain(*meta_data_pool))
@@ -376,8 +377,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
             grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
 
     strategy_tasks = []
-    for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time, total_qc)))
+    for active_strategy in active_strategies:
+        strategy_tasks.append(asyncio.create_task(active_strategy.run(analysis_dict, grouped_ltos.get(active_strategy.name, []), df_balance, ikarus_time, total_qc)))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
