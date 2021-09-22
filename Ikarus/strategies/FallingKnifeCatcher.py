@@ -18,7 +18,7 @@ class FallingKnifeCatcher(StrategyBase):
         return await super().run_logic(self, analysis_dict, lto_list, df_balance, dt_index, total_qc)
 
 
-    async def make_decision(self, analysis_dict, ao_pair, df_balance, dt_index, pairwise_alloc_share):
+    async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
 
             time_dict = analysis_dict[ao_pair]
             trange_mean5 = st.mean(time_dict[self.min_period]['trange'][-5:])
@@ -26,7 +26,6 @@ class FallingKnifeCatcher(StrategyBase):
 
             # Make decision to enter or not
             if trange_mean5 < trange_mean20:
-                self.logger.info(f"{ao_pair}: BUY SIGNAL")
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
                 trade_obj['strategy'] = self.name
@@ -66,7 +65,6 @@ class FallingKnifeCatcher(StrategyBase):
                                                                                                             enter_type, 
                                                                                                             trade_obj['enter'][enter_type], 
                                                                                                             self.symbol_info[ao_pair])
-                # TODO: NEXT: A strategy may contain multiple pair thus the related symbol info should be given each time as argument
                 if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
                     self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter. Enter Ref Amount:\
                         {(trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
@@ -75,7 +73,6 @@ class FallingKnifeCatcher(StrategyBase):
                 return trade_obj
 
             else:
-                self.logger.info(f"{ao_pair}: NO SIGNAL")
                 return None
 
 

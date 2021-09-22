@@ -96,7 +96,7 @@ class MongoClient():
             update (dict): update rule
         """
         result = await self.db_bot[col].update_one(query, update)
-        self.logger.debug(f"do_update [{col}]: ")
+        if '_id' in query.keys(): self.logger.debug(f"do_update [{col}]: \"{query['_id']}\"")
         return result
 
 

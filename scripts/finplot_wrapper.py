@@ -234,7 +234,7 @@ def _add_closed_tos(ax, df_closed):
     pass
 
 
-    # TODO: NEXT: Visualiztion of updated order, exit target price and sel price become the same if it is updated
+    # TODO: Visualiztion of updated order, exit target price and sel price become the same if it is updated
     #               # sellPrice and exitPrice become the same and the rectangle does not appear
     df_closed.set_index('decision_time',inplace=True)
     duplicate_filter = df_closed.index.duplicated(keep=False)

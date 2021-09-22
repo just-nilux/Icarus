@@ -123,7 +123,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     continue
 
             # Perform evaluation
-            decision = await self.make_decision(analysis_dict, ao_pair, df_balance, dt_index, pairwise_alloc_share)
+            decision = await self.make_decision(analysis_dict, ao_pair, dt_index, pairwise_alloc_share)
             if decision:
                 trade_objects.append(decision)
                 empty_lto_slot -= 1

@@ -327,10 +327,10 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    logger.info(f'Ikarus Time: [{ikarus_time}]')
+    logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
 
     # 1.1 Get balance and datadict,
-    # TODO: NEXT: give index paramter to retrieve a single object instead of a list
+    # TODO: give index paramter to retrieve a single object instead of a list
     info = await mongocli.get_n_docs('observer', {'type':'balance'}) # Default is the last doc
     # NOTE:info given to the get_current_balance only for test-engine.p
     
@@ -479,9 +479,10 @@ async def main():
 
     # Get [hist-trades] docs to visualize the session
     await visualize_online(bwrapper, mongocli, config)
+
+    # TODO: NEXT: visualization of qc: total, in_trade etc
     pass
     # Visualize the test session
-    # TODO: Get the df
     #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
 
