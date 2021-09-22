@@ -60,8 +60,9 @@ class BinanceWrapper():
         df_balance.set_index(['asset'], inplace=True)
         df_balance = df_balance.astype(float)
         df_balance['total'] = df_balance['free'] + df_balance['locked']
-        pairs = []
 
+        '''
+        pairs = []
         # TODO: The logic of creating pairs might be updated to try the both combination
         for asset in df_balance.index:
             if asset == self.quote_currency:
@@ -71,6 +72,7 @@ class BinanceWrapper():
             else:
                 pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
+        '''
         return df_balance
 
 
@@ -106,15 +108,25 @@ class BinanceWrapper():
         )
 
         # Add current prices to df_balance
-        price = [float(df_tickers.loc[pair]['price'])
-                 if pair != self.quote_currency
-                 else 1
-                 for pair in df_balance['pair']]
+        #price = [float(df_tickers.loc[pair]['price'])
+        #         if pair != self.quote_currency
+        #         else 1
+        #         for pair in df_balance['pair']]
+        '''
+        price = []
+        for pair in df_balance['pair']:
+            if pair == "USDTBTC":
+                print("HERE")
+            if pair != self.quote_currency:
+                price.append(float(df_tickers.loc[pair]['price']))
+            else:
+                price.append(1)
+
         df_balance['price'] = price
 
         # Evaluate the equity in terms of quote_currency
         df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
-
+        '''
         return df_balance
 
 
@@ -608,6 +620,7 @@ class TestBinanceWrapper():
         df_balance.set_index(['asset'], inplace=True)
         df_balance = df_balance.astype(float)
         df_balance['total'] = df_balance['free'] + df_balance['locked']
+        '''
         pairs = []
         for asset in df_balance.index:
             if asset == self.quote_currency:
@@ -617,7 +630,7 @@ class TestBinanceWrapper():
             else:
                 pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
-
+        '''
         return df_balance
 
 
@@ -677,7 +690,7 @@ class TestBinanceWrapper():
         '''
 
         df_balance = await self.get_info(last_observer_item)
-
+        '''
         # Add current prices to df_balance
         price = [float(TestBinanceWrapper.df_tickers.loc[pair]['price'])
                  if pair != self.quote_currency
@@ -686,8 +699,8 @@ class TestBinanceWrapper():
         df_balance['price'] = price
 
         # Evaluate the equity in terms of quote_currency
-        df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
-
+        #df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
+        '''
         return df_balance
 
     async def get_data_dict_from_file(self, pairs, time_df, df_list):
@@ -895,17 +908,17 @@ class TestBinanceWrapper():
                     # Update df_balance: write the amount of the exit
                     df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[self.quote_currency,'total'] = df_balance.loc[self.quote_currency,'free'] + df_balance.loc[self.quote_currency,'locked']
-                    df_balance.loc[self.quote_currency,'ref_balance'] = df_balance.loc[self.quote_currency,'total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
-                    # TODO: DEPLOY: Place the exit order to Binance: oco or limit
-                    #       No need to fill anything in 'result' or 'exit' sections.
 
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
+                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                    df_balance.loc[base_cur, 'free'] -= lto_list[i]['result']['enter']['quantity']
+                    df_balance.loc[base_cur, 'locked'] += lto_list[i]['result']['enter']['quantity']
+                    # NOTE: Since the removed and added quantity is the same, no need to update total
 
                     lto_list[i]['status'] = STAT_OPEN_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])

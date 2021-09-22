@@ -14,22 +14,6 @@ class Observer():
         self.logger.info('creating an instance of {}'.format(__name__))
         self.equity = None
 
-
-    async def default_observer(self,balance=pd.DataFrame(),trade_obj={}):
-        """This function returns the default observer object which observes the equity (observe.json)
-
-        Returns:
-            dict: observation.json
-        """
-        self.logger.debug('default_observer started')
-
-        print(balance['ref_balance'].sum())
-        observation = dict()
-        observation["equity"] = self.equity
-
-        self.logger.debug('default_observer ended')
-        return observation
-
     async def sample_observer(self, df_balance, ikarus_time):
         observation_obj = GenericObject()
         df_balance.reset_index(level=0, inplace=True)

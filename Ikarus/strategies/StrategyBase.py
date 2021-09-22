@@ -54,7 +54,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, lto_list, df_balance, dt_index, total_qc):
+    async def run_logic(self, analysis_dict, lto_list, dt_index, total_qc):
         """[summary]
 
         Args:
@@ -105,6 +105,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
         #    in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
         free_strategy_capital = strategy_capital - in_trade_capital
 
+        # BUG: If the QC is a high value qurenct such as BTC, then  capital is always a small numerical value compare to USDT (i.e. 0.003376975)
+        #       In this case math floor is not good at rounding float values
+        # TODO: NEXT: Solve this shit
         pairwise_alloc_share = round(math.floor(free_strategy_capital/empty_lto_slot), 4)
 
         #if empty_lto_slot == 1:

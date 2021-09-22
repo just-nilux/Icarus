@@ -37,7 +37,7 @@
         },
         "FallingKnifeCatcher": {
             "pairs": ["BTCUSDT","XRPUSDT"],
-            "time_scales": ["5m","15m"],
+            "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
             },

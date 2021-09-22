@@ -189,18 +189,15 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 
                     # Remove the bought amount from the 'locked' and 'ref_balance' columns
                     df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
-                    df_balance.loc[config['broker']['quote_currency'], 'ref_balance'] = df_balance.loc[config['broker']['quote_currency'], 'locked'] +  df_balance.loc[config['broker']['quote_currency'], 'free']
-                    # TODO sync the ref_balance and total
                     # Update df_balance: add the quantity to the base_cur or create a row for base_cur
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     if pair in list(df_balance.index):
                         df_balance.loc[base_cur, 'locked' ] += lto_list[i]['result']['enter']['quantity']
                     else:
                         # Previously there was no base_currency, so we create a row for it
-                        # free  locked    total      pair   price  ref_balance
-                        df_balance.loc[base_cur] = [0.0, lto_list[i]['result']['enter']['quantity'], 0, pair, 0, 0]
+                        # free locked total
+                        df_balance.loc[base_cur] = [lto_list[i]['result']['enter']['quantity'], 0, 0]
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
-                        # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -240,8 +237,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -271,7 +266,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     pass
                 
                 elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
@@ -294,8 +288,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
                     pass
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
@@ -379,7 +371,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     strategy_tasks = []
     for active_strategy in active_strategies:
-        strategy_tasks.append(asyncio.create_task(active_strategy.run(analysis_dict, grouped_ltos.get(active_strategy.name, []), df_balance, ikarus_time, total_qc)))
+        strategy_tasks.append(asyncio.create_task(active_strategy.run(analysis_dict, grouped_ltos.get(active_strategy.name, []), ikarus_time, total_qc)))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))

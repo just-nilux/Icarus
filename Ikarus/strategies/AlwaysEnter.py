@@ -16,8 +16,8 @@ class AlwaysEnter(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, df_balance, dt_index, total_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, df_balance, dt_index, total_qc)
+    async def run(self, analysis_dict, lto_list, dt_index, total_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc)
 
 
     async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
@@ -65,7 +65,7 @@ class AlwaysEnter(StrategyBase):
                                                                                                             trade_obj['enter'][enter_type], 
                                                                                                             self.symbol_info[ao_pair])
                 if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
-                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter. Enter Ref Amount: {(trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
+                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. Enter Ref Amount: {(trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
                     return None
                 
                 return trade_obj
