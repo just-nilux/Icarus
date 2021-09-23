@@ -34,6 +34,8 @@ class BinanceWrapper():
         # Set reference currencies
         self.quote_currency = _config['broker']['quote_currency']
         self.credit_currency = _config['broker']['credit_currency']
+        self.pricePrecision = 8
+        # TODO: get the precision from symbol info and use it in the orders
 
         # Currency pairs compare the value of one currency to another—the base currency (or the first one) 
         # versus the second or the quote currency. It indicates how much of the quote currency is needed to 
@@ -256,15 +258,15 @@ class BinanceWrapper():
                 symbol=lto['pair'],
                 side=SIDE_SELL,
                 quantity=lto['exit'][TYPE_OCO]['quantity'],
-                price=lto['exit'][TYPE_OCO]['limitPrice'],
-                stopPrice=lto['exit'][TYPE_OCO]['stopPrice'],
-                stopLimitPrice=lto['exit'][TYPE_OCO]['stopLimitPrice'],
+                price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['limitPrice'],
+                stopPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopPrice'],
+                stopLimitPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopLimitPrice'],
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC)
 
             if response['orderReports'][0]['status'] != 'NEW' or response['orderReports'][1]['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return lto
 
@@ -288,12 +290,12 @@ class BinanceWrapper():
             response = await self.client.order_limit_sell(
                 symbol=lto['pair'],
                 quantity=lto['exit'][TYPE_LIMIT]['quantity'],
-                price=lto['exit'][TYPE_LIMIT]['price'])
+                price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_LIMIT]['price'])
 
             if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return lto
 
@@ -316,7 +318,7 @@ class BinanceWrapper():
                 orderId=lto[phase][type]['orderId'])
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return False
 
@@ -395,7 +397,7 @@ class BinanceWrapper():
                             quantity=lto_list[i]['pair']) # TODO: left with typo to not to execute
 
                     except Exception as e:
-                        self.logger.error(e)
+                        self.logger.error(f"{lto_list[i]['strategy']} - {lto_list[i]['pair']}: {e}")
                         # TODO: Notification
 
                     else:
@@ -495,11 +497,14 @@ class BinanceWrapper():
                         response = await self.client.order_limit_buy(
                             symbol=nto_list[i]['pair'],
                             quantity=nto_list[i]['enter'][TYPE_LIMIT]['quantity'],
-                            price=nto_list[i]['enter'][TYPE_LIMIT]['price'])
+                            price=f'%.{self.pricePrecision}f' % nto_list[i]['enter'][TYPE_LIMIT]['price'])
                         if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-
+                    # TODO: NEXT: For small quantities this float number create poblem such as 1.114e-05
+                    #       Need the precision
+                    #       f'%.{}f' % nto_list[i]['enter'][TYPE_LIMIT]['price']
+                    # TODO: NEXT: Why this limit_buy is here and not in a function????
                     except Exception as e:
-                        self.logger.error(e)
+                        self.logger.error(f"{nto_list[i]['strategy']} - {nto_list[i]['pair']}: {e}")
                         del nto_list[i]
                         # TODO: Notification
 

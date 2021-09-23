@@ -105,10 +105,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
         #    in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
         free_strategy_capital = strategy_capital - in_trade_capital
 
-        # BUG: If the QC is a high value qurenct such as BTC, then  capital is always a small numerical value compare to USDT (i.e. 0.003376975)
-        #       In this case math floor is not good at rounding float values
-        # TODO: NEXT: Solve this shit
-        pairwise_alloc_share = round(math.floor(free_strategy_capital/empty_lto_slot), 4)
+        # TODO: This can be updated to use some kind of precision from the symbol info instead of hardcoded 8
+        pairwise_alloc_share = round(free_strategy_capital/empty_lto_slot, 8)
 
         #if empty_lto_slot == 1:
         #    print('HERE')
@@ -321,4 +319,5 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def check_min_notional(price, quantity, symbol_info): return ((price*quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False
+    async def check_min_notional(price, quantity, symbol_info): 
+        return ((price*quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False

@@ -72,6 +72,7 @@ class Statistics():
             "Absolute Profit": "{:.2f} {}".format(absolute_profit[0]['sum'], self.config['broker']['quote_currency']),
             "Total Profit": "% {:.2f}".format((end_balance - start_balance)*100/start_balance),
         }
+        # TODO: In case of no LTO or HTO, absolute_profit raises an key error
 
         self.stat['general'] = general_stats
         pass

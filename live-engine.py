@@ -325,10 +325,10 @@ async def application(strategy_list, bwrapper, ikarus_time):
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
-
+    # TODO: NEXT: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
     if len(lto_list): 
-        #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
-        #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
+        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
         #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
         #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
         pass
