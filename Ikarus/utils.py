@@ -19,7 +19,7 @@ def time_scale_to_second(interval: str):
 def time_scale_to_milisecond(interval: str):
     return time_scale_to_minute(interval) * 60 * 1000
 
-def eval_total_capital(df_balance, lto_list, quote_currency):
+def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_ratio=1):
     # Toal capital: Free QC + LTO_enter
     free_qc = df_balance.loc[quote_currency,'free']
 
@@ -38,7 +38,7 @@ def eval_total_capital(df_balance, lto_list, quote_currency):
             in_trade_qc += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
 
     total_qc = free_qc + in_trade_qc
-    return total_qc
+    return total_qc*max_capital_use_ratio
 
 def eval_total_capital_in_lto(lto_list):
     in_trade_qc = 0

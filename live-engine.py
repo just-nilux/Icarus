@@ -327,8 +327,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
     # TODO: NEXT: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
     if len(lto_list): 
-        orders = await lto_manipulator.fill_open_enter(lto_list, orders)
-        orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
+        #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
         #orders = await lto_manipulator.limit_maker_taken_oco(lto_list, orders)
         #orders = await lto_manipulator.stoploss_taken_oco([lto_list[1]], orders)
         pass
@@ -344,7 +344,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2')
 
-    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'])
+    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
     total_qc_in_lto = eval_total_capital_in_lto(lto_list)
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
@@ -362,6 +362,9 @@ async def application(strategy_list, bwrapper, ikarus_time):
     nto_list = list(chain(*strategy_decisions))
 
     # 2.3: Execute LTOs and NTOs if any
+    if not len(nto_list) in [0,3]:
+        print('Break')
+
     if len(nto_list) or len(lto_list):
         # 2.3.1: Execute the TOs
         nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
@@ -375,22 +378,27 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
         if len(nto_list) != len(results.inserted_ids):
             # TODO: Add proper error handling and proper error messages
-            telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
             logger.error('Some of the NTOs could not be placed to Database')
+            telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
             for nto in nto_list:
                 telbot.send_constructed_msg('lto', *['', nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
         else:
             for _id, nto in zip(results.inserted_ids,nto_list):
                 logger.info(f'LTO: "{nto["_id"]}" | {nto["strategy"]} | {nto["pair"]} created with the {PHASE_ENTER} order: {nto["enter"][TYPE_LIMIT]["orderId"]}')
+                logger.info(f'before send_constructed_msg')
                 telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
+                logger.info(f'after send_constructed_msg')
+
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
+    logger.debug('before do update')
     await write_updated_ltos_to_db(lto_list)
-
+    logger.debug('after do update')
     # 3.3: Get the observer
 
     # 3.3.1 Get df_balance
     df_balance = await bwrapper.get_current_balance()
+    logger.debug('df_balance acquired for observers')
 
     # 3.3.2 Insert df_balance to [observer]
     observer_list = [

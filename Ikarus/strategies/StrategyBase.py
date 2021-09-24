@@ -96,7 +96,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         empty_lto_slot = total_lto_slot - alive_lto_counter
 
         if empty_lto_slot < 1:
-            return []
+            return [] # TODO Debug this ansync LTO issue buy doing debugging around here
 
         # Evaluate pairwise_alloc_share
         strategy_capital = total_qc * self.strategywise_alloc_rate
@@ -297,7 +297,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         Returns:
             dict: enter or exit module
         """ 
-        
+        # TODO: Do proper rounding to not to exceed target amount. Temporary fix is the max_capital_ratio values smaller than 1
         if phase == 'enter':
             module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                            # Fixing PRICE_FILTER: tickSize
             module['quantity'] = round_step_size(module['amount'] /module['price'], float(symbol_info['filters'][2]['minQty']))         # Fixing LOT_SIZE: minQty
