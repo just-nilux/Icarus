@@ -170,10 +170,13 @@ class BinanceWrapper():
             
             df = pd.DataFrame(composit_klines[idx], columns=BinanceWrapper.kline_column_names)
             df = df.set_index(['open_time'])
-            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
-            #       Since it requires closed candles.
+            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis, since it requires closed candles.
             df.drop(df.index[-1], inplace=True)
             df = df.astype(float)
+
+            if len(df) != int(self.config['time_scales'][meta_data[0]][1]-1):
+                self.logger.warn(f"Missing historical candle for {meta_data[1]} {meta_data[0]}: {len(df)} instead of {self.config['time_scales'][meta_data[0]][1]-1}")
+
             do_dict[meta_data[1]][meta_data[0]] = df
 
         self.logger.debug("decompose ended")

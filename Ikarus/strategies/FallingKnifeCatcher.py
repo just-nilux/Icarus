@@ -66,7 +66,7 @@ class FallingKnifeCatcher(StrategyBase):
                                                                                                             trade_obj['enter'][enter_type], 
                                                                                                             self.symbol_info[ao_pair])
                 if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
-                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. Enter Ref Amount: {(trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
+                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. Enter Ref Amount: {'%.8f' % (trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
                     return None
                 
                 return trade_obj
