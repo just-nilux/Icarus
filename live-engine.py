@@ -5,7 +5,8 @@ import json
 from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
-from Ikarus.utils import time_scale_to_minute, time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
+    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -16,6 +17,7 @@ import time
 from itertools import chain, groupby
 import operator
 import itertools
+from Ikarus.resource_allocator import ResourceAllocator
 
 
 # Global Variables
@@ -44,7 +46,7 @@ def setup_logger(_log_lvl):
     # rs
     #formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
     formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
-        '%(filename)20s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
+        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
     formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
@@ -293,7 +295,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
-
+    # TODO: NEXT: Update live-engine based on the changes in test-engine
     logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
     
     #################### Phase 1: Perform pre-calculation tasks ####################
@@ -301,12 +303,14 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
+    active_strategies = []
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
         if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
+            active_strategies.append(strategy_obj) # Create a copy of each strategy object
 
     ikarus_time = ikarus_time * 1000 # Convert to ms
     meta_data_pool = set(chain(*meta_data_pool))
@@ -321,7 +325,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
-
+    # TODO: NEXT: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
     if len(lto_list): 
         #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
         #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
@@ -340,14 +344,19 @@ async def application(strategy_list, bwrapper, ikarus_time):
     #################### Phase 2: Perform calculation tasks ####################
     logger.debug('Phase 2')
 
+    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
+    total_qc_in_lto = eval_total_capital_in_lto(lto_list)
+    logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
+
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     grouped_ltos = {}
-    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
-        grouped_ltos[strategy] = list(lto)
+    if len(lto_list):
+        for lto_obj in lto_list:
+            grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
 
     strategy_tasks = []
     for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
+        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), ikarus_time, total_qc)))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
@@ -366,14 +375,15 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
         if len(nto_list) != len(results.inserted_ids):
             # TODO: Add proper error handling and proper error messages
-            telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
             logger.error('Some of the NTOs could not be placed to Database')
+            telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
             for nto in nto_list:
                 telbot.send_constructed_msg('lto', *['', nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
         else:
             for _id, nto in zip(results.inserted_ids,nto_list):
                 logger.info(f'LTO: "{nto["_id"]}" | {nto["strategy"]} | {nto["pair"]} created with the {PHASE_ENTER} order: {nto["enter"][TYPE_LIMIT]["orderId"]}')
                 telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
+
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await write_updated_ltos_to_db(lto_list)
@@ -384,8 +394,13 @@ async def application(strategy_list, bwrapper, ikarus_time):
     df_balance = await bwrapper.get_current_balance()
 
     # 3.3.2 Insert df_balance to [observer]
-    observation_obj = await observer.sample_observer(df_balance)
-    await mongocli.do_insert_one("observer",observation_obj.get())
+    observer_list = [
+        observer.qc_observer(df_balance, lto_list+nto_list, config['broker']['quote_currency'], ikarus_time),
+        observer.sample_observer(df_balance, ikarus_time)
+    ]
+    observer_objs = list(await asyncio.gather(*observer_list))
+    await mongocli.do_insert_many("observer", observer_objs)
+
 
     return True
 
@@ -401,7 +416,19 @@ async def main():
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
-    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
+    # Create Resource Allocator and initialize allocation for strategies
+    res_allocater = ResourceAllocator(list(config['strategy'].keys()), mongocli)
+    await res_allocater.allocate()
+    # NOTE: This implementation uses Resource Allocator only in the boot time.
+    #       For dynamic allocation (or at least updating each day/week automatically), allocator needs to
+    #       create a new allocation and strategy manager needs to consume it in an cycle
+
+    # Create Strategy Manager and configure strategies
+
+    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info, mongocli)
+    await strategy_mgr.source_plugin()
+    # TODO: Receive data from plugin once. This needs to be a periodic operations for each cycle if a new
+    #       resource_allocation object exist
     strategy_list = strategy_mgr.get_strategies()
 
     strategy_periods = set()
@@ -434,10 +461,13 @@ async def main():
             current_time = int(server_time['serverTime']/1000)                                                  # exact second
             current_time -= (current_time % 60)                                                                 # exact minute
             current_time -= (current_time % ikarus_cycle_period_in_sec )                                          # exact scale
-            next_start_time = current_time + ikarus_cycle_period_in_sec + 1 
+
+            # NOTE: start_time_offset is used to make sure the broker created the last closed candle properly
+            start_time_offset = 10
+            next_start_time = current_time + ikarus_cycle_period_in_sec + start_time_offset
 
             logger.debug(f'Cycle start time: {next_start_time}')
-            result = await asyncio.create_task(run_at(next_start_time, application(strategy_list, bwrapper, next_start_time-1)))
+            result = await asyncio.create_task(run_at(next_start_time, application(strategy_list, bwrapper, next_start_time-start_time_offset)))
             
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)

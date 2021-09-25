@@ -10,7 +10,7 @@
     "notification":{
         "telegram": {
             "hto": true,
-            "lto": false,
+            "lto": true,
             "app": true,
             "error": true,
             "daily": true,
@@ -20,26 +20,15 @@
         "mail": false
     },
     "broker": {
-        "quote_currency": "USDT",
+        "quote_currency": "BTC",
         "credit_currency": "TRY"
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.99
     },
     "strategy": {
         "AlwaysEnter": {
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1m","15m"],
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "limit"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            }
-        },
-        "AlwaysEnter90": {
-            "pairs": ["BNBUSDT", "AVAXUSDT"],
+            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
             "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
@@ -50,7 +39,23 @@
             "action_mapping": {
                 "enter_expire": "cancel",
                 "exit_expire": "update"
-            }
+            },
+            "max_lto": 1
+        },
+        "AlwaysEnter90": {
+            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
+            "time_scales": ["1m","5m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 1
         }
     },
     "analysis": {
@@ -60,7 +65,7 @@
         }
     },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/live/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],

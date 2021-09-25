@@ -4,7 +4,6 @@ import json
 import sys
 from datetime import datetime, timezone
 
-
 class EMail():
 
     def __init__(self):
@@ -63,10 +62,15 @@ class TelegramBot():
         '''
 
     def send_constructed_msg(self, type, *args) -> None:
-        
-        if type in self.telegram_config.keys() and self.telegram_config[type]:
-            text = self.templates[type](*args)
-            self.send_raw(text)
+        # NOTE: This try-except statement is here to encapsulate timeout errors
+        # TODO: Add proper logging instead of printing
+        try:
+            if type in self.telegram_config.keys() and self.telegram_config[type]:
+                text = self.templates[type](*args)
+                self.send_raw(text)
+
+        except Exception as e:
+            print(e)
 
 
     def send_raw(self, msg='Default Message') -> None:  

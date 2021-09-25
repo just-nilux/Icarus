@@ -34,6 +34,8 @@ class BinanceWrapper():
         # Set reference currencies
         self.quote_currency = _config['broker']['quote_currency']
         self.credit_currency = _config['broker']['credit_currency']
+        self.pricePrecision = 8
+        # TODO: get the precision from symbol info and use it in the orders
 
         # Currency pairs compare the value of one currency to another—the base currency (or the first one) 
         # versus the second or the quote currency. It indicates how much of the quote currency is needed to 
@@ -60,8 +62,9 @@ class BinanceWrapper():
         df_balance.set_index(['asset'], inplace=True)
         df_balance = df_balance.astype(float)
         df_balance['total'] = df_balance['free'] + df_balance['locked']
-        pairs = []
 
+        '''
+        pairs = []
         # TODO: The logic of creating pairs might be updated to try the both combination
         for asset in df_balance.index:
             if asset == self.quote_currency:
@@ -71,6 +74,7 @@ class BinanceWrapper():
             else:
                 pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
+        '''
         return df_balance
 
 
@@ -106,15 +110,25 @@ class BinanceWrapper():
         )
 
         # Add current prices to df_balance
-        price = [float(df_tickers.loc[pair]['price'])
-                 if pair != self.quote_currency
-                 else 1
-                 for pair in df_balance['pair']]
+        #price = [float(df_tickers.loc[pair]['price'])
+        #         if pair != self.quote_currency
+        #         else 1
+        #         for pair in df_balance['pair']]
+        '''
+        price = []
+        for pair in df_balance['pair']:
+            if pair == "USDTBTC":
+                print("HERE")
+            if pair != self.quote_currency:
+                price.append(float(df_tickers.loc[pair]['price']))
+            else:
+                price.append(1)
+
         df_balance['price'] = price
 
         # Evaluate the equity in terms of quote_currency
         df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
-
+        '''
         return df_balance
 
 
@@ -125,7 +139,6 @@ class BinanceWrapper():
         length = meta_do['time_scale']
         """
         self.logger.debug('get_data_dict started')
-
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
@@ -141,6 +154,8 @@ class BinanceWrapper():
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         data_dict = await self.decompose(meta_data_pool, composit_klines)
         self.logger.debug('get_data_dict ended')
+
+        # TODO: Length check for Data dict items could help a lot to detect anomalies
         return data_dict
 
 
@@ -155,10 +170,13 @@ class BinanceWrapper():
             
             df = pd.DataFrame(composit_klines[idx], columns=BinanceWrapper.kline_column_names)
             df = df.set_index(['open_time'])
-            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
-            #       Since it requires closed candles.
+            # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis, since it requires closed candles.
             df.drop(df.index[-1], inplace=True)
             df = df.astype(float)
+
+            if len(df) != int(self.config['time_scales'][meta_data[0]][1]-1):
+                self.logger.warn(f"Missing historical candle for {meta_data[1]} {meta_data[0]}: {len(df)} instead of {self.config['time_scales'][meta_data[0]][1]-1}")
+
             do_dict[meta_data[1]][meta_data[0]] = df
 
         self.logger.debug("decompose ended")
@@ -244,15 +262,15 @@ class BinanceWrapper():
                 symbol=lto['pair'],
                 side=SIDE_SELL,
                 quantity=lto['exit'][TYPE_OCO]['quantity'],
-                price=lto['exit'][TYPE_OCO]['limitPrice'],
-                stopPrice=lto['exit'][TYPE_OCO]['stopPrice'],
-                stopLimitPrice=lto['exit'][TYPE_OCO]['stopLimitPrice'],
+                price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['limitPrice'],
+                stopPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopPrice'],
+                stopLimitPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopLimitPrice'],
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC)
 
             if response['orderReports'][0]['status'] != 'NEW' or response['orderReports'][1]['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return lto
 
@@ -276,12 +294,12 @@ class BinanceWrapper():
             response = await self.client.order_limit_sell(
                 symbol=lto['pair'],
                 quantity=lto['exit'][TYPE_LIMIT]['quantity'],
-                price=lto['exit'][TYPE_LIMIT]['price'])
+                price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_LIMIT]['price'])
 
             if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return lto
 
@@ -304,7 +322,7 @@ class BinanceWrapper():
                 orderId=lto[phase][type]['orderId'])
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return False
 
@@ -383,7 +401,7 @@ class BinanceWrapper():
                             quantity=lto_list[i]['pair']) # TODO: left with typo to not to execute
 
                     except Exception as e:
-                        self.logger.error(e)
+                        self.logger.error(f"{lto_list[i]['strategy']} - {lto_list[i]['pair']}: {e}")
                         # TODO: Notification
 
                     else:
@@ -483,11 +501,14 @@ class BinanceWrapper():
                         response = await self.client.order_limit_buy(
                             symbol=nto_list[i]['pair'],
                             quantity=nto_list[i]['enter'][TYPE_LIMIT]['quantity'],
-                            price=nto_list[i]['enter'][TYPE_LIMIT]['price'])
+                            price=f'%.{self.pricePrecision}f' % nto_list[i]['enter'][TYPE_LIMIT]['price'])
                         if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-
+                    # TODO: NEXT: For small quantities this float number create poblem such as 1.114e-05
+                    #       Need the precision
+                    #       f'%.{}f' % nto_list[i]['enter'][TYPE_LIMIT]['price']
+                    # TODO: NEXT: Why this limit_buy is here and not in a function????
                     except Exception as e:
-                        self.logger.error(e)
+                        self.logger.error(f"{nto_list[i]['strategy']} - {nto_list[i]['pair']}: {e}")
                         del nto_list[i]
                         # TODO: Notification
 
@@ -608,6 +629,7 @@ class TestBinanceWrapper():
         df_balance.set_index(['asset'], inplace=True)
         df_balance = df_balance.astype(float)
         df_balance['total'] = df_balance['free'] + df_balance['locked']
+        '''
         pairs = []
         for asset in df_balance.index:
             if asset == self.quote_currency:
@@ -617,7 +639,7 @@ class TestBinanceWrapper():
             else:
                 pairs.append(str(asset)+str(self.quote_currency))
         df_balance['pair'] = pairs
-
+        '''
         return df_balance
 
 
@@ -677,7 +699,7 @@ class TestBinanceWrapper():
         '''
 
         df_balance = await self.get_info(last_observer_item)
-
+        '''
         # Add current prices to df_balance
         price = [float(TestBinanceWrapper.df_tickers.loc[pair]['price'])
                  if pair != self.quote_currency
@@ -686,8 +708,8 @@ class TestBinanceWrapper():
         df_balance['price'] = price
 
         # Evaluate the equity in terms of quote_currency
-        df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
-
+        #df_balance['ref_balance'] = df_balance['price'] * df_balance['total']
+        '''
         return df_balance
 
     async def get_data_dict_from_file(self, pairs, time_df, df_list):
@@ -734,6 +756,7 @@ class TestBinanceWrapper():
             tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=ikarus_time )))
 
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
+        # TODO: NEXT: BUG: If a pair does not exist in the given time, then composit kline comes empty: [[], [[...], [...]]
         data_dict = await self.decompose(meta_data_pool, composit_klines)
         self.logger.debug('get_data_dict ended')
 
@@ -750,7 +773,6 @@ class TestBinanceWrapper():
         for meta_data in meta_data_pool:
             if type(session_start_time) == int:
                 # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
-                # TODO: NEXT: Go to normal BinanceWrapper and adapt it to this start and end time logic. WTF is verbal expresssions
                 hist_data_start_time = session_start_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000
             else:
                 raise NotImplementedException('start_time is not integer')
@@ -895,17 +917,17 @@ class TestBinanceWrapper():
                     # Update df_balance: write the amount of the exit
                     df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[self.quote_currency,'total'] = df_balance.loc[self.quote_currency,'free'] + df_balance.loc[self.quote_currency,'locked']
-                    df_balance.loc[self.quote_currency,'ref_balance'] = df_balance.loc[self.quote_currency,'total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
-                    # TODO: DEPLOY: Place the exit order to Binance: oco or limit
-                    #       No need to fill anything in 'result' or 'exit' sections.
 
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
+                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                    df_balance.loc[base_cur, 'free'] -= lto_list[i]['result']['enter']['quantity']
+                    df_balance.loc[base_cur, 'locked'] += lto_list[i]['result']['enter']['quantity']
+                    # NOTE: Since the removed and added quantity is the same, no need to update total
 
                     lto_list[i]['status'] = STAT_OPEN_EXIT
                     lto_list[i]['history'].append(lto_list[i]['status'])

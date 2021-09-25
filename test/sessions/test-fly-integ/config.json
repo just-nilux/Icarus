@@ -1,6 +1,6 @@
 {
     "tag": "test-bot",
-    "log-level": "INFO",
+    "log-level": "DEBUG",
     "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
@@ -10,18 +10,18 @@
     },
     "balances": [
         {
-            "asset": "USDT", 
-            "free": 10000, 
+            "asset": "BTC", 
+            "free": 0.01, 
             "locked": 0
         }
     ],
     "broker": {
-        "quote_currency": "USDT",
+        "quote_currency": "BTC",
         "credit_currency": "TRY"
     },
     "strategy": {
         "NewStrategy": {
-            "pairs": ["BTCUSDT", "XRPUSDT"],
+            "pairs": ["LTCBTC", "XRPBTC"],
             "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
@@ -32,11 +32,27 @@
             "action_mapping": {
                 "enter_expire": "cancel",
                 "exit_expire": "update"
-            }
+            },
+            "max_lto": 3
+        },
+        "FallingKnifeCatcher": {
+            "pairs": ["LTCBTC", "XRPBTC"],
+            "time_scales": ["15m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 3
         }
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange", "ma"],
+        "indicators": ["low","high", "trange"],
         "params": {
             "ma": [5,20]
         }

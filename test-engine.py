@@ -5,7 +5,8 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_min_scale, get_pair_min_period_mapping
+from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
+    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -16,6 +17,8 @@ from itertools import chain, groupby
 import operator
 import itertools
 from scripts import finplot_wrapper as fplot
+from Ikarus.resource_allocator import ResourceAllocator 
+
 #from scripts.visualize_test_session import visualize_online
 
 # Global Variables
@@ -88,7 +91,7 @@ def setup_logger(_log_lvl):
 
     # create formatter and add it to the handlers
     formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
-        '%(filename)20s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
+        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
     formatter.converter = time.gmtime # Use the UTC Time
     rfh.setFormatter(formatter)
     ch.setFormatter(formatter)
@@ -186,18 +189,15 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 
                     # Remove the bought amount from the 'locked' and 'ref_balance' columns
                     df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
-                    df_balance.loc[config['broker']['quote_currency'], 'ref_balance'] = df_balance.loc[config['broker']['quote_currency'], 'locked'] +  df_balance.loc[config['broker']['quote_currency'], 'free']
-                    # TODO sync the ref_balance and total
                     # Update df_balance: add the quantity to the base_cur or create a row for base_cur
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     if pair in list(df_balance.index):
                         df_balance.loc[base_cur, 'locked' ] += lto_list[i]['result']['enter']['quantity']
                     else:
                         # Previously there was no base_currency, so we create a row for it
-                        # free  locked    total      pair   price  ref_balance
-                        df_balance.loc[base_cur] = [0.0, lto_list[i]['result']['enter']['quantity'], 0, pair, 0, 0]
+                        # free locked total
+                        df_balance.loc[base_cur] = [lto_list[i]['result']['enter']['quantity'], 0, 0]
                         df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
-                        # NOTE: TEST: 'price' and 'ref_balance' is omitted #NOTE ADD total not the ref_balance for the base_cur
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -237,8 +237,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -268,7 +266,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
                     pass
                 
                 elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
@@ -291,8 +288,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     # TODO: Gather up all the df_balance sections and put them in a function
                     df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
                     df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    df_balance.loc[config['broker']['quote_currency'],'ref_balance'] = df_balance.loc[config['broker']['quote_currency'],'total']
-                    # NOTE: For the quote_currency total and the ref_balance is the same
                     pass
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
@@ -320,30 +315,27 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 async def application(strategy_list, bwrapper, ikarus_time):
     # NOTE: 'ikarus-time' denotes the current_time in old implementation
     #################### Phase 1: Perform pre-calculation tasks ####################
-    #current_ts = int(df_list[0].index[-1])
     
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    #current_ts = int(df_list[0]['close_time'].iloc[-1] + 1)  
-    # NOTE: df_list[0]['close_time'].iloc[-1] is the close time of last closed candle such as 1589360399999
-    #       In this case +1 will be the start time of the next candle which is the current candle for the application
-    logger.info(f'Ikarus Time: [{ikarus_time}]')
+    logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
 
     # 1.1 Get balance and datadict,
-    # TODO: NEXT: give index paramter to retrieve a single object instead of a list
-    info = await mongocli.get_n_docs('observer') # Default is the last doc
+    # TODO: give index paramter to retrieve a single object instead of a list
+    info = await mongocli.get_n_docs('observer', {'type':'balance'}) # Default is the last doc
     # NOTE:info given to the get_current_balance only for test-engine.p
     
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
-    #active_strategies = []
+    active_strategies = []
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
         if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
+            active_strategies.append(strategy_obj) # Create a copy of each strategy object
 
     ikarus_time = ikarus_time * 1000 # Convert to ms
     meta_data_pool = set(chain(*meta_data_pool))
@@ -366,17 +358,21 @@ async def application(strategy_list, bwrapper, ikarus_time):
     #################### Phase 2: Perform calculation tasks ####################
 
     # 2.2: Algorithm is the only authority to make decision
-    #nto_list = await asyncio.create_task(strategy_list[0].run(analysis_dict, lto_list, df_balance, current_ts)) # Send the last timestamp index
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
+
+    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'])
+    total_qc_in_lto = eval_total_capital_in_lto(lto_list)
+    logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
+
     grouped_ltos = {}
-    for strategy,lto in groupby(lto_list,key= operator.itemgetter("strategy")):
-        grouped_ltos[strategy] = list(lto)
+    if len(lto_list):
+        for lto_obj in lto_list:
+            grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
 
     strategy_tasks = []
-    for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), df_balance, ikarus_time)))
-    
-    # TODO: NEXT: Currently all the pairs of a strategy can create LTO at the same time. But is this what is desired?
+    for active_strategy in active_strategies:
+        strategy_tasks.append(asyncio.create_task(active_strategy.run(analysis_dict, grouped_ltos.get(active_strategy.name, []), ikarus_time, total_qc)))
+
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
 
@@ -397,26 +393,39 @@ async def application(strategy_list, bwrapper, ikarus_time):
     await write_updated_ltos_to_db(lto_list)
 
     # 3.3: Get the onserver
-    observation_obj = await observer.sample_observer(df_balance)
-    observation_obj.load('timestamp',ikarus_time)
-    await mongocli.do_insert_one("observer",observation_obj.get())
+    # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
+    observer_list = [
+        observer.qc_observer(df_balance, lto_list+nto_list, config['broker']['quote_currency'], ikarus_time),
+        observer.sample_observer(df_balance, ikarus_time)
+    ]
+    observer_objs = list(await asyncio.gather(*observer_list))
+    await mongocli.do_insert_many("observer", observer_objs)
 
     pass
 
 
 async def main():
 
-    # NOTE: Temporary hack for yesting without internet connection
+    # Create a Async Binance client and receive initial information
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
     bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
-
     all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
-    # TODO: Actually no need to make symbol_info a member of the instances, it is better to have it as 
-    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info)
+    # Create Resource Allocator and initialize allocation for strategies
+    res_allocater = ResourceAllocator(list(config['strategy'].keys()), mongocli)
+    await res_allocater.allocate()
+    # NOTE: This implementation uses Resource Allocator only in the boot time.
+    #       For dynamic allocation (or at least updating each day/week automatically), allocator needs to
+    #       create a new allocation and strategy manager needs to consume it in an cycle
+
+    # Create Strategy Manager and configure strategies
+    strategy_mgr = strategy_manager.StrategyManager(config, symbol_info, mongocli)
+    await strategy_mgr.source_plugin()
+    # TODO: Receive data from plugin once. This needs to be a periodic operations for each cycle if a new
+    #       resource_allocation object exist
     strategy_list = strategy_mgr.get_strategies()
 
     meta_data_pool = []
@@ -434,13 +443,14 @@ async def main():
 
     # Initiate the cash in the [observer]
     initial_observation_item = {
+        'type': 'balance',
         'balances': config['balances']
     }
-    await mongocli.do_insert_one("observer", initial_observation_item)   
+    await mongocli.do_insert_one("observer", initial_observation_item)
 
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    session_start_timestamp = int(datetime.timestamp(session_start_time)) # TODO: Check for UTC
+    session_start_timestamp = int(datetime.timestamp(session_start_time)) # UTC
     session_end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
     session_end_timestamp = int(datetime.timestamp(session_end_time))
 
@@ -461,9 +471,10 @@ async def main():
 
     # Get [hist-trades] docs to visualize the session
     await visualize_online(bwrapper, mongocli, config)
+
+    # TODO: NEXT: visualization of qc: total, in_trade etc
     pass
     # Visualize the test session
-    # TODO: Get the df
     #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
 

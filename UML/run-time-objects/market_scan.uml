@@ -1,0 +1,24 @@
+@startjson
+{
+    "_id": "",
+    "plugin_type": "market_scan",
+    "strategy": {
+        "NewStrategy": ["BTCUSDT"],
+        "FallingKnifeCatcher": ["XRPUSDT", "DOGEUSDT"],
+        "AlwaysEnter": []
+    }
+}
+@endjson
+
+NOTE: Currently I imagine it to be so, but there are some problems:
+    Suppose we found the pairs that has high volatility and there are some strategies that benefits
+    from that. 
+    - How market scanner will know which strategy operates better in that conditions?
+
+    An alternative is to provide some kind of analysis dict but reverse:
+    "range": ["BTCUSDT"],
+    "trending": ["XRPUSDT", "DOGEUSDT"],
+    but in this case:
+    - How each stratgy or strategy_manager know about the nature and the purpose
+    of the strategies which is an abstract consept?
+
