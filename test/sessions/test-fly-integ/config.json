@@ -10,18 +10,18 @@
     },
     "balances": [
         {
-            "asset": "USDT", 
-            "free": 10000, 
+            "asset": "BTC", 
+            "free": 0.01, 
             "locked": 0
         }
     ],
     "broker": {
-        "quote_currency": "USDT",
+        "quote_currency": "BTC",
         "credit_currency": "TRY"
     },
     "strategy": {
         "NewStrategy": {
-            "pairs": ["BTCUSDT", "LTCUSDT", "XRPUSDT"],
+            "pairs": ["LTCBTC", "XRPBTC"],
             "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
@@ -36,7 +36,7 @@
             "max_lto": 3
         },
         "FallingKnifeCatcher": {
-            "pairs": ["BTCUSDT","XRPUSDT"],
+            "pairs": ["LTCBTC", "XRPBTC"],
             "time_scales": ["15m"],
             "enter": {
                 "type": "limit"

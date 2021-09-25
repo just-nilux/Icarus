@@ -139,7 +139,6 @@ class BinanceWrapper():
         length = meta_do['time_scale']
         """
         self.logger.debug('get_data_dict started')
-
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
@@ -155,6 +154,8 @@ class BinanceWrapper():
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         data_dict = await self.decompose(meta_data_pool, composit_klines)
         self.logger.debug('get_data_dict ended')
+
+        # TODO: Length check for Data dict items could help a lot to detect anomalies
         return data_dict
 
 

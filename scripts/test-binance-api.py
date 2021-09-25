@@ -12,7 +12,21 @@ client = Client(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'], api_se
 
 # Place the break point here
 pass
+info = client.get_symbol_info('SHIBUSDT')
+print(info)
 
+price = 0.0000076 #0.0000112
+precision = 8
+order = client.create_test_order(
+    symbol='SHIBUSDT',
+    side=SIDE_SELL,
+    type=ORDER_TYPE_LIMIT,
+    timeInForce=TIME_IN_FORCE_GTC,
+    quantity=10000000.000,
+    price=f'%.{precision}f' % price)
+
+print(order)
+'''
 response = client.create_oco_order(
     symbol='BTCUSDT',
     side=SIDE_SELL,
@@ -29,3 +43,5 @@ order2 = client.get_order(symbol='BTCUSDT', orderId=response['orderReports'][1][
 cancel_order1 = client.cancel_order(symbol='BTCUSDT', orderId=response['orderReports'][0]['orderId'])
 
 cancel_order2 = client.cancel_order(symbol='BTCUSDT', orderId=response['orderReports'][1]['orderId'])
+
+'''

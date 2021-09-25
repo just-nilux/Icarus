@@ -23,24 +23,12 @@
         "quote_currency": "BTC",
         "credit_currency": "TRY"
     },
+    "risk_management":{
+        "max_capital_use_ratio": 0.99
+    },
     "strategy": {
         "AlwaysEnter": {
-            "pairs": ["LTCBTC", "XRPBTC"],
-            "time_scales": ["1m","15m"],
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "limit"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            },
-            "max_lto": 3
-        },
-        "AlwaysEnter90": {
-            "pairs": ["XRPBTC"],
+            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
             "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
@@ -52,7 +40,22 @@
                 "enter_expire": "cancel",
                 "exit_expire": "update"
             },
-            "max_lto": 3
+            "max_lto": 1
+        },
+        "AlwaysEnter90": {
+            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
+            "time_scales": ["1m","5m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 1
         }
     },
     "analysis": {

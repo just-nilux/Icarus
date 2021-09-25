@@ -362,9 +362,6 @@ async def application(strategy_list, bwrapper, ikarus_time):
     nto_list = list(chain(*strategy_decisions))
 
     # 2.3: Execute LTOs and NTOs if any
-    if not len(nto_list) in [0,3]:
-        print('Break')
-
     if len(nto_list) or len(lto_list):
         # 2.3.1: Execute the TOs
         nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
@@ -385,20 +382,16 @@ async def application(strategy_list, bwrapper, ikarus_time):
         else:
             for _id, nto in zip(results.inserted_ids,nto_list):
                 logger.info(f'LTO: "{nto["_id"]}" | {nto["strategy"]} | {nto["pair"]} created with the {PHASE_ENTER} order: {nto["enter"][TYPE_LIMIT]["orderId"]}')
-                logger.info(f'before send_constructed_msg')
                 telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
-                logger.info(f'after send_constructed_msg')
 
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
-    logger.debug('before do update')
     await write_updated_ltos_to_db(lto_list)
-    logger.debug('after do update')
+
     # 3.3: Get the observer
 
     # 3.3.1 Get df_balance
     df_balance = await bwrapper.get_current_balance()
-    logger.debug('df_balance acquired for observers')
 
     # 3.3.2 Insert df_balance to [observer]
     observer_list = [
@@ -468,10 +461,13 @@ async def main():
             current_time = int(server_time['serverTime']/1000)                                                  # exact second
             current_time -= (current_time % 60)                                                                 # exact minute
             current_time -= (current_time % ikarus_cycle_period_in_sec )                                          # exact scale
-            next_start_time = current_time + ikarus_cycle_period_in_sec + 1 
+
+            # NOTE: start_time_offset is used to make sure the broker created the last closed candle properly
+            start_time_offset = 10
+            next_start_time = current_time + ikarus_cycle_period_in_sec + start_time_offset
 
             logger.debug(f'Cycle start time: {next_start_time}')
-            result = await asyncio.create_task(run_at(next_start_time, application(strategy_list, bwrapper, next_start_time-1)))
+            result = await asyncio.create_task(run_at(next_start_time, application(strategy_list, bwrapper, next_start_time-start_time_offset)))
             
             '''
             # NOTE: The logic below is for gathering data every 'period' seconds (Good for testing and not waiting)
