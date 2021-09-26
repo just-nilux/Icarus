@@ -25,7 +25,8 @@ class FallingKnifeCatcher(StrategyBase):
             trange_mean20 = st.mean(time_dict[self.min_period]['trange'][-20:])
 
             # Make decision to enter or not
-            if trange_mean5 < trange_mean20:
+            #if trange_mean5 < trange_mean20:
+            if True:
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
                 trade_obj['strategy'] = self.name
@@ -57,9 +58,9 @@ class FallingKnifeCatcher(StrategyBase):
                 exit_type = self.config['exit']['type']
 
                 trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
+                                                                        StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
                 trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
+                                                                        StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
 
                 trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
                                                                                                             enter_type, 

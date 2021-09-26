@@ -1,0 +1,98 @@
+{
+    "tag": "bot",
+    "log-level": "DEBUG",
+    "credential_file": ".\\test_credentials.json",
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "notification":{
+        "telegram": {
+            "hto": true,
+            "lto": false,
+            "app": true,
+            "error": true,
+            "daily": true,
+            "stat": true,
+            "market": false
+        },
+        "mail": false
+    },
+    "broker": {
+        "quote_currency": "USDT",
+        "credit_currency": "TRY"
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.99
+    },
+    "strategy": {
+        "AlwaysEnter90": {
+            "pairs": ["BTCUSDT", "BNBUSDT", "XRPUSDT"],
+            "time_scales": ["1m","5m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 1
+        },
+        "NewStrategy": {
+            "pairs": ["BTCUSDT", "BNBUSDT", "ETHUSDT"],
+            "time_scales": ["1m","15m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 3
+        },
+        "FallingKnifeCatcher": {
+            "pairs": ["BTCUSDT", "BNBUSDT", "DOTUSDT"],
+            "time_scales": ["1m","1h"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 3
+        }
+    },
+    "analysis": {
+        "indicators": ["low","high","llow", "hhigh", "trange", "ma"],
+        "params": {
+            "ma": [5,20]
+        }
+    },
+    "statistics": {
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/live/stat.txt"
+    },
+    "time_scales": {
+        "1m": ["12 hours", 720],
+        "5m": ["1 day", 480],
+        "15m": ["1 day", 96],
+        "30m": ["1 week", 336],
+        "1h": ["1 week", 168],
+        "2h": ["1 week", 84],
+        "4h": ["1 week", 42],
+        "12h": ["1 month", 60],
+        "1d": ["3 months", 90],
+        "1w": ["1 year", 52],
+        "1M": ["1 year", 12]
+    }
+}
