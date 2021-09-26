@@ -1,4 +1,5 @@
 import argparse
+from PyQt5.QtCore import qChecksum
 import backtrader as bt
 from numpy.core.numeric import False_
 from tables import file
@@ -286,19 +287,27 @@ def change_asset():
     # TODO: Fix the QGraphicsScene::removeItem: error
     #       It is caused by the rectangles in green and red
 
-    fplt.candlestick_ochl(dashboard_data[symbol]['df']['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
-    fplt.volume_ocv(dashboard_data[symbol]['df']['open close volume'.split()], ax=axo)
-    ax.set_visible(xaxis=True)
+    # Plot QC
+    if symbol == 'qc':
+        fplt.plot(dashboard_data['qc']['total'], width=3, ax=ax, legend='Total')
+        fplt.plot(dashboard_data['qc']['free'], width=2, ax=ax, legend='Free')
+        fplt.plot(dashboard_data['qc']['in_trade'], width=2, ax=ax, legend='In Trade')
 
-    if not dashboard_data[symbol]['df_enter_expire'].empty:
-        _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['df_enter_expire']))
+    # Plot Trades
+    else:
+        fplt.candlestick_ochl(dashboard_data[symbol]['df']['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
+        fplt.volume_ocv(dashboard_data[symbol]['df']['open close volume'.split()], ax=axo)
+        ax.set_visible(xaxis=True)
 
-    # Exit expired trade visualization
-    if not dashboard_data[symbol]['df_exit_expire'].empty:
-        _add_exit_expire_tos(deepcopy(dashboard_data[symbol]['df_exit_expire']))
+        if not dashboard_data[symbol]['df_enter_expire'].empty:
+            _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['df_enter_expire']))
 
-    if not dashboard_data[symbol]['df_closed'].empty:
-        _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['df_closed'])) # NOTE: Plot the closed ones last to make sure they are in front
+        # Exit expired trade visualization
+        if not dashboard_data[symbol]['df_exit_expire'].empty:
+            _add_exit_expire_tos(deepcopy(dashboard_data[symbol]['df_exit_expire']))
+
+        if not dashboard_data[symbol]['df_closed'].empty:
+            _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['df_closed'])) # NOTE: Plot the closed ones last to make sure they are in front
 
     # restores saved zoom position, if in range
     fplt.refresh()
@@ -381,6 +390,7 @@ def create_ctrl_panel(win, pairs):
 
     panel.symbol = QComboBox(panel)
     [panel.symbol.addItem(pair) for pair in pairs]
+    panel.symbol.addItem('qc')
     panel.symbol.setCurrentIndex(1)
     layout.addWidget(panel.symbol, 0, 0)
     panel.symbol.currentTextChanged.connect(change_asset)
