@@ -359,7 +359,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 2.2: Algorithm is the only authority to make decision
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
-
+    logger.debug('Phase 2')
     total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'])
     total_qc_in_lto = eval_total_capital_in_lto(lto_list)
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
@@ -472,7 +472,6 @@ async def main():
     # Get [hist-trades] docs to visualize the session
     await visualize_online(bwrapper, mongocli, config)
 
-    # TODO: NEXT: visualization of qc: total, in_trade etc
     pass
     # Visualize the test session
     #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)

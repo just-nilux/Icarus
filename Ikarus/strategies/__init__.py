@@ -1,1 +1,1 @@
-from . import AlwaysEnter90, AlwaysEnter, FallingKnifeCatcher, NewStrategy
+from . import StrategyBase, AlwaysEnter90, AlwaysEnter, FallingKnifeCatcher, NewStrategy

@@ -10,43 +10,29 @@
     },
     "balances": [
         {
-            "asset": "BTC", 
-            "free": 0.01, 
+            "asset": "USDT", 
+            "free": 10000, 
             "locked": 0
         }
     ],
     "broker": {
-        "quote_currency": "BTC",
-        "credit_currency": "TRY"
+        "quote_currency": "USDT",
+        "credit_currency": "TRY",
+        "fee": 0.001
     },
     "strategy": {
         "NewStrategy": {
-            "pairs": ["LTCBTC", "XRPBTC"],
+            "pairs": ["BTCUSDT", "ETHUSDT"],
             "time_scales": ["15m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
-                "exit_expire": "update"
-            },
-            "max_lto": 3
-        },
-        "FallingKnifeCatcher": {
-            "pairs": ["LTCBTC", "XRPBTC"],
-            "time_scales": ["15m"],
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "limit"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
+                "exit_expire": "market_exit"
             },
             "max_lto": 3
         }

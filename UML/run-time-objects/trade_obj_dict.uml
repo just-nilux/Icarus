@@ -10,12 +10,14 @@
         "quantity": "",
         "amount": "",
         "expire": "",
-        "orderId": ""
+        "orderId": "",
+        "fee": ""
       },
       "market": {
         "quantity": "",
         "amount": "",
-		"orderId": ""
+        "orderId": "",
+        "fee": ""
       }
     },
     "exit": {
@@ -27,19 +29,22 @@
         "amount": "",
         "expire": "",
         "orderId": "",
-        "stopLimit_orderId": ""
+        "stopLimit_orderId": "",
+        "fee": ""
       },
       "limit": {
         "price": "",
         "quantity": "",
         "amount": "",
         "expire": "",
-        "orderId": ""
+        "orderId": "",
+        "fee": ""
       },
       "market": {
         "quantity": "",
         "amount": "",
-		"orderId": ""
+        "orderId": "",
+        "fee": ""
       }
     },
     "result": {
@@ -49,14 +54,16 @@
         "time": "",
         "price": "",
         "quantity": "",
-        "amount": ""
+        "amount": "",
+        "fee": ""
       },
       "exit": {
         "type": "",
         "time": "",
         "price": "",
         "quantity": "",
-        "amount": ""
+        "amount": "",
+        "fee": ""
       },
       "profit": 0,
       "liveTime": 0

@@ -11,6 +11,8 @@ from ..utils import time_scale_to_minute
 
 
 class StrategyBase(metaclass=abc.ABCMeta):
+    # NOTE: fee can stay here until a better place is found
+    fee = 0
 
     def __init__(self, _name, _config, _symbol_info):
         self.name = _name
@@ -18,6 +20,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy'][self.name]
         self.max_lto = self.config.get('max_lto',1)
+
+        # NOTE: Assigning the fee multiple times is not the most optimal solution
+        StrategyBase.fee = _config['broker'].get('fee', 0)
         # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
         # TODO: Make proper handling for symbol_info
@@ -157,7 +162,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 return await self.on_exit_postpone(lto, dt_index)
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                return await self.on_market_exit(self, lto)
+                return await self.on_market_exit(lto)
 
         elif lto['status'] == STAT_WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
@@ -235,6 +240,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def _create_enter_module(type, enter_price, enter_quantity, enter_ref_amount, expire_time):
+        # TODO: NEXT: Add StrategyBase.fee to calculation of quantity and fee
+        # TODO: NEXT: Add fee to the related field
 
         if type == TYPE_LIMIT:
             enter_module = {
@@ -247,14 +254,20 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     },
                 }
         elif type == TYPE_MARKET:
-            # TODO: Create TYPE_MARKET orders to enter
-            pass
+            enter_module = {
+                "market": {
+                    "quantity": float(enter_quantity),
+                    "orderId": ""
+                    },
+                }
         else: pass # Internal Error
         return enter_module
 
 
     @staticmethod
     async def _create_exit_module(type, enter_price, enter_quantity, exit_price, exit_ref_amount, expire_time):
+        # TODO: NEXT: Add StrategyBase.fee to calculation of quantity and fee
+        # TODO: NEXT: Add fee to the related field
 
         if type == TYPE_OCO:
             exit_module = {
