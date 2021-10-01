@@ -1,3 +1,4 @@
+from Ikarus.strategies.StrategyBase import StrategyBase
 import asyncio
 from binance import AsyncClient
 from datetime import datetime
@@ -6,7 +7,7 @@ from Ikarus import performance, strategy_manager, binance_wrapper, notifications
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
 from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
-    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto
+    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto, calculate_fee
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -186,6 +187,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['enter']['price'] = float(orders_dict[enter_orderId]['price'])
                     lto_list[i]['result']['enter']['quantity'] = float(orders_dict[enter_orderId]['executedQty'])
                     lto_list[i]['result']['enter']['amount'] = float(lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity'])
+                    lto_list[i]['result']['enter']['fee'] = calculate_fee(lto_list[i]['result']['enter']['amount'], StrategyBase.fee)
                     telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'enter', enter_orderId, 'filled'])
 
 
@@ -218,8 +220,12 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[exit_orderId]['price'])
                     lto_list[i]['result']['exit']['quantity'] = float(orders_dict[exit_orderId]['executedQty'])
                     lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
                     telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', exit_orderId, 'filled'])
@@ -246,8 +252,12 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_stopLimit_orderId]['price'])
                     lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_stopLimit_orderId]['executedQty'])
                     lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                     
                     telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', oco_stopLimit_orderId, 'filled'])
@@ -264,8 +274,12 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
                     lto_list[i]['result']['exit']['price'] = float(orders_dict[oco_limit_orderId]['price'])
                     lto_list[i]['result']['exit']['quantity'] = float(orders_dict[oco_limit_orderId]['executedQty'])
                     lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                     
                     telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', oco_limit_orderId, 'filled'])

@@ -1,3 +1,4 @@
+from Ikarus.strategies.StrategyBase import StrategyBase
 from Ikarus.exceptions import NotImplementedException
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
@@ -12,7 +13,7 @@ import bson
 import time
 from itertools import chain, groupby
 import datetime
-from .utils import time_scale_to_second, get_min_scale
+from .utils import time_scale_to_second, get_min_scale, calculate_fee
 
 
 class BinanceWrapper():
@@ -405,30 +406,36 @@ class BinanceWrapper():
                         # TODO: Notification
 
                     else:
+                        # TODO: Integrate commissions for BNB not only the quote currency
                         lto_list[i]['status'] = STAT_CLOSED
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         lto_list[i]['result']['cause'] = STAT_EXIT_EXP
-                        lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['fills']
+                        lto_list[i]['exit'][TYPE_MARKET]['orderId'] = response['orderId']
 
                         lto_list[i]['result']['exit']['type'] = TYPE_MARKET
 
                         # TODO: Multiple time scale is not supported
+                        raise Exception('Fix the current time issue')
                         current_time = int(response['transactTime']/1000)                                               # exact second
                         current_time -= (current_time % 60)                                                             # exact minute
                         current_time -= (current_time % (self.config['data_input']['scales_in_minute'][0]*60))          # exact scale
                         current_time -= (self.config['data_input']['scales_in_minute'][0]*60)                           # -scale
 
                         lto_list[i]['result']['exit']['time'] = bson.Int64(current_time)
-                        # NOTE: Sum of fills
-                        lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]))
+                        # TODO: WARNING: Non of the below is tested. So do the tests !!!
+                        lto_list[i]['result']['exit']['price'] = float(sum([float(fill['price']) for fill in response['fills']]) / len(response['fills']) )
                         lto_list[i]['result']['exit']['quantity'] = float(sum([float(fill['qty']) for fill in response['fills']]))
                         lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                        lto_list[i]['result']['exit']['fee'] = float(sum([float(fill['commission']) for fill in response['fills'] \
+                            if fill['commissionAsset']==self.config['broker']['quote_currency'] ])) 
 
-                        lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                        lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                            - lto_list[i]['result']['enter']['amount'] \
+                            - lto_list[i]['result']['enter']['fee'] \
+                            - lto_list[i]['result']['exit']['fee']
                         lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
                         self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', response["orderId"], EVENT_PLACED])
                         self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', response["orderId"], 'filled'])
-
 
 
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
@@ -566,13 +573,6 @@ class BinanceWrapper():
         #   - market enter causes instant fill
 
         return nto_list, lto_list
-
-
-    async def pprint_klines(self, list_klines):
-        self.logger.debug("Length of klines: {}".format(len(list_klines)))
-        for idx,kline in enumerate(list_klines):
-            self.logger.debug("-->Lenth of kline {}: {}".format(idx, len(kline)))
-            self.logger.debug("----> 0:[{}] 1:[{}] ... {}:[{}]".format(kline[0][0],kline[1][0],len(kline)-1,kline[-1][0]))
 
 
 class TestBinanceWrapper():
@@ -882,6 +882,7 @@ class TestBinanceWrapper():
                     '''
                     - Since the enter is succesful, the quantity to exit is already determined.
                     - Uptate operation will cause the locked base asset to go to free and locked again since the quantity will not change
+                    - The changes in the price levels are already in the LTO so no action needed here
                     - Thus no need to update df_balance
                     '''
                     
@@ -912,11 +913,18 @@ class TestBinanceWrapper():
                     lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    #lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
 
-                    # Update df_balance: write the amount of the exit
-                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']
+                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']   # Update df_balance: write the amount of the exit
+                    df_balance.loc[self.quote_currency,'free'] -= lto_list[i]['result']['exit']['fee']      # Count on the Fee
+                    # NOTE: Here is the only place that the fees applied in TestBinanceWrapper.
+
                     df_balance.loc[self.quote_currency,'total'] = df_balance.loc[self.quote_currency,'free'] + df_balance.loc[self.quote_currency,'locked']
                     # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
@@ -973,6 +981,7 @@ class TestBinanceWrapper():
                     # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
                     #       timestamp values
 
+                    # NOTE: No fee here, since the order is not filled yet
                     nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
                     df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['enter'][TYPE_LIMIT]['amount']
                     df_balance.loc[self.quote_currency,'locked'] += nto_list[i]['enter'][TYPE_LIMIT]['amount']

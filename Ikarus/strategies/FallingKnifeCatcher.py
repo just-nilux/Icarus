@@ -40,36 +40,39 @@ class FallingKnifeCatcher(StrategyBase):
                 exit_price = max(time_dict[self.min_period]['high'][-10:])
 
                 # Calculate enter/exit amount value
-                # Example: Buy XRP with 100$ in your account
                 enter_ref_amount = pairwise_alloc_share
 
-                # TODO: HIGH: In order to not to face with an issue with dust, exit amount might be "just a bit less" then what it should be
-                # Example:
-                #   Buy XRP from the price XRPUSDT: 0.66 (Price of 1XRP = 0.66$), use 100$ to make the trade
-                #   151,51 = 100$ / 0.66
-                enter_quantity = enter_ref_amount / enter_price
-
-                #   Sell the bought XRP from the price 0.70
-                #   exit_ref_amount = 151,4 * 0.70 = 105.98
-                exit_ref_amount = enter_quantity * exit_price
-
-                # Fill enter and exit modules
+                # Fill enter module
                 enter_type = self.config['enter']['type']
+                trade_obj['enter'] = await StrategyBase._create_enter_module(
+                    enter_type, 
+                    enter_price, 
+                    enter_ref_amount, 
+                    StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
+
+                # Fill exit module
                 exit_type = self.config['exit']['type']
+                trade_obj['exit'] = await StrategyBase._create_exit_module(
+                    exit_type,
+                    enter_price,
+                    trade_obj['enter'][enter_type]['quantity'],
+                    exit_price,
+                    StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
 
-                trade_obj['enter'] = await StrategyBase._create_enter_module(enter_type, enter_price, enter_quantity, enter_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
-                trade_obj['exit'] = await StrategyBase._create_exit_module(exit_type, enter_price, enter_quantity, exit_price, exit_ref_amount, 
-                                                                        StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
+                # Apply exchange filters
+                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters(
+                    PHASE_ENTER, 
+                    enter_type, 
+                    trade_obj['enter'][enter_type], 
+                    self.symbol_info[ao_pair])
 
-                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters('enter', 
-                                                                                                            enter_type, 
-                                                                                                            trade_obj['enter'][enter_type], 
-                                                                                                            self.symbol_info[ao_pair])
-                if not await StrategyBase.check_min_notional(trade_obj['enter'][enter_type]['price'], trade_obj['enter'][enter_type]['quantity'], self.symbol_info[ao_pair]):
+                if not await StrategyBase.check_min_notional(
+                    trade_obj['enter'][enter_type]['price'], 
+                    trade_obj['enter'][enter_type]['quantity'], 
+                    self.symbol_info[ao_pair]):
                     self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. Enter Ref Amount: {'%.8f' % (trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
                     return None
-                
+
                 return trade_obj
 
             else:

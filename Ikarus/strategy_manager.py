@@ -23,7 +23,6 @@ class StrategyManager():
             self.strategy_list.append(strategy_class(_config, _symbol_info))
             self.strategy_names.append(strategy_name)
         self.mongo_cli = _mongo_cli
-
         pass
 
     def get_strategies(self): return self.strategy_list # NOTE: It returns a shallow copy

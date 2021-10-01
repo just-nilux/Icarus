@@ -228,7 +228,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def _config_market_exit(lto, type):
-
+        # TODO: Integrate fee to market order
         lto['action'] = ACTN_MARKET_EXIT
         lto['exit'][TYPE_MARKET] = {
             'amount': lto['exit'][type]['amount'],
@@ -239,21 +239,35 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def _create_enter_module(type, enter_price, enter_quantity, enter_ref_amount, expire_time):
-        # TODO: NEXT: Add StrategyBase.fee to calculation of quantity and fee
-        # TODO: NEXT: Add fee to the related field
+    async def _create_enter_module(type, enter_price, enter_ref_amount, expire_time):
+
+        # NOTE: amount = enter_price * enter_quantity
+        #       amount is excluded from the fees
+
+        # NOTE: enter_ref_amount is the total quantity of the quote currency that will be used for the trade.
+        #       It includes the stake amount and the transaction fee (comission)
+        
+        # NOTE: It is assumed that the fee is paid in the quote currency not BNB.
+        #       For BNB, some generalizations and details needs to be implemented
+        enter_quantity = enter_ref_amount / (enter_price * (1 + StrategyBase.fee))
 
         if type == TYPE_LIMIT:
             enter_module = {
                 "limit": {
                     "price": float(enter_price),
                     "quantity": float(enter_quantity),
-                    "amount": float(enter_ref_amount),
+                    "fee": float(enter_price * enter_quantity * StrategyBase.fee),
+                    "amount": float(enter_quantity * enter_price),
                     "expire": expire_time,
                     "orderId": ""
                     },
                 }
         elif type == TYPE_MARKET:
+            # TODO: For market buy it, the quantity is needed, but the price is volatile and unknown.
+            #       It is impossible to know the fee exactly. Some guess might be added, or simply
+            #       the quantity might be guessed roughly to not to exceed the max allowed capital
+            # TODO: Integrate fee to market order
+
             enter_module = {
                 "market": {
                     "quantity": float(enter_quantity),
@@ -265,10 +279,11 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def _create_exit_module(type, enter_price, enter_quantity, exit_price, exit_ref_amount, expire_time):
-        # TODO: NEXT: Add StrategyBase.fee to calculation of quantity and fee
-        # TODO: NEXT: Add fee to the related field
+    async def _create_exit_module(type, enter_price, enter_quantity, exit_price, expire_time):
+        
+        # NOTE: amount = exit_price * enter_quantity
 
+        # TODO: receive stopPrice and stopLimitPrice directly as argument
         if type == TYPE_OCO:
             exit_module = {
                 "oco": {
@@ -276,7 +291,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
                     "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
                     "quantity": float(enter_quantity),
-                    "amount": float(exit_ref_amount),
+                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
+                    "amount": float(exit_price * enter_quantity),
                     "expire": expire_time,
                     "orderId": "",
                     "stopLimit_orderId": ""
@@ -287,12 +303,14 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 "limit": {
                     "price": float(exit_price),
                     "quantity": float(enter_quantity),
-                    "amount": float(exit_ref_amount),
+                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
+                    "amount": float(exit_price * enter_quantity),
                     "expire": expire_time,
                     "orderId": ""
                     },
                 }
         elif type == TYPE_MARKET:
+            # TODO: Integrate fee to market order
             pass
         else: pass # Internal Error
         return exit_module

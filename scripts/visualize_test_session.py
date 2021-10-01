@@ -78,7 +78,11 @@ async def visualize_dashboard(bwrapper, mongocli, config):
         dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire
         dashboard_data_pack[item[0]]['df_exit_expire'] = df_exit_expire
         dashboard_data_pack[item[0]]['df_closed'] = df_closed
-        
+
+    # Get trade objects
+    qc_list = list(await mongocli.do_find('observer',{'type':'qc'}))
+    df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
+    dashboard_data_pack['qc'] = df
     fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
 
     pass
