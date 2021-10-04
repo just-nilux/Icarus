@@ -932,6 +932,8 @@ class TestBinanceWrapper():
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
 
+                    # TODO: NEXT: Add the final edits about the TYPE_MARKET. Normally this section is used to place 
+                    #       an order. In TYPE_MARKET case it is placed and filled directly
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
                     base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
                     df_balance.loc[base_cur, 'free'] -= lto_list[i]['result']['enter']['quantity']
@@ -960,7 +962,7 @@ class TestBinanceWrapper():
         return lto_list, df_balance
 
 
-    async def _execute_nto(self, nto_list, df_balance):
+    async def _execute_nto(self, nto_list, df_balance, data_dict):
         """
         Args:
             nto_list (list): [description]
@@ -973,15 +975,43 @@ class TestBinanceWrapper():
             # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
             if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
+                # TODO: Consider using the direct enter and exit types rather than checking the keys with a order
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
-                    # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
+
+                    nto_list[i]['status'] = STAT_CLOSED
+                    nto_list[i]['history'].append(nto_list[i]['status'])
+                    nto_list[i]['result']['cause'] = STAT_EXIT_EXP
+                    # NOTE: The order is PLACED and FILLED
+                    min_scale = await get_min_scale(self.config['time_scales'].keys(), data_dict[nto_list[i]['pair']].keys())
+                    last_kline = data_dict[nto_list[i]['pair']][min_scale].tail(1)
+
+                    nto_list[i]['enter'][TYPE_MARKET]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
+                    nto_list[i]['result'][PHASE_ENTER]['type'] = TYPE_MARKET
+                    nto_list[i]['result'][PHASE_ENTER]['time'] = bson.Int64(last_kline.index.values)
+                    nto_list[i]['result'][PHASE_ENTER]['price'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['price']
+                    nto_list[i]['result'][PHASE_ENTER]['quantity'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['quantity']
+                    nto_list[i]['result'][PHASE_ENTER]['amount'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['amount']
+                    nto_list[i]['result'][PHASE_ENTER]['fee'] = calculate_fee(nto_list[i]['result'][PHASE_ENTER]['amount'], StrategyBase.fee)
+                    # TODO: Instead of directly modifying the value, just create a wrapper that also checks if the withdraw or deposit is successfull
+                    #       There might be some cases where the balance go below zero, (Which indicates some bgs in implementation of logic)
+                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['result'][PHASE_ENTER]['fee']
+                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['result'][PHASE_ENTER]['amount']
+
+                    base_cur = nto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                    if base_cur in list(df_balance.index):
+                        df_balance.loc[base_cur, 'free' ] += nto_list[i]['result'][PHASE_ENTER]['quantity']
+                    else:
+                        # Previously there was no base_currency, so we create a row for it: | free | locked | total |
+                        df_balance.loc[base_cur] = [nto_list[i]['result'][PHASE_ENTER]['quantity'], 0, 0]
+                        df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
+
                     pass
 
                 elif TYPE_LIMIT in nto_list[i]['enter'].keys():
                     # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
                     #       timestamp values
 
-                    # NOTE: No fee here, since the order is not filled yet
+                    # NOTE: The order is only PLACED but not FILLED. No fee here
                     nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
                     df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['enter'][TYPE_LIMIT]['amount']
                     df_balance.loc[self.quote_currency,'locked'] += nto_list[i]['enter'][TYPE_LIMIT]['amount']
@@ -992,7 +1022,7 @@ class TestBinanceWrapper():
         return nto_list, df_balance
 
 
-    async def execute_decision(self, trade_dict, df_balance, lto_list, data_dict):
+    async def execute_decision(self, nto_list, df_balance, lto_list, data_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -1015,16 +1045,15 @@ class TestBinanceWrapper():
         Returns:
             tuple: result, df_balances
         """
-        result = True
 
         # Execute decsisions about ltos
         lto_list, df_balance = await self._execute_lto(lto_list, df_balance, data_dict)
 
         # Execute new trade objects
-        trade_dict, df_balance = await self._execute_nto(trade_dict, df_balance)      
+        nto_list, df_balance = await self._execute_nto(nto_list, df_balance, data_dict)
             
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
 
-        return result, df_balance, lto_list
+        return df_balance, lto_list, nto_list

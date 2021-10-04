@@ -128,7 +128,7 @@ class AlwaysEnter(StrategyBase):
         return lto
 
 
-    async def on_waiting_exit(self, lto):
+    async def on_waiting_exit(self, lto, analysis_dict):
         lto['action'] = ACTN_EXEC_EXIT
         lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
                                                                                             self.config['exit']['type'], 

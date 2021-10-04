@@ -87,7 +87,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         alive_lto_counter = 0
         in_trade_capital = 0
         for lto_idx in range(len(lto_list)):
-            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, lto_list[lto_idx], dt_index)
+            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, lto_list[lto_idx], dt_index)
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
@@ -138,7 +138,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def handle_lto_logic(self, lto, dt_index):
+    async def handle_lto_logic(self, analysis_dict, lto, dt_index):
 
         """
         This function decides what to do for the LTOs based on their 'status'
@@ -167,7 +167,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         elif lto['status'] == STAT_WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # TODO: expire of the exit_module can be calculated after the trade entered
-            return await self.on_waiting_exit(lto)
+            return await self.on_waiting_exit(lto, analysis_dict)
 
         return lto
 
@@ -229,6 +229,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
     @staticmethod
     async def _config_market_exit(lto, type):
         # TODO: Integrate fee to market order
+        # TODO: Integrate price to market order, even if it has no use
+        #       For now, it works and I am not gonna touch it for a rework
         lto['action'] = ACTN_MARKET_EXIT
         lto['exit'][TYPE_MARKET] = {
             'amount': lto['exit'][type]['amount'],
@@ -253,7 +255,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         if type == TYPE_LIMIT:
             enter_module = {
-                "limit": {
+                TYPE_LIMIT: {
                     "price": float(enter_price),
                     "quantity": float(enter_quantity),
                     "fee": float(enter_price * enter_quantity * StrategyBase.fee),
@@ -266,15 +268,19 @@ class StrategyBase(metaclass=abc.ABCMeta):
             # TODO: For market buy it, the quantity is needed, but the price is volatile and unknown.
             #       It is impossible to know the fee exactly. Some guess might be added, or simply
             #       the quantity might be guessed roughly to not to exceed the max allowed capital
-            # TODO: Integrate fee to market order
-
             enter_module = {
-                "market": {
+                TYPE_MARKET: {
+                    "price": float(enter_price),
                     "quantity": float(enter_quantity),
+                    "fee": float(enter_price * enter_quantity * StrategyBase.fee),
+                    "amount": float(enter_quantity * enter_price),
                     "orderId": ""
                     },
                 }
         else: pass # Internal Error
+
+        # NOTE: Actually no difference in the objects, in terms of value and te stucture
+        #       Only the difference is, one is full of certain values, the other is about expectations
         return enter_module
 
 
@@ -286,7 +292,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # TODO: receive stopPrice and stopLimitPrice directly as argument
         if type == TYPE_OCO:
             exit_module = {
-                "oco": {
+                TYPE_OCO: {
                     "limitPrice": float(exit_price),
                     "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
                     "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
@@ -300,7 +306,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             }
         elif type == TYPE_LIMIT:
             exit_module = {
-                "limit": {
+                TYPE_LIMIT: {
                     "price": float(exit_price),
                     "quantity": float(enter_quantity),
                     "fee": float(enter_quantity * exit_price * StrategyBase.fee),
@@ -310,7 +316,18 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     },
                 }
         elif type == TYPE_MARKET:
-            # TODO: Integrate fee to market order
+            # NOTE: Even if there is no exact price to calcualte fee, some rough valuyes can be given
+            #       It would also be helpful if this last closed price method works as expected.
+            # TODO: NEXT: Take a look at below
+            exit_module = {
+                TYPE_MARKET: {
+                    "price": float(exit_price),
+                    "quantity": float(enter_quantity),
+                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
+                    "amount": float(exit_price * enter_quantity),
+                    "orderId": ""
+                    },
+                }
             pass
         else: pass # Internal Error
         return exit_module
@@ -318,6 +335,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def apply_exchange_filters(phase, type, module, symbol_info, exit_qty=0):
+        # TODO: NEXT: Get rid of this exit_qty bullshit
         """
         - Call this method prior to any order placement
         - Apply the filter of exchange pair
@@ -330,8 +348,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
         """ 
         # TODO: Do proper rounding to not to exceed target amount. Temporary fix is the max_capital_ratio values smaller than 1
         if phase == 'enter':
-            module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                            # Fixing PRICE_FILTER: tickSize
-            module['quantity'] = round_step_size(module['amount'] /module['price'], float(symbol_info['filters'][2]['minQty']))         # Fixing LOT_SIZE: minQty
+            if type == TYPE_LIMIT:
+                module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
+                module['quantity'] = round_step_size(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
+            
+            elif type == TYPE_MARKET:
+                module['quantity'] = round_step_size(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
 
         elif phase == 'exit':
             if type == TYPE_OCO:
@@ -343,6 +365,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
             elif type == TYPE_LIMIT:
                 module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))
                 module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+            
+            elif type == TYPE_MARKET:
+                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))
+                # TODO: NEXT: Remove the exit_qty
 
         else: pass
 

@@ -21,14 +21,14 @@
         "fee": 0.001
     },
     "strategy": {
-        "NewStrategy": {
-            "pairs": ["BTCUSDT", "ETHUSDT"],
+        "RandomStrategy": {
+            "pairs": ["BTCUSDT"],
             "time_scales": ["15m"],
             "enter": {
-                "type": "limit"
+                "type": "market"
             },
             "exit": {
-                "type": "oco"
+                "type": "market"
             },
             "action_mapping": {
                 "enter_expire": "cancel",

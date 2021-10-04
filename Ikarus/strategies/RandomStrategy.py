@@ -7,12 +7,12 @@ import copy
 import itertools
 from ..utils import time_scale_to_minute
 from itertools import chain, groupby
-import operator
+import random
 
-class NewStrategy(StrategyBase):
+class RandomStrategy(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__("NewStrategy", _config, _symbol_info)
+        super().__init__("RandomStrategy", _config, _symbol_info)
         return
 
 
@@ -23,41 +23,43 @@ class NewStrategy(StrategyBase):
     async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
 
             time_dict = analysis_dict[ao_pair]
-            trange_mean5 = st.mean(time_dict[self.min_period]['trange'][-5:])
-            trange_mean20 = st.mean(time_dict[self.min_period]['trange'][-20:])
 
-            # Make decision to enter or not
-            if trange_mean5 < trange_mean20:
+            # Random Entry
+            rand_number = random.random()
+            #if rand_number < 0.5:
+            if True:
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
                 trade_obj['strategy'] = self.name
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
                 trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
-                # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict[self.min_period]['low'][-10:])
-                exit_price = max(time_dict[self.min_period]['high'][-10:])
+                # NOTE: For Market enters, the enter_price value is just a value to determine the quantity
+                #       It is simply a rough estimation to go forward
+                enter_price = float(time_dict[self.min_period]['close'])
 
                 enter_ref_amount=pairwise_alloc_share
 
                 # Fill enter module
-                enter_type = self.config['enter']['type']
+                #enter_type = self.config['enter']['type']
+                enter_type = TYPE_MARKET
                 trade_obj['enter'] = await StrategyBase._create_enter_module(
                     enter_type, 
                     enter_price, 
                     enter_ref_amount, 
-                    StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
+                    0)
 
                 # Fill exit module
+                # TODO: Check if the exit moudle creation is really required
                 exit_type = self.config['exit']['type']
                 trade_obj['exit'] = await StrategyBase._create_exit_module(
                     exit_type,
                     enter_price,
                     trade_obj['enter'][enter_type]['quantity'],
-                    exit_price,
-                    StrategyBase._eval_future_candle_time(dt_index,15,time_scale_to_minute(self.min_period)))
+                    0,
+                    0)
 
                 # Apply exchange filters
                 trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters(
@@ -83,7 +85,9 @@ class NewStrategy(StrategyBase):
         # TODO: Give a call to methods that calculates exit point
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
         lto['action'] = ACTN_UPDATE 
-        lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']])) # This is good for debugging and will be good for perf. evaluation in future
+        lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']]))
+
+               
         if self.config['exit']['type'] == TYPE_LIMIT:
             lto['exit'][TYPE_LIMIT]['price'] *= 1
             lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
@@ -131,12 +135,33 @@ class NewStrategy(StrategyBase):
 
 
     async def on_waiting_exit(self, lto, analysis_dict):
+        # TODO: NEXT: NEXT: Integrate TYPE_MARKET exit
+
+        if self.config['exit']['type'] == TYPE_MARKET:
+            
+            # Make decision to enter or not by considering analysis_dict
+            random_number = random.random()
+
+            # NOTE: If TYPE_MARKET: then either decide to exit or do not edit the LTO:
+            #       As a result, the status is left STAT_WAITING_EXIT
+            #if random_number < 0.5:
+            if True:
+                # TODO: Add info log: market exit decided
+                lto['exit'] = await StrategyBase._create_exit_module(
+                    TYPE_MARKET,
+                    0,
+                    lto['result'][PHASE_ENTER]['quantity'],
+                    analysis_dict[lto['pair']][self.min_period]['close'],
+                    0)
+            else:
+                return lto
+
         lto['action'] = ACTN_EXEC_EXIT
-        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
+        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(PHASE_EXIT, 
                                                                                             self.config['exit']['type'], 
                                                                                             lto['exit'][self.config['exit']['type']], 
                                                                                             self.symbol_info[lto['pair']], 
-                                                                                            exit_qty=lto['result']['enter']['quantity'])
+                                                                                            exit_qty=lto['result'][PHASE_ENTER]['quantity'])
         return lto
 
 
