@@ -1,5 +1,5 @@
 import pandas as pd
-
+import more_itertools
 from .enums import *
 
 def calculate_fee(amount, fee, digit=8):
@@ -35,11 +35,7 @@ def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_rat
     #           : these LTOs needs be omitted
     #   'enter_expire': then it is marked to be handled by the their strategy but the balance is still locked in LTO
 
-    in_trade_qc = 0
-    for lto in lto_list:
-        # Omit the LTOs that are closed, because their use of amount returned to df_balance (by broker or by lto_update of test-engine)
-        if lto['status'] != STAT_CLOSED:
-            in_trade_qc += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
+    in_trade_qc = eval_total_capital_in_lto(lto_list)
 
     total_qc = free_qc + in_trade_qc
     return total_qc*max_capital_use_ratio
@@ -49,7 +45,10 @@ def eval_total_capital_in_lto(lto_list):
     for lto in lto_list:
         # Omit the LTOs that are closed, because their use of amount returned to df_balance (by broker or by lto_update of test-engine)
         if lto['status'] != STAT_CLOSED:
-            in_trade_qc += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
+            # NOTE: It is assumed that each object may only have 1 TYPE of exit or enter:
+            # TODO: NEXT: CAREFULL: The approach above make sense but the action logic may needs to be changed in case of market_exit:
+            #       As a solution, when market exit decision is made. Simply save the old oco or limit, then remove it to make sure that there is only one
+            in_trade_qc += more_itertools.one(lto[PHASE_ENTER].values())['amount'] 
     return in_trade_qc
 
 async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):

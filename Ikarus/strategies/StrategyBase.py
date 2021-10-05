@@ -34,8 +34,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
         # Since it facilitates so much new strategy creation and modular implementation
-        
-        # TODO: NEXT: Apply the self.alloc_perc to evaluation phase
 
         # NOTE: strategywise_alloc_rate determines the available rate of use from the main capital
         #       If self.strategywise_alloc_rate is 0.25 then this strategy can use max %25 of the main capital
@@ -91,8 +89,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
+            # TODO: Make this function non-awaitable
             if not await StrategyBase.is_lto_dead(lto_list[lto_idx]): 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
+                # TODO: NEXT: Fix and clean all hardcoded TYPE_LIMIT
                 in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
                 alive_lto_counter += 1
 
@@ -318,7 +318,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         elif type == TYPE_MARKET:
             # NOTE: Even if there is no exact price to calcualte fee, some rough valuyes can be given
             #       It would also be helpful if this last closed price method works as expected.
-            # TODO: NEXT: Take a look at below
             exit_module = {
                 TYPE_MARKET: {
                     "price": float(exit_price),
@@ -347,6 +346,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             dict: enter or exit module
         """ 
         # TODO: Do proper rounding to not to exceed target amount. Temporary fix is the max_capital_ratio values smaller than 1
+        #       round_step_size may round up: 1.1359267447385257 -> 1.13593
         if phase == 'enter':
             if type == TYPE_LIMIT:
                 module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize

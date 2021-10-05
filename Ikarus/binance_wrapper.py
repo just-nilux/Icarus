@@ -978,15 +978,17 @@ class TestBinanceWrapper():
                 # TODO: Consider using the direct enter and exit types rather than checking the keys with a order
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
 
-                    nto_list[i]['status'] = STAT_CLOSED
+                    nto_list[i]['status'] = STAT_OPEN_EXIT
                     nto_list[i]['history'].append(nto_list[i]['status'])
-                    nto_list[i]['result']['cause'] = STAT_EXIT_EXP
+
                     # NOTE: The order is PLACED and FILLED
                     min_scale = await get_min_scale(self.config['time_scales'].keys(), data_dict[nto_list[i]['pair']].keys())
                     last_kline = data_dict[nto_list[i]['pair']][min_scale].tail(1)
 
                     nto_list[i]['enter'][TYPE_MARKET]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
                     nto_list[i]['result'][PHASE_ENTER]['type'] = TYPE_MARKET
+                    # TODO: NEXT: BUG: Notice that the decision_time and the enter_time is actually not 
+                    #       bson.Int64(last_kline.index.values) but the ikarus_time
                     nto_list[i]['result'][PHASE_ENTER]['time'] = bson.Int64(last_kline.index.values)
                     nto_list[i]['result'][PHASE_ENTER]['price'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['price']
                     nto_list[i]['result'][PHASE_ENTER]['quantity'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['quantity']
