@@ -21,7 +21,8 @@ class RandomStrategy(StrategyBase):
 
 
     async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
-
+            # TODO: BUG: This strategy works with market orders but if you set 'limit' in the config file
+            #       Then rest is a mess. Take some precautions.
             time_dict = analysis_dict[ao_pair]
 
             # Random Entry

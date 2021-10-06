@@ -52,6 +52,7 @@ def eval_total_capital_in_lto(lto_list):
     return in_trade_qc
 
 async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
+    # TODO: NEXT: All statistics needs to be changed a bit  to integrate market orders
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed = []
@@ -64,7 +65,7 @@ async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'], # TODO: NEXT: TYPE_LIMIT 
             "exitTime": hto['result']['exit']['time'],
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
@@ -85,7 +86,7 @@ async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
             "_id": hto['_id'],
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],
+            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: NEXT: TYPE_LIMIT 
             "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
         }
         hto_ent_exp_list.append(hto_dict)
@@ -108,7 +109,7 @@ async def get_exit_expire_hto(mongocli, query={'result.cause':STAT_EXIT_EXP}):
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
+            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],# TODO: NEXT: TYPE_LIMIT 
             "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
             "sellPrice": hto['result']['exit']['price'],
             "exitExpire": hto['exit'][plannedExitType]['expire']

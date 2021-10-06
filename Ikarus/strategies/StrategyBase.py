@@ -8,7 +8,7 @@ import statistics as st
 from ..objects import GenericObject
 import math
 from ..utils import time_scale_to_minute
-
+import more_itertools
 
 class StrategyBase(metaclass=abc.ABCMeta):
     # NOTE: fee can stay here until a better place is found
@@ -92,8 +92,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
             # TODO: Make this function non-awaitable
             if not await StrategyBase.is_lto_dead(lto_list[lto_idx]): 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
-                # TODO: NEXT: Fix and clean all hardcoded TYPE_LIMIT
-                in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
+                #in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
+                in_trade_capital += more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'] 
                 alive_lto_counter += 1
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict

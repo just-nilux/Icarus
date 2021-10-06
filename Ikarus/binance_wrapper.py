@@ -874,8 +874,9 @@ class TestBinanceWrapper():
 
                     # TEST: Update df_balance
                     # No need to check the enter type because lto do not contain TYPE_MARKET. It only contains TYPE_LIMIT
+                    df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount'] # It is assumed TYPE_LIMIT and ignored TYPE_OCO
                     df_balance.loc[self.quote_currency,'free'] += lto_list[i]['enter'][TYPE_LIMIT]['amount']
-                    df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
+                    
             
                 elif lto_list[i]['action'] == ACTN_UPDATE:
                     lto_list[i]['status'] = STAT_OPEN_EXIT
@@ -932,17 +933,41 @@ class TestBinanceWrapper():
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
 
-                    # TODO: NEXT: Add the final edits about the TYPE_MARKET. Normally this section is used to place 
-                    #       an order. In TYPE_MARKET case it is placed and filled directly
+                    # NOTE: TYPE_MARKET orders executed and closed right here
+                    if TYPE_MARKET in lto_list[i]['exit'].keys():
+                        # TODO: Consider a more elegant way of doing this
+                        min_scale = await get_min_scale(self.config['time_scales'].keys(), data_dict[lto_list[i]['pair']].keys())
+                        last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
+                        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
+
+                        lto_list[i]['status'] = STAT_CLOSED
+                        lto_list[i]['history'].append(lto_list[i]['status'])
+                        lto_list[i]['result']['cause'] = STAT_CLOSED
+
+                        lto_list[i]['result']['exit']['type'] = TYPE_MARKET
+                        # TODO: NEXT: CAREFULL about the close time of the market exit, it requires ikarus_time
+                        lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
+                        lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_MARKET]['price']
+                        lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                        lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
+
+                        lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                            - lto_list[i]['result']['enter']['amount'] \
+                            - lto_list[i]['result']['enter']['fee'] \
+                            - lto_list[i]['result']['exit']['fee']
+                        lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+
+                    # NOTE: For the TYPE_LIMIT and TYPE_OCO the orders are only placed, not executed yet
+                    else:
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
+                        lto_list[i]['history'].append(lto_list[i]['status'])
+
                     # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
                     base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
                     df_balance.loc[base_cur, 'free'] -= lto_list[i]['result']['enter']['quantity']
-                    df_balance.loc[base_cur, 'locked'] += lto_list[i]['result']['enter']['quantity']
+                    #df_balance.loc[base_cur, 'locked'] += lto_list[i]['result']['enter']['quantity']
                     # NOTE: Since the removed and added quantity is the same, no need to update total
-
-                    lto_list[i]['status'] = STAT_OPEN_EXIT
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    pass
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == ACTN_POSTPONE:
