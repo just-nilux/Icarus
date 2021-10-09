@@ -47,8 +47,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
     @staticmethod
     async def is_lto_dead(lto):
         conditions = [
-            lto.get('action','') in [ACTN_CANCEL, ACTN_MARKET_EXIT], # evaluate nad make decision if TRUE
-            lto.get('status','') == STAT_CLOSED # evaluate and make decision if TRUE
+            # lto.get('action','') in [ACTN_CANCEL, ACTN_MARKET_EXIT], # evaluate nad make decision if TRUE
+            lto.get('action','') == ACTN_CANCEL,                       # evaluate nad make decision if TRUE
+            lto.get('status','') == STAT_CLOSED                        # evaluate and make decision if TRUE
         ]
         if not any(conditions): # Skip evaluation if non of this is true (LTO will be alive until the next cycle)
             return False
@@ -113,8 +114,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # TODO: This can be updated to use some kind of precision from the symbol info instead of hardcoded 8
         pairwise_alloc_share = round(free_strategy_capital/empty_lto_slot, 8)
 
-        #if empty_lto_slot == 1:
-        #    print('HERE')
+        # TODO: NEXT: Implement this feature:
+        min(pairwise_alloc_share, df_balance.qc.free+strategy.ltos.dead)
 
         # Iterate over pairs and make decisions about them
         for ao_pair in self.config['pairs']:
