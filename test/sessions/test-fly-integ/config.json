@@ -18,17 +18,35 @@
     "broker": {
         "quote_currency": "USDT",
         "credit_currency": "TRY",
-        "fee": 0.001
+        "fee": 0
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.99
     },
     "strategy": {
-        "RandomStrategy": {
-            "pairs": ["BTCUSDT"],
+        "NewStrategy": {
+            "pairs": ["BTCUSDT","ETHUSDT"],
             "time_scales": ["15m"],
             "enter": {
-                "type": "market"
+                "type": "limit"
             },
             "exit": {
-                "type": "market"
+                "type": "limit"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "market_exit"
+            },
+            "max_lto": 3
+        },
+        "FallingKnifeCatcher": {
+            "pairs": ["ETHUSDT"],
+            "time_scales": ["15m"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "limit"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -38,7 +56,7 @@
         }
     },
     "analysis": {
-        "indicators": ["low","high", "trange"],
+        "indicators": ["low","high", "trange", "close"],
         "params": {
             "ma": [5,20]
         }
