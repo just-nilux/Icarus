@@ -1,9 +1,12 @@
+from copy import Error
 import pandas as pd
 import more_itertools
 from .enums import *
+from math import log
+from decimal import Decimal
 
 def calculate_fee(amount, fee, digit=8):
-    return round(amount*fee, digit)
+    return round(safe_multiply(amount,fee), digit)
 
 def time_scale_to_minute(interval: str):
     seconds_per_unit = {
@@ -16,6 +19,30 @@ def time_scale_to_minute(interval: str):
         return int(interval[:-1]) * seconds_per_unit[interval[-1]]
     except (ValueError, KeyError):
         return None
+
+def round_step_downward(quantity, step_size):
+    if step_size == 0: raise Exception('step_size cannot be 0!')
+    precision: int = int(round(-log(step_size, 10), 0))
+    return truncate(quantity,precision)
+
+def truncate(num,n):
+    temp = str(num)
+    for x in range(len(temp)):
+        if temp[x] == '.':
+            try:
+                return float(temp[:x+n+1])
+            except:
+                return float(temp)      
+    return float(temp)
+
+def safe_multiply(num1, num2):
+    return float( (Decimal(str(num1)) * Decimal(str(num2))).quantize(Decimal('0.00000001'), rounding=None) )
+
+def safe_sum(num1, num2):
+    return float( (Decimal(str(num1)) + Decimal(str(num2))).quantize(Decimal('0.00000001'), rounding=None) )
+
+def safe_substract(num1, num2):
+    return float( (Decimal(str(num1)) - Decimal(str(num2))).quantize(Decimal('0.00000001'), rounding=None) )
 
 def time_scale_to_second(interval: str):
     return time_scale_to_minute(interval) * 60
@@ -37,8 +64,8 @@ def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_rat
 
     in_trade_qc = eval_total_capital_in_lto(lto_list)
 
-    total_qc = free_qc + in_trade_qc
-    return total_qc*max_capital_use_ratio
+    total_qc = safe_sum(free_qc, in_trade_qc)
+    return safe_multiply(total_qc, max_capital_use_ratio)
 
 def eval_total_capital_in_lto(lto_list):
     in_trade_qc = 0
@@ -48,7 +75,7 @@ def eval_total_capital_in_lto(lto_list):
             # NOTE: It is assumed that each object may only have 1 TYPE of exit or enter:
             # TODO: NEXT: CAREFULL: The approach above make sense but the action logic may needs to be changed in case of market_exit:
             #       As a solution, when market exit decision is made. Simply save the old oco or limit, then remove it to make sure that there is only one
-            in_trade_qc += more_itertools.one(lto[PHASE_ENTER].values())['amount'] 
+            in_trade_qc = safe_sum(in_trade_qc, more_itertools.one(lto[PHASE_ENTER].values())['amount'])
     return in_trade_qc
 
 async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
