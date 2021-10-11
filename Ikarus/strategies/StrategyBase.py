@@ -7,7 +7,7 @@ import itertools
 import statistics as st
 from ..objects import GenericObject
 import math
-from ..utils import time_scale_to_minute
+from ..utils import safe_sum, time_scale_to_minute, round_step_downward, truncate, safe_multiply, safe_substract
 import more_itertools
 
 class StrategyBase(metaclass=abc.ABCMeta):
@@ -58,7 +58,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, lto_list, dt_index, total_qc):
+    async def run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
         """[summary]
 
         Args:
@@ -85,6 +85,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         pair_grouped_ltos = {}
         alive_lto_counter = 0
         in_trade_capital = 0
+        dead_lto_capital = 0
         for lto_idx in range(len(lto_list)):
             lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, lto_list[lto_idx], dt_index)
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
@@ -94,8 +95,15 @@ class StrategyBase(metaclass=abc.ABCMeta):
             if not await StrategyBase.is_lto_dead(lto_list[lto_idx]): 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
                 #in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
-                in_trade_capital += more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'] 
+                # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance
+                #       market_exit is not considered as dead lto
+                #       The result of the OCO orders is unknown
+                in_trade_capital = safe_sum(in_trade_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
                 alive_lto_counter += 1
+            
+            else:
+                # Dead capital
+                dead_lto_capital = safe_sum(dead_lto_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
         total_lto_slot = min(self.max_lto, len(self.config['pairs']))
@@ -105,18 +113,18 @@ class StrategyBase(metaclass=abc.ABCMeta):
             return [] # TODO Debug this ansync LTO issue buy doing debugging around here
 
         # Evaluate pairwise_alloc_share
-        strategy_capital = total_qc * self.strategywise_alloc_rate
+        strategy_capital = safe_multiply(total_qc, self.strategywise_alloc_rate)
         
         #for lto in lto_list:
         #    in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
-        free_strategy_capital = strategy_capital - in_trade_capital
+        free_strategy_capital = safe_substract(strategy_capital, in_trade_capital)
 
+        available_capital = min(free_strategy_capital, safe_sum(free_qc, dead_lto_capital))
         # TODO: This can be updated to use some kind of precision from the symbol info instead of hardcoded 8
-        pairwise_alloc_share = round(free_strategy_capital/empty_lto_slot, 8)
+        pairwise_alloc_share = truncate(available_capital/empty_lto_slot, 8)
 
-        # TODO: NEXT: Implement this feature:
-        min(pairwise_alloc_share, df_balance.qc.free+strategy.ltos.dead)
-
+        #available_lto_capital = min(pairwise_alloc_share, free_qc+dead_lto_capital)
+        
         # Iterate over pairs and make decisions about them
         for ao_pair in self.config['pairs']:
 
@@ -350,32 +358,35 @@ class StrategyBase(metaclass=abc.ABCMeta):
         #       round_step_size may round up: 1.1359267447385257 -> 1.13593
         if phase == 'enter':
             if type == TYPE_LIMIT:
-                module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
-                module['quantity'] = round_step_size(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
+                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
+                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
             
             elif type == TYPE_MARKET:
-                module['quantity'] = round_step_size(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
+                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
 
         elif phase == 'exit':
             if type == TYPE_OCO:
-                module['limitPrice'] = round_step_size(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
-                module['stopPrice'] = round_step_size(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['stopLimitPrice'] = round_step_size(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+                module['limitPrice'] = round_step_downward(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
+                module['stopPrice'] = round_step_downward(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
+                module['stopLimitPrice'] = round_step_downward(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
             
             elif type == TYPE_LIMIT:
-                module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
             
             elif type == TYPE_MARKET:
-                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))
                 # TODO: NEXT: Remove the exit_qty
 
         else: pass
+
+        module['amount'] = safe_multiply(module['quantity'], module['price'])
+        module['fee'] = safe_multiply(module['amount'], StrategyBase.fee)
 
         return module
 
 
     @staticmethod
     async def check_min_notional(price, quantity, symbol_info): 
-        return ((price*quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False
+        return (safe_multiply(price, quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False

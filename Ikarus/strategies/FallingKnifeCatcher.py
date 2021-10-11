@@ -14,8 +14,8 @@ class FallingKnifeCatcher(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, dt_index, total_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc)
+    async def run(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc)
 
 
     async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
@@ -36,7 +36,7 @@ class FallingKnifeCatcher(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict[self.min_period]['low'][-10:]) * 0.97
+                enter_price = min(time_dict[self.min_period]['low'][-10:]) * 0.99
                 exit_price = max(time_dict[self.min_period]['high'][-10:])
 
                 # Calculate enter/exit amount value

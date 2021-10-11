@@ -18,7 +18,7 @@
     "broker": {
         "quote_currency": "USDT",
         "credit_currency": "TRY",
-        "fee": 0
+        "fee": 0.001
     },
     "risk_management":{
         "max_capital_use_ratio": 0.99
