@@ -27,31 +27,6 @@ from decimal import Decimal, getcontext
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
-async def visualize_online(bwrapper, mongocli, config):
-
-    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    start_timestamp = int(datetime.timestamp(start_time))*1000
-    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
-    end_timestamp = int(datetime.timestamp(end_time))*1000
-
-    pair_scale_mapping = await get_pair_min_period_mapping(config)
-
-    df_list = []
-    for pair,scale in pair_scale_mapping.items(): 
-        df_list.append(bwrapper.get_historical_klines(start_timestamp, end_timestamp, pair, scale))
-
-    df_pair_list = list(await asyncio.gather(*df_list))
-
-    for idx, item in enumerate(pair_scale_mapping.items()):
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
-
-        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
-
-    pass
-
-
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
     Call in a loop to create terminal progress bar
@@ -272,17 +247,11 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                         - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                    # Update df_balance: # Update df_balance: write the amount of the exit
-                    # TODO: Gather up all the df_balance sections and put them in a function
-                    # TODO: Do everything that you have done for TYPE_LIMIT, to here as well
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
-                    df_balance.loc[config['broker']['quote_currency'],'free'] -= lto_list[i]['result']['exit']['fee']
-                    df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    pass
+                    base_cur = pair.replace(config['broker']['quote_currency'],'')
+                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
                 
                 elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
                     # Limit taken
-
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_CLOSED
@@ -300,12 +269,8 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                         - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                    # Update df_balance: # Update df_balance: write the amount of the exit
-                    # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
-                    df_balance.loc[config['broker']['quote_currency'],'free'] -= lto_list[i]['result']['exit']['fee']
-                    df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    pass
+                    base_cur = pair.replace(config['broker']['quote_currency'],'')
+                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -491,13 +456,6 @@ async def main():
 
     # Evaluate the statistics
     await stats.main()
-
-    # Get [hist-trades] docs to visualize the session
-    await visualize_online(bwrapper, mongocli, config)
-
-    pass
-    # Visualize the test session
-    #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
 
 
 if __name__ == '__main__':

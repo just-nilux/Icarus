@@ -381,7 +381,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         else: pass
 
-        module['amount'] = safe_multiply(module['quantity'], module['price'])
+        if type == TYPE_OCO:
+            # NOTE: Be careful about the limitPrice
+            module['amount'] = safe_multiply(module['quantity'], module['limitPrice'])
+        else:
+            module['amount'] = safe_multiply(module['quantity'], module['price'])
+        
         module['fee'] = safe_multiply(module['amount'], StrategyBase.fee)
 
         return module

@@ -16,8 +16,8 @@ class RandomStrategy(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, dt_index, total_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc)
+    async def run(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc)
 
 
     async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):

@@ -38,11 +38,8 @@ def buy(df_balance, quote_cur, base_cur, enter_module, enter_type):
 def sell(df_balance, quote_cur, base_cur, exit_module):
 
     # NOTE: Locked base_cur will be withdrew and deposited to free qc
-    #df_balance.loc[base_cur,'locked'] -= exit_module['quantity']
     df_balance.loc[base_cur,'locked'] = safe_substract(df_balance.loc[base_cur,'locked'], exit_module['quantity'])
-    #df_balance.loc[quote_cur,'free'] += exit_module['amount']
     df_balance.loc[quote_cur,'free'] = safe_sum(df_balance.loc[quote_cur,'free'],exit_module['amount'])
-    #df_balance.loc[quote_cur,'free'] -= exit_module['fee']
     df_balance.loc[quote_cur,'free'] = safe_substract(df_balance.loc[quote_cur,'free'], exit_module['fee'])
 
     df_balance['total'] = df_balance['free'] + df_balance['locked']
@@ -59,50 +56,37 @@ def place_enter_order(df_balance, quote_cur, enter_module):
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    #df_balance['total'] = safe_sum(df_balance['free'], df_balance['locked'])
     return df_balance
 
 
 def cancel_enter_order(df_balance, quote_cur, enter_module):
 
     # Move free amount to locked
-    
-    logger.info(str(df_balance))
-    logger.info('CANCELING:\n'+str(enter_module))
-    #df_balance.loc[quote_cur,'locked'] -= enter_module['amount'] # It is assumed TYPE_LIMIT and ignored TYPE_OCO
     df_balance.loc[quote_cur,'locked'] = safe_substract(df_balance.loc[quote_cur,'locked'], enter_module['amount'])
-    #df_balance.loc[quote_cur,'free'] += enter_module['amount']
     df_balance.loc[quote_cur,'free'] = safe_sum(df_balance.loc[quote_cur,'free'], enter_module['amount'])
+
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    logger.info(str(df_balance))
     return df_balance
 
 
 def cancel_exit_order(df_balance, base_cur, quantity):
 
     # Move free amount to locked
-    
-    logger.info(str(df_balance))
-    logger.info('CANCELING:\n'+str(quantity))
-    #df_balance.loc[quote_cur,'locked'] -= enter_module['amount'] # It is assumed TYPE_LIMIT and ignored TYPE_OCO
     df_balance.loc[base_cur,'locked'] = safe_substract(df_balance.loc[base_cur,'locked'], quantity)
-    #df_balance.loc[quote_cur,'free'] += enter_module['amount']
     df_balance.loc[base_cur,'free'] = safe_sum(df_balance.loc[base_cur,'free'], quantity)
+
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    logger.info(str(df_balance))
     return df_balance
 
 
 def place_exit_order(df_balance, base_cur, quantity):
 
     # Move free amount to locked
-    #df_balance.loc[base_cur, 'free'] -= quantity
     df_balance.loc[base_cur, 'free'] = safe_substract(df_balance.loc[base_cur, 'free'], quantity)
-    #df_balance.loc[base_cur, 'locked'] += quantity
     df_balance.loc[base_cur, 'locked'] = safe_sum(df_balance.loc[base_cur, 'locked'], quantity)
 
     # Sync with total
