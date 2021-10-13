@@ -960,26 +960,29 @@ class TestBinanceWrapper():
                         lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
                         lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_MARKET]['price']
                         lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
-                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'] # TODO: do safe oepration
                         lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
-
+                        # TODO NEXT: safe calcualtion for profit and fee
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
                             - lto_list[i]['result']['enter']['amount'] \
                             - lto_list[i]['result']['enter']['fee'] \
                             - lto_list[i]['result']['exit']['fee']
                         lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
+                        # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
+                        base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                        df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
+                        df_balance = balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+
                     # NOTE: For the TYPE_LIMIT and TYPE_OCO the orders are only placed, not executed yet
                     elif TYPE_LIMIT in lto_list[i]['exit'].keys() or TYPE_OCO in lto_list[i]['exit'].keys():
                         lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
+                        base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                        df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
+
                     else: pass # TODO: Internal Error
-                    # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
-                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    #df_balance.loc[base_cur, 'free'] -= lto_list[i]['result']['enter']['quantity']
-                    #df_balance.loc[base_cur, 'locked'] += lto_list[i]['result']['enter']['quantity']
-                    # NOTE: Since the removed and added quantity is the same, no need to update total
-                    df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
+
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == ACTN_POSTPONE:
@@ -1033,16 +1036,19 @@ class TestBinanceWrapper():
                     nto_list[i]['result'][PHASE_ENTER]['fee'] = calculate_fee(nto_list[i]['result'][PHASE_ENTER]['amount'], StrategyBase.fee)
                     # TODO: Instead of directly modifying the value, just create a wrapper that also checks if the withdraw or deposit is successfull
                     #       There might be some cases where the balance go below zero, (Which indicates some bgs in implementation of logic)
-                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['result'][PHASE_ENTER]['fee']
-                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['result'][PHASE_ENTER]['amount']
+                    #df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['result'][PHASE_ENTER]['fee']
+                    #df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['result'][PHASE_ENTER]['amount']
 
                     base_cur = nto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    if base_cur in list(df_balance.index):
-                        df_balance.loc[base_cur, 'free' ] += nto_list[i]['result'][PHASE_ENTER]['quantity']
-                    else:
-                        # Previously there was no base_currency, so we create a row for it: | free | locked | total |
-                        df_balance.loc[base_cur] = [nto_list[i]['result'][PHASE_ENTER]['quantity'], 0, 0]
-                        df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
+                    #if base_cur in list(df_balance.index):
+                    #    df_balance.loc[base_cur, 'free' ] += nto_list[i]['result'][PHASE_ENTER]['quantity']
+                    #else:
+                    #    # Previously there was no base_currency, so we create a row for it: | free | locked | total |
+                    #    df_balance.loc[base_cur] = [nto_list[i]['result'][PHASE_ENTER]['quantity'], 0, 0]
+                    #    df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
+                    
+                    df_balance = balance_manager.place_enter_order(df_balance, self.quote_currency, nto_list[i][PHASE_ENTER][TYPE_MARKET])
+                    df_balance = balance_manager.buy(df_balance, self.quote_currency, base_cur, nto_list[i]['result'][PHASE_ENTER], TYPE_MARKET)
 
                     pass
 
@@ -1053,7 +1059,6 @@ class TestBinanceWrapper():
                     # NOTE: The order is only PLACED but not FILLED. No fee here
                     nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
                     df_balance = balance_manager.place_enter_order(df_balance, self.quote_currency, nto_list[i]['enter'][TYPE_LIMIT])
-                    # TODO: NEXT: This is the point to detect problem
 
                 else: pass # TODO: Internal Error
 

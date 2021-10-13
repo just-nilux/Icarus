@@ -9,21 +9,14 @@ logger = logging.getLogger('app')
 
 def buy(df_balance, quote_cur, base_cur, enter_module, enter_type):
     # Cut the fee first
-    #df_balance.loc[quote_cur, 'free'] -= calculate_fee(enter_module['amount'], StrategyBase.fee)
     df_balance.loc[quote_cur, 'free'] = safe_substract(df_balance.loc[quote_cur, 'free'], calculate_fee(enter_module['amount'], StrategyBase.fee))
     # Remove the enter amount from quote currency
-    if enter_type == TYPE_MARKET:
-        pass
-    elif enter_type == TYPE_LIMIT:
-        # NOTE: Cut the amount from the 'locked' since the enter amount is located to there until execution
-        #df_balance.loc[quote_cur, 'locked'] -= enter_module['amount']
-        df_balance.loc[quote_cur, 'locked'] = safe_substract(df_balance.loc[quote_cur, 'locked'], enter_module['amount'])
-    else:
-        raise NotImplementedException('Unexpected Enter Type: ')
+
+    # NOTE: Cut the amount from the 'locked' since the enter amount is located to there until execution
+    df_balance.loc[quote_cur, 'locked'] = safe_substract(df_balance.loc[quote_cur, 'locked'], enter_module['amount'])
 
     # Add the enter quantity to the base currency
     if base_cur in list(df_balance.index):
-        #df_balance.loc[base_cur, 'free' ] += enter_module['quantity']
         df_balance.loc[base_cur, 'free' ] = safe_sum(df_balance.loc[base_cur, 'free' ], enter_module['quantity'])
     else:
         # Previously there was no base_currency, so we create a row for it

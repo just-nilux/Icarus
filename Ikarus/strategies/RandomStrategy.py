@@ -27,8 +27,8 @@ class RandomStrategy(StrategyBase):
 
             # Random Entry
             rand_number = random.random()
-            #if rand_number < 0.5:
-            if True:
+            if rand_number < 0.5:
+            #if True:
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
                 trade_obj['strategy'] = self.name
@@ -44,8 +44,8 @@ class RandomStrategy(StrategyBase):
                 enter_ref_amount=pairwise_alloc_share
 
                 # Fill enter module
-                #enter_type = self.config['enter']['type']
-                enter_type = TYPE_MARKET
+                # Expected to be TYPE_MARKET
+                enter_type = self.config['enter']['type']
                 trade_obj['enter'] = await StrategyBase._create_enter_module(
                     enter_type, 
                     enter_price, 
@@ -145,8 +145,7 @@ class RandomStrategy(StrategyBase):
 
             # NOTE: If TYPE_MARKET: then either decide to exit or do not edit the LTO:
             #       As a result, the status is left STAT_WAITING_EXIT
-            #if random_number < 0.5:
-            if True:
+            if random_number < 0.5:
                 # TODO: Add info log: market exit decided
                 lto['exit'] = await StrategyBase._create_exit_module(
                     TYPE_MARKET,

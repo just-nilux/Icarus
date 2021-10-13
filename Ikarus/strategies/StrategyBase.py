@@ -100,7 +100,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 #       The result of the OCO orders is unknown
                 in_trade_capital = safe_sum(in_trade_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
                 alive_lto_counter += 1
-            
+                # NOTE: TYPE_MARKET PHASE:_EXIT LTOs are considered as alive right here. Not sure if it is a good approach
             else:
                 # Dead capital
                 dead_lto_capital = safe_sum(dead_lto_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
@@ -354,8 +354,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         Returns:
             dict: enter or exit module
         """ 
-        # TODO: Do proper rounding to not to exceed target amount. Temporary fix is the max_capital_ratio values smaller than 1
-        #       round_step_size may round up: 1.1359267447385257 -> 1.13593
+
         if phase == 'enter':
             if type == TYPE_LIMIT:
                 module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
@@ -377,7 +376,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
             
             elif type == TYPE_MARKET:
                 module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))
-                # TODO: NEXT: Remove the exit_qty
 
         else: pass
 

@@ -164,7 +164,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['enter']['amount'] = lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity']
                     lto_list[i]['result']['enter']['fee'] = lto_list[i]['enter'][TYPE_LIMIT]['fee']
 
-                    # TODO: NEXT put result fee to line below instead of enter module
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     df_balance = balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['enter'], TYPE_LIMIT)
 
@@ -361,7 +360,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
             df_balance.loc[config['broker']['quote_currency'],'free'])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
-    nto_list = list(chain(*strategy_decisions))
+    nto_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
@@ -369,8 +368,6 @@ async def application(strategy_list, bwrapper, ikarus_time):
         df_balance, lto_list, nto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, df_balance, lto_list, data_dict))
         # TODO: NEXT: Check if nto_list updated properly
 
-    # TODO: BUG: NEXT: df_balance is not properly updated for the base_cur in many places
-    #       In fact when closing a trade, the locked quantity of the base_cur needs to be removed but it is not done anywhere
     #################### Phase 3: Perform post-calculation tasks ####################
 
     if len(nto_list):
