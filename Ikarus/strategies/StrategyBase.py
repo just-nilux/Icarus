@@ -237,7 +237,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def _config_market_exit(lto, type):
-        # TODO: Integrate fee to market order
+        # TODO: NEXT NEXT Integrate fee to market order
+        #       Continue here
         # TODO: Integrate price to market order, even if it has no use
         #       For now, it works and I am not gonna touch it for a rework
         lto['action'] = ACTN_MARKET_EXIT
