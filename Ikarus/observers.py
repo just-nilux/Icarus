@@ -4,8 +4,7 @@ Observers are the configurable read-only units. They simply collect data at the 
 import logging
 import pandas as pd
 from Ikarus.objects import GenericObject
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
-    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto
+from Ikarus.utils import eval_total_capital_in_lto
 
 class Observer():
 

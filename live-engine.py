@@ -6,8 +6,7 @@ import json
 from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
-    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto, calculate_fee
+from Ikarus.utils import time_scale_to_second, get_min_scale, eval_total_capital, eval_total_capital_in_lto, calculate_fee
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd

@@ -9,6 +9,7 @@ from ..objects import GenericObject
 import math
 from ..utils import safe_sum, time_scale_to_minute, round_step_downward, truncate, safe_multiply, safe_substract
 import more_itertools
+import copy
 
 class StrategyBase(metaclass=abc.ABCMeta):
     # NOTE: fee can stay here until a better place is found
@@ -171,11 +172,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 return await self.on_exit_postpone(lto, dt_index)
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                return await self.on_market_exit(lto)
+                # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that
+                return await StrategyBase.on_market_exit(self, lto, analysis_dict)
 
         elif lto['status'] == STAT_WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
-            # TODO: expire of the exit_module can be calculated after the trade entered
+            # NOTE: expire of the exit_module can be calculated after the trade entered
             return await self.on_waiting_exit(lto, analysis_dict)
 
         return lto
@@ -196,9 +198,33 @@ class StrategyBase(metaclass=abc.ABCMeta):
         pass
 
 
-    @abc.abstractclassmethod
-    async def on_market_exit(self):
-        pass
+    @staticmethod
+    async def on_market_exit(self, lto, analysis_dict):
+        #lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
+        
+        # NOTE: enter and exit modules represents the base idea before starting to a trade. Thus
+        lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']]))
+        
+        lto['exit'] = await StrategyBase._create_exit_module(
+            TYPE_MARKET,
+            0,
+            lto['result'][PHASE_ENTER]['quantity'],
+            analysis_dict[lto['pair']][self.min_period]['close'],
+            0)
+        
+        lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(
+            PHASE_EXIT, 
+            TYPE_MARKET, 
+            lto['exit'][TYPE_MARKET], 
+            self.symbol_info[lto['pair']], 
+            exit_qty=lto['result']['enter']['quantity'])
+        
+        lto['action'] = ACTN_MARKET_EXIT
+
+        self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
+
+        return lto
+
 
 
     @abc.abstractclassmethod

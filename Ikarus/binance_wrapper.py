@@ -924,21 +924,9 @@ class TestBinanceWrapper():
 
                     base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
                     
-                    # NOTE: Canceling previous order causes capital to be moved from locked to free
-                    # TODO: For the TestBinanceWrapper create functions that does the same thing in 
-                    #       BinanceWrapper such as cancel order create lto/limit order etc
                     df_balance = balance_manager.cancel_exit_order(df_balance, base_cur, lto_list[i]['result']['exit']['quantity'])
-
                     df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
                     df_balance = balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
-                    # Execute sell order
-                    #df_balance.loc[base_cur,'free'] -= lto_list[i]['result']['exit']['quantity']            # Remove the TO quantity from the base_cur
-                    #df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']   # Update df_balance: write the amount of the exit
-                    #df_balance.loc[self.quote_currency,'free'] -= lto_list[i]['result']['exit']['fee']      # Cut the fee
-                    # NOTE: Here is the only place that the fees applied in TestBinanceWrapper.
-
-                    #df_balance['total'] = df_balance['free'] + df_balance['locked']
-                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
                     pass
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:

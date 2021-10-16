@@ -123,12 +123,6 @@ class RandomStrategy(StrategyBase):
         return lto
 
 
-    async def on_market_exit(self, lto):
-        lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-        self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
-        return lto
-
-
     async def on_cancel(self, lto):
         lto['action'] = ACTN_CANCEL
         lto['result']['cause'] = STAT_ENTER_EXP

@@ -113,7 +113,7 @@ async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
             "_id": hto['_id'],
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: NEXT: TYPE_LIMIT 
+            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: NEXT: TYPE_LIMIT | TODO: use result enter price
             "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
         }
         hto_ent_exp_list.append(hto_dict)
@@ -122,24 +122,34 @@ async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
     return df
 
 
-async def get_exit_expire_hto(mongocli, query={'result.cause':STAT_EXIT_EXP}):
+async def get_exit_expire_hto(config, mongocli, query={'result.cause':STAT_EXIT_EXP}):
     # Read Database to get hist-trades and dump to a DataFrame
     
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed_list = []
     for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
+        #if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
+        #elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
+
+        enter_type = config['strategy'][hto['strategy']]['enter']['type']
+        exit_type = config['strategy'][hto['strategy']]['exit']['type']
+
+        if exit_type == TYPE_OCO: plannedPriceName = 'limitPrice'
+        elif exit_type == TYPE_LIMIT: plannedPriceName = 'price'
+
+        # Initial (ideal) exit module is saved to update_history list
+        initial_exit_module = hto['update_history'][0]
+        # TODO: Rename the update_history with some proper name
 
         hto_dict = {
             "_id": hto['_id'],
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],# TODO: NEXT: TYPE_LIMIT 
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
+            "enterPrice": hto['enter'][enter_type]['price'],            # Ideally enter limit orders are executed with the exact prices
+            "exitPrice": initial_exit_module[plannedPriceName],
             "sellPrice": hto['result']['exit']['price'],
-            "exitExpire": hto['exit'][plannedExitType]['expire']
+            "exitExpire": initial_exit_module['expire']
         }
         hto_closed_list.append(hto_dict)
     df = pd.DataFrame(hto_closed_list)
