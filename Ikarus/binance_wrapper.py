@@ -901,7 +901,6 @@ class TestBinanceWrapper():
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
 
-                    self.config['strategy'][lto_list[i]['strategy']]['time_scales']
                     min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto_list[i]['strategy']]['time_scales'])
                     last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
 
@@ -910,7 +909,7 @@ class TestBinanceWrapper():
                     #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
                     lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                     lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
@@ -927,7 +926,6 @@ class TestBinanceWrapper():
                     df_balance = balance_manager.cancel_exit_order(df_balance, base_cur, lto_list[i]['result']['exit']['quantity'])
                     df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
                     df_balance = balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
-                    pass
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
@@ -938,7 +936,6 @@ class TestBinanceWrapper():
                         # TODO: Consider a more elegant way of doing this
                         min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto_list[i]['strategy']]['time_scales'])
                         last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
-                        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
                         lto_list[i]['status'] = STAT_CLOSED
                         lto_list[i]['history'].append(lto_list[i]['status'])
@@ -946,8 +943,8 @@ class TestBinanceWrapper():
 
                         lto_list[i]['result']['exit']['type'] = TYPE_MARKET
                         # TODO: NEXT: CAREFULL about the close time of the market exit, it requires ikarus_time
-                        lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                        lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_MARKET]['price']
+                        lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
+                        lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                         lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                         lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'] # TODO: do safe oepration
                         lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
@@ -1013,14 +1010,11 @@ class TestBinanceWrapper():
                     # NOTE: The order is PLACED and FILLED
                     min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][nto_list[i]['strategy']]['time_scales'])
                     last_kline = data_dict[nto_list[i]['pair']][min_scale].tail(1)
-                    last_kline = data_dict[nto_list[i]['pair']][min_scale].tail(1)
 
                     nto_list[i]['enter'][TYPE_MARKET]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
                     nto_list[i]['result'][PHASE_ENTER]['type'] = TYPE_MARKET
-                    # TODO: NEXT: BUG: Notice that the decision_time and the enter_time is actually not 
-                    #       bson.Int64(last_kline.index.values) but the ikarus_time
                     nto_list[i]['result'][PHASE_ENTER]['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
-                    nto_list[i]['result'][PHASE_ENTER]['price'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['price']
+                    nto_list[i]['result'][PHASE_ENTER]['price'] = float(last_kline['close'])
                     nto_list[i]['result'][PHASE_ENTER]['quantity'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['quantity']
                     nto_list[i]['result'][PHASE_ENTER]['amount'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['amount']
                     nto_list[i]['result'][PHASE_ENTER]['fee'] = calculate_fee(nto_list[i]['result'][PHASE_ENTER]['amount'], StrategyBase.fee)

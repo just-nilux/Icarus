@@ -78,23 +78,29 @@ def eval_total_capital_in_lto(lto_list):
             in_trade_qc = safe_sum(in_trade_qc, more_itertools.one(lto[PHASE_ENTER].values())['amount'])
     return in_trade_qc
 
-async def get_closed_hto(mongocli, query={'result.cause':STAT_CLOSED}):
+async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
     # TODO: NEXT: All statistics needs to be changed a bit  to integrate market orders
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed = []
     for hto in hto_list:
-        if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
+
+        # Ideal enter and exit types
+        enter_type = config['strategy'][hto['strategy']]['enter']['type']
+        exit_type = config['strategy'][hto['strategy']]['exit']['type']
+        # NOTE: These ideal types only change in market_exit action which is handled in get_exit_expire_hto
+
+        if exit_type == TYPE_OCO: plannedPriceName = 'limitPrice'
+        elif exit_type == TYPE_LIMIT or exit_type == TYPE_MARKET: plannedPriceName = 'price'
 
         hto_dict = {
             "_id": hto['_id'],
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'], # TODO: NEXT: TYPE_LIMIT 
+            "enterPrice": hto['enter'][enter_type]['price'], # TODO: NEXT: TYPE_LIMIT 
             "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][plannedExitType][plannedPriceName],
+            "exitPrice": hto['exit'][exit_type][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
         }
         hto_closed.append(hto_dict)
@@ -128,8 +134,6 @@ async def get_exit_expire_hto(config, mongocli, query={'result.cause':STAT_EXIT_
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed_list = []
     for hto in hto_list:
-        #if TYPE_OCO in hto['exit'].keys():  plannedExitType = TYPE_OCO; plannedPriceName = 'limitPrice'
-        #elif TYPE_LIMIT in hto['exit'].keys(): plannedExitType = TYPE_LIMIT; plannedPriceName = 'price'
 
         enter_type = config['strategy'][hto['strategy']]['enter']['type']
         exit_type = config['strategy'][hto['strategy']]['exit']['type']

@@ -227,12 +227,11 @@ def _add_closed_tos(ax, df_closed):
             trade_color = '#60FF60'
             rect_lower_limit = row['enterPrice']
 
-        fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
-        fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+        rect_upper_limit = max(row['exitPrice'], row['enterPrice'])
+        fplt.add_rect((row['decision_time'], rect_upper_limit), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
+        fplt.add_text((row['decision_time'], rect_upper_limit), "%{:.2f}".format(profit_perc), color='#000000')
         fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-    x=0
-    pass
 
 
     # TODO: Visualiztion of updated order, exit target price and sel price become the same if it is updated
