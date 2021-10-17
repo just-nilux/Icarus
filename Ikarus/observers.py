@@ -29,16 +29,14 @@ class Observer():
 
 
     async def qc(self, ikarus_time, df_balance, lto_list):
+        # NOTE: As a principle all the observer item that will be  visualized should not have an extra level of indent
         observation_obj = {}
         observation_obj['type'] = 'qc'
         observation_obj['timestamp'] = ikarus_time
+        observation_obj['free'] = df_balance.loc[self.config['broker']['quote_currency'],'free']
+        observation_obj['in_trade'] = eval_total_capital_in_lto(lto_list)
+        observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
 
-        qc_dict = {}
-        qc_dict['free'] = df_balance.loc[self.config['broker']['quote_currency'],'free']
-        qc_dict['in_trade'] = eval_total_capital_in_lto(lto_list)
-        qc_dict['total'] = qc_dict['free'] + qc_dict['in_trade']
-
-        observation_obj['qc'] = qc_dict
         return observation_obj
 
 
@@ -53,4 +51,5 @@ class Observer():
         observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, self.config['risk_management']['max_capital_use_ratio']))
         observation_obj['real_free'] = free
         observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
+
         return observation_obj
