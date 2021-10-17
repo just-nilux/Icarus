@@ -228,7 +228,7 @@ def _add_closed_tos(ax, df_closed):
             rect_lower_limit = row['enterPrice']
 
         rect_upper_limit = max(row['exitPrice'], row['enterPrice'])
-        fplt.add_rect((row['decision_time'], rect_upper_limit), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=True)
+        fplt.add_rect((row['decision_time'], rect_upper_limit), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=False)
         fplt.add_text((row['decision_time'], rect_upper_limit), "%{:.2f}".format(profit_perc), color='#000000')
         fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
@@ -250,7 +250,6 @@ def _add_closed_tos(ax, df_closed):
     duplicate_filter = df_closed.index.duplicated(keep=False)
     plot_spec = {'color':'#00ff00','style':'^', 'ax':ax, 'legend':'Buy Point'}
     _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
-    # TODO: Fix the multiple buy point legend text
 
 
 def _scatter_wrapper(serie, duplicate_filter, plot_spec):
@@ -259,7 +258,7 @@ def _scatter_wrapper(serie, duplicate_filter, plot_spec):
 
     # Visualize Duplicates
     for row in serie[duplicate_filter].to_frame().iterrows():
-        fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'], legend=plot_spec['legend'])
+        fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'])
 
 
 def change_asset():
@@ -294,6 +293,9 @@ def change_asset():
         fplt.add_line((dashboard_data['qc']['total'].index[0], dashboard_data['qc']['total'].iloc[0]),
             (dashboard_data['qc']['total'].index[-1], dashboard_data['qc']['total'].iloc[0]), color='#000000', interactive=False)
         # NOTE: The reference line or QC visualization can be improved
+
+    elif symbol == 'qc_leak':
+        fplt.plot(dashboard_data['qc_leak']['binary'], width=3, ax=ax, legend='binary')
 
     # Plot Trades
     else:
@@ -392,7 +394,6 @@ def create_ctrl_panel(win, pairs):
 
     panel.symbol = QComboBox(panel)
     [panel.symbol.addItem(pair) for pair in pairs]
-    panel.symbol.addItem('qc')
     panel.symbol.setCurrentIndex(1)
     layout.addWidget(panel.symbol, 0, 0)
     panel.symbol.currentTextChanged.connect(change_asset)

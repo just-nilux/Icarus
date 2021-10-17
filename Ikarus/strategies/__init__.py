@@ -3,4 +3,5 @@ from . import StrategyBase,\
     AlwaysEnter,\
     FallingKnifeCatcher,\
     NewStrategy,\
-    RandomStrategy
+    RandomStrategy, \
+    RandomStrategy2

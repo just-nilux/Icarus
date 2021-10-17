@@ -80,6 +80,15 @@ async def visualize_dashboard(bwrapper, mongocli, config):
         dashboard_data_pack[item[0]]['df_closed'] = df_closed
 
     # Get trade objects
+    # TODO: Create proper architecture to easly visualize observers and make them configurable
+    #for obs_type in config['visualization']['observers']:
+    #    obs_objs = list(await mongocli.do_find('observer',{'type':obs_type}))
+    #    df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
+
+
+    qc_leak = list(await mongocli.do_find('observer',{'type':'qc_leak'}))
+    dashboard_data_pack['qc_leak'] = pd.DataFrame([item['binary'] for item in qc_leak], index=[item['timestamp'] for item in qc_leak], columns=['binary'])
+
     qc_list = list(await mongocli.do_find('observer',{'type':'qc'}))
     df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
     dashboard_data_pack['qc'] = df
