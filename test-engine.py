@@ -1,3 +1,4 @@
+from Ikarus.strategies.StrategyBase import StrategyBase
 import asyncio
 from binance import Client, AsyncClient
 from datetime import datetime
@@ -6,7 +7,7 @@ from Ikarus import binance_wrapper, performance, strategy_manager, notifications
 from Ikarus.enums import *
 from Ikarus.exceptions import NotImplementedException
 from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
-    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto
+    get_min_scale, get_pair_min_period_mapping, eval_total_capital, eval_total_capital_in_lto, calculate_fee
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -18,37 +19,13 @@ import operator
 import itertools
 from scripts import finplot_wrapper as fplot
 from Ikarus.resource_allocator import ResourceAllocator 
-
+from Ikarus import balance_manager
+from decimal import Decimal, getcontext
 #from scripts.visualize_test_session import visualize_online
 
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
-
-async def visualize_online(bwrapper, mongocli, config):
-
-    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    start_timestamp = int(datetime.timestamp(start_time))*1000
-    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
-    end_timestamp = int(datetime.timestamp(end_time))*1000
-
-    pair_scale_mapping = await get_pair_min_period_mapping(config)
-
-    df_list = []
-    for pair,scale in pair_scale_mapping.items(): 
-        df_list.append(bwrapper.get_historical_klines(start_timestamp, end_timestamp, pair, scale))
-
-    df_pair_list = list(await asyncio.gather(*df_list))
-
-    for idx, item in enumerate(pair_scale_mapping.items()):
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
-
-        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
-
-    pass
-
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
@@ -159,7 +136,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
     Returns:
         dict: lto_dict
     """
-
     # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
 
     for i in range(len(lto_list)):
@@ -184,20 +160,12 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
                     lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
                     lto_list[i]['result']['enter']['price'] = lto_list[i]['enter'][TYPE_LIMIT]['price']
-                    lto_list[i]['result']['enter']['amount'] = lto_list[i]['enter'][TYPE_LIMIT]['amount']
                     lto_list[i]['result']['enter']['quantity'] = lto_list[i]['enter'][TYPE_LIMIT]['quantity']
+                    lto_list[i]['result']['enter']['amount'] = lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity']
+                    lto_list[i]['result']['enter']['fee'] = lto_list[i]['enter'][TYPE_LIMIT]['fee']
 
-                    # Remove the bought amount from the 'locked' and 'ref_balance' columns
-                    df_balance.loc[config['broker']['quote_currency'], 'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
-                    # Update df_balance: add the quantity to the base_cur or create a row for base_cur
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    if pair in list(df_balance.index):
-                        df_balance.loc[base_cur, 'locked' ] += lto_list[i]['result']['enter']['quantity']
-                    else:
-                        # Previously there was no base_currency, so we create a row for it
-                        # free locked total
-                        df_balance.loc[base_cur] = [lto_list[i]['result']['enter']['quantity'], 0, 0]
-                        df_balance.loc[base_cur, 'total'] = df_balance.loc[base_cur,'free'] + df_balance.loc[base_cur,'locked']
+                    df_balance = balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['enter'], TYPE_LIMIT)
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -214,7 +182,16 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 
         elif lto_list[i]['status'] == STAT_OPEN_EXIT:
 
-            if TYPE_LIMIT in lto_list[i]['exit'].keys():
+            if TYPE_MARKET in lto_list[i]['exit'].keys():
+                # TODO: NEXT: Direct the flow from here to strategies to be updated
+                #       An alternative might be like setting the status as STAT_WAITING_EXIT
+                #       and skipping this evaluation, which makes sense
+                #       Because TYPE_MARKET exit orders requires to eb checked in each cycle if the condiditon is met
+                lto_list[i]['status'] = STAT_WAITING_EXIT
+                lto_list[i]['history'].append(lto_list[i]['status'])
+                pass
+
+            elif TYPE_LIMIT in lto_list[i]['exit'].keys():
 
                 # Check if the open sell trade is filled or stoploss is taken
                 if float(last_kline['high']) > lto_list[i]['exit'][TYPE_LIMIT]['price']:
@@ -228,15 +205,18 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_LIMIT]['price']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_LIMIT]['quantity'] 
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
                     # NOTE: Exit quantity and the enter quantity is assumed to be the same
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
+                    
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                    # Update df_balance: # Update df_balance: write the amount of the exit
-                    # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
-                    df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
+                    base_cur = pair.replace(config['broker']['quote_currency'],'')
+                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -258,19 +238,19 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                    # Update df_balance: # Update df_balance: write the amount of the exit
-                    # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
-                    df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    pass
+                    base_cur = pair.replace(config['broker']['quote_currency'],'')
+                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
                 
                 elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
                     # Limit taken
-
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_CLOSED
@@ -280,15 +260,16 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['limitPrice']
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
+                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                        - lto_list[i]['result']['enter']['amount'] \
+                        - lto_list[i]['result']['enter']['fee'] \
+                        - lto_list[i]['result']['exit']['fee']
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
-                    # Update df_balance: # Update df_balance: write the amount of the exit
-                    # TODO: Gather up all the df_balance sections and put them in a function
-                    df_balance.loc[config['broker']['quote_currency'],'free'] += lto_list[i]['result']['exit']['amount']
-                    df_balance.loc[config['broker']['quote_currency'],'total'] = df_balance.loc[config['broker']['quote_currency'],'free'] + df_balance.loc[config['broker']['quote_currency'],'locked']
-                    pass
+                    base_cur = pair.replace(config['broker']['quote_currency'],'')
+                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -309,7 +290,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
             # TODO: Internal Error
             pass
 
-    return lto_list
+    return lto_list, df_balance
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
@@ -350,7 +331,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    lto_list = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
+    lto_list, df_balance = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await analyzer.sample_analyzer(data_dict)
@@ -360,7 +341,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 2.2: Algorithm is the only authority to make decision
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     logger.debug('Phase 2')
-    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'])
+    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
     total_qc_in_lto = eval_total_capital_in_lto(lto_list)
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
@@ -371,17 +352,21 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     strategy_tasks = []
     for active_strategy in active_strategies:
-        strategy_tasks.append(asyncio.create_task(active_strategy.run(analysis_dict, grouped_ltos.get(active_strategy.name, []), ikarus_time, total_qc)))
+        strategy_tasks.append(asyncio.create_task(active_strategy.run(
+            analysis_dict, 
+            grouped_ltos.get(active_strategy.name, []), 
+            ikarus_time, 
+            total_qc, 
+            df_balance.loc[config['broker']['quote_currency'],'free'])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
-    nto_list = list(chain(*strategy_decisions))
+    nto_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
 
     # 2.3: Execute LTOs and NTOs if any
     if len(nto_list) or len(lto_list):
         # 2.3.1: Execute the TOs
-        exec_status, df_balance, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, df_balance, lto_list, data_dict))
-        # TODO: Handle exec_status to do sth in case of failure (like sending notification)
-
+        df_balance, lto_list, nto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, df_balance, lto_list, data_dict))
+        # TODO: NEXT: Check if nto_list updated properly
 
     #################### Phase 3: Perform post-calculation tasks ####################
 
@@ -395,8 +380,9 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 3.3: Get the onserver
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
-        observer.qc_observer(df_balance, lto_list+nto_list, config['broker']['quote_currency'], ikarus_time),
-        observer.sample_observer(df_balance, ikarus_time)
+        observer.qc(ikarus_time, df_balance, lto_list+nto_list),
+        observer.qc_leak(ikarus_time, df_balance, lto_list+nto_list),
+        observer.balance(ikarus_time, df_balance)
     ]
     observer_objs = list(await asyncio.gather(*observer_list))
     await mongocli.do_insert_many("observer", observer_objs)
@@ -469,13 +455,6 @@ async def main():
     # Evaluate the statistics
     await stats.main()
 
-    # Get [hist-trades] docs to visualize the session
-    await visualize_online(bwrapper, mongocli, config)
-
-    pass
-    # Visualize the test session
-    #fplot.buy_sell(df=df, df_closed=df_closed_hto, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire)
-
 
 if __name__ == '__main__':
     
@@ -496,7 +475,7 @@ if __name__ == '__main__':
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 
-    observer = observers.Observer()
+    observer = observers.Observer(config)
     analyzer = analyzers.Analyzer(config)
 
     logger.info("---------------------------------------------------------")

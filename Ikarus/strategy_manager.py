@@ -9,19 +9,17 @@ class StrategyManager():
 
         self.logger = logging.getLogger('app.{}'.format(__name__))
 
-        self.strategies = {
-            "AlwaysEnter": strategies.AlwaysEnter.AlwaysEnter,
-            "AlwaysEnter90": strategies.AlwaysEnter90.AlwaysEnter90,
-            "FallingKnifeCatcher": strategies.FallingKnifeCatcher.FallingKnifeCatcher,
-            "NewStrategy": strategies.NewStrategy.NewStrategy,
-        }
-
         self.strategy_list = []
         self.strategy_names = []
         for strategy_name in _config['strategy'].keys():
-            strategy_class = self.strategies[strategy_name]
-            self.strategy_list.append(strategy_class(_config, _symbol_info))
-            self.strategy_names.append(strategy_name)
+            
+            if hasattr(strategies,strategy_name):
+                strategy_class = getattr(getattr(strategies, strategy_name),strategy_name)
+                self.strategy_list.append(strategy_class(_config, _symbol_info))
+                self.strategy_names.append(strategy_name)
+            else:
+                raise Exception(f'Unknown strategy: {strategy_name}!')
+
         self.mongo_cli = _mongo_cli
         pass
 

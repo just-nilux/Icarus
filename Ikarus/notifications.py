@@ -21,7 +21,6 @@ class TelegramBot():
         # Start the Bot
         #self.updater.start_polling()
         #self.updater.idle()
-        # TODO: Apply alingment to messages
         # TODO: NEXT: Instead of writing 'format', and giving list of values, just give the lto/hto itself and handle the data in function
         #       Buy doing so you dont need to change much thing if any update is needed
         self.templates = {

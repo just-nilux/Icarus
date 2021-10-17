@@ -43,8 +43,8 @@ async def visualize_online(bwrapper, mongocli, config):
 
     for idx, item in enumerate(pair_scale_mapping.items()):
         df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(config, mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
 
         fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
 
@@ -70,8 +70,8 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     for idx, item in enumerate(pair_scale_mapping.items()):
         # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
         df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(config, mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
 
         #fplot.buy_sell_dashboard(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
@@ -80,6 +80,15 @@ async def visualize_dashboard(bwrapper, mongocli, config):
         dashboard_data_pack[item[0]]['df_closed'] = df_closed
 
     # Get trade objects
+    # TODO: Create proper architecture to easly visualize observers and make them configurable
+    #for obs_type in config['visualization']['observers']:
+    #    obs_objs = list(await mongocli.do_find('observer',{'type':obs_type}))
+    #    df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
+
+
+    qc_leak = list(await mongocli.do_find('observer',{'type':'qc_leak'}))
+    dashboard_data_pack['qc_leak'] = pd.DataFrame([item['binary'] for item in qc_leak], index=[item['timestamp'] for item in qc_leak], columns=['binary'])
+
     qc_list = list(await mongocli.do_find('observer',{'type':'qc'}))
     df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
     dashboard_data_pack['qc'] = df

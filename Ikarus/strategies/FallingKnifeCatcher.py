@@ -14,8 +14,8 @@ class FallingKnifeCatcher(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, dt_index, total_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc)
+    async def run(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc)
 
 
     async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
@@ -36,7 +36,7 @@ class FallingKnifeCatcher(StrategyBase):
                 # TODO: give proper values to limit
 
                 # Calculate enter/exit prices
-                enter_price = min(time_dict[self.min_period]['low'][-10:]) * 0.97
+                enter_price = min(time_dict[self.min_period]['low'][-10:]) * 0.99
                 exit_price = max(time_dict[self.min_period]['high'][-10:])
 
                 # Calculate enter/exit amount value
@@ -118,19 +118,13 @@ class FallingKnifeCatcher(StrategyBase):
         return lto
 
 
-    async def on_market_exit(self, lto):
-        lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-        self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
-        return lto
-
-
     async def on_cancel(self, lto):
         lto['action'] = ACTN_CANCEL
         lto['result']['cause'] = STAT_ENTER_EXP
         return lto
 
 
-    async def on_waiting_exit(self, lto):
+    async def on_waiting_exit(self, lto, analysis_dict):
         lto['action'] = ACTN_EXEC_EXIT
         lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
                                                                                             self.config['exit']['type'], 

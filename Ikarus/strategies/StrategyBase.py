@@ -7,8 +7,9 @@ import itertools
 import statistics as st
 from ..objects import GenericObject
 import math
-from ..utils import time_scale_to_minute
-
+from ..utils import safe_sum, time_scale_to_minute, round_step_downward, truncate, safe_multiply, safe_substract
+import more_itertools
+import copy
 
 class StrategyBase(metaclass=abc.ABCMeta):
     # NOTE: fee can stay here until a better place is found
@@ -34,8 +35,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
         # Since it facilitates so much new strategy creation and modular implementation
-        
-        # TODO: NEXT: Apply the self.alloc_perc to evaluation phase
 
         # NOTE: strategywise_alloc_rate determines the available rate of use from the main capital
         #       If self.strategywise_alloc_rate is 0.25 then this strategy can use max %25 of the main capital
@@ -49,8 +48,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
     @staticmethod
     async def is_lto_dead(lto):
         conditions = [
-            lto.get('action','') in [ACTN_CANCEL, ACTN_MARKET_EXIT], # evaluate nad make decision if TRUE
-            lto.get('status','') == STAT_CLOSED # evaluate and make decision if TRUE
+            # lto.get('action','') in [ACTN_CANCEL, ACTN_MARKET_EXIT], # evaluate nad make decision if TRUE
+            lto.get('action','') == ACTN_CANCEL,                       # evaluate nad make decision if TRUE
+            lto.get('status','') == STAT_CLOSED                        # evaluate and make decision if TRUE
         ]
         if not any(conditions): # Skip evaluation if non of this is true (LTO will be alive until the next cycle)
             return False
@@ -59,7 +59,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, lto_list, dt_index, total_qc):
+    async def run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
         """[summary]
 
         Args:
@@ -86,15 +86,25 @@ class StrategyBase(metaclass=abc.ABCMeta):
         pair_grouped_ltos = {}
         alive_lto_counter = 0
         in_trade_capital = 0
+        dead_lto_capital = 0
         for lto_idx in range(len(lto_list)):
-            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, lto_list[lto_idx], dt_index)
+            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, lto_list[lto_idx], dt_index)
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
+            # TODO: Make this function non-awaitable
             if not await StrategyBase.is_lto_dead(lto_list[lto_idx]): 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
-                in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
+                #in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
+                # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance
+                #       market_exit is not considered as dead lto
+                #       The result of the OCO orders is unknown
+                in_trade_capital = safe_sum(in_trade_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
                 alive_lto_counter += 1
+                # NOTE: TYPE_MARKET PHASE:_EXIT LTOs are considered as alive right here. Not sure if it is a good approach
+            else:
+                # Dead capital
+                dead_lto_capital = safe_sum(dead_lto_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
         total_lto_slot = min(self.max_lto, len(self.config['pairs']))
@@ -104,18 +114,18 @@ class StrategyBase(metaclass=abc.ABCMeta):
             return [] # TODO Debug this ansync LTO issue buy doing debugging around here
 
         # Evaluate pairwise_alloc_share
-        strategy_capital = total_qc * self.strategywise_alloc_rate
+        strategy_capital = safe_multiply(total_qc, self.strategywise_alloc_rate)
         
         #for lto in lto_list:
         #    in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
-        free_strategy_capital = strategy_capital - in_trade_capital
+        free_strategy_capital = safe_substract(strategy_capital, in_trade_capital)
 
+        available_capital = min(free_strategy_capital, safe_sum(free_qc, dead_lto_capital))
         # TODO: This can be updated to use some kind of precision from the symbol info instead of hardcoded 8
-        pairwise_alloc_share = round(free_strategy_capital/empty_lto_slot, 8)
+        pairwise_alloc_share = truncate(available_capital/empty_lto_slot, 8)
 
-        #if empty_lto_slot == 1:
-        #    print('HERE')
-
+        #available_lto_capital = min(pairwise_alloc_share, free_qc+dead_lto_capital)
+        
         # Iterate over pairs and make decisions about them
         for ao_pair in self.config['pairs']:
 
@@ -138,7 +148,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def handle_lto_logic(self, lto, dt_index):
+    async def handle_lto_logic(self, analysis_dict, lto, dt_index):
 
         """
         This function decides what to do for the LTOs based on their 'status'
@@ -162,12 +172,13 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 return await self.on_exit_postpone(lto, dt_index)
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
-                return await self.on_market_exit(lto)
+                # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that
+                return await StrategyBase.on_market_exit(self, lto, analysis_dict)
 
         elif lto['status'] == STAT_WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
-            # TODO: expire of the exit_module can be calculated after the trade entered
-            return await self.on_waiting_exit(lto)
+            # NOTE: expire of the exit_module can be calculated after the trade entered
+            return await self.on_waiting_exit(lto, analysis_dict)
 
         return lto
 
@@ -187,9 +198,33 @@ class StrategyBase(metaclass=abc.ABCMeta):
         pass
 
 
-    @abc.abstractclassmethod
-    async def on_market_exit(self):
-        pass
+    @staticmethod
+    async def on_market_exit(self, lto, analysis_dict):
+        #lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
+        
+        # NOTE: enter and exit modules represents the base idea before starting to a trade. Thus
+        lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']]))
+        
+        lto['exit'] = await StrategyBase._create_exit_module(
+            TYPE_MARKET,
+            0,
+            lto['result'][PHASE_ENTER]['quantity'],
+            analysis_dict[lto['pair']][self.min_period]['close'],
+            0)
+        
+        lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(
+            PHASE_EXIT, 
+            TYPE_MARKET, 
+            lto['exit'][TYPE_MARKET], 
+            self.symbol_info[lto['pair']], 
+            exit_qty=lto['result']['enter']['quantity'])
+        
+        lto['action'] = ACTN_MARKET_EXIT
+
+        self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
+
+        return lto
+
 
 
     @abc.abstractclassmethod
@@ -228,7 +263,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def _config_market_exit(lto, type):
-        # TODO: Integrate fee to market order
+        # TODO: NEXT NEXT Integrate fee to market order
+        #       Continue here
+        # TODO: Integrate price to market order, even if it has no use
+        #       For now, it works and I am not gonna touch it for a rework
         lto['action'] = ACTN_MARKET_EXIT
         lto['exit'][TYPE_MARKET] = {
             'amount': lto['exit'][type]['amount'],
@@ -253,7 +291,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         if type == TYPE_LIMIT:
             enter_module = {
-                "limit": {
+                TYPE_LIMIT: {
                     "price": float(enter_price),
                     "quantity": float(enter_quantity),
                     "fee": float(enter_price * enter_quantity * StrategyBase.fee),
@@ -266,15 +304,19 @@ class StrategyBase(metaclass=abc.ABCMeta):
             # TODO: For market buy it, the quantity is needed, but the price is volatile and unknown.
             #       It is impossible to know the fee exactly. Some guess might be added, or simply
             #       the quantity might be guessed roughly to not to exceed the max allowed capital
-            # TODO: Integrate fee to market order
-
             enter_module = {
-                "market": {
+                TYPE_MARKET: {
+                    "price": float(enter_price),
                     "quantity": float(enter_quantity),
+                    "fee": float(enter_price * enter_quantity * StrategyBase.fee),
+                    "amount": float(enter_quantity * enter_price),
                     "orderId": ""
                     },
                 }
         else: pass # Internal Error
+
+        # NOTE: Actually no difference in the objects, in terms of value and te stucture
+        #       Only the difference is, one is full of certain values, the other is about expectations
         return enter_module
 
 
@@ -286,7 +328,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # TODO: receive stopPrice and stopLimitPrice directly as argument
         if type == TYPE_OCO:
             exit_module = {
-                "oco": {
+                TYPE_OCO: {
                     "limitPrice": float(exit_price),
                     "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
                     "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
@@ -300,7 +342,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             }
         elif type == TYPE_LIMIT:
             exit_module = {
-                "limit": {
+                TYPE_LIMIT: {
                     "price": float(exit_price),
                     "quantity": float(enter_quantity),
                     "fee": float(enter_quantity * exit_price * StrategyBase.fee),
@@ -310,7 +352,17 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     },
                 }
         elif type == TYPE_MARKET:
-            # TODO: Integrate fee to market order
+            # NOTE: Even if there is no exact price to calcualte fee, some rough valuyes can be given
+            #       It would also be helpful if this last closed price method works as expected.
+            exit_module = {
+                TYPE_MARKET: {
+                    "price": float(exit_price),
+                    "quantity": float(enter_quantity),
+                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
+                    "amount": float(exit_price * enter_quantity),
+                    "orderId": ""
+                    },
+                }
             pass
         else: pass # Internal Error
         return exit_module
@@ -318,6 +370,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def apply_exchange_filters(phase, type, module, symbol_info, exit_qty=0):
+        # TODO: NEXT: Get rid of this exit_qty bullshit
         """
         - Call this method prior to any order placement
         - Apply the filter of exchange pair
@@ -328,27 +381,42 @@ class StrategyBase(metaclass=abc.ABCMeta):
         Returns:
             dict: enter or exit module
         """ 
-        # TODO: Do proper rounding to not to exceed target amount. Temporary fix is the max_capital_ratio values smaller than 1
+
         if phase == 'enter':
-            module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))                            # Fixing PRICE_FILTER: tickSize
-            module['quantity'] = round_step_size(module['amount'] /module['price'], float(symbol_info['filters'][2]['minQty']))         # Fixing LOT_SIZE: minQty
+            if type == TYPE_LIMIT:
+                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
+                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
+            
+            elif type == TYPE_MARKET:
+                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
 
         elif phase == 'exit':
             if type == TYPE_OCO:
-                module['limitPrice'] = round_step_size(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
-                module['stopPrice'] = round_step_size(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['stopLimitPrice'] = round_step_size(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+                module['limitPrice'] = round_step_downward(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
+                module['stopPrice'] = round_step_downward(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
+                module['stopLimitPrice'] = round_step_downward(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
             
             elif type == TYPE_LIMIT:
-                module['price'] = round_step_size(module['price'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_size(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+            
+            elif type == TYPE_MARKET:
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))
 
         else: pass
+
+        if type == TYPE_OCO:
+            # NOTE: Be careful about the limitPrice
+            module['amount'] = safe_multiply(module['quantity'], module['limitPrice'])
+        else:
+            module['amount'] = safe_multiply(module['quantity'], module['price'])
+        
+        module['fee'] = safe_multiply(module['amount'], StrategyBase.fee)
 
         return module
 
 
     @staticmethod
     async def check_min_notional(price, quantity, symbol_info): 
-        return ((price*quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False
+        return (safe_multiply(price, quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False

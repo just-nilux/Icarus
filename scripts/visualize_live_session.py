@@ -37,13 +37,13 @@ async def visualize_online(bwrapper, mongocli, config):
             'decision_time': { '$gte': start_timestamp}, 
             'enter.limit.expire': { '$lte': end_timestamp}
             })
-        df_exit_expire = await get_exit_expire_hto(mongocli, {
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {
             'result.cause':STAT_EXIT_EXP, 
             'pair':pair, 
             'decision_time': { '$gte': start_timestamp}, 
             'result.exit.time': { '$lte': end_timestamp}
             })
-        df_closed = await get_closed_hto(mongocli, {
+        df_closed = await get_closed_hto(config, mongocli, {
             'result.cause':STAT_CLOSED, 
             'pair':pair, 
             'decision_time': { '$gte': start_timestamp}, 
@@ -73,8 +73,8 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     for idx, item in enumerate(pair_scale_mapping.items()):
         # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
         df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(config, mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire

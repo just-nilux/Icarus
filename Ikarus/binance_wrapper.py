@@ -13,8 +13,8 @@ import bson
 import time
 from itertools import chain, groupby
 import datetime
-from .utils import time_scale_to_second, get_min_scale, calculate_fee
-
+from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond
+from . import balance_manager
 
 class BinanceWrapper():
 
@@ -872,10 +872,8 @@ class TestBinanceWrapper():
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
-                    # TEST: Update df_balance
                     # No need to check the enter type because lto do not contain TYPE_MARKET. It only contains TYPE_LIMIT
-                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['enter'][TYPE_LIMIT]['amount']
-                    df_balance.loc[self.quote_currency,'locked'] -= lto_list[i]['enter'][TYPE_LIMIT]['amount']
+                    df_balance = balance_manager.cancel_enter_order(df_balance, self.quote_currency, lto_list[i]['enter'][TYPE_LIMIT])
             
                 elif lto_list[i]['action'] == ACTN_UPDATE:
                     lto_list[i]['status'] = STAT_OPEN_EXIT
@@ -890,6 +888,8 @@ class TestBinanceWrapper():
 
                     # Place the order
                     # NOTE: No need to do anything for backtest
+                    # TODO: NEXT: Cancel the previous order and place the new order
+                    #       Do not change the exit order amount price etc because here the df_balance is not updated accordingly
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
@@ -901,7 +901,7 @@ class TestBinanceWrapper():
                     lto_list[i]['history'].append(lto_list[i]['status'])
                     lto_list[i]['result']['cause'] = STAT_EXIT_EXP
 
-                    min_scale = await get_min_scale(self.config['time_scales'].keys(), data_dict[lto_list[i]['pair']].keys())
+                    min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto_list[i]['strategy']]['time_scales'])
                     last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
 
                     # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
@@ -909,7 +909,7 @@ class TestBinanceWrapper():
                     #             by assumming that the 'close' price is pretty close to the 'open' of the future
 
                     lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values)
+                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                     lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                     lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
@@ -921,26 +921,54 @@ class TestBinanceWrapper():
                         - lto_list[i]['result']['enter']['fee'] \
                         - lto_list[i]['result']['exit']['fee']
 
-                    df_balance.loc[self.quote_currency,'free'] += lto_list[i]['result']['exit']['amount']   # Update df_balance: write the amount of the exit
-                    df_balance.loc[self.quote_currency,'free'] -= lto_list[i]['result']['exit']['fee']      # Count on the Fee
-                    # NOTE: Here is the only place that the fees applied in TestBinanceWrapper.
-
-                    df_balance.loc[self.quote_currency,'total'] = df_balance.loc[self.quote_currency,'free'] + df_balance.loc[self.quote_currency,'locked']
-                    # TODO: Add enter and exit times to result section and remove from enter and exit items. Evalutate liveTime based on that
-                    pass
+                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                    
+                    df_balance = balance_manager.cancel_exit_order(df_balance, base_cur, lto_list[i]['result']['exit']['quantity'])
+                    df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
+                    df_balance = balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
             
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
 
-                    # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
-                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    df_balance.loc[base_cur, 'free'] -= lto_list[i]['result']['enter']['quantity']
-                    df_balance.loc[base_cur, 'locked'] += lto_list[i]['result']['enter']['quantity']
-                    # NOTE: Since the removed and added quantity is the same, no need to update total
+                    # NOTE: TYPE_MARKET orders executed and closed right here
+                    # TODO: NEXT: Check here why do we need TYPE_MARKET section here???
+                    if TYPE_MARKET in lto_list[i]['exit'].keys():
+                        # TODO: Consider a more elegant way of doing this
+                        min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto_list[i]['strategy']]['time_scales'])
+                        last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
 
-                    lto_list[i]['status'] = STAT_OPEN_EXIT
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    pass
+                        lto_list[i]['status'] = STAT_CLOSED
+                        lto_list[i]['history'].append(lto_list[i]['status'])
+                        lto_list[i]['result']['cause'] = STAT_CLOSED
+
+                        lto_list[i]['result']['exit']['type'] = TYPE_MARKET
+                        # TODO: NEXT: CAREFULL about the close time of the market exit, it requires ikarus_time
+                        lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
+                        lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
+                        lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'] # TODO: do safe oepration
+                        lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
+                        # TODO NEXT: safe calcualtion for profit and fee
+                        lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
+                            - lto_list[i]['result']['enter']['amount'] \
+                            - lto_list[i]['result']['enter']['fee'] \
+                            - lto_list[i]['result']['exit']['fee']
+                        lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+
+                        # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
+                        base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                        df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
+                        df_balance = balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+
+                    # NOTE: For the TYPE_LIMIT and TYPE_OCO the orders are only placed, not executed yet
+                    elif TYPE_LIMIT in lto_list[i]['exit'].keys() or TYPE_OCO in lto_list[i]['exit'].keys():
+                        lto_list[i]['status'] = STAT_OPEN_EXIT
+                        lto_list[i]['history'].append(lto_list[i]['status'])
+                        base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                        df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
+
+                    else: pass # TODO: Internal Error
+
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == ACTN_POSTPONE:
@@ -960,7 +988,7 @@ class TestBinanceWrapper():
         return lto_list, df_balance
 
 
-    async def _execute_nto(self, nto_list, df_balance):
+    async def _execute_nto(self, nto_list, df_balance, data_dict):
         """
         Args:
             nto_list (list): [description]
@@ -973,18 +1001,40 @@ class TestBinanceWrapper():
             # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
             if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
+                # TODO: Consider using the direct enter and exit types rather than checking the keys with a order
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
-                    # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
+
+                    nto_list[i]['status'] = STAT_OPEN_EXIT
+                    nto_list[i]['history'].append(nto_list[i]['status'])
+
+                    # NOTE: The order is PLACED and FILLED
+                    min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][nto_list[i]['strategy']]['time_scales'])
+                    last_kline = data_dict[nto_list[i]['pair']][min_scale].tail(1)
+
+                    nto_list[i]['enter'][TYPE_MARKET]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
+                    nto_list[i]['result'][PHASE_ENTER]['type'] = TYPE_MARKET
+                    nto_list[i]['result'][PHASE_ENTER]['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
+                    nto_list[i]['result'][PHASE_ENTER]['price'] = float(last_kline['close'])
+                    nto_list[i]['result'][PHASE_ENTER]['quantity'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['quantity']
+                    nto_list[i]['result'][PHASE_ENTER]['amount'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['amount']
+                    nto_list[i]['result'][PHASE_ENTER]['fee'] = calculate_fee(nto_list[i]['result'][PHASE_ENTER]['amount'], StrategyBase.fee)
+                    # TODO: Instead of directly modifying the value, just create a wrapper that also checks if the withdraw or deposit is successfull
+                    #       There might be some cases where the balance go below zero, (Which indicates some bgs in implementation of logic)
+
+                    base_cur = nto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                    
+                    df_balance = balance_manager.place_enter_order(df_balance, self.quote_currency, nto_list[i][PHASE_ENTER][TYPE_MARKET])
+                    df_balance = balance_manager.buy(df_balance, self.quote_currency, base_cur, nto_list[i]['result'][PHASE_ENTER], TYPE_MARKET)
+
                     pass
 
                 elif TYPE_LIMIT in nto_list[i]['enter'].keys():
                     # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
                     #       timestamp values
 
-                    # NOTE: No fee here, since the order is not filled yet
+                    # NOTE: The order is only PLACED but not FILLED. No fee here
                     nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
-                    df_balance.loc[self.quote_currency,'free'] -= nto_list[i]['enter'][TYPE_LIMIT]['amount']
-                    df_balance.loc[self.quote_currency,'locked'] += nto_list[i]['enter'][TYPE_LIMIT]['amount']
+                    df_balance = balance_manager.place_enter_order(df_balance, self.quote_currency, nto_list[i]['enter'][TYPE_LIMIT])
 
                 else: pass # TODO: Internal Error
 
@@ -992,7 +1042,7 @@ class TestBinanceWrapper():
         return nto_list, df_balance
 
 
-    async def execute_decision(self, trade_dict, df_balance, lto_list, data_dict):
+    async def execute_decision(self, nto_list, df_balance, lto_list, data_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -1015,16 +1065,15 @@ class TestBinanceWrapper():
         Returns:
             tuple: result, df_balances
         """
-        result = True
 
         # Execute decsisions about ltos
         lto_list, df_balance = await self._execute_lto(lto_list, df_balance, data_dict)
 
         # Execute new trade objects
-        trade_dict, df_balance = await self._execute_nto(trade_dict, df_balance)      
+        nto_list, df_balance = await self._execute_nto(nto_list, df_balance, data_dict)
             
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
 
-        return result, df_balance, lto_list
+        return df_balance, lto_list, nto_list

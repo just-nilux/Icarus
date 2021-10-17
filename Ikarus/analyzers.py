@@ -67,7 +67,8 @@ class Analyzer():
     async def _ind_high(self): return list(self.current_time_df['high'])
     async def _ind_llow(self): return self.current_time_df['low'].min()
     async def _ind_hhigh(self): return self.current_time_df['high'].max()
-
+    async def _ind_close(self): return float(self.current_time_df['close'].tail(1))
+    # TODO: Find a way to standardize the low/high/close
 
     # Overlap Studies
     async def _ind_bband(self):
