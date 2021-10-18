@@ -71,6 +71,7 @@
         "observers":{
             "qc":["free", "total", "in_trade"],
             "qc_leak":["binary"]
-        }
+        },
+        "indicators": ["ma"]
     }
 }

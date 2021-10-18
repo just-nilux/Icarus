@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import QComboBox, QCheckBox, QWidget
 from pyqtgraph import QtGui
 import pyqtgraph as pg
 from copy import deepcopy
-
+import observer_plot
 dashboard_data = {}
 ax, axo, ctrl_panel = '', '', ''
 #kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
@@ -285,20 +285,13 @@ def change_asset():
     # TODO: Fix the QGraphicsScene::removeItem: error
     #       It is caused by the rectangles in green and red
 
-    # Plot QC
-    if symbol == 'qc':
-        fplt.plot(dashboard_data['qc']['total'], width=3, ax=ax, legend='Total')
-        fplt.plot(dashboard_data['qc']['free'], width=2, ax=ax, legend='Free')
-        fplt.plot(dashboard_data['qc']['in_trade'], width=2, ax=ax, legend='In Trade')
-        fplt.add_line((dashboard_data['qc']['total'].index[0], dashboard_data['qc']['total'].iloc[0]),
-            (dashboard_data['qc']['total'].index[-1], dashboard_data['qc']['total'].iloc[0]), color='#000000', interactive=False)
-        # NOTE: The reference line or QC visualization can be improved
+    # Plot Observers
+    if hasattr(observer_plot, symbol):
+        handler = getattr(observer_plot, symbol)
+        handler(dashboard_data, ax)
 
-    elif symbol == 'qc_leak':
-        fplt.plot(dashboard_data['qc_leak']['binary'], width=3, ax=ax, legend='binary')
-
-    # Plot Trades
-    else:
+    # TODO: Find a better way to do it. Create types such as observer vis, to vis, indicator vis etc
+    if 'df' in dashboard_data[symbol].keys():
         fplt.candlestick_ochl(dashboard_data[symbol]['df']['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
         fplt.volume_ocv(dashboard_data[symbol]['df']['open close volume'.split()], ax=axo)
         ax.set_visible(xaxis=True)
