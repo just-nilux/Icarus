@@ -55,6 +55,37 @@ class Analyzer():
         return analysis_dict
 
 
+    async def visual_analysis(self, data_dict):
+        analysis_dict=dict()
+        for pair,data_obj in data_dict.items():
+            analysis_obj = dict()
+
+            for time_scale, time_df in data_obj.items():
+                self.current_time_df = copy.deepcopy(time_df)
+
+                # Generate coroutines
+                indicator_coroutines = []
+                header = '_ind_'
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['indicators']))
+                for ind in indicator_method_names:
+                    if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
+                    else: raise RuntimeError(f'Unknown indicator: "{ind}"')
+
+                analysis_output = list(await asyncio.gather(*indicator_coroutines))
+
+                # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
+                # NOTE: pd.Series needs to be casted to list
+                stats = dict()
+                for key, value in zip(self.config['visualization']['indicators'], analysis_output):
+                    stats[key] = value
+                # Assign "stats" to each "time_scale"
+                analysis_obj[time_scale] = stats
+
+            analysis_dict[pair] = analysis_obj
+
+        return analysis_dict
+
+
     async def dump(self, js_obj):
         js_file = open("run-time-objs/analysis.json", "w")
         json.dump(js_obj, js_file, indent=4, cls=ObjectEncoder)

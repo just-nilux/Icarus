@@ -782,7 +782,9 @@ class TestBinanceWrapper():
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         self.downloaded_data = await self.decompose(meta_data_pool, composit_klines)
         self.logger.debug('download ended')
-        return True
+
+        # The returned dict supposed to be used by the visulize_indicators.py
+        return self.downloaded_data
 
 
     async def get_data_dict_download(self, meta_data_pool, ikarus_time):
