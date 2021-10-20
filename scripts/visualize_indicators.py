@@ -31,37 +31,11 @@ import sys
 import asyncio
 from binance import AsyncClient
 from Ikarus import binance_wrapper
-from datetime import datetime
+import datetime
 import finplot_wrapper as fplot
 from itertools import chain, groupby
 import itertools
 from Ikarus.analyzers import Analyzer
-
-def do_load_price_history(symbol, interval):
-    url = 'https://www.binance.com/fapi/v1/klines?symbol=%s&interval=%s&limit=%s' % (symbol, interval, 1000)
-    print('loading binance future %s %s' % (symbol, interval))
-    d = requests.get(url).json()
-    df = pd.DataFrame(d, columns='Time Open High Low Close Volume a b c d e f'.split())
-    df = df.astype({'Time':'datetime64[ms]', 'Open':float, 'High':float, 'Low':float, 'Close':float, 'Volume':float})
-    return df.set_index('Time')
-
-
-@lru_cache(maxsize=5)
-def cache_load_price_history(symbol, interval):
-    '''Stupid caching, but works sometimes.'''
-    return do_load_price_history(symbol, interval)
-
-
-def load_price_history(symbol, interval):
-    '''Use memoized, and if too old simply load the data.'''
-    df = cache_load_price_history(symbol, interval)
-    # check if cache's newest candle is current
-    t0 = df.index[-2].timestamp()
-    t1 = df.index[-1].timestamp()
-    t2 = t1 + (t1 - t0)
-    if now() >= t2:
-        df = do_load_price_history(symbol, interval)
-    return df
 
 
 def calc_parabolic_sar(df, af=0.2, steps=10):
@@ -154,48 +128,46 @@ def calc_plot_data(df, indicators):
     return plot_data, price_data
 
 
-def realtime_update_plot():
-    '''Called at regular intervals by a timer.'''
-    if ws.df is None:
-        return
-
-    # calculate the new plot data
-    indicators = ctrl_panel.indicators.currentText().lower()
-    data,price_data = calc_plot_data(ws.df, indicators)
-
-    # first update all data, then graphics (for zoom rigidity)
-    for k in data:
-        if data[k] is not None:
-            plots[k].update_data(data[k], gfx=False)
-    for k in data:
-        if data[k] is not None:
-            plots[k].update_gfx()
-
-    # place and color price line
-    ax.price_line.setPos(price_data['last_close'])
-    ax.price_line.pen.setColor(pg.mkColor(price_data['last_col']))
-
 
 def change_asset(*args, **kwargs):
     '''Resets and recalculates everything, and plots for the first time.'''
     # save window zoom position before resetting
-    fplt._savewindata(fplt.windows[0])
+    #fplt._savewindata(fplt.windows[0])
 
     symbol = ctrl_panel.symbol.currentText()
     interval = ctrl_panel.interval.currentText()
-    ws.df = None
-    df = load_price_history(symbol, interval=interval)
-    ws.reconnect(symbol, interval, df)
+    #ws.df = None
+    #df = load_price_history(symbol, interval=interval)
+    #ws.reconnect(symbol, interval, df)
 
     # remove any previous plots
     ax.reset()
     axo.reset()
-    ax_rsi.reset()
+    #ax_rsi.reset()
 
     # calculate plot data
-    indicators = ctrl_panel.indicators.currentText().lower()
-    data,price_data = calc_plot_data(df, indicators)
+    indicator = ctrl_panel.indicators.currentText().lower()
 
+    fplt.candlestick_ochl(data_dict[symbol][interval]['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
+    fplt.volume_ocv(data_dict[symbol][interval]['open close volume'.split()], ax=axo)
+    if indicator != 'clean':
+        if indicator in config['analysis']['params'].keys():
+            #ctrl_panel.ind_param.clear()
+            #list(map(str, config['analysis']['params'][indicator]))
+            #ctrl_panel.ind_param.addItems(['5','20'])
+            # TODO: NEXT: Continue from here
+            ctrl_panel.ind_param.setCurrentIndex(0)
+            ctrl_panel.ind_param.setVisible(True)
+            param = ctrl_panel.ind_param.currentText()
+            fplt.plot(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator][param])
+
+        else:
+            ctrl_panel.ind_param.setVisible(False)
+            fplt.plot(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator])
+    ax.set_visible(xaxis=True)
+    '''
+    data,price_data = calc_plot_data(df, indicators)
+    
     # some space for legend
     ctrl_panel.move(100 if 'clean' in indicators else 200, 0)
 
@@ -226,7 +198,7 @@ def change_asset(*args, **kwargs):
     ax.price_line.setPos(price_data['last_close'])
     ax.price_line.pen.setColor(pg.mkColor(price_data['last_col']))
     ax.addItem(ax.price_line, ignoreBounds=True)
-
+    '''
     # restores saved zoom position, if in range
     fplt.refresh()
 
@@ -299,50 +271,61 @@ def dark_mode_toggle(dark):
                 item.repaint()
 
 
-def create_ctrl_panel(win):
+def create_ctrl_panel(win, pairs, time_scales, indicators):
     panel = QWidget(win)
     panel.move(100, 0)
     win.scene().addWidget(panel)
     layout = QtGui.QGridLayout(panel)
 
     panel.symbol = QComboBox(panel)
-    [panel.symbol.addItem(i+'USDT') for i in 'BTC ETH XRP DOGE BNB SOL ADA LTC LINK DOT TRX BCH'.split()]
-    panel.symbol.setCurrentIndex(1)
+    [panel.symbol.addItem(pair) for pair in pairs]
+    panel.symbol.setCurrentIndex(0)
     layout.addWidget(panel.symbol, 0, 0)
     panel.symbol.currentTextChanged.connect(change_asset)
 
     layout.setColumnMinimumWidth(1, 30)
 
     panel.interval = QComboBox(panel)
-    [panel.interval.addItem(i) for i in '1d 4h 1h 30m 15m 5m 1m'.split()]
-    panel.interval.setCurrentIndex(6)
+    [panel.interval.addItem(scale) for scale in time_scales]
+    panel.interval.setCurrentIndex(0)
     layout.addWidget(panel.interval, 0, 2)
     panel.interval.currentTextChanged.connect(change_asset)
 
     layout.setColumnMinimumWidth(3, 30)
 
     panel.indicators = QComboBox(panel)
-    [panel.indicators.addItem(i) for i in 'Clean:Few indicators:Moar indicators'.split(':')]
-    panel.indicators.setCurrentIndex(1)
+    panel.indicators.addItem('clean')
+    [panel.indicators.addItem(ind) for ind in indicators]
+    panel.indicators.setCurrentIndex(0)
     layout.addWidget(panel.indicators, 0, 4)
     panel.indicators.currentTextChanged.connect(change_asset)
 
     layout.setColumnMinimumWidth(5, 30)
 
+    panel.ind_param = QComboBox(panel)
+    #[panel.ind_param.addItem(ind) for ind in indicators]
+    #panel.ind_param.setCurrentIndex(0)
+    layout.addWidget(panel.ind_param, 0, 6)
+    panel.ind_param.currentTextChanged.connect(change_asset)
+    #panel.ind_param.setEnabled(False)
+    panel.ind_param.setVisible(False)
+    layout.setColumnMinimumWidth(7, 30)
+
     panel.darkmode = QCheckBox(panel)
     panel.darkmode.setText('Haxxor mode')
     panel.darkmode.setCheckState(2)
     panel.darkmode.toggled.connect(dark_mode_toggle)
-    layout.addWidget(panel.darkmode, 0, 6)
+    layout.addWidget(panel.darkmode, 0, 8)
 
     return panel
 
 
-def analysis_dashboard(dashboard_data_pack, title='Buy/Sell Plot'):
+def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Sell Plot'):
 
     # TODO: NEXT: Continue from here to visualization config
-    global ctrl_panel, ax, axo, dashboard_data
-    dashboard_data = dashboard_data_pack
+    global ctrl_panel, ax, axo, pair_data, pair_analysis
+    pair_data = data_dict
+    pair_analysis = analysis_dict
 
     print("buy sell dahsboard")
     
@@ -356,7 +339,7 @@ def analysis_dashboard(dashboard_data_pack, title='Buy/Sell Plot'):
     axo = ax.overlay()
     ax.set_visible(xaxis=True)
 
-    ctrl_panel = create_ctrl_panel(ax.vb.win,list(dashboard_data.keys()))
+    ctrl_panel = create_ctrl_panel(ax.vb.win, pair_pool, time_scale_pool, indicator_pool)
     dark_mode_toggle(False)
     change_asset()
 
@@ -365,23 +348,29 @@ def analysis_dashboard(dashboard_data_pack, title='Buy/Sell Plot'):
 
 async def visualize_dashboard(bwrapper, config):
 
-    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    start_timestamp = int(datetime.timestamp(start_time))*1000
-    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
-    end_timestamp = int(datetime.timestamp(end_time))*1000
+    start_time = datetime.datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+    start_timestamp = int(datetime.datetime.timestamp(start_time))*1000
+    end_time = datetime.datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+    end_timestamp = int(datetime.datetime.timestamp(end_time))*1000
 
     # Create pools for pair-scales
-    meta_data_pool = []
+    time_scale_pool = []
+    pair_pool = []
     for strategy in config['strategy'].values():
-        meta_do = list(itertools.product(strategy['time_scales'], strategy['pairs']))
-        meta_data_pool.append(meta_do)
-    meta_data_pool = set(chain(*meta_data_pool))
+        time_scale_pool.append(strategy['time_scales'])
+        pair_pool.append(strategy['pairs'])
 
+    time_scale_pool = list(set(chain(*time_scale_pool)))
+    pair_pool = list(set(chain(*pair_pool)))
+
+    meta_data_pool = list(itertools.product(time_scale_pool, pair_pool))
+
+    global data_dict, analysis_dict
     data_dict = await bwrapper.download_all_data(meta_data_pool, start_timestamp, end_timestamp)
     analyzer = Analyzer(config)
     analysis_dict = await analyzer.visual_analysis(data_dict)
 
-    fplot.analysis_dashboard(data_dict, analysis_dict, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
+    analysis_dashboard(pair_pool, time_scale_pool, config['visualization']['indicators'], title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
 
 
 async def main():
