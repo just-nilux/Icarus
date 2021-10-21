@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import logging
+from finplot import close
 import talib as ta
 import json
 from Ikarus.objects import ObjectEncoder, GenericObject
@@ -155,7 +156,7 @@ class Analyzer():
     async def _ind_rocp(self): raise NotImplementedException('indicator')
     async def _ind_rocr(self): raise NotImplementedException('indicator')
     async def _ind_rocr100(self): raise NotImplementedException('indicator')
-    async def _ind_rsi(self): raise NotImplementedException('indicator')
+    async def _ind_rsi(self): return list(ta.RSI(self.current_time_df['close'], timeperiod=14))
     async def _ind_stoch(self): raise NotImplementedException('indicator')
     async def _ind_stochhf(self): raise NotImplementedException('indicator')
     async def _ind_stochrsi(self): raise NotImplementedException('indicator')
@@ -172,7 +173,7 @@ class Analyzer():
 
     # Volatility indicators
     async def _ind_atr(self): raise NotImplementedException('indicator')
-    async def _ind_natr(self): raise NotImplementedException('indicator')
+    async def _ind_natr(self): return list(ta.NATR( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
     async def _ind_trange(self): return list(ta.TRANGE( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
 
 

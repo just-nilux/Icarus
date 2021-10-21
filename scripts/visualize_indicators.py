@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-'''A lengthy example that shows some more complex uses of finplot:
-    - control panel in PyQt
-    - varying indicators, intervals and layout
-    - toggle dark mode
-    - price line
-    - real-time updates via websocket
-
-   This example includes dipping in to the internals of finplot and
-   the underlying lib pyqtgraph, which is not part of the API per se,
-   and may thus change in the future. If so happens, this example
-   will be updated to reflect such changes.
-
-   Included is also some third-party libraries to make the example
-   more realistic.
-   '''
-
 
 import finplot as fplt
 from functools import lru_cache
@@ -36,176 +19,39 @@ import finplot_wrapper as fplot
 from itertools import chain, groupby
 import itertools
 from Ikarus.analyzers import Analyzer
-
-
-def calc_parabolic_sar(df, af=0.2, steps=10):
-    up = True
-    sars = [nan] * len(df)
-    sar = ep_lo = df.Low.iloc[0]
-    ep = ep_hi = df.High.iloc[0]
-    aaf = af
-    aaf_step = aaf / steps
-    af = 0
-    for i,(hi,lo) in enumerate(zip(df.High, df.Low)):
-        # parabolic sar formula:
-        sar = sar + af * (ep - sar)
-        # handle new extreme points
-        if hi > ep_hi:
-            ep_hi = hi
-            if up:
-                ep = ep_hi
-                af = min(aaf, af+aaf_step)
-        elif lo < ep_lo:
-            ep_lo = lo
-            if not up:
-                ep = ep_lo
-                af = min(aaf, af+aaf_step)
-        # handle switch
-        if up:
-            if lo < sar:
-                up = not up
-                sar = ep_hi
-                ep = ep_lo = lo
-                af = 0
-        else:
-            if hi > sar:
-                up = not up
-                sar = ep_lo
-                ep = ep_hi = hi
-                af = 0
-        sars[i] = sar
-    df['sar'] = sars
-    return df['sar']
-
-
-def calc_rsi(price, n=14, ax=None):
-    diff = price.diff().values
-    gains = diff
-    losses = -diff
-    gains[~(gains>0)] = 0.0
-    losses[~(losses>0)] = 1e-10 # we don't want divide by zero/NaN
-    m = (n-1) / n
-    ni = 1 / n
-    g = gains[n] = gains[:n].mean()
-    l = losses[n] = losses[:n].mean()
-    gains[:n] = losses[:n] = nan
-    for i,v in enumerate(gains[n:],n):
-        g = gains[i] = ni*v + m*g
-    for i,v in enumerate(losses[n:],n):
-        l = losses[i] = ni*v + m*l
-    rs = gains / losses
-    rsi = 100 - (100/(1+rs))
-    return rsi
-
-
-def calc_stochastic_oscillator(df, n=14, m=3, smooth=3):
-    lo = df.Low.rolling(n).min()
-    hi = df.High.rolling(n).max()
-    k = 100 * (df.Close-lo) / (hi-lo)
-    d = k.rolling(m).mean()
-    return k, d
-
-
-def calc_plot_data(df, indicators):
-    '''Returns data for all plots and for the price line.'''
-    price = df['Open Close High Low'.split()]
-    volume = df['Open Close Volume'.split()]
-    ma50 = ma200 = vema24 = sar = rsi = stoch = stoch_s = None
-    if 'few' in indicators or 'moar' in indicators:
-        ma50  = price.Close.rolling(50).mean()
-        ma200 = price.Close.rolling(200).mean()
-        vema24 = volume.Volume.ewm(span=24).mean()
-    if 'moar' in indicators:
-        sar = calc_parabolic_sar(df)
-        rsi = calc_rsi(df.Close)
-        stoch,stoch_s = calc_stochastic_oscillator(df)
-    plot_data = dict(price=price, volume=volume, ma50=ma50, ma200=ma200, vema24=vema24, sar=sar, rsi=rsi, \
-                     stoch=stoch, stoch_s=stoch_s)
-    # for price line
-    last_close = price.iloc[-1].Close
-    last_col = fplt.candle_bull_color if last_close > price.iloc[-2].Close else fplt.candle_bear_color
-    price_data = dict(last_close=last_close, last_col=last_col)
-    return plot_data, price_data
-
+import indicator_plot
 
 
 def change_asset(*args, **kwargs):
     '''Resets and recalculates everything, and plots for the first time.'''
     # save window zoom position before resetting
-    #fplt._savewindata(fplt.windows[0])
+    fplt._savewindata(fplt.windows[0])
 
     symbol = ctrl_panel.symbol.currentText()
     interval = ctrl_panel.interval.currentText()
-    #ws.df = None
-    #df = load_price_history(symbol, interval=interval)
-    #ws.reconnect(symbol, interval, df)
+    indicator = ctrl_panel.indicators.currentText().lower()
 
     # remove any previous plots
     ax.reset()
     axo.reset()
-    #ax_rsi.reset()
-
-    # calculate plot data
-    indicator = ctrl_panel.indicators.currentText().lower()
+    ax_rsi.reset()
 
     fplt.candlestick_ochl(data_dict[symbol][interval]['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
     fplt.volume_ocv(data_dict[symbol][interval]['open close volume'.split()], ax=axo)
+
+    # Visualize indicators
     if indicator != 'clean':
-        if indicator in config['analysis']['params'].keys():
-            #ctrl_panel.ind_param.clear()
-            #list(map(str, config['analysis']['params'][indicator]))
-            #ctrl_panel.ind_param.addItems(['5','20'])
-            # TODO: NEXT: Continue from here
-            ctrl_panel.ind_param.setCurrentIndex(0)
-            ctrl_panel.ind_param.setVisible(True)
-            param = ctrl_panel.ind_param.currentText()
-            fplt.plot(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator][param])
+        if hasattr(indicator_plot, indicator):
+            handler = getattr(indicator_plot, indicator)
+            handler(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator], ax, axo, ax_rsi)
 
-        else:
-            ctrl_panel.ind_param.setVisible(False)
-            fplt.plot(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator])
     ax.set_visible(xaxis=True)
-    '''
-    data,price_data = calc_plot_data(df, indicators)
-    
-    # some space for legend
-    ctrl_panel.move(100 if 'clean' in indicators else 200, 0)
-
-    # plot data
-    global plots
-    plots = {}
-    plots['price'] = fplt.candlestick_ochl(data['price'], ax=ax)
-    plots['volume'] = fplt.volume_ocv(data['volume'], ax=axo)
-    if data['ma50'] is not None:
-        plots['ma50'] = fplt.plot(data['ma50'], legend='MA-50', ax=ax)
-        plots['ma200'] = fplt.plot(data['ma200'], legend='MA-200', ax=ax)
-        plots['vema24'] = fplt.plot(data['vema24'], color=4, legend='V-EMA-24', ax=axo)
-    if data['rsi'] is not None:
-        ax.set_visible(xaxis=False)
-        ax_rsi.show()
-        fplt.set_y_range(0, 100, ax=ax_rsi)
-        fplt.add_band(30, 70, color='#6335', ax=ax_rsi)
-        plots['sar'] = fplt.plot(data['sar'], color='#55a', style='+', width=0.6, legend='SAR', ax=ax)
-        plots['rsi'] = fplt.plot(data['rsi'], legend='RSI', ax=ax_rsi)
-        plots['stoch'] = fplt.plot(data['stoch'], color='#880', legend='Stoch', ax=ax_rsi)
-        plots['stoch_s'] = fplt.plot(data['stoch_s'], color='#650', ax=ax_rsi)
-    else:
-        ax.set_visible(xaxis=True)
-        ax_rsi.hide()
-
-    # price line
-    ax.price_line = pg.InfiniteLine(angle=0, movable=False, pen=fplt._makepen(fplt.candle_bull_body_color, style='.'))
-    ax.price_line.setPos(price_data['last_close'])
-    ax.price_line.pen.setColor(pg.mkColor(price_data['last_col']))
-    ax.addItem(ax.price_line, ignoreBounds=True)
-    '''
     # restores saved zoom position, if in range
     fplt.refresh()
 
 
 def dark_mode_toggle(dark):
-    '''Digs into the internals of finplot and pyqtgraph to change the colors of existing
-       plots, axes, backgronds, etc.'''
+
     # first set the colors we'll be using
     if dark:
         fplt.foreground = '#777'
@@ -273,7 +119,7 @@ def dark_mode_toggle(dark):
 
 def create_ctrl_panel(win, pairs, time_scales, indicators):
     panel = QWidget(win)
-    panel.move(100, 0)
+    panel.move(150, 0)
     win.scene().addWidget(panel)
     layout = QtGui.QGridLayout(panel)
 
@@ -302,28 +148,18 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
 
     layout.setColumnMinimumWidth(5, 30)
 
-    panel.ind_param = QComboBox(panel)
-    #[panel.ind_param.addItem(ind) for ind in indicators]
-    #panel.ind_param.setCurrentIndex(0)
-    layout.addWidget(panel.ind_param, 0, 6)
-    panel.ind_param.currentTextChanged.connect(change_asset)
-    #panel.ind_param.setEnabled(False)
-    panel.ind_param.setVisible(False)
-    layout.setColumnMinimumWidth(7, 30)
-
     panel.darkmode = QCheckBox(panel)
     panel.darkmode.setText('Haxxor mode')
     panel.darkmode.setCheckState(2)
     panel.darkmode.toggled.connect(dark_mode_toggle)
-    layout.addWidget(panel.darkmode, 0, 8)
+    layout.addWidget(panel.darkmode, 0, 6)
 
     return panel
 
 
 def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Sell Plot'):
 
-    # TODO: NEXT: Continue from here to visualization config
-    global ctrl_panel, ax, axo, pair_data, pair_analysis
+    global ctrl_panel, ax, axo, ax_rsi, pair_data, pair_analysis
     pair_data = data_dict
     pair_analysis = analysis_dict
 
@@ -334,9 +170,10 @@ def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Se
     fplt.y_pad = 0.07 # pad some extra (for control panel)
     fplt.max_zoom_points = 7
     fplt.autoviewrestore()
-
-    ax = fplt.create_plot(title)
+    ax,ax_rsi = fplt.create_plot(title, rows=2, init_zoom_periods=300)
     axo = ax.overlay()
+    ax_rsi.hide()
+    ax_rsi.vb.setBackgroundColor(None) # don't use odd background color
     ax.set_visible(xaxis=True)
 
     ctrl_panel = create_ctrl_panel(ax.vb.win, pair_pool, time_scale_pool, indicator_pool)

@@ -25,8 +25,8 @@
     },
     "strategy": {
         "RandomStrategy": {
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["15m"],
+            "pairs": ["BTCUSDT", "XRPUSDT", "ETHUSDT"],
+            "time_scales": ["15m", "1d"],
             "enter": {
                 "type": "market"
             },
@@ -43,7 +43,12 @@
     "analysis": {
         "indicators": ["low","high", "trange", "close"],
         "params": {
-            "ma": [5,20]
+            "ma": [5,20],
+            "bband": {
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
+            }
         }
     },
     "statistics": {
@@ -72,6 +77,6 @@
             "qc":["free", "total", "in_trade"],
             "qc_leak":["binary"]
         },
-        "indicators": ["ma"]
+        "indicators": ["ma", "bband", "rsi"]
     }
 }
