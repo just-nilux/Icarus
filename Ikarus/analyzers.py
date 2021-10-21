@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import logging
+from finplot import close
 import talib as ta
 import json
 from Ikarus.objects import ObjectEncoder, GenericObject
@@ -46,6 +47,37 @@ class Analyzer():
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
                 for key, value in zip(self.config['analysis']['indicators'], analysis_output):
+                    stats[key] = value
+                # Assign "stats" to each "time_scale"
+                analysis_obj[time_scale] = stats
+
+            analysis_dict[pair] = analysis_obj
+
+        return analysis_dict
+
+
+    async def visual_analysis(self, data_dict):
+        analysis_dict=dict()
+        for pair,data_obj in data_dict.items():
+            analysis_obj = dict()
+
+            for time_scale, time_df in data_obj.items():
+                self.current_time_df = copy.deepcopy(time_df)
+
+                # Generate coroutines
+                indicator_coroutines = []
+                header = '_ind_'
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['indicators']))
+                for ind in indicator_method_names:
+                    if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
+                    else: raise RuntimeError(f'Unknown indicator: "{ind}"')
+
+                analysis_output = list(await asyncio.gather(*indicator_coroutines))
+
+                # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
+                # NOTE: pd.Series needs to be casted to list
+                stats = dict()
+                for key, value in zip(self.config['visualization']['indicators'], analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -124,7 +156,7 @@ class Analyzer():
     async def _ind_rocp(self): raise NotImplementedException('indicator')
     async def _ind_rocr(self): raise NotImplementedException('indicator')
     async def _ind_rocr100(self): raise NotImplementedException('indicator')
-    async def _ind_rsi(self): raise NotImplementedException('indicator')
+    async def _ind_rsi(self): return list(ta.RSI(self.current_time_df['close'], timeperiod=14))
     async def _ind_stoch(self): raise NotImplementedException('indicator')
     async def _ind_stochhf(self): raise NotImplementedException('indicator')
     async def _ind_stochrsi(self): raise NotImplementedException('indicator')
@@ -141,7 +173,7 @@ class Analyzer():
 
     # Volatility indicators
     async def _ind_atr(self): raise NotImplementedException('indicator')
-    async def _ind_natr(self): raise NotImplementedException('indicator')
+    async def _ind_natr(self): return list(ta.NATR( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
     async def _ind_trange(self): return list(ta.TRANGE( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
 
 

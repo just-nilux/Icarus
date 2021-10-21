@@ -46,6 +46,16 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "visualize_indicators",
+            "type": "python",
+            "request": "launch",
+            "program": ".\\scripts\\visualize_indicators.py",
+            "console": "integratedTerminal",
+            "args": [
+                ".\\test\\sessions\\test-fly-integ\\config.json"
+            ]
+        },
+        {
             "name": "visualize_test_session",
             "type": "python",
             "request": "launch",
@@ -62,7 +72,7 @@
             "program": ".\\scripts\\visualize_live_session.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\live\\config.json",
+                ".\\test\\sessions\\stage1_2\\config.json",
                 "2021-08-29 14:45:00",
                 "2021-08-31 05:30:00"
             ]
