@@ -24,9 +24,24 @@
         "max_capital_use_ratio": 0.99
     },
     "strategy": {
-        "RandomStrategy": {
-            "pairs": ["BTCUSDT", "XRPUSDT", "ETHUSDT"],
-            "time_scales": ["15m", "1d"],
+        "MACDStrategy": {
+            "pairs": ["BTCUSDT","ETHUSDT"],
+            "time_scales": ["1d"],
+            "enter": {
+                "type": "market"
+            },
+            "exit": {
+                "type": "market"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "market_exit"
+            },
+            "max_lto": 3
+        },
+        "RSIStrategy": {
+            "pairs": ["BTCUSDT","ETHUSDT"],
+            "time_scales": ["1d"],
             "enter": {
                 "type": "market"
             },
@@ -41,9 +56,9 @@
         }
     },
     "analysis": {
-        "indicators": ["low","high", "trange", "close"],
+        "indicators": ["low","high", "rsi", "close", "macd"],
         "params": {
-            "ma": [5,20],
+            "ma": [50,200],
             "bband": {
                 "timeperiod": 5,
                 "nbdevup": 2,
@@ -68,7 +83,7 @@
         "1M": ["1 year", 12]
     },
     "backtest":{
-        "start_time": "2020-05-12 12:15:00",
+        "start_time": "2019-05-12 12:15:00",
         "end_time": "2020-05-19 13:00:00",
         "online": true
     },
@@ -77,6 +92,6 @@
             "qc":["free", "total", "in_trade"],
             "qc_leak":["binary"]
         },
-        "indicators": ["ma", "bband", "rsi"]
+        "indicators": ["ma", "bband", "rsi", "macd"]
     }
 }

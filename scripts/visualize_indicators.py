@@ -34,7 +34,8 @@ def change_asset(*args, **kwargs):
     # remove any previous plots
     ax.reset()
     axo.reset()
-    ax_rsi.reset()
+    ax_bot.reset()
+    axo_bot.reset()
 
     fplt.candlestick_ochl(data_dict[symbol][interval]['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
     fplt.volume_ocv(data_dict[symbol][interval]['open close volume'.split()], ax=axo)
@@ -43,7 +44,8 @@ def change_asset(*args, **kwargs):
     if indicator != 'clean':
         if hasattr(indicator_plot, indicator):
             handler = getattr(indicator_plot, indicator)
-            handler(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator], ax, axo, ax_rsi)
+            handler(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator], 
+                {'ax':ax, 'axo':axo, 'ax_bot':ax_bot, 'axo_bot':axo_bot})
 
     ax.set_visible(xaxis=True)
     # restores saved zoom position, if in range
@@ -159,7 +161,7 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
 
 def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Sell Plot'):
 
-    global ctrl_panel, ax, axo, ax_rsi, pair_data, pair_analysis
+    global ctrl_panel, ax, axo, ax_bot, axo_bot, pair_data, pair_analysis
     pair_data = data_dict
     pair_analysis = analysis_dict
 
@@ -170,10 +172,11 @@ def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Se
     fplt.y_pad = 0.07 # pad some extra (for control panel)
     fplt.max_zoom_points = 7
     fplt.autoviewrestore()
-    ax,ax_rsi = fplt.create_plot(title, rows=2, init_zoom_periods=300)
+    ax,ax_bot = fplt.create_plot(title, rows=2, init_zoom_periods=300)
     axo = ax.overlay()
-    ax_rsi.hide()
-    ax_rsi.vb.setBackgroundColor(None) # don't use odd background color
+    axo_bot = ax_bot.overlay()
+    ax_bot.hide()
+    ax_bot.vb.setBackgroundColor(None) # don't use odd background color
     ax.set_visible(xaxis=True)
 
     ctrl_panel = create_ctrl_panel(ax.vb.win, pair_pool, time_scale_pool, indicator_pool)

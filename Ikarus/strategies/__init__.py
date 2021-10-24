@@ -4,4 +4,6 @@ from . import StrategyBase,\
     FallingKnifeCatcher,\
     NewStrategy,\
     RandomStrategy, \
-    RandomStrategy2
+    RandomStrategy2, \
+    RSIStrategy, \
+    MACDStrategy

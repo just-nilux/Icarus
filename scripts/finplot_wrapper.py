@@ -18,6 +18,7 @@ from pyqtgraph import QtGui
 import pyqtgraph as pg
 from copy import deepcopy
 import observer_plot
+
 dashboard_data = {}
 ax, axo, ctrl_panel = '', '', ''
 #kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
@@ -205,7 +206,7 @@ def _add_exit_expire_tos(df_exit_expire):
     for idx, row in df_exit_expire.iterrows():
         fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
         profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-        fplt.add_text((row['decision_time'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000')
+        fplt.add_text((row['exitTime'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000',anchor=(1,0))
         fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
         fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
@@ -229,7 +230,7 @@ def _add_closed_tos(ax, df_closed):
 
         rect_upper_limit = max(row['exitPrice'], row['enterPrice'])
         fplt.add_rect((row['decision_time'], rect_upper_limit), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=False)
-        fplt.add_text((row['decision_time'], rect_upper_limit), "%{:.2f}".format(profit_perc), color='#000000')
+        fplt.add_text((row['exitTime'], rect_upper_limit), "%{:.2f}".format(profit_perc), color='#000000', anchor=(1,0))
         fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
 

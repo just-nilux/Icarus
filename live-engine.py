@@ -6,7 +6,8 @@ import json
 from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_min_scale, eval_total_capital, eval_total_capital_in_lto, calculate_fee
+from Ikarus.utils import time_scale_to_second, get_min_scale, eval_total_capital, \
+    eval_total_capital_in_lto, calculate_fee, round_to_period
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
@@ -471,13 +472,11 @@ async def main():
 
             server_time = await client.get_server_time() # UTC
             logger.debug(f'System time: {server_time["serverTime"]}')
-            current_time = int(server_time['serverTime']/1000)                                                  # exact second
-            current_time -= (current_time % 60)                                                                 # exact minute
-            current_time -= (current_time % ikarus_cycle_period_in_sec )                                          # exact scale
+            current_time = int(server_time['serverTime']/1000)
 
-            # NOTE: start_time_offset is used to make sure the broker created the last closed candle properly
+            # TODO: Not tested yet
             start_time_offset = 10
-            next_start_time = current_time + ikarus_cycle_period_in_sec + start_time_offset
+            next_start_time = round_to_period(current_time, ikarus_cycle_period_in_sec, direction='ceiling', offset=start_time_offset)
 
             logger.debug(f'Cycle start time: {next_start_time}')
             result = await asyncio.create_task(run_at(next_start_time, application(strategy_list, bwrapper, next_start_time-start_time_offset)))

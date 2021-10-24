@@ -142,7 +142,9 @@ class Analyzer():
     async def _ind_cci(self): raise NotImplementedException('indicator')
     async def _ind_cmo(self): raise NotImplementedException('indicator')
     async def _ind_dx(self): raise NotImplementedException('indicator')
-    async def _ind_macd(self): raise NotImplementedException('indicator')
+    async def _ind_macd(self):
+        macd, macdsignal, macdhist = ta.MACD(self.current_time_df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+        return {'macd':list(macd), 'macdsignal': list(macdsignal), 'macdhist':list(macdhist)}
     async def _ind_macdext(self): raise NotImplementedException('indicator')
     async def _ind_macdfix(self): raise NotImplementedException('indicator')
     async def _ind_mfi(self): raise NotImplementedException('indicator')
