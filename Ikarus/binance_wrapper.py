@@ -13,7 +13,7 @@ import bson
 import time
 from itertools import chain, groupby
 import datetime
-from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond
+from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond, get_lto_phase
 from . import balance_manager
 
 class BinanceWrapper():

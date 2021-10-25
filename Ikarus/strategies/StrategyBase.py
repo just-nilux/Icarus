@@ -7,7 +7,7 @@ import itertools
 import statistics as st
 from ..objects import GenericObject
 import math
-from ..utils import safe_sum, time_scale_to_minute, round_step_downward, truncate, safe_multiply, safe_substract
+from ..utils import get_lto_phase, safe_sum, time_scale_to_minute, round_step_downward, truncate, safe_multiply, safe_substract
 import more_itertools
 import copy
 
@@ -212,12 +212,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             analysis_dict[lto['pair']][self.min_period]['close'],
             0)
         
-        lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(
-            PHASE_EXIT, 
-            TYPE_MARKET, 
-            lto['exit'][TYPE_MARKET], 
-            self.symbol_info[lto['pair']], 
-            exit_qty=lto['result']['enter']['quantity'])
+        lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
         
         lto['action'] = ACTN_MARKET_EXIT
 
@@ -369,7 +364,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def apply_exchange_filters(phase, type, module, symbol_info, exit_qty=0):
+    async def apply_exchange_filters(lto,  symbol_info):
         # TODO: NEXT: Get rid of this exit_qty bullshit
         """
         - Call this method prior to any order placement
@@ -381,6 +376,11 @@ class StrategyBase(metaclass=abc.ABCMeta):
         Returns:
             dict: enter or exit module
         """ 
+
+        # NOTE: It is guarantee that there will only be 1 type of enter or exit in the lto
+        phase = get_lto_phase(lto)
+        module = more_itertools.one(lto[phase].values())
+        exit_qty = lto['result']['enter']['quantity']
 
         if phase == 'enter':
             if type == TYPE_LIMIT:

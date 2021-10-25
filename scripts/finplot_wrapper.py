@@ -206,7 +206,7 @@ def _add_exit_expire_tos(df_exit_expire):
     for idx, row in df_exit_expire.iterrows():
         fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
         profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-        fplt.add_text((row['exitTime'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000',anchor=(1,0))
+        fplt.add_text((row['exitExpire'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000',anchor=(1,0))
         fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
         fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)

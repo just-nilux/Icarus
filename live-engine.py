@@ -7,7 +7,7 @@ from Ikarus import performance, strategy_manager, binance_wrapper, notifications
 from Ikarus.enums import *
 from Ikarus.exceptions import SysStatDownException, NotImplementedException
 from Ikarus.utils import time_scale_to_second, get_min_scale, eval_total_capital, \
-    eval_total_capital_in_lto, calculate_fee, round_to_period
+    eval_total_capital_in_lto, calculate_fee, round_to_period, get_lto_phase
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd

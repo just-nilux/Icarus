@@ -58,11 +58,7 @@ class AlwaysEnter(StrategyBase):
                     StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
 
                 # Apply exchange filters
-                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters(
-                    PHASE_ENTER, 
-                    enter_type, 
-                    trade_obj['enter'][enter_type], 
-                    self.symbol_info[ao_pair])
+                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters(trade_obj, self.symbol_info[ao_pair])
 
                 if not await StrategyBase.check_min_notional(
                     trade_obj['enter'][enter_type]['price'], 
@@ -96,11 +92,7 @@ class AlwaysEnter(StrategyBase):
 
         # Apply the filters
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
-        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
-                                                                                            self.config['exit']['type'], 
-                                                                                            lto['exit'][self.config['exit']['type']], 
-                                                                                            self.symbol_info[lto['pair']], 
-                                                                                            exit_qty=lto['result']['enter']['quantity'])
+        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
         return lto
 
 
@@ -124,11 +116,7 @@ class AlwaysEnter(StrategyBase):
 
     async def on_waiting_exit(self, lto, analysis_dict):
         lto['action'] = ACTN_EXEC_EXIT
-        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters('exit', 
-                                                                                            self.config['exit']['type'], 
-                                                                                            lto['exit'][self.config['exit']['type']], 
-                                                                                            self.symbol_info[lto['pair']], 
-                                                                                            exit_qty=lto['result']['enter']['quantity'])
+        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
         return lto
 
 

@@ -31,15 +31,3 @@ COLL_STR_MGR_PLUGIN = 'strmgr_plugin'
 COLL_LIVE_TRADES = 'live-trades'
 COLL_HIST_TRADES = 'hist-trades'
 COLL_OBSERVER = 'observer'
-
-# TODO: Move this function to utils
-def get_lto_phase(lto):
-
-    if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP]:
-        return PHASE_ENTER
-
-    elif lto['status'] in [STAT_EXIT_EXP, STAT_OPEN_EXIT, STAT_WAITING_EXIT]:
-        return PHASE_EXIT
-
-    else:
-        raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')

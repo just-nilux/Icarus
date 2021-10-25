@@ -62,11 +62,7 @@ class RSIStrategy(StrategyBase):
                     0)
 
                 # Apply exchange filters
-                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters(
-                    PHASE_ENTER, 
-                    enter_type, 
-                    trade_obj['enter'][enter_type], 
-                    self.symbol_info[ao_pair])
+                trade_obj['enter'][self.config['enter']['type']] = await StrategyBase.apply_exchange_filters(trade_obj, self.symbol_info[ao_pair])
 
                 if not await StrategyBase.check_min_notional(
                     trade_obj['enter'][enter_type]['price'], 
@@ -117,11 +113,7 @@ class RSIStrategy(StrategyBase):
                 return lto
 
         lto['action'] = ACTN_EXEC_EXIT
-        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(PHASE_EXIT, 
-                                                                                            self.config['exit']['type'], 
-                                                                                            lto['exit'][self.config['exit']['type']], 
-                                                                                            self.symbol_info[lto['pair']], 
-                                                                                            exit_qty=lto['result'][PHASE_ENTER]['quantity'])
+        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
         return lto
 
 
