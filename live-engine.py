@@ -369,8 +369,13 @@ async def application(strategy_list, bwrapper, ikarus_time):
             grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
 
     strategy_tasks = []
-    for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), ikarus_time, total_qc)))
+    for active_strategy in active_strategies:
+        strategy_tasks.append(asyncio.create_task(active_strategy.run(
+            analysis_dict, 
+            grouped_ltos.get(active_strategy.name, []), 
+            ikarus_time, 
+            total_qc, 
+            df_balance.loc[config['broker']['quote_currency'],'free'])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
@@ -409,14 +414,14 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 3.3.2 Insert df_balance to [observer]
     observer_list = [
-        observer.qc_observer(df_balance, lto_list+nto_list, config['broker']['quote_currency'], ikarus_time),
-        observer.sample_observer(df_balance, ikarus_time)
+        observer.qc(ikarus_time, df_balance, lto_list+nto_list),
+        observer.qc_leak(ikarus_time, df_balance, lto_list+nto_list),
+        observer.balance(ikarus_time, df_balance)
     ]
     observer_objs = list(await asyncio.gather(*observer_list))
     await mongocli.do_insert_many("observer", observer_objs)
 
-
-    return True
+    pass
 
 
 async def main():
@@ -523,7 +528,7 @@ if __name__ == "__main__":
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 
-    observer = observers.Observer()
+    observer = observers.Observer(config)
     analyzer = analyzers.Analyzer(config)
 
     logger.info("---------------------------------------------------------")
