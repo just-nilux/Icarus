@@ -28,13 +28,13 @@
     },
     "strategy": {
         "AlwaysEnter": {
-            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
+            "pairs": ["SHIBUSDT", "HOTUSDT"],
             "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -43,13 +43,13 @@
             "max_lto": 1
         },
         "AlwaysEnter90": {
-            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
+            "pairs": ["SHIBUSDT", "HOTUSDT"],
             "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",

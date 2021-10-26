@@ -380,6 +380,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # NOTE: It is guarantee that there will only be 1 type of enter or exit in the lto
         phase = get_lto_phase(lto)
         module = more_itertools.one(lto[phase].values())
+        type = more_itertools.one(lto[phase].keys())
         exit_qty = lto['result']['enter']['quantity']
 
         if phase == 'enter':

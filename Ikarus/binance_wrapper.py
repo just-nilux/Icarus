@@ -12,7 +12,7 @@ import json
 import bson
 import time
 from itertools import chain, groupby
-import datetime
+import copy
 from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond, get_lto_phase
 from . import balance_manager
 
@@ -253,10 +253,6 @@ class BinanceWrapper():
         return lto_orders_dict
 
 
-    async def monitor_account(self):
-        return True
-
-
     async def _execute_oco_sell(self, lto):
         try:
             response = await self.client.create_oco_order(
@@ -495,6 +491,7 @@ class BinanceWrapper():
         """
         # TODO: HIGH: Should we check the keys of an module and use the priorities or should we only use config file enter/exit types?
         nto_list_len = len(nto_list)
+        live_nto_list = []
         for i in range(nto_list_len):
             # BUG: NEXT If an NTO is deleted from the list then there will be a index error since the list shrinked
             # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
@@ -515,20 +512,22 @@ class BinanceWrapper():
                     #       Need the precision
                     #       f'%.{}f' % nto_list[i]['enter'][TYPE_LIMIT]['price']
                     # TODO: NEXT: Why this limit_buy is here and not in a function????
+                        
                     except Exception as e:
                         self.logger.error(f"{nto_list[i]['strategy']} - {nto_list[i]['pair']}: {e}")
-                        del nto_list[i]
+                        # del nto_list[i]
                         # TODO: Notification
 
                     else:
                         nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
                         self.logger.info(f'NTO ({nto_list[i]["strategy"]},{nto_list[i]["pair"]}) limit order placed: {response["orderId"]}')
                         self.telbot.send_constructed_msg('lto', *['_id', nto_list[i]['strategy'], nto_list[i]['pair'], 'enter', response["orderId"], EVENT_PLACED]) # '_id' is not given yet
+                        live_nto_list.append(copy.deepcopy(nto_list[i]))
 
                 else: pass # TODO: Internal Error
 
             else: pass # TODO: Internal Error
-        return nto_list
+        return live_nto_list
 
 
     async def execute_decision(self, nto_list, lto_list):
@@ -949,7 +948,7 @@ class TestBinanceWrapper():
                         lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                         lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                         lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
-                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'] # TODO: do safe oepration
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
                         lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
                         # TODO NEXT: safe calcualtion for profit and fee
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \

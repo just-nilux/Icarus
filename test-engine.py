@@ -440,7 +440,6 @@ async def main():
     session_end_timestamp = int(datetime.timestamp(session_end_time))
 
     # Iterate through the time stamps
-    # BUG: Start time is 2016-05-12 12:15:00, if you only choose 1d, the you should expect to start 2016-05-13 00:00:00
     ikarus_cycle_period_in_sec = time_scale_to_second(ikarus_cycle_period)
     session_start_timestamp = round_to_period(session_start_timestamp, ikarus_cycle_period_in_sec, direction='ceiling')
     session_end_timestamp = round_to_period(session_end_timestamp, ikarus_cycle_period_in_sec, direction='floor')
