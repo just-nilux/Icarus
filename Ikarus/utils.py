@@ -3,7 +3,7 @@ import pandas as pd
 import more_itertools
 from .enums import *
 from math import log
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 def calculate_fee(amount, fee, digit=8):
     return round(safe_multiply(amount,fee), digit)
@@ -21,9 +21,7 @@ def time_scale_to_minute(interval: str):
         return None
 
 def round_step_downward(quantity, step_size):
-    if step_size == 0: raise Exception('step_size cannot be 0!')
-    precision: int = int(round(-log(step_size, 10), 0))
-    return truncate(quantity,precision)
+    return float(Decimal(str(quantity)).quantize(Decimal(str(step_size)), rounding=ROUND_DOWN))
 
 def truncate(num,n):
     temp = str(num)

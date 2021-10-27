@@ -1,3 +1,4 @@
+import json
 import logging
 from binance.helpers import round_step_size
 from Ikarus.enums import *
@@ -382,10 +383,14 @@ class StrategyBase(metaclass=abc.ABCMeta):
         module = more_itertools.one(lto[phase].values())
         type = more_itertools.one(lto[phase].keys())
         exit_qty = lto['result']['enter']['quantity']
-
+        copy_module = copy.deepcopy(module)
+        # TODO: BUG: NEXT: here somewhere the enter limit order price is get corrupted
         if phase == 'enter':
             if type == TYPE_LIMIT:
                 module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
+                if module['price'] > float(symbol_info['filters'][0]['maxPrice']):
+                    print(json.dumps(copy_module))
+                    # TODO: BUG: NEXT: Add proper error handling or check for the prices
                 module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
             
             elif type == TYPE_MARKET:

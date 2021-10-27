@@ -72,8 +72,12 @@ class TelegramBot():
             print(e)
 
 
-    def send_raw(self, msg='Default Message') -> None:  
-        self.updater.bot.send_message(self.chatId, text=msg)
+    def send_raw(self, msg='Default Message') -> None:
+        try:
+            self.updater.bot.send_message(self.chatId, text=msg)
+        except Exception as e:
+            print(e)
+            # TODO: NEXT: Add logging
 
 
 def test_lto():
