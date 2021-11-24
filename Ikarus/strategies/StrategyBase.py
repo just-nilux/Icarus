@@ -12,6 +12,8 @@ from ..utils import get_lto_phase, safe_sum, time_scale_to_minute, round_step_do
 import more_itertools
 import copy
 
+logger = logging.getLogger('app')
+
 class StrategyBase(metaclass=abc.ABCMeta):
     # NOTE: fee can stay here until a better place is found
     fee = 0
@@ -366,7 +368,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def apply_exchange_filters(lto,  symbol_info):
-        # TODO: NEXT: Get rid of this exit_qty bullshit
         """
         - Call this method prior to any order placement
         - Apply the filter of exchange pair
@@ -385,30 +386,31 @@ class StrategyBase(metaclass=abc.ABCMeta):
         exit_qty = lto['result']['enter']['quantity']
         copy_module = copy.deepcopy(module)
         # TODO: BUG: NEXT: here somewhere the enter limit order price is get corrupted
+        #       It should be fixed I guess with the commit de12ba7a3abdcf797659fc3c3f7005c94d196765
         if phase == 'enter':
             if type == TYPE_LIMIT:
                 module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
                 if module['price'] > float(symbol_info['filters'][0]['maxPrice']):
                     print(json.dumps(copy_module))
                     # TODO: BUG: NEXT: Add proper error handling or check for the prices
-                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
-            
+                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['stepSize']))                    # Fixing LOT_SIZE: minQty
+                # TODO: BUG: NEXT: Add proper handling for LOT_SIZE filter min and max qty
             elif type == TYPE_MARKET:
-                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['minQty']))                    # Fixing LOT_SIZE: minQty
+                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['stepSize']))                    # Fixing LOT_SIZE: minQty
 
         elif phase == 'exit':
             if type == TYPE_OCO:
                 module['limitPrice'] = round_step_downward(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
                 module['stopPrice'] = round_step_downward(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
                 module['stopLimitPrice'] = round_step_downward(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['stepSize']))                              # NOTE: Enter quantity will be used to exit
             
             elif type == TYPE_LIMIT:
                 module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))                              # NOTE: Enter quantity will be used to exit
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['stepSize']))                              # NOTE: Enter quantity will be used to exit
             
             elif type == TYPE_MARKET:
-                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['minQty']))
+                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['stepSize']))
 
         else: pass
 

@@ -21,6 +21,9 @@ def time_scale_to_minute(interval: str):
         return None
 
 def round_step_downward(quantity, step_size):
+    # NOTE: if the step_size is '1.0', 1.2389196468651802 is rounded as 1.2 instead of 1.
+    #       Thus if the step_size is an integer then we should approach properly
+    if step_size.is_integer(): step_size = int(step_size)
     return float(Decimal(str(quantity)).quantize(Decimal(str(step_size)), rounding=ROUND_DOWN))
 
 def truncate(num,n):

@@ -520,7 +520,6 @@ class BinanceWrapper():
         nto_list_len = len(nto_list)
         live_nto_list = []
         for i in range(nto_list_len):
-            # BUG: NEXT If an NTO is deleted from the list then there will be a index error since the list shrinked
             # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
             if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
