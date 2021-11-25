@@ -2,7 +2,6 @@ from copy import Error
 import pandas as pd
 import more_itertools
 from .enums import *
-from math import log
 from decimal import ROUND_DOWN, Decimal
 
 def calculate_fee(amount, fee, digit=8):
@@ -220,3 +219,10 @@ def get_lto_phase(lto):
 
     else:
         raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')
+
+def filter_lot_size(quantity, symbol_info): 
+    quantity = round_step_downward(quantity, float(symbol_info['filters'][2]['stepSize']))
+    if float(symbol_info['filters'][2]['minQty']) < quantity < float(symbol_info['filters'][2]['maxQty']):
+        return quantity
+    else:
+        return None

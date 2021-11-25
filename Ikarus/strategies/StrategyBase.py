@@ -8,7 +8,7 @@ import itertools
 import statistics as st
 from ..objects import GenericObject
 import math
-from ..utils import get_lto_phase, safe_sum, time_scale_to_minute, round_step_downward, truncate, safe_multiply, safe_substract
+from ..utils import get_lto_phase, safe_sum, filter_lot_size, round_step_downward, truncate, safe_multiply, safe_substract
 import more_itertools
 import copy
 
@@ -393,24 +393,30 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 if module['price'] > float(symbol_info['filters'][0]['maxPrice']):
                     print(json.dumps(copy_module))
                     # TODO: BUG: NEXT: Add proper error handling or check for the prices
-                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['stepSize']))                    # Fixing LOT_SIZE: minQty
-                # TODO: BUG: NEXT: Add proper handling for LOT_SIZE filter min and max qty
+                if result := filter_lot_size(module['quantity'], symbol_info): module['quantity'] = result
+                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(module['quantity'])}"); return None
+
             elif type == TYPE_MARKET:
-                module['quantity'] = round_step_downward(module['quantity'], float(symbol_info['filters'][2]['stepSize']))                    # Fixing LOT_SIZE: minQty
+                if result := filter_lot_size(module['quantity'], symbol_info): module['quantity'] = result
+                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(module['quantity'])}"); return None
 
         elif phase == 'exit':
+            # TODO: NEXT: Add _id for the phase exit lot size filter errors
             if type == TYPE_OCO:
                 module['limitPrice'] = round_step_downward(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
                 module['stopPrice'] = round_step_downward(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
                 module['stopLimitPrice'] = round_step_downward(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['stepSize']))                              # NOTE: Enter quantity will be used to exit
-            
+                if result := filter_lot_size(exit_qty, symbol_info): module['quantity'] = result           # NOTE: Enter quantity will be used to exit
+                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(exit_qty)}"); return None
+
             elif type == TYPE_LIMIT:
-                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))
-                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['stepSize']))                              # NOTE: Enter quantity will be used to exit
-            
+                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))    
+                if result := filter_lot_size(exit_qty, symbol_info): module['quantity'] = result           # NOTE: Enter quantity will be used to exit
+                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(exit_qty)}"); return None
+
             elif type == TYPE_MARKET:
-                module['quantity'] = round_step_downward(exit_qty, float(symbol_info['filters'][2]['stepSize']))
+                if result := filter_lot_size(exit_qty, symbol_info): module['quantity'] = result
+                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(exit_qty)}"); return None
 
         else: pass
 
