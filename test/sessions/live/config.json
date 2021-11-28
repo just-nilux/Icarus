@@ -20,7 +20,7 @@
         "mail": false
     },
     "broker": {
-        "quote_currency": "BTC",
+        "quote_currency": "USDT",
         "credit_currency": "TRY"
     },
     "risk_management":{
@@ -28,13 +28,13 @@
     },
     "strategy": {
         "AlwaysEnter": {
-            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
+            "pairs": ["SHIBUSDT", "HOTUSDT"],
             "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -43,13 +43,13 @@
             "max_lto": 1
         },
         "AlwaysEnter90": {
-            "pairs": ["LTCBTC", "BNBBTC", "XRPBTC", "ETCBTC"],
+            "pairs": ["SHIBUSDT", "HOTUSDT"],
             "time_scales": ["1m","5m"],
             "enter": {
                 "type": "limit"
             },
             "exit": {
-                "type": "limit"
+                "type": "oco"
             },
             "action_mapping": {
                 "enter_expire": "cancel",
@@ -59,13 +59,18 @@
         }
     },
     "analysis": {
-        "indicators": ["low","high","llow", "hhigh", "trange", "ma"],
+        "indicators": ["low","high", "rsi", "close", "macd"],
         "params": {
-            "ma": [5,20]
+            "ma": [50,200],
+            "bband": {
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
+            }
         }
     },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/live/stat.txt"
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],
@@ -79,5 +84,12 @@
         "1d": ["3 months", 90],
         "1w": ["1 year", 52],
         "1M": ["1 year", 12]
+    },
+    "visualization":{
+        "observers":{
+            "qc":["free", "total", "in_trade"],
+            "qc_leak":["binary"]
+        },
+        "indicators": ["ma", "bband", "rsi", "macd"]
     }
 }

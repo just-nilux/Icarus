@@ -309,7 +309,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
-    # TODO: NEXT: Update live-engine based on the changes in test-engine
     logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
     
     #################### Phase 1: Perform pre-calculation tasks ####################
@@ -339,7 +338,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
-    # TODO: NEXT: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
+    # TODO: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
+    #       This is a issue related with custom order obj manipulation, so do not invest too much time
     if len(lto_list): 
         #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
         #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)
@@ -369,8 +369,13 @@ async def application(strategy_list, bwrapper, ikarus_time):
             grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
 
     strategy_tasks = []
-    for strategy in strategy_list:
-        strategy_tasks.append(asyncio.create_task(strategy.run(analysis_dict, grouped_ltos.get(strategy.name, []), ikarus_time, total_qc)))
+    for active_strategy in active_strategies:
+        strategy_tasks.append(asyncio.create_task(active_strategy.run(
+            analysis_dict, 
+            grouped_ltos.get(active_strategy.name, []), 
+            ikarus_time, 
+            total_qc, 
+            df_balance.loc[config['broker']['quote_currency'],'free'])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     nto_list = list(chain(*strategy_decisions))
@@ -409,14 +414,14 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 3.3.2 Insert df_balance to [observer]
     observer_list = [
-        observer.qc_observer(df_balance, lto_list+nto_list, config['broker']['quote_currency'], ikarus_time),
-        observer.sample_observer(df_balance, ikarus_time)
+        observer.qc(ikarus_time, df_balance, lto_list+nto_list),
+        observer.qc_leak(ikarus_time, df_balance, lto_list+nto_list),
+        observer.balance(ikarus_time, df_balance)
     ]
     observer_objs = list(await asyncio.gather(*observer_list))
     await mongocli.do_insert_many("observer", observer_objs)
 
-
-    return True
+    pass
 
 
 async def main():
@@ -523,7 +528,7 @@ if __name__ == "__main__":
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 
-    observer = observers.Observer()
+    observer = observers.Observer(config)
     analyzer = analyzers.Analyzer(config)
 
     logger.info("---------------------------------------------------------")

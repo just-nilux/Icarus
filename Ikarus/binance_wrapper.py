@@ -12,9 +12,10 @@ import json
 import bson
 import time
 from itertools import chain, groupby
-import datetime
+import copy
 from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond, get_lto_phase
 from . import balance_manager
+import more_itertools
 
 class BinanceWrapper():
 
@@ -253,10 +254,6 @@ class BinanceWrapper():
         return lto_orders_dict
 
 
-    async def monitor_account(self):
-        return True
-
-
     async def _execute_oco_sell(self, lto):
         try:
             response = await self.client.create_oco_order(
@@ -314,10 +311,36 @@ class BinanceWrapper():
             return lto
 
 
+    async def _execute_limit_buy(self, lto):
+        try:
+            response = await self.client.order_limit_buy(
+                symbol=lto['pair'],
+                quantity=lto[PHASE_ENTER][TYPE_LIMIT]['quantity'],
+                price=f'%.{self.pricePrecision}f' % lto[PHASE_ENTER][TYPE_LIMIT]['price'])
+
+            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+
+        except Exception as e:
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            self.logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_LIMIT]))
+            return None
+
+        else:
+            self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            lto[PHASE_ENTER][TYPE_LIMIT]['orderId'] = response['orderId']
+
+            lto['status'] = STAT_OPEN_ENTER
+            lto['history'].append(lto['status'])
+            self.telbot.send_constructed_msg('lto', *['_id', lto['strategy'], lto['pair'], PHASE_ENTER, response["orderId"], EVENT_PLACED])
+            return lto
+
+
     async def _execute_cancel(self, lto):
+        # NOTE: Since cancel can be called to end the life of LTO if the phase is enter and to update if
+        #       the phase is exit, status change should not be here        
         try:
             phase = get_lto_phase(lto)
-            type = self.config['strategy'][lto['strategy']][phase]['type']
+            type = more_itertools.one(lto[phase].keys())
             response = await self.client.cancel_order(
                 symbol=lto['pair'],
                 orderId=lto[phase][type]['orderId'])
@@ -495,6 +518,7 @@ class BinanceWrapper():
         """
         # TODO: HIGH: Should we check the keys of an module and use the priorities or should we only use config file enter/exit types?
         nto_list_len = len(nto_list)
+        live_nto_list = []
         for i in range(nto_list_len):
             # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
             if nto_list[i]['status'] == STAT_OPEN_ENTER:
@@ -504,30 +528,14 @@ class BinanceWrapper():
                     raise Exception('Market Enter is not supported')
 
                 elif TYPE_LIMIT in nto_list[i]['enter'].keys():
-                    try:
-                        response = await self.client.order_limit_buy(
-                            symbol=nto_list[i]['pair'],
-                            quantity=nto_list[i]['enter'][TYPE_LIMIT]['quantity'],
-                            price=f'%.{self.pricePrecision}f' % nto_list[i]['enter'][TYPE_LIMIT]['price'])
-                        if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-                    # TODO: NEXT: For small quantities this float number create poblem such as 1.114e-05
-                    #       Need the precision
-                    #       f'%.{}f' % nto_list[i]['enter'][TYPE_LIMIT]['price']
-                    # TODO: NEXT: Why this limit_buy is here and not in a function????
-                    except Exception as e:
-                        self.logger.error(f"{nto_list[i]['strategy']} - {nto_list[i]['pair']}: {e}")
-                        del nto_list[i]
-                        # TODO: Notification
-
-                    else:
-                        nto_list[i]['enter'][TYPE_LIMIT]['orderId'] = int(response['orderId'])
-                        self.logger.info(f'NTO ({nto_list[i]["strategy"]},{nto_list[i]["pair"]}) limit order placed: {response["orderId"]}')
-                        self.telbot.send_constructed_msg('lto', *['_id', nto_list[i]['strategy'], nto_list[i]['pair'], 'enter', response["orderId"], EVENT_PLACED]) # '_id' is not given yet
+                    result = await self._execute_limit_buy(nto_list[i])
+                    if result:
+                        live_nto_list.append(copy.deepcopy(result))
 
                 else: pass # TODO: Internal Error
 
             else: pass # TODO: Internal Error
-        return nto_list
+        return live_nto_list
 
 
     async def execute_decision(self, nto_list, lto_list):
@@ -892,6 +900,8 @@ class TestBinanceWrapper():
                     # NOTE: No need to do anything for backtest
                     # TODO: NEXT: Cancel the previous order and place the new order
                     #       Do not change the exit order amount price etc because here the df_balance is not updated accordingly
+                    # TODO: Actually since the update is a generic action: it may endup with some changes in prices which causes the expected
+                    #       amount to be changed. Thus, currently it may not be necessary but will be key point for ACTN_UPDATE to be useful
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
@@ -944,13 +954,12 @@ class TestBinanceWrapper():
                         lto_list[i]['result']['cause'] = STAT_CLOSED
 
                         lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                        # TODO: NEXT: CAREFULL about the close time of the market exit, it requires ikarus_time
                         lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                         lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                         lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
-                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'] # TODO: do safe oepration
+                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
                         lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
-                        # TODO NEXT: safe calcualtion for profit and fee
+
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
                             - lto_list[i]['result']['enter']['amount'] \
                             - lto_list[i]['result']['enter']['fee'] \

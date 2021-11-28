@@ -2,8 +2,7 @@ from copy import Error
 import pandas as pd
 import more_itertools
 from .enums import *
-from math import log
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 def calculate_fee(amount, fee, digit=8):
     return round(safe_multiply(amount,fee), digit)
@@ -21,9 +20,10 @@ def time_scale_to_minute(interval: str):
         return None
 
 def round_step_downward(quantity, step_size):
-    if step_size == 0: raise Exception('step_size cannot be 0!')
-    precision: int = int(round(-log(step_size, 10), 0))
-    return truncate(quantity,precision)
+    # NOTE: if the step_size is '1.0', 1.2389196468651802 is rounded as 1.2 instead of 1.
+    #       Thus if the step_size is an integer then we should approach properly
+    if step_size.is_integer(): step_size = int(step_size)
+    return float(Decimal(str(quantity)).quantize(Decimal(str(step_size)), rounding=ROUND_DOWN))
 
 def truncate(num,n):
     temp = str(num)
@@ -72,9 +72,7 @@ def eval_total_capital_in_lto(lto_list):
     for lto in lto_list:
         # Omit the LTOs that are closed, because their use of amount returned to df_balance (by broker or by lto_update of test-engine)
         if lto['status'] != STAT_CLOSED:
-            # NOTE: It is assumed that each object may only have 1 TYPE of exit or enter:
-            # TODO: NEXT: CAREFULL: The approach above make sense but the action logic may needs to be changed in case of market_exit:
-            #       As a solution, when market exit decision is made. Simply save the old oco or limit, then remove it to make sure that there is only one
+            # NOTE: It is assumed that each object may only have 1 TYPE of exit or enter
             in_trade_qc = safe_sum(in_trade_qc, more_itertools.one(lto[PHASE_ENTER].values())['amount'])
     return in_trade_qc
 
@@ -98,7 +96,7 @@ async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
             "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][enter_type]['price'], # TODO: NEXT: TYPE_LIMIT 
+            "enterPrice": hto['enter'][enter_type]['price'],
             "exitTime": hto['result']['exit']['time'],
             "exitPrice": hto['exit'][exit_type][plannedPriceName],
             "sellPrice": hto['result']['exit']['price']
@@ -119,7 +117,7 @@ async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
             "_id": hto['_id'],
             "strategy": hto['strategy'],
             "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: NEXT: TYPE_LIMIT | TODO: use result enter price
+            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: TYPE_LIMIT | TODO: use result enter price
             "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
         }
         hto_ent_exp_list.append(hto_dict)
@@ -219,3 +217,10 @@ def get_lto_phase(lto):
 
     else:
         raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')
+
+def filter_lot_size(quantity, symbol_info): 
+    quantity = round_step_downward(quantity, float(symbol_info['filters'][2]['stepSize']))
+    if float(symbol_info['filters'][2]['minQty']) < quantity < float(symbol_info['filters'][2]['maxQty']):
+        return quantity
+    else:
+        return None

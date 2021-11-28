@@ -7,7 +7,7 @@ import copy
 import itertools
 from ..utils import time_scale_to_minute
 from itertools import chain, groupby
-import operator
+import json
 
 class NewStrategy(StrategyBase):
 
@@ -66,7 +66,7 @@ class NewStrategy(StrategyBase):
                     trade_obj['enter'][enter_type]['price'], 
                     trade_obj['enter'][enter_type]['quantity'], 
                     self.symbol_info[ao_pair]):
-                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. Enter Ref Amount: {'%.8f' % (trade_obj['enter'][enter_type]['price']*trade_obj['enter'][enter_type]['quantity'])}")
+                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. NTO: {json.dumps(trade_obj['enter'][enter_type])}")
                     return None
                 
                 return trade_obj

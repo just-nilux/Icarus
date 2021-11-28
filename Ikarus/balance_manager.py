@@ -24,7 +24,6 @@ def buy(df_balance, quote_cur, base_cur, enter_module, enter_type):
         df_balance.loc[base_cur] = [enter_module['quantity'], 0, 0]
 
     # Sync with total
-    # BUG: Random Negative Balance exc.
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
     return df_balance

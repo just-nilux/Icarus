@@ -21,7 +21,7 @@ class TelegramBot():
         # Start the Bot
         #self.updater.start_polling()
         #self.updater.idle()
-        # TODO: NEXT: Instead of writing 'format', and giving list of values, just give the lto/hto itself and handle the data in function
+        # TODO: Instead of writing 'format', and giving list of values, just give the lto/hto itself and handle the data in function
         #       Buy doing so you dont need to change much thing if any update is needed
         self.templates = {
             'lto': 'LTO {}:\n\
@@ -72,8 +72,12 @@ class TelegramBot():
             print(e)
 
 
-    def send_raw(self, msg='Default Message') -> None:  
-        self.updater.bot.send_message(self.chatId, text=msg)
+    def send_raw(self, msg='Default Message') -> None:
+        try:
+            self.updater.bot.send_message(self.chatId, text=msg)
+        except Exception as e:
+            print(e)
+            # TODO: Add logging
 
 
 def test_lto():

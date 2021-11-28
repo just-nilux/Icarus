@@ -365,7 +365,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     if len(nto_list) or len(lto_list):
         # 2.3.1: Execute the TOs
         df_balance, lto_list, nto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, df_balance, lto_list, data_dict))
-        # TODO: NEXT: Check if nto_list updated properly
+        # TODO: Investigate if the lto_list and the nto_list is updated directly (which means no need for re-assignment)
 
     #################### Phase 3: Perform post-calculation tasks ####################
 
@@ -440,7 +440,6 @@ async def main():
     session_end_timestamp = int(datetime.timestamp(session_end_time))
 
     # Iterate through the time stamps
-    # BUG: Start time is 2016-05-12 12:15:00, if you only choose 1d, the you should expect to start 2016-05-13 00:00:00
     ikarus_cycle_period_in_sec = time_scale_to_second(ikarus_cycle_period)
     session_start_timestamp = round_to_period(session_start_timestamp, ikarus_cycle_period_in_sec, direction='ceiling')
     session_end_timestamp = round_to_period(session_end_timestamp, ikarus_cycle_period_in_sec, direction='floor')
