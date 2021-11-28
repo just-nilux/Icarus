@@ -122,7 +122,6 @@ class RandomStrategy(StrategyBase):
 
 
     async def on_waiting_exit(self, lto, analysis_dict):
-        # TODO: NEXT: NEXT: Integrate TYPE_MARKET exit
 
         if self.config['exit']['type'] == TYPE_MARKET:
             

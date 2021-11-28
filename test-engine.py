@@ -365,7 +365,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     if len(nto_list) or len(lto_list):
         # 2.3.1: Execute the TOs
         df_balance, lto_list, nto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, df_balance, lto_list, data_dict))
-        # TODO: NEXT: Check if nto_list updated properly
+        # TODO: Investigate if the lto_list and the nto_list is updated directly (which means no need for re-assignment)
 
     #################### Phase 3: Perform post-calculation tasks ####################
 

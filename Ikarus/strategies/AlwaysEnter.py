@@ -59,6 +59,7 @@ class AlwaysEnter(StrategyBase):
                     StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
 
                 # Apply exchange filters
+                # TODO: NEXT: Instead of result assignment, directly use the trade_obj statement
                 if result := await StrategyBase.apply_exchange_filters(trade_obj, self.symbol_info[ao_pair]): 
                     trade_obj['enter'][self.config['enter']['type']] = result
                 else: return None

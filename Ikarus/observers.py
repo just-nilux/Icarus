@@ -18,7 +18,7 @@ class Observer():
     async def balance(self, ikarus_time, df_balance):
         observation_obj = GenericObject()
         df_balance.reset_index(level=0, inplace=True)
-        # TODO: NEXT: Convert this function to use dicts directly instead of custom GenericObjects
+        # TODO: Convert this function to use dicts directly instead of custom GenericObjects
         observer_item = list(df_balance.T.to_dict().values())
         observation_obj.load('type','balance')
         observation_obj.load('timestamp', ikarus_time)

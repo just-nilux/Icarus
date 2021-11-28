@@ -900,6 +900,8 @@ class TestBinanceWrapper():
                     # NOTE: No need to do anything for backtest
                     # TODO: NEXT: Cancel the previous order and place the new order
                     #       Do not change the exit order amount price etc because here the df_balance is not updated accordingly
+                    # TODO: Actually since the update is a generic action: it may endup with some changes in prices which causes the expected
+                    #       amount to be changed. Thus, currently it may not be necessary but will be key point for ACTN_UPDATE to be useful
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
@@ -952,13 +954,12 @@ class TestBinanceWrapper():
                         lto_list[i]['result']['cause'] = STAT_CLOSED
 
                         lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                        # TODO: NEXT: CAREFULL about the close time of the market exit, it requires ikarus_time
                         lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                         lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                         lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
                         lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
                         lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
-                        # TODO NEXT: safe calcualtion for profit and fee
+
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
                             - lto_list[i]['result']['enter']['amount'] \
                             - lto_list[i]['result']['enter']['fee'] \

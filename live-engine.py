@@ -309,7 +309,6 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
-    # TODO: NEXT: Update live-engine based on the changes in test-engine
     logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
     
     #################### Phase 1: Perform pre-calculation tasks ####################
@@ -339,7 +338,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
                               bwrapper.get_lto_orders(lto_list)]
 
     data_dict, orders = await asyncio.gather(*pre_calc_1_coroutines)
-    # TODO: NEXT: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
+    # TODO: [APIError(code=-1105): Parameter 'orderId' was empty.] Resolve the issue and continue integ
+    #       This is a issue related with custom order obj manipulation, so do not invest too much time
     if len(lto_list): 
         #orders = await lto_manipulator.fill_open_enter(lto_list, orders)
         #orders = await lto_manipulator.fill_open_exit_limit(lto_list, orders)

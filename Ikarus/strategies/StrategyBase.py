@@ -385,8 +385,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         type = more_itertools.one(lto[phase].keys())
         exit_qty = lto['result']['enter']['quantity']
         copy_module = copy.deepcopy(module)
-        # TODO: BUG: NEXT: here somewhere the enter limit order price is get corrupted
-        #       It should be fixed I guess with the commit de12ba7a3abdcf797659fc3c3f7005c94d196765
+
         if phase == 'enter':
             if type == TYPE_LIMIT:
                 module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
