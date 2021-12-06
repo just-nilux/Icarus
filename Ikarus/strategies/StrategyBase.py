@@ -142,9 +142,21 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     continue
 
             # Perform evaluation
-            decision = await self.make_decision(analysis_dict, ao_pair, dt_index, pairwise_alloc_share)
-            if decision:
-                trade_objects.append(decision)
+            if nto:= await self.make_decision(analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
+                
+                # Apply exchange filters
+                if result := await StrategyBase.apply_exchange_filters(nto, self.symbol_info[ao_pair]): 
+                    nto['enter'][self.config['enter']['type']] = result
+                else: continue
+
+                if not await StrategyBase.check_min_notional(
+                    nto['enter'][self.config['enter']['type']]['price'], 
+                    nto['enter'][self.config['enter']['type']]['quantity'], 
+                    self.symbol_info[ao_pair]):
+                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. NTO: {json.dumps(nto['enter'][self.config['enter']['type']])}")
+                    continue
+
+                trade_objects.append(nto)
                 empty_lto_slot -= 1
 
         return trade_objects

@@ -57,18 +57,6 @@ class AlwaysEnter90(StrategyBase):
                     exit_price,
                     StrategyBase._eval_future_candle_time(dt_index,9,time_scale_to_minute(self.min_period)))
 
-                # Apply exchange filters
-                if result := await StrategyBase.apply_exchange_filters(trade_obj, self.symbol_info[ao_pair]): 
-                    trade_obj['enter'][self.config['enter']['type']] = result
-                else: return None
-                
-                if not await StrategyBase.check_min_notional(
-                    trade_obj['enter'][enter_type]['price'], 
-                    trade_obj['enter'][enter_type]['quantity'], 
-                    self.symbol_info[ao_pair]):
-                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. NTO: {json.dumps(trade_obj['enter'][enter_type])}")
-                    return None
-                
                 return trade_obj
 
             else:
