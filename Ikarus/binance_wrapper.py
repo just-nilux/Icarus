@@ -363,6 +363,33 @@ class BinanceWrapper():
             return True
 
 
+    async def _execute_market_buy(self, lto):
+        try:
+            response = await self.client.order_market_buy(
+                symbol=lto['pair'],
+                quantity=lto[PHASE_ENTER][TYPE_LIMIT]['quantity'])
+
+            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+
+        except Exception as e:
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            self.logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_MARKET]))
+            return None
+
+        else:
+            # TODO: NEXT: Get response["fills"] section
+            self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            lto[PHASE_ENTER][TYPE_MARKET]['orderId'] = response['orderId']
+
+            # TODO: NEXT: Think about the status stuff again, and the diagram
+            lto['status'] = STAT_OPEN_ENTER
+            lto['history'].append(lto['status'])
+            self.telbot.send_constructed_msg('lto', *['_id', lto['strategy'], lto['pair'], PHASE_ENTER, response["orderId"], EVENT_PLACED])
+            return lto
+
+    async def _execute_market_sell(self, lto):
+        return
+
     async def _execute_lto(self, lto_list):
         """
         The errors during execution of exit orders will left the status:
@@ -460,7 +487,6 @@ class BinanceWrapper():
                         self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', response["orderId"], EVENT_PLACED])
                         self.telbot.send_constructed_msg('lto', *[ lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], 'exit', response["orderId"], 'filled'])
 
-
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successful and the algorithm decides to execute the exit order
                     
@@ -473,7 +499,9 @@ class BinanceWrapper():
                     An alternative solution might be changing the status as 'open_exit', so that in the next iteration, exit module might be
                     updated to fix the problems such as filters etc. In this case the question is: Then what was wrong with the first time?
                     '''
-                    if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
+                    if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_MARKET:
+                        lto_list[i] = await self._execute_market_sell(lto_list[i])  
+                    elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
                         lto_list[i] = await self._execute_limit_sell(lto_list[i])
                     elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
                         lto_list[i] = await self._execute_oco_sell(lto_list[i])
@@ -524,12 +552,11 @@ class BinanceWrapper():
             if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
-                    # NOTE: Since there is no risk evaluation in the market enter, It is not planned to be implemented
-                    raise Exception('Market Enter is not supported')
+                    if result := await self._execute_market_buy(nto_list[i]):
+                        live_nto_list.append(copy.deepcopy(result))
 
                 elif TYPE_LIMIT in nto_list[i]['enter'].keys():
-                    result = await self._execute_limit_buy(nto_list[i])
-                    if result:
+                    if result := await self._execute_limit_buy(nto_list[i]):
                         live_nto_list.append(copy.deepcopy(result))
 
                 else: pass # TODO: Internal Error
