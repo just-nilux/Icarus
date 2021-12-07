@@ -145,16 +145,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
             if nto:= await self.make_decision(analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
                 
                 # Apply exchange filters
+                # NOTE: This only works for phase_enter
                 if result := await StrategyBase.apply_exchange_filters(nto, self.symbol_info[ao_pair]): 
                     nto['enter'][self.config['enter']['type']] = result
                 else: continue
-
-                if not await StrategyBase.check_min_notional(
-                    nto['enter'][self.config['enter']['type']]['price'], 
-                    nto['enter'][self.config['enter']['type']]['quantity'], 
-                    self.symbol_info[ao_pair]):
-                    self.logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {ao_pair}. NTO: {json.dumps(nto['enter'][self.config['enter']['type']])}")
-                    continue
 
                 trade_objects.append(nto)
                 empty_lto_slot -= 1
@@ -431,17 +425,32 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         else: pass
 
+        # TODO: MIN_NOTIONAL filter is not checked for the phase_exit and TYPE_OCO
         if type == TYPE_OCO:
+            # NOTE: According to https://binance-docs.github.io/apidocs/spot/en/#filters MIN_NOTIONAL section, for OCO and stoploss,
+            #       stopPrice is used
+            if not await StrategyBase.check_min_notional(
+                module['stopPrice'], 
+                module['quantity'], 
+                symbol_info):
+                logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(module)}")
+                return None
             # NOTE: Be careful about the limitPrice
             module['amount'] = safe_multiply(module['quantity'], module['limitPrice'])
         else:
+            if not await StrategyBase.check_min_notional(
+                module['price'], 
+                module['quantity'], 
+                symbol_info):
+                logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(module)}")
+                return None
             module['amount'] = safe_multiply(module['quantity'], module['price'])
         
         module['fee'] = safe_multiply(module['amount'], StrategyBase.fee)
-
         return module
 
 
     @staticmethod
     async def check_min_notional(price, quantity, symbol_info): 
         return (safe_multiply(price, quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False
+
