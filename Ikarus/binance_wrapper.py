@@ -381,14 +381,57 @@ class BinanceWrapper():
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_ENTER][TYPE_MARKET]['orderId'] = response['orderId']
 
-            # TODO: NEXT: Think about the status stuff again, and the diagram
+            # TODO: NEXT: Think about the status stuff again
             lto['status'] = STAT_OPEN_ENTER
             lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('lto', *['_id', lto['strategy'], lto['pair'], PHASE_ENTER, response["orderId"], EVENT_PLACED])
+            
+            # TODO: NEXT: figure out way to fill time
+            lto['result'][PHASE_ENTER]['type'] = TYPE_MARKET
+            lto['result'][PHASE_ENTER]['time'] = response["transactTime"]   # TODO: Check if the value is correct or in UTC
+            lto['result'][PHASE_ENTER]['price'] = 
+            lto['result'][PHASE_ENTER]['quantity'] = float(response["executedQty"])
+            lto['result'][PHASE_ENTER]['amount'] = float(lto['result'][PHASE_ENTER]['price'] * lto['result'][PHASE_ENTER]['quantity'])
+            lto['result'][PHASE_ENTER]['fee'] = calculate_fee(lto['result'][PHASE_ENTER]['amount'], StrategyBase.fee)   # TODO: Obtain the comission from the order
             return lto
 
     async def _execute_market_sell(self, lto):
-        return
+        try:
+            response = await self.client.order_market_sell(
+                symbol=lto['pair'],
+                quantity=lto[PHASE_EXIT][TYPE_MARKET]['quantity'])
+
+            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+
+        except Exception as e:
+            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
+            return None
+
+        else:
+            # TODO: NEXT: Get response["fills"] section
+            self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            lto[PHASE_EXIT][TYPE_MARKET]['orderId'] = response['orderId']
+
+            lto['status'] = STAT_CLOSED
+            lto['history'].append(lto['status'])
+            lto['result']['cause'] = STAT_CLOSED
+
+            lto['result'][PHASE_EXIT]['type'] = TYPE_MARKET
+            lto['result'][PHASE_EXIT]['time'] = response["transactTime"]   # TODO: Check if the value is correct or in UTC
+            lto['result'][PHASE_EXIT]['price'] = 
+            lto['result'][PHASE_EXIT]['quantity'] = float(response["executedQty"])
+            lto['result'][PHASE_EXIT]['amount'] = float(lto['result'][PHASE_EXIT]['price'] * lto['result'][PHASE_EXIT]['quantity'])
+            lto['result'][PHASE_EXIT]['fee'] = calculate_fee(lto['result'][PHASE_EXIT]['amount'], StrategyBase.fee)
+
+            lto['result']['profit'] = lto['result'][PHASE_EXIT]['amount'] \
+                - lto['result'][PHASE_ENTER]['amount'] \
+                - lto['result'][PHASE_ENTER]['fee'] \
+                - lto['result'][PHASE_EXIT]['fee']
+            lto['result']['liveTime'] = lto['result'][PHASE_EXIT]['time'] - lto['result'][PHASE_ENTER]['time']
+
+            self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response["orderId"], EVENT_FILLED])
+
+            return lto
 
     async def _execute_lto(self, lto_list):
         """
