@@ -35,14 +35,17 @@ def truncate(num,n):
                 return float(temp)      
     return float(temp)
 
-def safe_multiply(num1, num2):
-    return float( (Decimal(str(num1)) * Decimal(str(num2))).quantize(Decimal('0.00000001'), rounding=None) )
+def safe_divide(num1, num2, quant='0.00000001', rounding=None):
+    return float( (Decimal(str(num1)) / Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
 
-def safe_sum(num1, num2):
-    return float( (Decimal(str(num1)) + Decimal(str(num2))).quantize(Decimal('0.00000001'), rounding=None) )
+def safe_multiply(num1, num2, quant='0.00000001', rounding=None):
+    return float( (Decimal(str(num1)) * Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
 
-def safe_substract(num1, num2):
-    return float( (Decimal(str(num1)) - Decimal(str(num2))).quantize(Decimal('0.00000001'), rounding=None) )
+def safe_sum(num1, num2, quant='0.00000001', rounding=None):
+    return float( (Decimal(str(num1)) + Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
+
+def safe_substract(num1, num2, quant='0.00000001', rounding=None):
+    return float( (Decimal(str(num1)) - Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
 
 def time_scale_to_second(interval: str):
     return time_scale_to_minute(interval) * 60

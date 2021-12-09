@@ -13,7 +13,8 @@ import bson
 import time
 from itertools import chain, groupby
 import copy
-from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond, get_lto_phase
+from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond, get_lto_phase, \
+    safe_multiply, safe_divide, round_to_period
 from . import balance_manager
 import more_itertools
 
@@ -377,7 +378,6 @@ class BinanceWrapper():
             return None
 
         else:
-            # TODO: NEXT: Get response["fills"] section
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_ENTER][TYPE_MARKET]['orderId'] = response['orderId']
 
@@ -385,10 +385,21 @@ class BinanceWrapper():
             lto['status'] = STAT_OPEN_ENTER
             lto['history'].append(lto['status'])
             
-            # TODO: NEXT: figure out way to fill time
+            if response['executedQty'] != response['origQty']:
+                # TODO: Send an Error msg
+                pass
+            avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in response['fills']]), response['executedQty'])
+        
+            strategy_cycle_period = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+            strategy_cycle_period_in_sec = time_scale_to_second(strategy_cycle_period)
+            time_value = int(response["transactTime"]/1000)
+
+            # Get the start time of the current candle
+            execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
             lto['result'][PHASE_ENTER]['type'] = TYPE_MARKET
-            lto['result'][PHASE_ENTER]['time'] = response["transactTime"]   # TODO: Check if the value is correct or in UTC
-            lto['result'][PHASE_ENTER]['price'] = 
+            lto['result'][PHASE_ENTER]['time'] = execution_time   # TODO: Check if the value is correct or in UTC
+            lto['result'][PHASE_ENTER]['price'] = avg_price
             lto['result'][PHASE_ENTER]['quantity'] = float(response["executedQty"])
             lto['result'][PHASE_ENTER]['amount'] = float(lto['result'][PHASE_ENTER]['price'] * lto['result'][PHASE_ENTER]['quantity'])
             lto['result'][PHASE_ENTER]['fee'] = calculate_fee(lto['result'][PHASE_ENTER]['amount'], StrategyBase.fee)   # TODO: Obtain the comission from the order
