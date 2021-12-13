@@ -181,6 +181,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 
         elif lto_list[i]['status'] == STAT_OPEN_EXIT:
 
+            # TODO: Remove this statement and do not use STAT_OPEN_EXIT, use STAT_WAITING_EXIT
             if TYPE_MARKET in lto_list[i]['exit'].keys():
                 # TODO: NEXT: Direct the flow from here to strategies to be updated
                 #       An alternative might be like setting the status as STAT_WAITING_EXIT

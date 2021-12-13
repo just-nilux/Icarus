@@ -381,8 +381,7 @@ class BinanceWrapper():
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_ENTER][TYPE_MARKET]['orderId'] = response['orderId']
 
-            # TODO: NEXT: Think about the status stuff again
-            lto['status'] = STAT_OPEN_ENTER
+            lto['status'] = STAT_WAITING_EXIT
             lto['history'].append(lto['status'])
             
             if response['executedQty'] != response['origQty']:
