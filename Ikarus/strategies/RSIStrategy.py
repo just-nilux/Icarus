@@ -84,7 +84,7 @@ class RSIStrategy(StrategyBase):
 
 
     async def on_waiting_exit(self, lto, analysis_dict):
-
+        # TODO: Raise error if a strategy is not made for a certain exit type
         if self.config['exit']['type'] == TYPE_MARKET:
             time_dict = analysis_dict[lto['pair']]
 
@@ -99,12 +99,13 @@ class RSIStrategy(StrategyBase):
                     lto['result'][PHASE_ENTER]['quantity'],
                     analysis_dict[lto['pair']][self.min_period]['close'],
                     0)
-            else:
+                lto['action'] = ACTN_EXEC_EXIT
+                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
                 return lto
 
-        lto['action'] = ACTN_EXEC_EXIT
-        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
-        return lto
+            else:
+                return lto
+        
 
 
     async def on_closed(self, lto):

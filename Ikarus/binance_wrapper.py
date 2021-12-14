@@ -426,9 +426,22 @@ class BinanceWrapper():
             lto['history'].append(lto['status'])
             lto['result']['cause'] = STAT_CLOSED
 
+            if response['executedQty'] != response['origQty']:
+                # TODO: Send an Error msg
+                pass
+            
+            avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in response['fills']]), response['executedQty'])
+        
+            strategy_cycle_period = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+            strategy_cycle_period_in_sec = time_scale_to_second(strategy_cycle_period)
+            time_value = int(response["transactTime"]/1000)
+
+            # Get the start time of the current candle
+            execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
             lto['result'][PHASE_EXIT]['type'] = TYPE_MARKET
-            lto['result'][PHASE_EXIT]['time'] = response["transactTime"]   # TODO: Check if the value is correct or in UTC
-            lto['result'][PHASE_EXIT]['price'] = 
+            lto['result'][PHASE_EXIT]['time'] = execution_time   # TODO: Check if the value is correct or in UTC
+            lto['result'][PHASE_EXIT]['price'] = avg_price
             lto['result'][PHASE_EXIT]['quantity'] = float(response["executedQty"])
             lto['result'][PHASE_EXIT]['amount'] = float(lto['result'][PHASE_EXIT]['price'] * lto['result'][PHASE_EXIT]['quantity'])
             lto['result'][PHASE_EXIT]['fee'] = calculate_fee(lto['result'][PHASE_EXIT]['amount'], StrategyBase.fee)
