@@ -7,6 +7,7 @@ import copy
 import itertools
 from ..utils import time_scale_to_minute
 import json
+from ..exceptions import FatalException
 
 class MACDStrategy(StrategyBase):
 
@@ -105,7 +106,8 @@ class MACDStrategy(StrategyBase):
                 return lto
             else:
                 return lto
-
+        else:
+            raise FatalException(f"Unexpected exit type: {self.config['exit']['type']}")
 
     async def on_closed(self, lto):
         return lto

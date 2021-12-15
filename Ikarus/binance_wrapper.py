@@ -1017,17 +1017,15 @@ class TestBinanceWrapper():
                     lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                     lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                     lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
                     lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
-                    #lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] - lto_list[i]['result']['enter']['amount']
                     lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
                         - lto_list[i]['result']['enter']['amount'] \
                         - lto_list[i]['result']['enter']['fee'] \
                         - lto_list[i]['result']['exit']['fee']
 
                     base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    
                     df_balance = balance_manager.cancel_exit_order(df_balance, base_cur, lto_list[i]['result']['exit']['quantity'])
                     df_balance = balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
                     df_balance = balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
@@ -1050,7 +1048,7 @@ class TestBinanceWrapper():
                         lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                         lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
                         lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
-                        lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
+                        lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
                         lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
 
                         lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
@@ -1108,7 +1106,7 @@ class TestBinanceWrapper():
                 # TODO: Consider using the direct enter and exit types rather than checking the keys with a order
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
 
-                    nto_list[i]['status'] = STAT_OPEN_EXIT
+                    nto_list[i]['status'] = STAT_WAITING_EXIT
                     nto_list[i]['history'].append(nto_list[i]['status'])
 
                     # NOTE: The order is PLACED and FILLED
@@ -1120,13 +1118,10 @@ class TestBinanceWrapper():
                     nto_list[i]['result'][PHASE_ENTER]['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
                     nto_list[i]['result'][PHASE_ENTER]['price'] = float(last_kline['close'])
                     nto_list[i]['result'][PHASE_ENTER]['quantity'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['quantity']
-                    nto_list[i]['result'][PHASE_ENTER]['amount'] = nto_list[i][PHASE_ENTER][TYPE_MARKET]['amount']
+                    nto_list[i]['result'][PHASE_ENTER]['amount'] = float(nto_list[i][PHASE_ENTER][TYPE_MARKET]['price'] * nto_list[i][PHASE_ENTER][TYPE_MARKET]['quantity'])
                     nto_list[i]['result'][PHASE_ENTER]['fee'] = calculate_fee(nto_list[i]['result'][PHASE_ENTER]['amount'], StrategyBase.fee)
-                    # TODO: Instead of directly modifying the value, just create a wrapper that also checks if the withdraw or deposit is successfull
-                    #       There might be some cases where the balance go below zero, (Which indicates some bgs in implementation of logic)
 
                     base_cur = nto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    
                     df_balance = balance_manager.place_enter_order(df_balance, self.quote_currency, nto_list[i][PHASE_ENTER][TYPE_MARKET])
                     df_balance = balance_manager.buy(df_balance, self.quote_currency, base_cur, nto_list[i]['result'][PHASE_ENTER], TYPE_MARKET)
 

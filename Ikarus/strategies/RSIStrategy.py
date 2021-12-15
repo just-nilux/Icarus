@@ -7,6 +7,7 @@ import copy
 import itertools
 from ..utils import time_scale_to_minute
 import json
+from ..exceptions import FatalException
 
 class RSIStrategy(StrategyBase):
 
@@ -105,6 +106,8 @@ class RSIStrategy(StrategyBase):
 
             else:
                 return lto
+        else:
+            raise FatalException(f"Unexpected exit type: {self.config['exit']['type']}")
         
 
 
