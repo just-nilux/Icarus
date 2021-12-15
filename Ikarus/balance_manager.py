@@ -26,7 +26,6 @@ def buy(df_balance, quote_cur, base_cur, enter_module, enter_type):
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    return df_balance
 
 def sell(df_balance, quote_cur, base_cur, exit_module):
 
@@ -36,7 +35,6 @@ def sell(df_balance, quote_cur, base_cur, exit_module):
     df_balance.loc[quote_cur,'free'] = safe_substract(df_balance.loc[quote_cur,'free'], exit_module['fee'])
 
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    return df_balance
 
 
 def place_enter_order(df_balance, quote_cur, enter_module):
@@ -49,7 +47,6 @@ def place_enter_order(df_balance, quote_cur, enter_module):
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    return df_balance
 
 
 def cancel_enter_order(df_balance, quote_cur, enter_module):
@@ -61,7 +58,6 @@ def cancel_enter_order(df_balance, quote_cur, enter_module):
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    return df_balance
 
 
 def cancel_exit_order(df_balance, base_cur, quantity):
@@ -73,7 +69,6 @@ def cancel_exit_order(df_balance, base_cur, quantity):
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    return df_balance
 
 
 def place_exit_order(df_balance, base_cur, quantity):
@@ -85,4 +80,3 @@ def place_exit_order(df_balance, base_cur, quantity):
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']
-    return df_balance

@@ -164,7 +164,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['enter']['fee'] = lto_list[i]['enter'][TYPE_LIMIT]['fee']
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    df_balance = balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['enter'], TYPE_LIMIT)
+                    balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['enter'], TYPE_LIMIT)
 
                 elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -216,7 +216,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
 
                 elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
@@ -247,7 +247,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
                 
                 elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
                     # Limit taken
@@ -269,7 +269,7 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
                     lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    df_balance = balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
 
                 elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
                     lto_list[i]['status'] = STAT_EXIT_EXP
