@@ -100,14 +100,14 @@ class MACDStrategy(StrategyBase):
                     lto['result'][PHASE_ENTER]['quantity'],
                     analysis_dict[lto['pair']][self.min_period]['close'],
                     0)
-                
-                lto['action'] = ACTN_EXEC_EXIT
-                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
-                return lto
             else:
                 return lto
         else:
             raise FatalException(f"Unexpected exit type: {self.config['exit']['type']}")
+
+        lto['action'] = ACTN_EXEC_EXIT
+        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
+        return lto
 
     async def on_closed(self, lto):
         return lto

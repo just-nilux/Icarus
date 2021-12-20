@@ -128,15 +128,12 @@ class RandomStrategy(StrategyBase):
                     lto['result'][PHASE_ENTER]['quantity'],
                     analysis_dict[lto['pair']][self.min_period]['close'],
                     0)
-                lto['action'] = ACTN_EXEC_EXIT
-                lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
-                return lto
-                # TODO: NEXT: Check the path of market execution from here (in backtest)
-                #       If it is fine then apply the changes to others as well
             else:
                 return lto
 
-
+        lto['action'] = ACTN_EXEC_EXIT
+        lto['exit'][self.config['exit']['type']] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
+        return lto
 
 
     async def on_closed(self, lto):
