@@ -18,6 +18,7 @@ import time
 from itertools import chain, groupby
 import operator
 import itertools
+import more_itertools
 from Ikarus.resource_allocator import ResourceAllocator
 
 
@@ -144,6 +145,12 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
     #       len(orders_dict) >= len(lto_dict)
 
     for i in range(len(lto_list)):
+
+        if lto_list[i]['status'] == STAT_WAITING_EXIT:
+            # NOTE: If the condition is true, then there is no active order for that LTO, so the statement: orders_dict[orderId]
+            #       will cause exception since there is no orderId
+            continue
+
         pair = lto_list[i]['pair']
 
         #scale = list(data_dict[pair].keys())[0]
@@ -158,6 +165,8 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, orders_dict)
         type = config['strategy'][lto_list[i]['strategy']][phase_lto]['type']
         orderId = lto_list[i][phase_lto][type]['orderId'] # Get the orderId of the exit module
 
+        # BUG: If the lto has market enter order or simply the exit order execution failed, then the status will remain STAT_WAITING_EXIT.
+        #       In this case the phase become the PHASE_EXIT and the order ID is searched for the exit order which does not exist yet
         if orders_dict[orderId]['status'] == 'CANCELED':
             logger.warning(f'LTO: "{lto_list[i]["_id"]}": canceled at the phase {phase_lto}. Order ID: {orderId}. Closing the LTO')
             telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], phase_lto, orderId, 'manually canceled'])
@@ -397,11 +406,11 @@ async def application(strategy_list, bwrapper, ikarus_time):
             logger.error('Some of the NTOs could not be placed to Database')
             telbot.send_constructed_msg('error', 'Some of the NTOs could not be placed to Database')
             for nto in nto_list:
-                telbot.send_constructed_msg('lto', *['', nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
+                telbot.send_constructed_msg('lto', *['', nto['strategy'], nto['pair'], PHASE_ENTER, more_itertools.one(nto[PHASE_ENTER].values())['orderId'], EVENT_PLACED])
         else:
             for _id, nto in zip(results.inserted_ids,nto_list):
-                logger.info(f'LTO: "{nto["_id"]}" | {nto["strategy"]} | {nto["pair"]} created with the {PHASE_ENTER} order: {nto["enter"][TYPE_LIMIT]["orderId"]}')
-                telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, nto['enter'][TYPE_LIMIT]['orderId'], EVENT_PLACED])
+                logger.info(f"LTO: '{nto['_id']}' | {nto['strategy']} | {nto['pair']} created with the {PHASE_ENTER} order: {more_itertools.one(nto[PHASE_ENTER].values())['orderId']}")
+                telbot.send_constructed_msg('lto', *[_id, nto['strategy'], nto['pair'], PHASE_ENTER, more_itertools.one(nto[PHASE_ENTER].values())['orderId'], EVENT_PLACED])
 
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]

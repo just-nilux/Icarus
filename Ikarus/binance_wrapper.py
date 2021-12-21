@@ -266,8 +266,6 @@ class BinanceWrapper():
                 stopLimitPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopLimitPrice'],
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC)
 
-            if response['orderReports'][0]['status'] != 'NEW' or response['orderReports'][1]['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
@@ -295,8 +293,6 @@ class BinanceWrapper():
                 quantity=lto['exit'][TYPE_LIMIT]['quantity'],
                 price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_LIMIT]['price'])
 
-            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
-
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
@@ -318,8 +314,6 @@ class BinanceWrapper():
                 symbol=lto['pair'],
                 quantity=lto[PHASE_ENTER][TYPE_LIMIT]['quantity'],
                 price=f'%.{self.pricePrecision}f' % lto[PHASE_ENTER][TYPE_LIMIT]['price'])
-
-            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
 
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
@@ -368,9 +362,9 @@ class BinanceWrapper():
         try:
             response = await self.client.order_market_buy(
                 symbol=lto['pair'],
-                quantity=lto[PHASE_ENTER][TYPE_LIMIT]['quantity'])
-
-            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+                quantity=lto[PHASE_ENTER][TYPE_MARKET]['quantity'])
+            self.logger.debug(json.dumps(response))
+            self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
 
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
@@ -397,7 +391,7 @@ class BinanceWrapper():
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
             lto['result'][PHASE_ENTER]['type'] = TYPE_MARKET
-            lto['result'][PHASE_ENTER]['time'] = execution_time   # TODO: Check if the value is correct or in UTC
+            lto['result'][PHASE_ENTER]['time'] = execution_time*1000
             lto['result'][PHASE_ENTER]['price'] = avg_price
             lto['result'][PHASE_ENTER]['quantity'] = float(response["executedQty"])
             lto['result'][PHASE_ENTER]['amount'] = float(lto['result'][PHASE_ENTER]['price'] * lto['result'][PHASE_ENTER]['quantity'])
@@ -409,8 +403,8 @@ class BinanceWrapper():
             response = await self.client.order_market_sell(
                 symbol=lto['pair'],
                 quantity=lto[PHASE_EXIT][TYPE_MARKET]['quantity'])
-
-            if response['status'] != 'NEW': raise Exception('Response status is not "NEW"')
+            self.logger.debug(json.dumps(response))
+            self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
 
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
@@ -418,7 +412,6 @@ class BinanceWrapper():
             return None
 
         else:
-            # TODO: NEXT: Get response["fills"] section
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_EXIT][TYPE_MARKET]['orderId'] = response['orderId']
 
@@ -440,7 +433,7 @@ class BinanceWrapper():
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
             lto['result'][PHASE_EXIT]['type'] = TYPE_MARKET
-            lto['result'][PHASE_EXIT]['time'] = execution_time   # TODO: Check if the value is correct or in UTC
+            lto['result'][PHASE_EXIT]['time'] = execution_time*1000
             lto['result'][PHASE_EXIT]['price'] = avg_price
             lto['result'][PHASE_EXIT]['quantity'] = float(response["executedQty"])
             lto['result'][PHASE_EXIT]['amount'] = float(lto['result'][PHASE_EXIT]['price'] * lto['result'][PHASE_EXIT]['quantity'])

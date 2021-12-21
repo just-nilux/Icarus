@@ -7,9 +7,7 @@ import os
 import asyncio
 from datetime import datetime, timezone
 from tabulate import tabulate
-from itertools import chain, groupby
-import operator
-import pathlib
+from .utils import safe_substract
 
 class Statistics():
     # You can not manage something that you can not measure
@@ -158,7 +156,7 @@ class Statistics():
             hto['pair'],
             datetime.fromtimestamp(hto['result']['enter']['time']/1000, timezone.utc),
             datetime.fromtimestamp(hto['result']['exit']['time']/1000, timezone.utc),
-            hto['result']['exit']['price'] - hto['result']['enter']['price'],
+            safe_substract(hto['result']['exit']['amount'], hto['result']['enter']['amount']),
             100*(hto['result']['exit']['price'] - hto['result']['enter']['price'])/hto['result']['enter']['price']
         ]
         return hto_stat

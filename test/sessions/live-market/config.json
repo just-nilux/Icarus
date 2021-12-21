@@ -1,0 +1,80 @@
+{
+    "tag": "bot",
+    "log-level": "DEBUG",
+    "credential_file": ".\\test_credentials.json",
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "notification":{
+        "telegram": {
+            "hto": true,
+            "lto": true,
+            "app": true,
+            "error": true,
+            "daily": true,
+            "stat": true,
+            "market": false
+        },
+        "mail": false
+    },
+    "broker": {
+        "quote_currency": "USDT",
+        "credit_currency": "TRY"
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.02
+    },
+    "strategy": {
+        "RandomStrategy2": {
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1m"],
+            "enter": {
+                "type": "market"
+            },
+            "exit": {
+                "type": "market"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "update"
+            },
+            "max_lto": 1
+        }
+    },
+    "analysis": {
+        "indicators": ["low","high", "rsi", "close", "macd"],
+        "params": {
+            "ma": [50,200],
+            "bband": {
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
+            }
+        }
+    },
+    "statistics": {
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
+    },
+    "time_scales": {
+        "1m": ["12 hours", 720],
+        "5m": ["1 day", 480],
+        "15m": ["1 day", 96],
+        "30m": ["1 week", 336],
+        "1h": ["1 week", 168],
+        "2h": ["1 week", 84],
+        "4h": ["1 week", 42],
+        "12h": ["1 month", 60],
+        "1d": ["3 months", 90],
+        "1w": ["1 year", 52],
+        "1M": ["1 year", 12]
+    },
+    "visualization":{
+        "observers":{
+            "qc":["free", "total", "in_trade"],
+            "qc_leak":["binary"]
+        },
+        "indicators": ["ma", "bband", "rsi", "macd"]
+    }
+}
