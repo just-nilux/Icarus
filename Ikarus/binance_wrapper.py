@@ -233,11 +233,10 @@ class BinanceWrapper():
         # Check the status of LTOs:
         coroutines = []
         for lto in lto_list:
-            lto_phase = get_lto_phase(lto)
-            if lto_phase == PHASE_ENTER:
+            if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP]:
                 coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter'][TYPE_LIMIT]['orderId']))
 
-            elif lto_phase == PHASE_EXIT:
+            elif lto['status'] in [STAT_OPEN_EXIT, STAT_EXIT_EXP]:
                 if self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_LIMIT:
                     coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_LIMIT]['orderId']))
                 elif self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_OCO:
@@ -269,7 +268,7 @@ class BinanceWrapper():
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
-            return lto
+            return False
 
         else:
             response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
@@ -283,7 +282,7 @@ class BinanceWrapper():
             lto['history'].append(lto['status'])
             self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response_limit_maker["orderId"], EVENT_PLACED])
 
-            return lto
+            return True
 
 
     async def _execute_limit_sell(self, lto):
@@ -296,7 +295,7 @@ class BinanceWrapper():
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
-            return lto
+            return False
 
         else:
             self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
@@ -305,7 +304,7 @@ class BinanceWrapper():
             lto['status'] = STAT_OPEN_EXIT
             lto['history'].append(lto['status'])
             self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response["orderId"], EVENT_PLACED])
-            return lto
+            return True
 
 
     async def _execute_limit_buy(self, lto):
@@ -318,7 +317,7 @@ class BinanceWrapper():
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             self.logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_LIMIT]))
-            return None
+            return False
 
         else:
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
@@ -327,7 +326,7 @@ class BinanceWrapper():
             lto['status'] = STAT_OPEN_ENTER
             lto['history'].append(lto['status'])
             self.telbot.send_constructed_msg('lto', *['_id', lto['strategy'], lto['pair'], PHASE_ENTER, response["orderId"], EVENT_PLACED])
-            return lto
+            return True
 
 
     async def _execute_cancel(self, lto):
@@ -369,7 +368,7 @@ class BinanceWrapper():
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             self.logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_MARKET]))
-            return None
+            return False
 
         else:
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
@@ -396,7 +395,7 @@ class BinanceWrapper():
             lto['result'][PHASE_ENTER]['quantity'] = float(response["executedQty"])
             lto['result'][PHASE_ENTER]['amount'] = float(lto['result'][PHASE_ENTER]['price'] * lto['result'][PHASE_ENTER]['quantity'])
             lto['result'][PHASE_ENTER]['fee'] = calculate_fee(lto['result'][PHASE_ENTER]['amount'], StrategyBase.fee)   # TODO: Obtain the comission from the order
-            return lto
+            return True
 
     async def _execute_market_sell(self, lto):
         try:
@@ -409,7 +408,7 @@ class BinanceWrapper():
         except Exception as e:
             self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
-            return None
+            return False
 
         else:
             self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
@@ -447,7 +446,7 @@ class BinanceWrapper():
 
             self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response["orderId"], EVENT_FILLED])
 
-            return lto
+            return True
 
     async def _execute_lto(self, lto_list):
         """
@@ -489,9 +488,9 @@ class BinanceWrapper():
                         '''
                         # Place the order
                         if exit_type == TYPE_OCO:
-                            lto_list[i] = await self._execute_oco_sell(lto_list[i])
+                            await self._execute_oco_sell(lto_list[i])
                         elif exit_type == TYPE_LIMIT:
-                            lto_list[i] = await self._execute_limit_sell(lto_list[i])
+                            await self._execute_limit_sell(lto_list[i])
                     else:
                         '''
                         If the cancel failed, then the exit orders are still there.
@@ -559,11 +558,11 @@ class BinanceWrapper():
                     updated to fix the problems such as filters etc. In this case the question is: Then what was wrong with the first time?
                     '''
                     if self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_MARKET:
-                        lto_list[i] = await self._execute_market_sell(lto_list[i])  
+                        await self._execute_market_sell(lto_list[i])  
                     elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_LIMIT:
-                        lto_list[i] = await self._execute_limit_sell(lto_list[i])
+                        await self._execute_limit_sell(lto_list[i])
                     elif self.config['strategy'][lto_list[i]['strategy']]['exit']['type'] == TYPE_OCO:
-                        lto_list[i] = await self._execute_oco_sell(lto_list[i])
+                        await self._execute_oco_sell(lto_list[i])
 
                 # Postpone can be for the enter or the exit phase
                 elif lto_list[i]['action'] == ACTN_POSTPONE:
@@ -611,12 +610,12 @@ class BinanceWrapper():
             if nto_list[i]['status'] == STAT_OPEN_ENTER:
                 
                 if TYPE_MARKET in nto_list[i]['enter'].keys():
-                    if result := await self._execute_market_buy(nto_list[i]):
-                        live_nto_list.append(copy.deepcopy(result))
+                    if await self._execute_market_buy(nto_list[i]):
+                        live_nto_list.append(copy.deepcopy(nto_list[i]))
 
                 elif TYPE_LIMIT in nto_list[i]['enter'].keys():
-                    if result := await self._execute_limit_buy(nto_list[i]):
-                        live_nto_list.append(copy.deepcopy(result))
+                    if await self._execute_limit_buy(nto_list[i]):
+                        live_nto_list.append(copy.deepcopy(nto_list[i]))
 
                 else: pass # TODO: Internal Error
 
@@ -939,19 +938,20 @@ class TestBinanceWrapper():
         self.logger.debug("decompose ended")
         return do_dict
 
-
+    # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
     async def _execute_oco_sell(self, lto, df_balance):
         lto['status'] = STAT_OPEN_EXIT
         lto['history'].append(lto['status'])
         base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
         balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
-
+        return True
 
     async def _execute_limit_sell(self, lto, df_balance):
         lto['status'] = STAT_OPEN_EXIT
         lto['history'].append(lto['status'])
         base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
         balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+        return True
 
 
     async def _execute_limit_buy(self, lto, df_balance):
@@ -961,7 +961,7 @@ class TestBinanceWrapper():
         # NOTE: The order is only PLACED but not FILLED. No fee here
         lto['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
         balance_manager.place_enter_order(df_balance, self.quote_currency, lto['enter'][TYPE_LIMIT])
-
+        return True
 
     async def _execute_market_buy(self, lto, df_balance, data_dict):
         lto['status'] = STAT_WAITING_EXIT
@@ -982,34 +982,34 @@ class TestBinanceWrapper():
         base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
         balance_manager.place_enter_order(df_balance, self.quote_currency, lto[PHASE_ENTER][TYPE_MARKET])
         balance_manager.buy(df_balance, self.quote_currency, base_cur, lto['result'][PHASE_ENTER], TYPE_MARKET)
-
+        return True
 
     async def _execute_market_sell(self, lto, df_balance, data_dict):
-            min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
-            last_kline = data_dict[lto['pair']][min_scale].tail(1)
+        min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+        last_kline = data_dict[lto['pair']][min_scale].tail(1)
 
-            lto['status'] = STAT_CLOSED
-            lto['history'].append(lto['status'])
-            lto['result']['cause'] = STAT_CLOSED
+        lto['status'] = STAT_CLOSED
+        lto['history'].append(lto['status'])
+        lto['result']['cause'] = STAT_CLOSED
 
-            lto['result']['exit']['type'] = TYPE_MARKET
-            lto['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
-            lto['result']['exit']['price'] = float(last_kline['close'])
-            lto['result']['exit']['quantity'] = lto['exit'][TYPE_MARKET]['quantity']
-            lto['result']['exit']['amount'] = float(lto['result']['exit']['price'] * lto['result']['exit']['quantity'])
-            lto['result']['exit']['fee'] = calculate_fee(lto['result']['exit']['amount'], StrategyBase.fee)
+        lto['result']['exit']['type'] = TYPE_MARKET
+        lto['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
+        lto['result']['exit']['price'] = float(last_kline['close'])
+        lto['result']['exit']['quantity'] = lto['exit'][TYPE_MARKET]['quantity']
+        lto['result']['exit']['amount'] = float(lto['result']['exit']['price'] * lto['result']['exit']['quantity'])
+        lto['result']['exit']['fee'] = calculate_fee(lto['result']['exit']['amount'], StrategyBase.fee)
 
-            lto['result']['profit'] = lto['result']['exit']['amount'] \
-                - lto['result']['enter']['amount'] \
-                - lto['result']['enter']['fee'] \
-                - lto['result']['exit']['fee']
-            lto['result']['liveTime'] = lto['result']['exit']['time'] - lto['result']['enter']['time']
+        lto['result']['profit'] = lto['result']['exit']['amount'] \
+            - lto['result']['enter']['amount'] \
+            - lto['result']['enter']['fee'] \
+            - lto['result']['exit']['fee']
+        lto['result']['liveTime'] = lto['result']['exit']['time'] - lto['result']['enter']['time']
 
-            # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
-            base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
-            balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
-            balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto['result']['exit'])
-
+        # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
+        base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
+        balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+        balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto['result']['exit'])
+        return True
 
     async def _execute_lto(self, lto_list, df_balance, data_dict):
         """
