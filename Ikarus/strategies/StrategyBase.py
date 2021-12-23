@@ -62,20 +62,20 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
+    async def run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
         """[summary]
 
         Args:
             analysis_dict ([type]): [description]
             lto_list ([type]): [description]
             df_balance ([type]): [description]
-            dt_index ([type]): [description]
+            ikarus_time ([type]): [description]
             total_qc ([type]): [description]
 
         Returns:
             [type]: [description]
         """
-        # TODO: Rename dt_index
+
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
             self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
@@ -91,7 +91,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         in_trade_capital = 0
         dead_lto_capital = 0
         for lto_idx in range(len(lto_list)):
-            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, lto_list[lto_idx], dt_index)
+            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, lto_list[lto_idx], ikarus_time)
             pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
@@ -142,7 +142,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     continue
 
             # Perform evaluation
-            if nto:= await self.make_decision(analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
+            if nto:= await self.make_decision(analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
                 
                 # Apply exchange filters
                 # NOTE: This only works for phase_enter
@@ -157,7 +157,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def handle_lto_logic(self, analysis_dict, lto, dt_index):
+    async def handle_lto_logic(self, analysis_dict, lto, ikarus_time):
 
         """
         This function decides what to do for the LTOs based on their 'status'
@@ -170,15 +170,15 @@ class StrategyBase(metaclass=abc.ABCMeta):
             elif self.config['action_mapping'][STAT_ENTER_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_ENTER_EXP) <= 1:
                 # NOTE: postponed_candles = 1 means 2 candle
                 #       If only 1 candle is desired to be postponed, then it means we will wait for newly started candle to close so postponed_candles will be 0
-                return await self.on_enter_postpone(lto, dt_index)
+                return await self.on_enter_postpone(lto, ikarus_time)
 
         elif lto['status'] == STAT_EXIT_EXP:
 
             if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
-                return await self.on_update(lto, dt_index)
+                return await self.on_update(lto, ikarus_time)
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
-                return await self.on_exit_postpone(lto, dt_index)
+                return await self.on_exit_postpone(lto, ikarus_time)
 
             elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
                 # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that
@@ -250,7 +250,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 NotImplemented)
 
     #@abc.abstractmethod
-    #async def run(self, analysis_dict, lto_list, df_balance, dt_index=None):
+    #async def run(self, analysis_dict, lto_list, df_balance, ikarus_time=None):
     #    """Load in the data set"""
     #    raise NotImplementedError
 

@@ -16,25 +16,25 @@ class RandomStrategy2(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, dt_index, total_qc, free_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, dt_index, total_qc, free_qc)
+    async def run(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc)
 
 
-    async def make_decision(self, analysis_dict, ao_pair, dt_index, pairwise_alloc_share):
+    async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
             # TODO: BUG: This strategy works with market orders but if you set 'limit' in the config file
             #       Then rest is a mess. Take some precautions.
             time_dict = analysis_dict[ao_pair]
 
             # Random Entry
             rand_number = random.random()
-            if rand_number < 0.3:
+            if True:
             #if True:
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
                 trade_obj['strategy'] = self.name
                 trade_obj['pair'] = ao_pair
                 trade_obj['history'].append(trade_obj['status'])
-                trade_obj['decision_time'] = int(dt_index) # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
+                trade_obj['decision_time'] = int(ikarus_time) # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
 
                 # Calculate enter/exit prices
                 # NOTE: For Market enters, the enter_price value is just a value to determine the quantity
@@ -68,7 +68,7 @@ class RandomStrategy2(StrategyBase):
                 return None
 
 
-    async def on_update(self, lto, dt_index):
+    async def on_update(self, lto, ikarus_time):
         # TODO: Give a call to methods that calculates exit point
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
         lto['action'] = ACTN_UPDATE 
@@ -78,14 +78,14 @@ class RandomStrategy2(StrategyBase):
         if self.config['exit']['type'] == TYPE_LIMIT:
             lto['exit'][TYPE_LIMIT]['price'] *= 1
             lto['exit'][TYPE_LIMIT]['amount'] = lto['exit'][TYPE_LIMIT]['price'] * lto['exit'][TYPE_LIMIT]['quantity']
-            lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
+            lto['exit'][TYPE_LIMIT]['expire'] = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
 
         elif self.config['exit']['type'] == TYPE_OCO:
             lto['exit'][TYPE_OCO]['limitPrice'] *= 1
             lto['exit'][TYPE_OCO]['stopPrice'] *= 1
             lto['exit'][TYPE_OCO]['stopLimitPrice'] *= 1
             lto['exit'][TYPE_OCO]['amount'] = lto['exit'][TYPE_OCO]['limitPrice'] * lto['exit'][TYPE_OCO]['quantity']
-            lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(dt_index,3,time_scale_to_minute(self.min_period))
+            lto['exit'][TYPE_OCO]['expire'] = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
 
         # Apply the filters
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
@@ -93,15 +93,15 @@ class RandomStrategy2(StrategyBase):
         return lto
 
 
-    async def on_exit_postpone(self, lto, dt_index):
+    async def on_exit_postpone(self, lto, ikarus_time):
         postponed_candles = 1
-        lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,time_scale_to_minute(self.min_period)))
+        lto = await StrategyBase._postpone(lto,'exit', self.config['exit']['type'], StrategyBase._eval_future_candle_time(ikarus_time,postponed_candles,time_scale_to_minute(self.min_period)))
         return lto
 
 
-    async def on_enter_postpone(self, lto, dt_index):
+    async def on_enter_postpone(self, lto, ikarus_time):
         postponed_candles = 1
-        lto = await StrategyBase._postpone(lto,'enter', self.config['enter']['type'], StrategyBase._eval_future_candle_time(dt_index,postponed_candles,time_scale_to_minute(self.min_period))) 
+        lto = await StrategyBase._postpone(lto,'enter', self.config['enter']['type'], StrategyBase._eval_future_candle_time(ikarus_time,postponed_candles,time_scale_to_minute(self.min_period))) 
         return lto
 
 
@@ -120,7 +120,7 @@ class RandomStrategy2(StrategyBase):
 
             # NOTE: If TYPE_MARKET: then either decide to exit or do not edit the LTO:
             #       As a result, the status is left STAT_WAITING_EXIT
-            if random_number < 0.3:
+            if True:
                 # TODO: Add info log: market exit decided
                 lto['exit'] = await StrategyBase._create_exit_module(
                     TYPE_MARKET,
