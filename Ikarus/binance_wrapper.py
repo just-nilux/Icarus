@@ -478,7 +478,6 @@ class BinanceWrapper():
                     '''
                     ACTN_UPDATE can only exist in the exit phase, thus no check for status
                     '''
-                    exit_type = self.config['strategy'][lto_list[i]['strategy']][PHASE_EXIT]['type']
                     # Cancel the order
                     if await self._execute_cancel(lto_list[i]):
                         '''
@@ -487,6 +486,7 @@ class BinanceWrapper():
                         strategy will create a new update action and send it here in the next cycle
                         '''
                         # Place the order
+                        exit_type = more_itertools.one(lto_list[i][PHASE_EXIT].keys())
                         if exit_type == TYPE_OCO:
                             await self._execute_oco_sell(lto_list[i])
                         elif exit_type == TYPE_LIMIT:
@@ -938,19 +938,36 @@ class TestBinanceWrapper():
         self.logger.debug("decompose ended")
         return do_dict
 
-    # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
-    async def _execute_oco_sell(self, lto, df_balance):
-        lto['status'] = STAT_OPEN_EXIT
-        lto['history'].append(lto['status'])
-        base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
-        balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+    async def _execute_cancel(self, lto, df_balance):
+        
+        if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP, STAT_CLOSED]:
+            balance_manager.cancel_enter_order(df_balance, self.quote_currency, lto[PHASE_ENTER][TYPE_LIMIT]) # NOTE: Enforcing TYPE_LIMIT
+        elif lto['status'] in [STAT_EXIT_EXP, STAT_OPEN_EXIT]:
+            base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
+            balance_manager.cancel_exit_order(df_balance, base_cur, more_itertools.one(lto[PHASE_EXIT].values())['quantity'])
+        else: 
+            # TODO: Add error message
+            pass
         return True
 
-    async def _execute_limit_sell(self, lto, df_balance):
-        lto['status'] = STAT_OPEN_EXIT
-        lto['history'].append(lto['status'])
+    # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
+    async def _execute_oco_sell(self, lto, df_balance):
         base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
         balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+
+        lto['status'] = STAT_OPEN_EXIT
+        lto['history'].append(lto['status'])
+        lto[PHASE_EXIT][TYPE_OCO]['orderId'] = int(time.time() * 1000)
+        return True
+
+
+    async def _execute_limit_sell(self, lto, df_balance):
+        base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
+        balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+
+        lto['status'] = STAT_OPEN_EXIT
+        lto['history'].append(lto['status'])
+        lto[PHASE_EXIT][TYPE_LIMIT]['orderId'] = int(time.time() * 1000)
         return True
 
 
@@ -959,9 +976,10 @@ class TestBinanceWrapper():
         #       timestamp values
 
         # NOTE: The order is only PLACED but not FILLED. No fee here
-        lto['enter'][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
         balance_manager.place_enter_order(df_balance, self.quote_currency, lto['enter'][TYPE_LIMIT])
+        lto[PHASE_ENTER][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
         return True
+
 
     async def _execute_market_buy(self, lto, df_balance, data_dict):
         lto['status'] = STAT_WAITING_EXIT
@@ -983,6 +1001,7 @@ class TestBinanceWrapper():
         balance_manager.place_enter_order(df_balance, self.quote_currency, lto[PHASE_ENTER][TYPE_MARKET])
         balance_manager.buy(df_balance, self.quote_currency, base_cur, lto['result'][PHASE_ENTER], TYPE_MARKET)
         return True
+
 
     async def _execute_market_sell(self, lto, df_balance, data_dict):
         min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
@@ -1035,36 +1054,45 @@ class TestBinanceWrapper():
         for i in range(len(lto_list)):
             if 'action' in lto_list[i].keys():
                 if lto_list[i]['action'] == ACTN_CANCEL:
-                    # TODO: ACTN_CANCEL action currently only used for enter phase, exit phase cancel can be added
+                    # NOTE: Currently the ACTN_CANCEL is only allowed to be used by the PHASE_ENTER LTOs
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
 
-                    # No need to check the enter type because lto do not contain TYPE_MARKET. It only contains TYPE_LIMIT
-                    balance_manager.cancel_enter_order(df_balance, self.quote_currency, lto_list[i]['enter'][TYPE_LIMIT])
-            
+                    await self._execute_cancel(lto_list[i], df_balance)
+                    
                 elif lto_list[i]['action'] == ACTN_UPDATE:
-                    lto_list[i]['status'] = STAT_OPEN_EXIT
-                    '''
-                    - Since the enter is succesful, the quantity to exit is already determined.
-                    - Uptate operation will cause the locked base asset to go to free and locked again since the quantity will not change
-                    - The changes in the price levels are already in the LTO so no action needed here
-                    - Thus no need to update df_balance
-                    '''
                     
                     # Cancel the order
-
-                    # Place the order
-                    # NOTE: No need to do anything for backtest
-                    # TODO: NEXT: Cancel the previous order and place the new order
-                    #       Do not change the exit order amount price etc because here the df_balance is not updated accordingly
-                    # TODO: Actually since the update is a generic action: it may endup with some changes in prices which causes the expected
-                    #       amount to be changed. Thus, currently it may not be necessary but will be key point for ACTN_UPDATE to be useful
+                    if await self._execute_cancel(lto_list[i], df_balance):
+                        '''
+                        No need to check the error case because if the order could not be placed due to some reason,
+                        there is no way other then retry. Status will stay like 'STAT_EXIT_EXP', lto_update will not do anything,
+                        strategy will create a new update action and send it here in the next cycle
+                        '''
+                        # Place the order
+                        exit_type = more_itertools.one(lto_list[i][PHASE_EXIT].keys())
+                        if exit_type == TYPE_OCO:
+                            await self._execute_oco_sell(lto_list[i])
+                        elif exit_type == TYPE_LIMIT:
+                            await self._execute_limit_sell(lto_list[i])
+                    else:
+                        '''
+                        If the cancel failed, then the exit orders are still there.
+                        So do not create new order and keep the status as exit_expired
+                        '''
+                        pass
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
                     pass
                 
                 elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
+                    
+                    # NOTE: Cancelling the current algo order and placing market order will not cause any change in the df_balance. Thus commented out.
+                    #balance_manager.cancel_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
+                    #balance_manager.place_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
+                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
+                    balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i][PHASE_EXIT][TYPE_MARKET])
 
                     lto_list[i]['status'] = STAT_CLOSED
                     lto_list[i]['history'].append(lto_list[i]['status'])
@@ -1089,11 +1117,7 @@ class TestBinanceWrapper():
                         - lto_list[i]['result']['enter']['fee'] \
                         - lto_list[i]['result']['exit']['fee']
 
-                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    balance_manager.cancel_exit_order(df_balance, base_cur, lto_list[i]['result']['exit']['quantity'])
-                    balance_manager.place_exit_order(df_balance, base_cur, lto_list[i]['result']['enter']['quantity'])
-                    balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
-            
+
                 elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
                     # If the enter is successfull and the algorithm decides to execute the exit order
 

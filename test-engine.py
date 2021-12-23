@@ -294,6 +294,10 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
+
+    if str(ikarus_time*1000) in config['backtest'].get('breakpoints',{}).keys():
+        logger.debug(f"Stopped at breakpoint \"{config['backtest']['breakpoints'][str(ikarus_time*1000)]}\": {ikarus_time}")
+
     # NOTE: 'ikarus-time' denotes the current_time in old implementation
     #################### Phase 1: Perform pre-calculation tasks ####################
     

@@ -67,7 +67,7 @@
         }
     },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/market/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],
@@ -90,11 +90,7 @@
     "visualization":{
         "observers":{
             "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"],
-            "breakpoints": {
-                "1562371200000":"decision_time",
-                "1562803200000":"result.enter.time"
-            }
+            "qc_leak":["binary"]
         },
         "indicators": ["ma", "bband", "rsi", "macd"]
     }
