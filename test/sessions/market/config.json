@@ -56,14 +56,16 @@
         }
     },
     "analysis": {
-        "indicators": ["low","high", "rsi", "close", "macd"],
-        "params": {
-            "ma": [50,200],
-            "bband": {
-                "timeperiod": 5,
-                "nbdevup": 2,
-                "nbdevdn": 2
-            }
+        "low":"",
+        "high":"",
+        "rsi":"",
+        "close":"",
+        "macd":"",
+        "ma": [50,200],
+        "bband": {
+            "timeperiod": 5,
+            "nbdevup": 2,
+            "nbdevdn": 2
         }
     },
     "statistics": {
