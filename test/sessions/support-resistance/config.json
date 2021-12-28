@@ -40,8 +40,8 @@
             "max_lto": 3
         },
         "RSIStrategy": {
-            "pairs": ["BTCUSDT","ETHUSDT"],
-            "time_scales": ["1d"],
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1d", "1w"],
             "enter": {
                 "type": "market"
             },
@@ -56,22 +56,12 @@
         }
     },
     "analysis": {
-        "indicators": {
-            "low":"",
-            "high":"",
-            "rsi":"",
-            "close":"",
-            "macd":"",
-            "ma": [50,200],
-            "bband": {
-                "timeperiod": 5,
-                "nbdevup": 2,
-                "nbdevdn": 2
-            }
+        "indicators":{
+            "kmeans": ""
         }
     },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/market/stat.txt"
+        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],
@@ -94,17 +84,14 @@
     "visualization":{
         "observers":{
             "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"]
-        },
-        "indicators": {
-            "rsi":"",
-            "macd":"",
-            "ma": [50,200],
-            "bband": {
-                "timeperiod": 5,
-                "nbdevup": 2,
-                "nbdevdn": 2
+            "qc_leak":["binary"],
+            "breakpoints": {
+                "1562371200000":"decision_time",
+                "1562803200000":"result.enter.time"
             }
+        },
+        "indicators":{
+            "kmeans": ""
         }
     }
 }

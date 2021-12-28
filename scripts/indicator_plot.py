@@ -1,5 +1,9 @@
 import finplot as fplt
 
+# Custom analyzers
+def kmeans(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
+
+# TA-LIB Indicators
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def rsi(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def bband(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
@@ -12,14 +16,23 @@ def macd(x, y, axes):
     fplt.bar(x, y['macdhist'], ax=axes['axo_bot'])
     axes['axo_bot'].show()
 
+# Helper functions for indicator visualization
 def line_handler(x, y, axis):
     # TODO: Improve the plot configuration, such as legend texts and the colors
     if type(y) == dict:
+        # Handling dict of list
         for param, data in y.items():
             fplt.plot(x, data, width=3, ax=axis, legend=str(param))
 
     elif type(y) == list:
-        fplt.plot(x, y, width=3, ax=axis)
+        # Handling list of list
+        if all(isinstance(el, list) for el in y): 
+            for sub_list in y:
+                fplt.plot(x, sub_list, width=3, ax=axis)
+
+        # Handling list
+        else:
+            fplt.plot(x, y, width=3, ax=axis)
 
 
 def enable_ax_bot(axes):

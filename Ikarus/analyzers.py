@@ -6,6 +6,7 @@ import talib as ta
 import json
 from Ikarus.objects import ObjectEncoder, GenericObject
 from Ikarus.exceptions import NotImplementedException
+from sklearn.cluster import KMeans
 
 class Analyzer():
     """
@@ -36,7 +37,7 @@ class Analyzer():
                 # Generate coroutines
                 indicator_coroutines = []
                 header = '_ind_'
-                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['analysis'].keys()))
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['analysis']['indicators'].keys()))
                 for ind in indicator_method_names:
                     if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
@@ -46,7 +47,7 @@ class Analyzer():
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
-                for key, value in zip(self.config['analysis'].keys(), analysis_output):
+                for key, value in zip(self.config['analysis']['indicators'].keys(), analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -67,7 +68,7 @@ class Analyzer():
                 # Generate coroutines
                 indicator_coroutines = []
                 header = '_ind_'
-                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['indicators']))
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['indicators'].keys()))
                 for ind in indicator_method_names:
                     if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
@@ -77,7 +78,7 @@ class Analyzer():
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
-                for key, value in zip(self.config['visualization']['indicators'], analysis_output):
+                for key, value in zip(self.config['visualization']['indicators'].keys(), analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -94,6 +95,19 @@ class Analyzer():
 
         return True
 
+    # Analyzers
+    async def _ind_kmeans(self):
+        # Obtain the (time,high) and (time,low) pairs and merge
+
+        # Perform unidimentional clustering
+
+        # Generate analyzer module
+        line1 = len(self.current_time_df)*[float(self.current_time_df['close'].tail(1))]
+        line2 = len(self.current_time_df)*[float(self.current_time_df['open'].tail(1))]
+        
+        return [line1, line2]
+
+
     # Custom Indicators
     async def _ind_low(self): return list(self.current_time_df['low'])
     async def _ind_high(self): return list(self.current_time_df['high'])
@@ -105,9 +119,9 @@ class Analyzer():
     # Overlap Studies
     async def _ind_bband(self):
         upperband, middleband, lowerband = ta.BBANDS(self.current_time_df['close'], 
-                                                        timeperiod=self.config['analysis']['bband']['timeperiod'], 
-                                                        nbdevup=self.config['analysis']['bband']['nbdevup'], 
-                                                        nbdevdn=self.config['analysis']['bband']['nbdevdn'], 
+                                                        timeperiod=self.config['analysis']['indicators']['bband']['timeperiod'], 
+                                                        nbdevup=self.config['analysis']['indicators']['bband']['nbdevup'], 
+                                                        nbdevdn=self.config['analysis']['indicators']['bband']['nbdevdn'], 
                                                         matype=0) # No config option for matype yet!
         return {'upper':list(upperband), 'middle': list(middleband), 'lower':list(lowerband)}
     async def _ind_dema(self): raise NotImplementedException('indicator')
@@ -116,7 +130,7 @@ class Analyzer():
     async def _ind_kama(self): raise NotImplementedException('indicator')
     async def _ind_ma(self):
         ma = {}
-        for param in self.config['analysis']['ma']:
+        for param in self.config['analysis']['indicators']['ma']:
             ma[param] = list(ta.MA(self.current_time_df['close'], timeperiod=param, matype=0))
         return ma
     async def _ind_mama(self): raise NotImplementedException('indicator')

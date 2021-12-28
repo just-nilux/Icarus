@@ -56,16 +56,18 @@
         }
     },
     "analysis": {
-        "low":"",
-        "high":"",
-        "rsi":"",
-        "close":"",
-        "macd":"",
-        "ma": [50,200],
-        "bband": {
-            "timeperiod": 5,
-            "nbdevup": 2,
-            "nbdevdn": 2
+        "indicators": {
+            "low":"",
+            "high":"",
+            "rsi":"",
+            "close":"",
+            "macd":"",
+            "ma": [50,200],
+            "bband": {
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
+            }
         }
     },
     "statistics": {
@@ -98,6 +100,15 @@
                 "1562803200000":"result.enter.time"
             }
         },
-        "indicators": ["ma", "bband", "rsi", "macd"]
+        "indicators": {
+            "rsi":"",
+            "macd":"",
+            "ma": [50,200],
+            "bband": {
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
+            }
+        }
     }
 }
