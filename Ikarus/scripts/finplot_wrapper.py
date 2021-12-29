@@ -1,10 +1,6 @@
 import argparse
 from PyQt5.QtCore import qChecksum
-import backtrader as bt
 from numpy.core.numeric import False_
-from tables import file
-import talib
-import collections
 import finplot as fplt
 import pandas as pd
 import numpy as np
@@ -17,7 +13,7 @@ from PyQt5.QtWidgets import QComboBox, QCheckBox, QWidget
 from pyqtgraph import QtGui
 import pyqtgraph as pg
 from copy import deepcopy
-import observer_plot
+from . import observer_plot
 
 dashboard_data = {}
 ax, axo, ctrl_panel = '', '', ''

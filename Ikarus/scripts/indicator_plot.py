@@ -28,7 +28,7 @@ def line_handler(x, y, axis):
         # Handling list of list
         if all(isinstance(el, list) for el in y): 
             for sub_list in y:
-                fplt.plot(x, sub_list, width=3, ax=axis)
+                fplt.plot(x, sub_list, width=3, ax=axis, color='#0000ff')
 
         # Handling list
         else:

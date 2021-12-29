@@ -49,10 +49,10 @@
             "name": "visualize_indicators",
             "type": "python",
             "request": "launch",
-            "program": ".\\scripts\\visualize_indicators.py",
             "console": "integratedTerminal",
+            "module": "Ikarus.scripts.visualize_indicators",
             "args": [
-                ".\\test\\sessions\\test-fly-integ\\config.json"
+                ".\\test\\sessions\\support-resistance\\config.json"
             ]
         },
         {

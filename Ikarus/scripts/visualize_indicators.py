@@ -1,25 +1,19 @@
 
 import finplot as fplt
-from functools import lru_cache
 import json
-from math import nan
-import pandas as pd
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QWidget
 from pyqtgraph import QtGui
 import pyqtgraph as pg
-import requests
 from time import time as now, sleep
-from threading import Thread
 import sys
 import asyncio
 from binance import AsyncClient
-from Ikarus import binance_wrapper
+from .. import binance_wrapper
 import datetime
-import finplot_wrapper as fplot
-from itertools import chain, groupby
+from itertools import chain
 import itertools
-from Ikarus.analyzers import Analyzer
-import indicator_plot
+from ..analyzers import Analyzer
+from . import indicator_plot
 
 
 def change_asset(*args, **kwargs):
@@ -222,7 +216,7 @@ async def main():
 
 
 if __name__ == '__main__':
-    
+    print(sys.argv)
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
     
@@ -231,3 +225,4 @@ if __name__ == '__main__':
     
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
+

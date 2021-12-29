@@ -1,10 +1,7 @@
 import asyncio
 import copy
 import logging
-from finplot import close
 import talib as ta
-import json
-from Ikarus.objects import ObjectEncoder, GenericObject
 from Ikarus.exceptions import NotImplementedException
 from sklearn.cluster import KMeans
 
@@ -87,13 +84,6 @@ class Analyzer():
 
         return analysis_dict
 
-
-    async def dump(self, js_obj):
-        js_file = open("run-time-objs/analysis.json", "w")
-        json.dump(js_obj, js_file, indent=4, cls=ObjectEncoder)
-        js_file.close()
-
-        return True
 
     # Analyzers
     async def _ind_kmeans(self):
