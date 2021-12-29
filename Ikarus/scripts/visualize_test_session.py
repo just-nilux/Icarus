@@ -1,9 +1,9 @@
 import asyncio
-from Ikarus import mongo_utils, binance_wrapper
+from .. import mongo_utils, binance_wrapper
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
-from Ikarus.enums import *
-from Ikarus.utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
+from ..enums import *
+from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
 from binance import AsyncClient
 import pandas as pd
 import json

@@ -1,14 +1,13 @@
 import asyncio
 
 from pymongo import ASCENDING, DESCENDING
-from Ikarus import mongo_utils, binance_wrapper
+from .. import mongo_utils, binance_wrapper
 #from scripts import finplot_wrapper as fplot
-import finplot_wrapper as fplot
-from Ikarus.enums import *
-from Ikarus.utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
+from . import finplot_wrapper as fplot
+from ..enums import *
+from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
 from binance import AsyncClient
 import pandas as pd
-import argparse
 import json
 import sys
 from datetime import datetime, timezone
@@ -83,6 +82,7 @@ async def visualize_dashboard(bwrapper, mongocli, config):
 
     # Get trade objects
     qc_list = list(await mongocli.do_find('observer',{'type':'qc'}))
+    # TODO: NEXT: Fix the logic by looking at visualize_test_sessions.py
     df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
     dashboard_data_pack['qc'] = df
     fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, title=f'Visualizing Time Frame:')

@@ -59,22 +59,20 @@
             "name": "visualize_test_session",
             "type": "python",
             "request": "launch",
-            "program": ".\\scripts\\visualize_test_session.py",
+            "module": "Ikarus.scripts.visualize_test_session",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\test-fly-integ\\config.json"
+                ".\\test\\sessions\\market\\config.json"
             ]
         },
         {
             "name": "visualize_live_session",
             "type": "python",
             "request": "launch",
-            "program": ".\\scripts\\visualize_live_session.py",
+            "module": "Ikarus.scripts.visualize_live_session",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\stage1_2\\config.json",
-                "2021-08-29 14:45:00",
-                "2021-08-31 05:30:00"
+                ".\\test\\sessions\\live\\config.json"
             ]
         },
         {
