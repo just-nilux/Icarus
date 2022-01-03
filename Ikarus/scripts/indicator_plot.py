@@ -1,7 +1,16 @@
 import finplot as fplt
 
 # Custom analyzers
-def kmeans(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
+def kmeans(x, y, axes): 
+    disable_ax_bot(axes)
+    # Visualize Support Lines
+    for sr_level in y['low_cls']:
+        fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#0000FF', width=2, interactive=False)
+
+    # Visualize Resistance Lines
+    for sr_level in y['high_cls']:
+        fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#FF0000', width=2, interactive=False)
+
 
 # TA-LIB Indicators
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])

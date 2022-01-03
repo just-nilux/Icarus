@@ -3,7 +3,10 @@ import copy
 import logging
 import talib as ta
 from Ikarus.exceptions import NotImplementedException
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.metrics import silhouette_score
+import pandas as pd
+import numpy as np
 
 class Analyzer():
     """
@@ -88,14 +91,38 @@ class Analyzer():
     # Analyzers
     async def _ind_kmeans(self):
         # Obtain the (time,high) and (time,low) pairs and merge
+        lows = np.array(self.current_time_df['low']).reshape(-1,1)
+        highs = np.array(self.current_time_df['high']).reshape(-1,1)
 
-        # Perform unidimentional clustering
+        # Perform unidimentional clustering     
+        km = KMeans(
+            n_clusters=5, init='random',
+            n_init=13, max_iter=300, 
+            tol=1e-04, random_state=0
+        )
+        y_km = km.fit_predict(lows)
+        low_clusters = km.cluster_centers_[:,0]
 
-        # Generate analyzer module
-        line1 = len(self.current_time_df)*[float(self.current_time_df['close'].tail(1))]
-        line2 = len(self.current_time_df)*[float(self.current_time_df['open'].tail(1))]
+        y_km = km.fit_predict(highs)
+        high_clusters = km.cluster_centers_[:,0]
+        '''
+        eps = float(max(peaks)* 0.01)
+        dbscan = DBSCAN(eps=eps, min_samples=3)
+        result = dbscan.fit_predict(peaks) 
+        no_clusters = len(np.unique(labels) )
+        no_noise = np.sum(np.array(labels) == -1, axis=0)
+        print('Estimated no. of clusters: %d' % no_clusters)
+        print('Estimated no. of noise points: %d' % no_noise)
+        '''
+        # NOTE: Recursive K-Means to eliminate noise
+        #       Checkout the clustering methods belows
+        #       https://scikit-learn.org/stable/modules/clustering.html
         
-        return [line1, line2]
+        # Generate analyzer module
+        #line1 = len(self.current_time_df)*[float(self.current_time_df['close'].tail(1))]
+        #line2 = len(self.current_time_df)*[float(self.current_time_df['open'].tail(1))]
+        
+        return {'high_cls':list(high_clusters), 'low_cls':list(low_clusters)}
 
 
     # Custom Indicators
