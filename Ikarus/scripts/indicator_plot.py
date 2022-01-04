@@ -1,16 +1,39 @@
 import finplot as fplt
+from statistics import mean
 
 # Custom analyzers
 def kmeans(x, y, axes): 
     disable_ax_bot(axes)
     # Visualize Support Lines
+    #for sr_level in y['low_cls']:
+    #    fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#0000FF', width=2, interactive=False)
+
+    # Visualize Resistance Lines
+    #for sr_level in y['high_cls']:
+    #    fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#FF0000', width=2, interactive=False)
     for sr_level in y['low_cls']:
-        fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#0000FF', width=2, interactive=False)
+        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#0000FF', width=2, interactive=False)
+        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
 
     # Visualize Resistance Lines
     for sr_level in y['high_cls']:
-        fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#FF0000', width=2, interactive=False)
+        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
+        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
 
+def dbscan(x, y, axes): 
+    disable_ax_bot(axes)
+    hover_label = fplt.add_legend('aaa', ax=axes['ax'])
+    hover_label.setText("Resistance", color='#FF0000', bold=True)
+    # TODO: Find a way to add proper legend
+    # Visualize Support Lines
+    for sr_level in y['low_cls']:
+        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#0000FF', width=2, interactive=False)
+        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
+
+    # Visualize Resistance Lines
+    for sr_level in y['high_cls']:
+        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
+        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
 
 # TA-LIB Indicators
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])

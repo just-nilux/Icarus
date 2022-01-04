@@ -89,6 +89,32 @@ class Analyzer():
 
 
     # Analyzers
+    async def _ind_dbscan(self):
+        # Obtain the (time,high) and (time,low) pairs and merge
+        lows = np.array(self.current_time_df['low']).reshape(-1,1)
+        highs = np.array(self.current_time_df['high']).reshape(-1,1)
+
+        # Perform unidimentional clustering     
+        eps = float(max(highs)* 0.003)
+        dbscan = DBSCAN(eps=eps, min_samples=5)
+
+        dbscan_lows = dbscan.fit_predict(lows)
+        cls_tokens = np.unique(dbscan_lows)
+        cls_centroids = []
+        for token in cls_tokens:
+            if token != -1:
+                cls_centroids.append(lows[np.where(dbscan_lows == token)].reshape(1,-1)[0].tolist())
+
+        dbscan_highs = dbscan.fit_predict(highs)
+        high_cls_tokens = np.unique(dbscan_highs)
+        high_cls_centroids = []
+        for token in high_cls_tokens:
+            if token != -1:
+                high_cls_centroids.append(lows[np.where(dbscan_highs == token)].reshape(1,-1)[0].tolist())
+
+        return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
+
+
     async def _ind_kmeans(self):
         # Obtain the (time,high) and (time,low) pairs and merge
         lows = np.array(self.current_time_df['low']).reshape(-1,1)
@@ -100,29 +126,25 @@ class Analyzer():
             n_init=13, max_iter=300, 
             tol=1e-04, random_state=0
         )
+        # TODO: Filter out the anomalies
+
+        # Low Cluster
         y_km = km.fit_predict(lows)
         low_clusters = km.cluster_centers_[:,0]
-
+        cls_tokens = np.unique(y_km)
+        cls_centroids = []
+        for token in cls_tokens:
+            cls_centroids.append(lows[np.where(y_km == token)].reshape(1,-1)[0].tolist())
+    
+        # High Cluster
         y_km = km.fit_predict(highs)
         high_clusters = km.cluster_centers_[:,0]
-        '''
-        eps = float(max(peaks)* 0.01)
-        dbscan = DBSCAN(eps=eps, min_samples=3)
-        result = dbscan.fit_predict(peaks) 
-        no_clusters = len(np.unique(labels) )
-        no_noise = np.sum(np.array(labels) == -1, axis=0)
-        print('Estimated no. of clusters: %d' % no_clusters)
-        print('Estimated no. of noise points: %d' % no_noise)
-        '''
-        # NOTE: Recursive K-Means to eliminate noise
-        #       Checkout the clustering methods belows
-        #       https://scikit-learn.org/stable/modules/clustering.html
-        
-        # Generate analyzer module
-        #line1 = len(self.current_time_df)*[float(self.current_time_df['close'].tail(1))]
-        #line2 = len(self.current_time_df)*[float(self.current_time_df['open'].tail(1))]
-        
-        return {'high_cls':list(high_clusters), 'low_cls':list(low_clusters)}
+        high_cls_tokens = np.unique(y_km)
+        high_cls_centroids = []
+        for token in high_cls_tokens:
+            high_cls_centroids.append(highs[np.where(y_km == token)].reshape(1,-1)[0].tolist())
+    
+        return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
 
 
     # Custom Indicators
