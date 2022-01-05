@@ -48,6 +48,10 @@ def macd(x, y, axes):
     fplt.bar(x, y['macdhist'], ax=axes['axo_bot'])
     axes['axo_bot'].show()
 
+# TA-LIB Patterns
+def cdleveningstar(x, y, axes): disable_ax_bot(axes); scatter_handler(x, y, axes['ax'])
+def cdlmorningstar(x, y, axes): disable_ax_bot(axes); scatter_handler(x, y, axes['ax'])
+
 # Helper functions for indicator visualization
 def line_handler(x, y, axis):
     # TODO: Improve the plot configuration, such as legend texts and the colors
@@ -66,6 +70,8 @@ def line_handler(x, y, axis):
         else:
             fplt.plot(x, y, width=3, ax=axis)
 
+def scatter_handler(x, y, axis):
+    fplt.plot(x=x, y=y, kind='scatter', color='#0000ff', width=2, ax=axis, zoomscale=False, style='d')
 
 def enable_ax_bot(axes):
     axes['ax'].set_visible(xaxis=False)

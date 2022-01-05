@@ -25,7 +25,7 @@
     },
     "strategy": {
         "MACDStrategy": {
-            "pairs": ["BTCUSDT","ETHUSDT"],
+            "pairs": ["BTCUSDT","ETHUSDT", "XRPUSDT"],
             "time_scales": ["1d"],
             "enter": {
                 "type": "market"
@@ -92,6 +92,7 @@
         },
         "indicators":{
             "kmeans": ""
-        }
+        },
+        "patterns": ["cdleveningstar", "cdlmorningstar"]
     }
 }

@@ -73,12 +73,18 @@ class Analyzer():
                     if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
 
+                header = '_pat_'
+                pattern_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['patterns'])) # Patterns do not take arg
+                for pat in pattern_method_names:
+                    if hasattr(self, pat): indicator_coroutines.append(getattr(self, pat)())
+                    else: raise RuntimeError(f'Unknown pattern: "{pat}"')
+
                 analysis_output = list(await asyncio.gather(*indicator_coroutines))
 
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
-                for key, value in zip(self.config['visualization']['indicators'].keys(), analysis_output):
+                for key, value in zip(list(self.config['visualization']['indicators'].keys()) + self.config['visualization']['patterns'], analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -146,6 +152,8 @@ class Analyzer():
     
         return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
 
+    async def _ind_fractal(self):
+        return
 
     # Custom Indicators
     async def _ind_low(self): return list(self.current_time_df['low'])
@@ -269,7 +277,16 @@ class Analyzer():
     async def _pat_cdldragonflydoji(self): raise NotImplementedException('indicator')
     async def _pat_cdlenfulging(self): raise NotImplementedException('indicator')
     async def _pat_cdleveningdojistar(self): raise NotImplementedException('indicator')
-    async def _pat_cdleveningstar(self): raise NotImplementedException('indicator')
+    async def _pat_cdleveningstar(self):
+        # TODO: Optimize the logic
+        flags = list(ta.CDLEVENINGSTAR(self.current_time_df['open'], self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], penetration=0))
+        indices = np.where(np.array(flags) != 0)[0]
+        result = [None]*len(flags)
+        for idx in indices:
+            # NOTE: The pattern has the length 3. Thus the returned values are the index that the pattern completed
+            #       Thus, the star is the 2nd point in the patter which is 'idx-1'
+           result[idx-1] = self.current_time_df['high'].iloc[idx-1]
+        return result
     async def _pat_cdlgapsidesidewhite(self): raise NotImplementedException('indicator')
     async def _pat_cdlgravestonedoji(self): raise NotImplementedException('indicator')
     async def _pat_cdlhammer(self): raise NotImplementedException('indicator')
@@ -292,7 +309,16 @@ class Analyzer():
     async def _pat_cdlmatchinglow(self): raise NotImplementedException('indicator')
     async def _pat_cdlmathold(self): raise NotImplementedException('indicator')
     async def _pat_cdlmorningdojistar(self): raise NotImplementedException('indicator')
-    async def _pat_cdlmorningstar(self): raise NotImplementedException('indicator')
+    async def _pat_cdlmorningstar(self):
+        # TODO: Optimize the logic
+        flags = list(ta.CDLMORNINGSTAR(self.current_time_df['open'], self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], penetration=0))
+        indices = np.where(np.array(flags) != 0)[0]
+        result = [None]*len(flags)
+        for idx in indices:
+            # NOTE: The pattern has the length 3. Thus the returned values are the index that the pattern completed
+            #       Thus, the star is the 2nd point in the patter which is 'idx-1'
+           result[idx-1] = self.current_time_df['low'].iloc[idx-1]
+        return result
     async def _pat_cdlonneck(self): raise NotImplementedException('indicator')
     async def _pat_cdlpiercing(self): raise NotImplementedException('indicator')
     async def _pat_cdlrickshawman(self): raise NotImplementedException('indicator')
