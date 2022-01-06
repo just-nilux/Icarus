@@ -41,7 +41,7 @@
         },
         "RSIStrategy": {
             "pairs": ["BTCUSDT"],
-            "time_scales": ["1d", "1w"],
+            "time_scales": ["1d"],
             "enter": {
                 "type": "market"
             },
@@ -68,7 +68,7 @@
         "5m": ["1 day", 480],
         "15m": ["1 day", 96],
         "30m": ["1 week", 336],
-        "1h": ["1 week", 168],
+        "1h": ["3 days", 72],
         "2h": ["1 week", 84],
         "4h": ["1 week", 42],
         "12h": ["1 month", 60],
@@ -91,8 +91,9 @@
             }
         },
         "indicators":{
-            "kmeans": ""
+            "kmeans": "",
+            "dbscan": ""
         },
-        "patterns": ["cdleveningstar", "cdlmorningstar"]
+        "patterns": ["cdleveningstar", "cdlmorningstar", "bearish_fractal", "bullish_fractal"]
     }
 }

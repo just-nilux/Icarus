@@ -96,6 +96,33 @@ class Analyzer():
 
     # Analyzers
     async def _ind_dbscan(self):
+
+        bearish_frac = np.array(await self._pat_bearish_fractal())
+        bullish_frac = np.array(await self._pat_bullish_fractal())
+        bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
+        bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
+
+        # Perform unidimentional clustering     
+        eps = float(max(bullish_frac)* 0.01)
+        dbscan = DBSCAN(eps=eps, min_samples=3)
+
+        dbscan_bull = dbscan.fit_predict(bullish_frac)
+        cls_tokens = np.unique(dbscan_bull)
+        bullish_centroids = []
+        for token in cls_tokens:
+            if token != -1:
+                bullish_centroids.append(bullish_frac[np.where(dbscan_bull == token)].reshape(1,-1)[0].tolist())
+
+        dbscan_bear = dbscan.fit_predict(bearish_frac)
+        cls_tokens = np.unique(dbscan_bear)
+        bearish_centroids = []
+        for token in cls_tokens:
+            if token != -1:
+                bearish_centroids.append(bearish_frac[np.where(dbscan_bear == token)].reshape(1,-1)[0].tolist())
+
+        return {'high_cls':bearish_centroids, 'low_cls':bullish_centroids}
+
+    async def _ind_dbscan2(self):
         # Obtain the (time,high) and (time,low) pairs and merge
         lows = np.array(self.current_time_df['low']).reshape(-1,1)
         highs = np.array(self.current_time_df['high']).reshape(-1,1)
@@ -152,8 +179,19 @@ class Analyzer():
     
         return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
 
-    async def _ind_fractal(self):
-        return
+
+    def is_resistance(serie):
+        if serie.iloc[0] < serie.iloc[1] < serie.iloc[2] > serie.iloc[3] > serie.iloc[4]:
+            return serie.iloc[2]
+        return np.NaN
+
+    def is_support(serie):
+        if serie.iloc[0] > serie.iloc[1] > serie.iloc[2] < serie.iloc[3] < serie.iloc[4]:
+            return serie.iloc[2]
+        return np.NaN
+
+    async def _pat_bearish_fractal(self): return list(np.roll(self.current_time_df['high'].rolling(5).apply(Analyzer.is_resistance), -2))
+    async def _pat_bullish_fractal(self): return list(np.roll(self.current_time_df['low'].rolling(5).apply(Analyzer.is_support), -2))
 
     # Custom Indicators
     async def _ind_low(self): return list(self.current_time_df['low'])

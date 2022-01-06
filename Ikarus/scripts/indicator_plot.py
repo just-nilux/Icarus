@@ -35,6 +35,14 @@ def dbscan(x, y, axes):
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
         fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
 
+def bullish_fractal(x, y, axes): 
+    disable_ax_bot(axes)
+    fplt.plot(x=x, y=y, kind='scatter', color='#0000ff', width=2, ax=axes['ax'], zoomscale=False, style='d')
+
+def bearish_fractal(x, y, axes): 
+    disable_ax_bot(axes)
+    fplt.plot(x=x, y=y, kind='scatter', color='#ff00ff', width=2, ax=axes['ax'], zoomscale=False, style='d')
+
 # TA-LIB Indicators
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def rsi(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
