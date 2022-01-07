@@ -95,16 +95,16 @@ class Analyzer():
 
 
     # Analyzers
-    async def _ind_dbscan(self):
+    async def _ind_dbscan_3(self):
 
-        bearish_frac = np.array(await self._pat_bearish_fractal())
-        bullish_frac = np.array(await self._pat_bullish_fractal())
+        bearish_frac = np.array(await self._pat_bearish_fractal_3())
+        bullish_frac = np.array(await self._pat_bullish_fractal_3())
         bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
         bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
 
         # Perform unidimentional clustering     
-        eps = float(max(bullish_frac)* 0.01)
-        dbscan = DBSCAN(eps=eps, min_samples=3)
+        eps = float(max(bullish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
+        dbscan = DBSCAN(eps=eps, min_samples=3) # It requires at least 3 point to call a cluster a region of s/r
 
         dbscan_bull = dbscan.fit_predict(bullish_frac)
         cls_tokens = np.unique(dbscan_bull)
@@ -122,31 +122,32 @@ class Analyzer():
 
         return {'high_cls':bearish_centroids, 'low_cls':bullish_centroids}
 
-    async def _ind_dbscan2(self):
-        # Obtain the (time,high) and (time,low) pairs and merge
-        lows = np.array(self.current_time_df['low']).reshape(-1,1)
-        highs = np.array(self.current_time_df['high']).reshape(-1,1)
+    async def _ind_dbscan_5(self):
+
+        bearish_frac = np.array(await self._pat_bearish_fractal())
+        bullish_frac = np.array(await self._pat_bullish_fractal())
+        bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
+        bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
 
         # Perform unidimentional clustering     
-        eps = float(max(highs)* 0.003)
-        dbscan = DBSCAN(eps=eps, min_samples=5)
+        eps = float(max(bullish_frac)* 0.01) # NOTE: Band of %1 unless optimized
+        dbscan = DBSCAN(eps=eps, min_samples=3)
 
-        dbscan_lows = dbscan.fit_predict(lows)
-        cls_tokens = np.unique(dbscan_lows)
-        cls_centroids = []
+        dbscan_bull = dbscan.fit_predict(bullish_frac)
+        cls_tokens = np.unique(dbscan_bull)
+        bullish_centroids = []
         for token in cls_tokens:
             if token != -1:
-                cls_centroids.append(lows[np.where(dbscan_lows == token)].reshape(1,-1)[0].tolist())
+                bullish_centroids.append(bullish_frac[np.where(dbscan_bull == token)].reshape(1,-1)[0].tolist())
 
-        dbscan_highs = dbscan.fit_predict(highs)
-        high_cls_tokens = np.unique(dbscan_highs)
-        high_cls_centroids = []
-        for token in high_cls_tokens:
+        dbscan_bear = dbscan.fit_predict(bearish_frac)
+        cls_tokens = np.unique(dbscan_bear)
+        bearish_centroids = []
+        for token in cls_tokens:
             if token != -1:
-                high_cls_centroids.append(lows[np.where(dbscan_highs == token)].reshape(1,-1)[0].tolist())
+                bearish_centroids.append(bearish_frac[np.where(dbscan_bear == token)].reshape(1,-1)[0].tolist())
 
-        return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
-
+        return {'high_cls':bearish_centroids, 'low_cls':bullish_centroids}
 
     async def _ind_kmeans(self):
         # Obtain the (time,high) and (time,low) pairs and merge
@@ -179,19 +180,24 @@ class Analyzer():
     
         return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
 
-
     def is_resistance(serie):
-        if serie.iloc[0] < serie.iloc[1] < serie.iloc[2] > serie.iloc[3] > serie.iloc[4]:
+        if len(serie) == 3 and serie.iloc[0] < serie.iloc[1] > serie.iloc[2]:
+            return serie.iloc[1]
+        elif len(serie) == 5 and serie.iloc[0] < serie.iloc[1] < serie.iloc[2] > serie.iloc[3] > serie.iloc[4]:
             return serie.iloc[2]
         return np.NaN
 
     def is_support(serie):
-        if serie.iloc[0] > serie.iloc[1] > serie.iloc[2] < serie.iloc[3] < serie.iloc[4]:
+        if len(serie) == 3 and serie.iloc[0] > serie.iloc[1] < serie.iloc[2]:
+            return serie.iloc[1]
+        elif len(serie) == 5 and serie.iloc[0] > serie.iloc[1] > serie.iloc[2] < serie.iloc[3] < serie.iloc[4]:
             return serie.iloc[2]
         return np.NaN
 
-    async def _pat_bearish_fractal(self): return list(np.roll(self.current_time_df['high'].rolling(5).apply(Analyzer.is_resistance), -2))
-    async def _pat_bullish_fractal(self): return list(np.roll(self.current_time_df['low'].rolling(5).apply(Analyzer.is_support), -2))
+    async def _pat_bearish_fractal(self): return list(np.roll(self.current_time_df['high'].rolling(5).apply(Analyzer.is_resistance), -1))
+    async def _pat_bullish_fractal(self): return list(np.roll(self.current_time_df['low'].rolling(5).apply(Analyzer.is_support), -1))
+    async def _pat_bearish_fractal_3(self): return list(np.roll(self.current_time_df['high'].rolling(3).apply(Analyzer.is_resistance), -1))
+    async def _pat_bullish_fractal_3(self): return list(np.roll(self.current_time_df['low'].rolling(3).apply(Analyzer.is_support), -1))
 
     # Custom Indicators
     async def _ind_low(self): return list(self.current_time_df['low'])

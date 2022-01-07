@@ -14,11 +14,11 @@ from itertools import chain
 import itertools
 from ..analyzers import Analyzer
 from . import indicator_plot
-
+from functools import partial
 
 def change_asset(*args, **kwargs):
     '''Resets and recalculates everything, and plots for the first time.'''
-    # save window zoom position before resetting
+    # save window zoom position before resetting  
     fplt._savewindata(fplt.windows[0])
 
     symbol = ctrl_panel.symbol.currentText()
@@ -26,10 +26,11 @@ def change_asset(*args, **kwargs):
     indicator = ctrl_panel.indicators.currentText().lower()
 
     # remove any previous plots
-    ax.reset()
-    axo.reset()
-    ax_bot.reset()
-    axo_bot.reset()
+    if ctrl_panel.autoclear.isChecked() or "symbol" in args:
+        ax.reset()
+        axo.reset()
+        ax_bot.reset()
+        axo_bot.reset()
 
     fplt.candlestick_ochl(data_dict[symbol][interval]['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
     fplt.volume_ocv(data_dict[symbol][interval]['open close volume'.split()], ax=axo)
@@ -123,7 +124,7 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
     [panel.symbol.addItem(pair) for pair in pairs]
     panel.symbol.setCurrentIndex(0)
     layout.addWidget(panel.symbol, 0, 0)
-    panel.symbol.currentTextChanged.connect(change_asset)
+    panel.symbol.currentTextChanged.connect(partial(change_asset, "symbol"))
 
     layout.setColumnMinimumWidth(1, 30)
 
@@ -131,7 +132,7 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
     [panel.interval.addItem(scale) for scale in time_scales]
     panel.interval.setCurrentIndex(0)
     layout.addWidget(panel.interval, 0, 2)
-    panel.interval.currentTextChanged.connect(change_asset)
+    panel.interval.currentTextChanged.connect(partial(change_asset, "interval"))
 
     layout.setColumnMinimumWidth(3, 30)
 
@@ -140,7 +141,7 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
     [panel.indicators.addItem(ind) for ind in indicators]
     panel.indicators.setCurrentIndex(0)
     layout.addWidget(panel.indicators, 0, 4)
-    panel.indicators.currentTextChanged.connect(change_asset)
+    panel.indicators.currentTextChanged.connect(partial(change_asset, "indicators"))
 
     layout.setColumnMinimumWidth(5, 30)
 
@@ -149,6 +150,13 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
     panel.darkmode.setCheckState(2)
     panel.darkmode.toggled.connect(dark_mode_toggle)
     layout.addWidget(panel.darkmode, 0, 6)
+
+    layout.setColumnMinimumWidth(5, 30)
+
+    panel.autoclear = QCheckBox(panel)
+    panel.autoclear.setText('Autoclear')
+    panel.autoclear.setCheckState(2)
+    layout.addWidget(panel.autoclear, 0, 8)
 
     return panel
 

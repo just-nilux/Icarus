@@ -26,7 +26,7 @@
     "strategy": {
         "MACDStrategy": {
             "pairs": ["BTCUSDT","ETHUSDT", "XRPUSDT"],
-            "time_scales": ["1d"],
+            "time_scales": ["1d", "4h"],
             "enter": {
                 "type": "market"
             },
@@ -70,14 +70,14 @@
         "30m": ["1 week", 336],
         "1h": ["3 days", 72],
         "2h": ["1 week", 84],
-        "4h": ["1 week", 42],
+        "4h": ["3 months", 540],
         "12h": ["1 month", 60],
-        "1d": ["3 months", 90],
+        "1d": ["1 year", 365],
         "1w": ["1 year", 52],
         "1M": ["1 year", 12]
     },
     "backtest":{
-        "start_time": "2019-05-12 12:15:00",
+        "start_time": "2020-05-19 13:00:00",
         "end_time": "2020-05-19 13:00:00",
         "online": true
     },
@@ -92,8 +92,9 @@
         },
         "indicators":{
             "kmeans": "",
-            "dbscan": ""
+            "dbscan_3": "",
+            "dbscan_5": ""
         },
-        "patterns": ["cdleveningstar", "cdlmorningstar", "bearish_fractal", "bullish_fractal"]
+        "patterns": ["cdleveningstar", "cdlmorningstar", "bearish_fractal_3", "bullish_fractal_3"]
     }
 }
