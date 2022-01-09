@@ -3,7 +3,7 @@ import copy
 import logging
 import talib as ta
 from Ikarus.exceptions import NotImplementedException
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans, DBSCAN, MeanShift
 from sklearn.metrics import silhouette_score
 import pandas as pd
 import numpy as np
@@ -109,10 +109,12 @@ class Analyzer():
         for token in cls_tokens:
             if token != -1:
                 bullish_centroids.append(bullish_frac[np.where(dbscan_bull == token)].reshape(1,-1)[0].tolist())
+
+        # TODO: Add start points of the confirmation, so the horizontal line may start from there
+        #       while the band persist through the chart
         return bullish_centroids
 
     async def _ind_resistance_dbscan(self):
-
         bearish_frac = np.array(await self._pat_bearish_fractal_3())
         bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
 
@@ -126,6 +128,38 @@ class Analyzer():
         for token in cls_tokens:
             if token != -1:
                 bearish_centroids.append(bearish_frac[np.where(dbscan_bear == token)].reshape(1,-1)[0].tolist())
+
+        return bearish_centroids
+
+    async def _ind_support_mshift(self):
+        bullish_frac = np.array(await self._pat_bullish_fractal_3())
+        bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
+
+        # Perform unidimentional clustering     
+        ms = MeanShift()
+        ms_bull = ms.fit_predict(bullish_frac)
+        #aa = ms.cluster_centers_
+        cls_tokens = np.unique(ms_bull)
+        bullish_centroids = []
+        for token in cls_tokens:
+            if token != -1:
+                bullish_centroids.append(bullish_frac[np.where(ms_bull == token)].reshape(1,-1)[0].tolist())
+
+        return bullish_centroids
+
+    async def _ind_resistance_mshift(self):
+        bearish_frac = np.array(await self._pat_bearish_fractal_3())
+        bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
+
+        # Perform unidimentional clustering     
+        ms = MeanShift()
+        ms_bear = ms.fit_predict(bearish_frac)
+        #aa = ms.cluster_centers_
+        cls_tokens = np.unique(ms_bear)
+        bearish_centroids = []
+        for token in cls_tokens:
+            if token != -1:
+                bearish_centroids.append(bearish_frac[np.where(ms_bear == token)].reshape(1,-1)[0].tolist())
 
         return bearish_centroids
 
