@@ -95,11 +95,8 @@ class Analyzer():
 
 
     # Analyzers
-    async def _ind_dbscan_3(self):
-
-        bearish_frac = np.array(await self._pat_bearish_fractal_3())
+    async def _ind_support_dbscan(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())
-        bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
         bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
 
         # Perform unidimentional clustering     
@@ -112,33 +109,16 @@ class Analyzer():
         for token in cls_tokens:
             if token != -1:
                 bullish_centroids.append(bullish_frac[np.where(dbscan_bull == token)].reshape(1,-1)[0].tolist())
+        return bullish_centroids
 
-        dbscan_bear = dbscan.fit_predict(bearish_frac)
-        cls_tokens = np.unique(dbscan_bear)
-        bearish_centroids = []
-        for token in cls_tokens:
-            if token != -1:
-                bearish_centroids.append(bearish_frac[np.where(dbscan_bear == token)].reshape(1,-1)[0].tolist())
+    async def _ind_resistance_dbscan(self):
 
-        return {'high_cls':bearish_centroids, 'low_cls':bullish_centroids}
-
-    async def _ind_dbscan_5(self):
-
-        bearish_frac = np.array(await self._pat_bearish_fractal())
-        bullish_frac = np.array(await self._pat_bullish_fractal())
+        bearish_frac = np.array(await self._pat_bearish_fractal_3())
         bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
-        bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
 
         # Perform unidimentional clustering     
-        eps = float(max(bullish_frac)* 0.01) # NOTE: Band of %1 unless optimized
-        dbscan = DBSCAN(eps=eps, min_samples=3)
-
-        dbscan_bull = dbscan.fit_predict(bullish_frac)
-        cls_tokens = np.unique(dbscan_bull)
-        bullish_centroids = []
-        for token in cls_tokens:
-            if token != -1:
-                bullish_centroids.append(bullish_frac[np.where(dbscan_bull == token)].reshape(1,-1)[0].tolist())
+        eps = float(max(bearish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
+        dbscan = DBSCAN(eps=eps, min_samples=3) # It requires at least 3 point to call a cluster a region of s/r
 
         dbscan_bear = dbscan.fit_predict(bearish_frac)
         cls_tokens = np.unique(dbscan_bear)
@@ -147,7 +127,7 @@ class Analyzer():
             if token != -1:
                 bearish_centroids.append(bearish_frac[np.where(dbscan_bear == token)].reshape(1,-1)[0].tolist())
 
-        return {'high_cls':bearish_centroids, 'low_cls':bullish_centroids}
+        return bearish_centroids
 
     async def _ind_kmeans(self):
         # Obtain the (time,high) and (time,low) pairs and merge

@@ -92,8 +92,8 @@
         },
         "indicators":{
             "kmeans": "",
-            "dbscan_3": "",
-            "dbscan_5": ""
+            "support_dbscan": "",
+            "resistance_dbscan": ""
         },
         "patterns": ["cdleveningstar", "cdlmorningstar", "bearish_fractal_3", "bullish_fractal_3"]
     }
