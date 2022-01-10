@@ -19,7 +19,7 @@ from functools import partial
 def change_asset(*args, **kwargs):
     '''Resets and recalculates everything, and plots for the first time.'''
     # save window zoom position before resetting  
-    fplt._savewindata(fplt.windows[0])
+    #fplt._savewindata(fplt.windows[0])
 
     symbol = ctrl_panel.symbol.currentText()
     interval = ctrl_panel.interval.currentText()

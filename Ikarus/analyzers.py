@@ -208,8 +208,8 @@ class Analyzer():
             return serie.iloc[2]
         return np.NaN
 
-    async def _pat_bearish_fractal(self): return list(np.roll(self.current_time_df['high'].rolling(5).apply(Analyzer.is_resistance), -1))
-    async def _pat_bullish_fractal(self): return list(np.roll(self.current_time_df['low'].rolling(5).apply(Analyzer.is_support), -1))
+    async def _pat_bearish_fractal_5(self): return list(np.roll(self.current_time_df['high'].rolling(5).apply(Analyzer.is_resistance), -1))
+    async def _pat_bullish_fractal_5(self): return list(np.roll(self.current_time_df['low'].rolling(5).apply(Analyzer.is_support), -1))
     async def _pat_bearish_fractal_3(self): return list(np.roll(self.current_time_df['high'].rolling(3).apply(Analyzer.is_resistance), -1))
     async def _pat_bullish_fractal_3(self): return list(np.roll(self.current_time_df['low'].rolling(3).apply(Analyzer.is_support), -1))
 
@@ -252,11 +252,13 @@ class Analyzer():
 
 
     # Momentum Indicators
-    async def _ind_adx(self): raise NotImplementedException('indicator')
-    async def _ind_adxr(self): raise NotImplementedException('indicator')
-    async def _ind_apo(self): raise NotImplementedException('indicator')
-    async def _ind_aroon(self): raise NotImplementedException('indicator')
-    async def _ind_aroonosc(self): raise NotImplementedException('indicator')
+    async def _ind_adx(self): return list(ta.ADX(self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], timeperiod=14))
+    async def _ind_adxr(self): return list(ta.ADXR(self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], timeperiod=14))
+    async def _ind_apo(self): return list(ta.APO(self.current_time_df['high'], fastperiod=12, slowperiod=26, matype=0))
+    async def _ind_aroon(self): 
+        aroondown, aroonup = ta.AROON(self.current_time_df['high'], self.current_time_df['low'], timeperiod=14)
+        return {'aroonup':list(aroonup), 'aroondown': list(aroondown)}
+    async def _ind_aroonosc(self): return list(ta.AROONOSC(self.current_time_df['high'], self.current_time_df['low'], timeperiod=14))
     async def _ind_bop(self): raise NotImplementedException('indicator')
     async def _ind_cci(self): raise NotImplementedException('indicator')
     async def _ind_cmo(self): raise NotImplementedException('indicator')
@@ -273,10 +275,10 @@ class Analyzer():
     async def _ind_plus_di(self): raise NotImplementedException('indicator')
     async def _ind_plus_dm(self): raise NotImplementedException('indicator')
     async def _ind_ppo(self): raise NotImplementedException('indicator')
-    async def _ind_roc(self): raise NotImplementedException('indicator')
-    async def _ind_rocp(self): raise NotImplementedException('indicator')
-    async def _ind_rocr(self): raise NotImplementedException('indicator')
-    async def _ind_rocr100(self): raise NotImplementedException('indicator')
+    async def _ind_roc(self): return list(ta.ROC(self.current_time_df['close'], timeperiod=10))
+    async def _ind_rocp(self): return list(ta.ROCP(self.current_time_df['close'], timeperiod=10))
+    async def _ind_rocr(self): return list(ta.ROCR(self.current_time_df['close'], timeperiod=10))
+    async def _ind_rocr100(self): return list(ta.ROCR100(self.current_time_df['close'], timeperiod=10))
     async def _ind_rsi(self): return list(ta.RSI(self.current_time_df['close'], timeperiod=14))
     async def _ind_stoch(self): raise NotImplementedException('indicator')
     async def _ind_stochhf(self): raise NotImplementedException('indicator')
@@ -293,7 +295,7 @@ class Analyzer():
 
 
     # Volatility indicators
-    async def _ind_atr(self): raise NotImplementedException('indicator')
+    async def _ind_atr(self): return list(ta.ATR( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
     async def _ind_natr(self): return list(ta.NATR( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
     async def _ind_trange(self): return list(ta.TRANGE( self.current_time_df['high'],  self.current_time_df['low'],  self.current_time_df['close']))
 
