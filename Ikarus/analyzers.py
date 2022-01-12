@@ -95,6 +95,14 @@ class Analyzer():
 
 
     # Analyzers
+
+    async def _ind_market_status(self):
+        # TODO: Market status receives the name of some other indicators and runs
+        #       a secondary analysis.
+        #       Maybe the secondary analysis such as  S/R levels should be put under
+        #       another category
+        return
+
     async def _ind_support_dbscan(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())
         bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)

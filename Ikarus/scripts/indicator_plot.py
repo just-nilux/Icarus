@@ -1,7 +1,20 @@
 import finplot as fplt
 from statistics import mean
+import pandas as pd
 
 # Custom analyzers
+def market_status(x, y, axes): 
+    # TODO: Add separatetor or some other kind of visualalization method for market status
+    enable_ax_bot(axes)
+    line_handler(x, y, axes['ax_bot'])
+
+    periods = pd.to_datetime(x, unit='ms').strftime('%H')
+    last_period = ''
+    for x,(period,price) in enumerate(zip(periods, df.close)):
+        if period != last_period:
+            fplt.add_line((x-0.5, 100), (x-0.5, price*2), color='#bbb', style='--')
+        last_period = period
+
 def kmeans(x, y, axes): 
     disable_ax_bot(axes)
     # Visualize Support Lines
@@ -59,6 +72,7 @@ def macd(x, y, axes):
 def adx(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(25,50)); line_handler(x, y, axes['ax_bot'])
 def adxr(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(25,50)); line_handler(x, y, axes['ax_bot'])
 def aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
+def aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
 def roc(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def rocp(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def rocr(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
