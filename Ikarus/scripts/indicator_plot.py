@@ -1,19 +1,37 @@
+from enum import unique
 import finplot as fplt
 from statistics import mean
+from itertools import groupby
 import pandas as pd
+import numpy as np
 
 # Custom analyzers
-def market_status(x, y, axes): 
+def market_classifier(x, y, axes): 
     # TODO: Add separatetor or some other kind of visualalization method for market status
-    enable_ax_bot(axes)
-    line_handler(x, y, axes['ax_bot'])
+    # NOTE: Maybe just a bar like ax_bot but thinner may display colorful seperation of market
+    disable_ax_bot(axes)
+    #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax_bot'], color='#CCCCFF')
+    # TODO: Add multiple column handling
 
-    periods = pd.to_datetime(x, unit='ms').strftime('%H')
-    last_period = ''
-    for x,(period,price) in enumerate(zip(periods, df.close)):
-        if period != last_period:
-            fplt.add_line((x-0.5, 100), (x-0.5, price*2), color='#bbb', style='--')
-        last_period = period
+    #fplt.fill_between(plots[1], plots[2], color='#9999fa')
+    total_length = len(y)
+    last_index = 0
+    color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF' '#FFFF80']
+    unique_states = np.unique(y)
+    classes = {}
+    for idx, state in enumerate(unique_states):
+        classes[state] = color_set[idx]
+    
+    for key, group in groupby(enumerate(y), lambda x: x[1]):
+        sequence = list(group)
+        start_idx = last_index
+        end_idx = last_index + len(sequence)
+        #fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['ax_bot'])
+        fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['axo'])
+        last_index = end_idx
+
+    # TODO: Find a way to make this regions dynamic
+
 
 def kmeans(x, y, axes): 
     disable_ax_bot(axes)

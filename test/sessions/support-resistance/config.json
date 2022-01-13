@@ -77,8 +77,8 @@
         "1M": ["1 year", 12]
     },
     "backtest":{
-        "start_time": "2020-05-19 13:00:00",
-        "end_time": "2020-05-19 13:00:00",
+        "start_time": "2020-07-19 13:00:00",
+        "end_time": "2020-07-19 13:00:00",
         "online": true
     },
     "visualization":{
@@ -91,10 +91,13 @@
             }
         },
         "indicators":{
-            "kmeans": "",
-            "support_dbscan": "",
-            "resistance_dbscan": ""
+            "macd": "",
+            "rsi": "",
+            "trange": "",
+            "aroon": "",
+            "aroonosc": "",
+            "market_classifier": ""
         },
-        "patterns": ["cdleveningstar", "cdlmorningstar", "bearish_fractal_3", "bullish_fractal_3"]
+        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bullish_fractal_5", "bearish_fractal_5"]
     }
 }

@@ -96,12 +96,18 @@ class Analyzer():
 
     # Analyzers
 
-    async def _ind_market_status(self):
+    async def _ind_market_classifier(self):
         # TODO: Market status receives the name of some other indicators and runs
         #       a secondary analysis.
         #       Maybe the secondary analysis such as  S/R levels should be put under
         #       another category
-        return
+        #analyzer = "_ind_" + self.config['visualization']['indicators']['market_classifier']
+        analyzer = "_ind_aroonosc"
+        if hasattr(self, analyzer):
+            analysis_output = await getattr(self, analyzer)()
+        
+        classes = list(map(lambda x: 'up_trend' if (x<0) else 'down_trend', analysis_output))
+        return classes
 
     async def _ind_support_dbscan(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())
