@@ -96,7 +96,7 @@
             "trange": "",
             "aroon": "",
             "aroonosc": "",
-            "market_classifier": ""
+            "market_classifier": "aroonosc"
         },
         "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bullish_fractal_5", "bearish_fractal_5"]
     }

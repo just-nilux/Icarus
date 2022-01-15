@@ -33,7 +33,7 @@ def change_asset(*args, **kwargs):
         axo_bot.reset()
 
     fplt.candlestick_ochl(data_dict[symbol][interval]['open close high low'.split()], ax=ax, colorfunc=fplt.strength_colorfilter)
-    #fplt.volume_ocv(data_dict[symbol][interval]['open close volume'.split()], ax=axo)
+    fplt.volume_ocv(data_dict[symbol][interval]['open close volume'.split()], ax=axo)
 
     # Visualize indicators
     if indicator != 'clean':
@@ -163,7 +163,7 @@ def create_ctrl_panel(win, pairs, time_scales, indicators):
 
 def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Sell Plot'):
 
-    global ctrl_panel, ax, axo, ax_bot, axo_bot, pair_data, pair_analysis, ax_bar
+    global ctrl_panel, ax, axo, ax_bot, axo_bot, pair_data, pair_analysis
     pair_data = data_dict
     pair_analysis = analysis_dict
 
@@ -174,10 +174,9 @@ def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Se
     fplt.y_pad = 0.07 # pad some extra (for control panel)
     fplt.max_zoom_points = 7
     fplt.autoviewrestore()
-    ax,ax_bar,ax_bot = fplt.create_plot(title, rows=3, init_zoom_periods=300, scaleing=[2,0.1,1])
+    ax,ax_bot = fplt.create_plot(title, rows=2, init_zoom_periods=300)
     axo = ax.overlay()
     axo_bot = ax_bot.overlay()
-    ax_bar.hide()
     ax_bot.hide()
     ax_bot.vb.setBackgroundColor(None) # don't use odd background color
     ax.set_visible(xaxis=True)

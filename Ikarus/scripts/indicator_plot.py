@@ -1,4 +1,5 @@
 from enum import unique
+import sqlite3
 import finplot as fplt
 from statistics import mean
 from itertools import groupby
@@ -7,30 +8,31 @@ import numpy as np
 
 # Custom analyzers
 def market_classifier(x, y, axes): 
-    # TODO: Add separatetor or some other kind of visualalization method for market status
-    # NOTE: Maybe just a bar like ax_bot but thinner may display colorful seperation of market
-    disable_ax_bot(axes)
-    #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax_bot'], color='#CCCCFF')
-    # TODO: Add multiple column handling
-
-    #fplt.fill_between(plots[1], plots[2], color='#9999fa')
-    total_length = len(y)
-    last_index = 0
-    color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF' '#FFFF80']
+    color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF' '#FFFF80'] # 6 Class is currently enough to model
     unique_states = np.unique(y)
+    unique_states = list(filter(('').__ne__, unique_states))
     classes = {}
     for idx, state in enumerate(unique_states):
-        classes[state] = color_set[idx]
-    
+        class_item = {'color': color_set[idx], 'top_value':idx+1, 'bot_value':idx}
+        classes[state] = class_item
+
+    enable_ax_bot(axes, y_range=(0,len(unique_states)))
+    fplt.plot(x, y=[len(unique_states)]*len(x), ax=axes['ax_bot'])
+    for class_name, class_item in classes.items():
+        fplt.add_text((x[0], class_item['top_value']-0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
+
+    last_index = 0
     for key, group in groupby(enumerate(y), lambda x: x[1]):
         sequence = list(group)
-        start_idx = last_index
-        end_idx = last_index + len(sequence)
-        #fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['ax_bot'])
-        fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['axo'])
-        last_index = end_idx
 
-    # TODO: Find a way to make this regions dynamic
+        if key != '':
+            start_idx = last_index
+            end_idx = last_index + len(sequence) - 1
+            #fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['ax_bot'])
+            #fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['axo'])
+            fplt.add_rect((x[start_idx], classes[key]['top_value']), (x[end_idx], classes[key]['bot_value']), color=classes[key]['color'], interactive=False, ax=axes['ax_bot'])
+        
+        last_index += len(sequence)
 
 
 def kmeans(x, y, axes): 
