@@ -174,7 +174,7 @@ def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Se
     fplt.y_pad = 0.07 # pad some extra (for control panel)
     fplt.max_zoom_points = 7
     fplt.autoviewrestore()
-    ax,ax_bot = fplt.create_plot(title, rows=2, init_zoom_periods=300)
+    ax,ax_bot = fplt.create_plot(title, rows=2)
     axo = ax.overlay()
     axo_bot = ax_bot.overlay()
     ax_bot.hide()

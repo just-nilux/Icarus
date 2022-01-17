@@ -101,17 +101,42 @@ class Analyzer():
         #       a secondary analysis.
         #       Maybe the secondary analysis such as  S/R levels should be put under
         #       another category
+
+        # TODO: More than 1 indicator shoud be able to use
         analyzer = "_ind_" + self.config['visualization']['indicators']['market_classifier']
         if hasattr(self, analyzer):
             analysis_output = await getattr(self, analyzer)()
         
         classification = []
-        for c in analysis_output:
-            if not np.isnan(c):
-                if c>0: classification.append('up_trend')
-                else: classification.append('down_trend')
-            else: classification.append('')
+        if analyzer == '_ind_aroonosc':
+            for c in analysis_output:
+                if not np.isnan(c):
+                    if c>0: classification.append('up_trend')
+                    else: classification.append('down_trend')
+                else: classification.append('')
+        
+        elif analyzer == 'fractal_aroon':
+            uptrend_idx = np.where(np.array(analysis_output['aroonup']) > 80)
+            lowtrend_idx = np.where(np.array(analysis_output['aroondown']) > 80)
+
+            pass
+        # TODO: Instead of sending a list, send a dict like: 'class_name': [True, False, ...]
+        #       So you can overlap states and create grey areas
         return classification
+
+    async def _ind_fractal_aroon(self):
+        fractal_line = await self._ind_fractal_line_3()
+        aroondown, aroonup = ta.AROON(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), timeperiod=25)
+        return {'aroonup':list(aroonup), 'aroondown': list(aroondown)}
+
+    async def _ind_fractal_aroonosc(self):
+        fractal_line = await self._ind_fractal_line_3() 
+        return list(ta.AROONOSC(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), timeperiod=25))
+
+    async def _ind_fractal_line_3(self):
+        bearish_frac = list(pd.Series(await self._pat_bearish_fractal_3()).bfill())
+        bullish_frac = list(pd.Series(await self._pat_bullish_fractal_3()).bfill())
+        return {'bearish':bearish_frac, 'bullish':bullish_frac}
 
     async def _ind_support_dbscan(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())

@@ -34,6 +34,9 @@ def market_classifier(x, y, axes):
         
         last_index += len(sequence)
 
+def fractal_line_3(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
+def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
+def fractal_aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
 
 def kmeans(x, y, axes): 
     disable_ax_bot(axes)
