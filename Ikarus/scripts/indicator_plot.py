@@ -1,4 +1,3 @@
-from enum import unique
 import finplot as fplt
 from statistics import mean
 from itertools import groupby
@@ -16,7 +15,7 @@ def market_classifier(x, y, axes):
     for class_idx, (class_name, filter_idx) in enumerate(y.items()):
         for k, g in groupby(enumerate(filter_idx), lambda ix: ix[0] - ix[1]):
             seq_idx = list(map(itemgetter(1), g))
-            fplt.add_rect((x[seq_idx[0]], class_idx+1), (x[seq_idx[-1]], class_idx), color=color_set[class_idx], interactive=False, ax=axes['ax_bot'])
+            fplt.add_rect((x[seq_idx[0]], class_idx+1), (x[seq_idx[-1]], class_idx), color=color_set[class_idx%6], interactive=False, ax=axes['ax_bot'])
         fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
 
@@ -101,18 +100,24 @@ def support_handler(x, y, axes):
     hover_label.setText("Support", color='#0000FF', bold=True)
     # TODO: Find a way to add proper legend
     # Visualize Support Lines
-    for sr_level in y:
+    for sr_level_obj in y:
+        sr_level = sr_level_obj['centroids']
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#0000FF', width=2, interactive=False)
-        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
+        #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
+        fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#CCCCFF')
 
 def resistance_handler(x, y, axes):
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
     hover_label.setText("Resistance", color='#FF0000', bold=True)
     # TODO: Find a way to add proper legend
     # Visualize Resistance Lines
-    for sr_level in y:
+    for sr_level_obj in y:
+        sr_level = sr_level_obj['centroids']
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
-        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
+        #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
+        fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#FFCCCC')
+        print(sr_level)
+
 
 # Helper functions for indicator visualization
 def line_handler(x, y, axis):

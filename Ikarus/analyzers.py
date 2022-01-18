@@ -102,7 +102,6 @@ class Analyzer():
         #       Maybe the secondary analysis such as  S/R levels should be put under
         #       another category
 
-        # TODO: More than 1 indicator shoud be able to use
         analyzer = "_ind_" + self.config['visualization']['indicators']['market_classifier']
         if hasattr(self, analyzer):
             analysis_output = await getattr(self, analyzer)()
@@ -111,14 +110,13 @@ class Analyzer():
         if analyzer == '_ind_aroonosc':
             uptrend_filter = np.where(np.array(analysis_output) > 0)[0]
             downtrend_filter = np.where(np.array(analysis_output) < 0)[0]
-            classification = {'uptrend':uptrend_filter, 'downtrend':downtrend_filter}
+            classification = {'downtrend':downtrend_filter, 'uptrend':uptrend_filter}
 
         elif analyzer == '_ind_fractal_aroon':
             uptrend_filter = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
             downtrend_filter = np.where(np.nan_to_num(analysis_output['aroondown']) > 80)[0]
-            classification = {'uptrend':uptrend_filter, 'downtrend':downtrend_filter}
-        # TODO: Instead of sending a list, send a dict like: 'class_name': [True, False, ...]
-        #       So you can overlap states and create grey areas
+            classification = {'downtrend':downtrend_filter, 'uptrend':uptrend_filter}
+
         return classification
 
     async def _ind_fractal_aroon(self):
@@ -136,8 +134,8 @@ class Analyzer():
         return {'bearish':bearish_frac, 'bullish':bullish_frac}
 
     async def _ind_support_dbscan(self):
-        bullish_frac = np.array(await self._pat_bullish_fractal_3())
-        bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
+        bullish_frac = np.nan_to_num(await self._pat_bullish_fractal_3()).reshape(-1,1)
+        #bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
 
         # Perform unidimentional clustering     
         eps = float(max(bullish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
@@ -145,18 +143,21 @@ class Analyzer():
 
         dbscan_bull = dbscan.fit_predict(bullish_frac)
         cls_tokens = np.unique(dbscan_bull)
-        bullish_centroids = []
+        sup_levels = []
         for token in cls_tokens:
             if token != -1:
-                bullish_centroids.append(bullish_frac[np.where(dbscan_bull == token)].reshape(1,-1)[0].tolist())
-
-        # TODO: Add start points of the confirmation, so the horizontal line may start from there
-        #       while the band persist through the chart
-        return bullish_centroids
+                indices = np.where(dbscan_bull == token)
+                sup_level = {}
+                sup_level['validation_point'] = indices[0][-1]
+                sup_level['centroids'] = bullish_frac[indices].reshape(1,-1)[0].tolist()
+                sup_levels.append(sup_level)
+        return sup_levels
 
     async def _ind_resistance_dbscan(self):
-        bearish_frac = np.array(await self._pat_bearish_fractal_3())
-        bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
+        # NOTE: In order to yield validation points, nan values are assigned to 0. 
+        #       They are visualized but not in the appeared window
+        bearish_frac = np.nan_to_num(await self._pat_bearish_fractal_3()).reshape(-1,1)
+        #bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
 
         # Perform unidimentional clustering     
         eps = float(max(bearish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
@@ -164,12 +165,15 @@ class Analyzer():
 
         dbscan_bear = dbscan.fit_predict(bearish_frac)
         cls_tokens = np.unique(dbscan_bear)
-        bearish_centroids = []
+        res_levels = []
         for token in cls_tokens:
             if token != -1:
-                bearish_centroids.append(bearish_frac[np.where(dbscan_bear == token)].reshape(1,-1)[0].tolist())
-
-        return bearish_centroids
+                indices = np.where(dbscan_bear == token)
+                res_level = {}
+                res_level['validation_point'] = indices[0][-1]
+                res_level['centroids'] = bearish_frac[indices].reshape(1,-1)[0].tolist()
+                res_levels.append(res_level)
+        return res_levels
 
     async def _ind_support_mshift(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())
