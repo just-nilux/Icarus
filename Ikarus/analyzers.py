@@ -107,19 +107,16 @@ class Analyzer():
         if hasattr(self, analyzer):
             analysis_output = await getattr(self, analyzer)()
         
-        classification = []
+        classification = {}
         if analyzer == '_ind_aroonosc':
-            for c in analysis_output:
-                if not np.isnan(c):
-                    if c>0: classification.append('up_trend')
-                    else: classification.append('down_trend')
-                else: classification.append('')
-        
-        elif analyzer == 'fractal_aroon':
-            uptrend_idx = np.where(np.array(analysis_output['aroonup']) > 80)
-            lowtrend_idx = np.where(np.array(analysis_output['aroondown']) > 80)
+            uptrend_filter = np.where(np.array(analysis_output) > 0)[0]
+            downtrend_filter = np.where(np.array(analysis_output) < 0)[0]
+            classification = {'uptrend':uptrend_filter, 'downtrend':downtrend_filter}
 
-            pass
+        elif analyzer == '_ind_fractal_aroon':
+            uptrend_filter = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
+            downtrend_filter = np.where(np.nan_to_num(analysis_output['aroondown']) > 80)[0]
+            classification = {'uptrend':uptrend_filter, 'downtrend':downtrend_filter}
         # TODO: Instead of sending a list, send a dict like: 'class_name': [True, False, ...]
         #       So you can overlap states and create grey areas
         return classification

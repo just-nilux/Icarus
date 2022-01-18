@@ -1,38 +1,24 @@
 from enum import unique
-import sqlite3
 import finplot as fplt
 from statistics import mean
 from itertools import groupby
 import pandas as pd
 import numpy as np
+from operator import itemgetter
 
 # Custom analyzers
 def market_classifier(x, y, axes): 
     color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF' '#FFFF80'] # 6 Class is currently enough to model
-    unique_states = np.unique(y)
-    unique_states = list(filter(('').__ne__, unique_states))
-    classes = {}
-    for idx, state in enumerate(unique_states):
-        class_item = {'color': color_set[idx], 'top_value':idx+1, 'bot_value':idx}
-        classes[state] = class_item
 
-    enable_ax_bot(axes, y_range=(0,len(unique_states)))
-    fplt.plot(x, y=[len(unique_states)]*len(x), ax=axes['ax_bot'])
-    for class_name, class_item in classes.items():
-        fplt.add_text((x[0], class_item['top_value']-0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
+    enable_ax_bot(axes, y_range=(0,len(y.keys())))
+    fplt.plot(x, y=[len(y.keys())]*len(x), ax=axes['ax_bot'])
 
-    last_index = 0
-    for key, group in groupby(enumerate(y), lambda x: x[1]):
-        sequence = list(group)
+    for class_idx, (class_name, filter_idx) in enumerate(y.items()):
+        for k, g in groupby(enumerate(filter_idx), lambda ix: ix[0] - ix[1]):
+            seq_idx = list(map(itemgetter(1), g))
+            fplt.add_rect((x[seq_idx[0]], class_idx+1), (x[seq_idx[-1]], class_idx), color=color_set[class_idx], interactive=False, ax=axes['ax_bot'])
+        fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
-        if key != '':
-            start_idx = last_index
-            end_idx = last_index + len(sequence) - 1
-            #fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['ax_bot'])
-            #fplt.add_column(start_idx/total_length, end_idx/total_length, color=classes[key], ax=axes['axo'])
-            fplt.add_rect((x[start_idx], classes[key]['top_value']), (x[end_idx], classes[key]['bot_value']), color=classes[key]['color'], interactive=False, ax=axes['ax_bot'])
-        
-        last_index += len(sequence)
 
 def fractal_line_3(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
