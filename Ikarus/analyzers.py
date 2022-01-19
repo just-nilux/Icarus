@@ -7,6 +7,8 @@ from sklearn.cluster import KMeans, DBSCAN, MeanShift
 from sklearn.metrics import silhouette_score
 import pandas as pd
 import numpy as np
+from itertools import groupby
+from operator import itemgetter
 
 class Analyzer():
     """
@@ -117,7 +119,33 @@ class Analyzer():
             downtrend_filter = np.where(np.nan_to_num(analysis_output['aroondown']) > 80)[0]
             classification = {'downtrend':downtrend_filter, 'uptrend':uptrend_filter}
 
-        return classification
+        ts_index = self.current_time_df.index
+        result = {}
+        # TODO: Make validation counter generic
+        validation_counter = 5
+        for class_name, filter_idx in classification.items():
+            class_item_list = []
+            for k, g in groupby(enumerate(filter_idx), lambda ix: ix[0] - ix[1]):
+                seq_idx = list(map(itemgetter(1), g))
+                # NOTE: If the sq. length is 1 than it will not be displayed. Apply "seq_idx[-1]+1" if you need to
+                if len(seq_idx) >= validation_counter:
+                    class_item = {'start':ts_index[seq_idx[0]], 'end':ts_index[seq_idx[-1]], 'validation_point':ts_index[seq_idx[0]+5]}
+                    class_item_list.append(class_item)
+            result[class_name] = class_item_list
+        '''
+        Sample: result
+        {
+            downtrend:[
+                {
+                    start_ts:
+                    end_ts:
+                    validation_point:
+                },
+                ...
+            ]
+        }
+        '''
+        return result
 
     async def _ind_fractal_aroon(self):
         fractal_line = await self._ind_fractal_line_3()
@@ -159,7 +187,9 @@ class Analyzer():
         bearish_frac = np.nan_to_num(await self._pat_bearish_fractal_3()).reshape(-1,1)
         #bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
 
-        # Perform unidimentional clustering     
+        # Perform unidimentional clustering
+        # TODO: NEXT: Find an algorithmic way of calculating epsilon
+        #       Because the epsilon values needs to be changed based on timeframe
         eps = float(max(bearish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
         dbscan = DBSCAN(eps=eps, min_samples=3) # It requires at least 3 point to call a cluster a region of s/r
 

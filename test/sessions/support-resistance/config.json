@@ -26,7 +26,7 @@
     "strategy": {
         "MACDStrategy": {
             "pairs": ["BTCUSDT","ETHUSDT", "XRPUSDT"],
-            "time_scales": ["1d", "4h"],
+            "time_scales": ["1d", "4h", "1h"],
             "enter": {
                 "type": "market"
             },
@@ -68,7 +68,7 @@
         "5m": ["1 day", 480],
         "15m": ["1 day", 96],
         "30m": ["1 week", 336],
-        "1h": ["3 days", 72],
+        "1h": ["2 weeks", 336],
         "2h": ["1 week", 84],
         "4h": ["3 months", 540],
         "12h": ["1 month", 60],
@@ -91,16 +91,15 @@
             }
         },
         "indicators":{
-            "macd": "",
-            "rsi": "",
-            "trange": "",
             "aroon": "",
             "aroonosc": "",
-            "market_classifier": "aroonosc",
+            "market_classifier": "fractal_aroon",
             "fractal_line_3": "",
             "fractal_aroon": "",
-            "fractal_aroonosc": ""
+            "fractal_aroonosc": "",
+            "support_dbscan": "",
+            "resistance_dbscan": ""
         },
-        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bullish_fractal_5", "bearish_fractal_5"]
+        "patterns": ["bearish_fractal_3", "bullish_fractal_3"]
     }
 }

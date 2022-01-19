@@ -1,9 +1,5 @@
 import finplot as fplt
 from statistics import mean
-from itertools import groupby
-import pandas as pd
-import numpy as np
-from operator import itemgetter
 
 # Custom analyzers
 def market_classifier(x, y, axes): 
@@ -12,10 +8,10 @@ def market_classifier(x, y, axes):
     enable_ax_bot(axes, y_range=(0,len(y.keys())))
     fplt.plot(x, y=[len(y.keys())]*len(x), ax=axes['ax_bot'])
 
-    for class_idx, (class_name, filter_idx) in enumerate(y.items()):
-        for k, g in groupby(enumerate(filter_idx), lambda ix: ix[0] - ix[1]):
-            seq_idx = list(map(itemgetter(1), g))
-            fplt.add_rect((x[seq_idx[0]], class_idx+1), (x[seq_idx[-1]], class_idx), color=color_set[class_idx%6], interactive=False, ax=axes['ax_bot'])
+    for class_idx, (class_name, class_item_list) in enumerate(y.items()):
+        for class_item in class_item_list:
+            fplt.add_rect((class_item['start'], class_idx+1), (class_item['end'], class_idx), color=color_set[class_idx%6], interactive=False, ax=axes['ax_bot'])
+            fplt.add_line((class_item['validation_point'], class_idx+1), (class_item['validation_point'], class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
         fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
 
