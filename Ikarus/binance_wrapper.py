@@ -141,7 +141,6 @@ class BinanceWrapper():
         (time_scale, pair)
         length = meta_do['time_scale']
         """
-        self.logger.debug('get_data_dict started')
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
@@ -156,7 +155,6 @@ class BinanceWrapper():
 
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         data_dict = await self.decompose(meta_data_pool, composit_klines)
-        self.logger.debug('get_data_dict ended')
 
         # TODO: Length check for Data dict items could help a lot to detect anomalies
         return data_dict
@@ -197,8 +195,6 @@ class BinanceWrapper():
         Returns:
             dict: [description]
         """
-        self.logger.debug('get_data_dict started')
-
         tasks_klines_scales = []
         for pair in pairs:
             for index, row in time_df.iterrows():
@@ -210,7 +206,6 @@ class BinanceWrapper():
         data_dict = await self.decompose(pairs, time_df, composit_klines)
 
         # NOTE: Keep in mind that the last row is the current candle that has not been completed
-        self.logger.debug('get_data_dict ended')
         return data_dict
 
 
@@ -835,8 +830,6 @@ class TestBinanceWrapper():
         length = meta_do['time_scale']
         """
 
-        self.logger.debug('get_data_dict started')
-
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
 
@@ -852,7 +845,6 @@ class TestBinanceWrapper():
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         # TODO: NEXT: BUG: If a pair does not exist in the given time, then composit kline comes empty: [[], [[...], [...]]
         data_dict = await self.decompose(meta_data_pool, composit_klines)
-        self.logger.debug('get_data_dict ended')
 
         return data_dict
 
@@ -886,8 +878,6 @@ class TestBinanceWrapper():
         (time_scale, pair)
         length = meta_do['time_scale']
         """
-        self.logger.debug('get_data_dict started')
-
         tasks_klines_scales = []
         data_dict = {}
         for meta_data in meta_data_pool:
@@ -903,8 +893,6 @@ class TestBinanceWrapper():
                 data_dict[meta_data[1]][meta_data[0]] = self.downloaded_data[meta_data[1]][meta_data[0]].loc[hist_data_start_time:hist_data_end_time]
             else:
                 raise NotImplementedException('start_time is not integer')
-
-        self.logger.debug('get_data_dict ended')
 
         return data_dict
 

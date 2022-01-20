@@ -6,4 +6,5 @@ from . import StrategyBase,\
     RandomStrategy, \
     RandomStrategy2, \
     RSIStrategy, \
-    MACDStrategy
+    MACDStrategy, \
+    UpTrenderMarket
