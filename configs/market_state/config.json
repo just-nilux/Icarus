@@ -1,6 +1,6 @@
 {
     "tag": "test-bot",
-    "log-level": "DEBUG",
+    "log-level": "INFO",
     "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
@@ -64,13 +64,17 @@
     },
     "backtest":{
         "start_time": "2019-01-11 13:00:00",
-        "end_time": "2020-01-11 13:00:00",
-        "online": true
+        "end_time": "2019-05-10 13:00:00",
+        "online": true,
+        "breakpoints": {
+            "1555718400000":"decision_time"
+        }
     },
     "visualization":{
         "observers":{
             "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"]
+            "qc_leak":["binary"],
+            "trend_diff":["diff"]
         },
         "indicators":{
             "market_classifier": "fractal_aroon",

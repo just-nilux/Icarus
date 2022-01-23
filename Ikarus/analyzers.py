@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from itertools import groupby
 from operator import itemgetter
+from .utils import time_scale_to_milisecond
 
 class Analyzer():
     """
@@ -128,9 +129,11 @@ class Analyzer():
             for k, g in groupby(enumerate(filter_idx), lambda ix: ix[0] - ix[1]):
                 seq_idx = list(map(itemgetter(1), g))
                 # NOTE: If the sq. length is 1 than it will not be displayed. Apply "seq_idx[-1]+1" if you need to
-                if len(seq_idx) >= validation_counter:
-                    class_item = {'start':ts_index[seq_idx[0]], 'end':ts_index[seq_idx[-1]], 'validation_point':ts_index[seq_idx[0]+5]}
-                    class_item_list.append(class_item)
+                #if len(seq_idx) >= validation_counter:
+                #    class_item = {'start':ts_index[seq_idx[0]], 'end':ts_index[seq_idx[-1]], 'validation_point':ts_index[seq_idx[0]+validation_counter -1]}
+                #    class_item_list.append(class_item)
+                class_item = {'start':ts_index[seq_idx[0]], 'end':ts_index[seq_idx[-1]]}
+                class_item_list.append(class_item)
             result[class_name] = class_item_list
         '''
         Sample: result
@@ -145,6 +148,10 @@ class Analyzer():
             ]
         }
         '''
+        # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
+        # so the day_diff will be 1
+        result['is_daydiff']=int((self.current_time_df.index[-1] - result['uptrend'][-1]['end'])/time_scale_to_milisecond('1d'))
+        result['is_lastidx']=int(analysis_output['aroonup'][-1] > 80)
         return result
 
     async def _ind_fractal_aroon(self):
