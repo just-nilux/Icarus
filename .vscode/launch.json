@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Geçerli Dosya",
+            "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -18,7 +18,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/live/config.json"
+                ".\\configs\\live\\config.json"
             ]
         },
         {
@@ -28,15 +28,8 @@
             "program": ".\\Ikarus\\performance.py",
             "console": "integratedTerminal",
             "args": [
-                "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/multi_strategy/config.json"
+                ".\\configs\\multi_strategy\\config.json"
             ]
-        },
-        {
-            "name": "test-binance-api",
-            "type": "python",
-            "request": "launch",
-            "program": ".\\scripts\\test-binance-api.py",
-            "console": "integratedTerminal"
         },
         {
             "name": "mongo_utils",
@@ -52,7 +45,7 @@
             "console": "integratedTerminal",
             "module": "Ikarus.scripts.visualize_indicators",
             "args": [
-                ".\\test\\sessions\\support-resistance\\config.json"
+                ".\\configs\\support-resistance\\config.json"
             ]
         },
         {
@@ -62,7 +55,7 @@
             "module": "Ikarus.scripts.visualize_test_session",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\market\\config.json"
+                ".\\configs\\market\\config.json"
             ]
         },
         {
@@ -72,7 +65,7 @@
             "module": "Ikarus.scripts.visualize_live_session",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\live\\config.json"
+                ".\\configs\\live\\config.json"
             ]
         },
         {
@@ -82,7 +75,7 @@
             "program": ".\\test-engine.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\test-fly-integ\\config.json"
+                ".\\configs\\market_state\\config.json"
             ]
         },
         {
@@ -92,7 +85,7 @@
             "program": ".\\live-engine.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\test\\sessions\\live\\config.json"
+                ".\\configs\\live\\config.json"
             ]
         }
     ]
