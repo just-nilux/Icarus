@@ -20,20 +20,28 @@ Icarus is an all-in-one cryptocurrency trading bot for Binance. It enables you t
 - Asyncio module based architecture which enables faster operations
 - Monitor module that supports telegram bot to monitor certain configurable events
 
+
 ## Concepts
 ### Objects:
-
+Icarus processes the raw data to create orders based on the decisions. The connections between consecutive stages of evaluation, are handled by intermediate objects.
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/40933377/150859442-66ba4e91-0d43-47b3-ad6e-a193017c01c2.png?raw=true" alt="Sublime's custom image"/>
+  <img src="https://user-images.githubusercontent.com/40933377/150873776-ea893a06-e5ac-4348-afeb-074b43563fa6.png?raw=true" alt="Sublime's custom image"/>
 </p>
 
-- Data Object
-- Analysis Object
-- Trade Object
+| Object | Description | Lifetime |
+| --- | --- | --- |
+| **Data Object** | Organized version of the raw data regarding to the configured 'currency pair' and time_frames' pairs. It is consumed by the 'Analyzer' | 1 Cycle |
+| **Analysis Object** | Contains the result of (configured) indicators types for each 'currency pair' and time_frames' pairs. It is evaluated by the Analyzer object and consumed by the Strategies | 1 Cycle |
+| **Trade Object** | A Trade Object contains the initial plan to enter/exit, current status and statistics of a trade. It contains characteristics such as order types, enter/exit levels, the due date of the current decision etc. | Until the enter and the exit phases completed (afterwards the closed trades are stored to create stats and visualizations) |
+| **Observer Object** | Observer Objects are used to store some statistics, diagnostic data or analysis results to be visualized alongside the trades. | Until the end of session (backtest) or until the database retention (live-trading)|
 
-### Modules:
-- Analyzer
-- Observer
-- Strategy
-- Visualization
-- Monitor
+
+### Submodules:
+| Submodules | Description |
+| --- | --- |
+| **Analyzer** | Contains the all available indicators and patterns |
+| **Observer** | Contains observer object creater |
+| **Strategy** | Contains the all strategies and the main strategy execution logic |
+| **Visualization** | Contains the visualization functions logic for ohlc data, analyzers, observers, trades etc. |
+| **Monitor** | Contains the monitoring tools such as telegram bot |
+
