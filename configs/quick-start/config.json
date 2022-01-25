@@ -20,12 +20,12 @@
         "fee": 0.001
     },
     "risk_management":{
-        "max_capital_use_ratio": 0.99
+        "max_capital_use_ratio": 0.95
     },
     "strategy": {
         "MACDStrategy": {
-            "pairs": ["BTCUSDT","ETHUSDT", "XRPUSDT"],
-            "time_scales": ["1d", "4h", "1h"],
+            "pairs": ["BTCUSDT","ETHUSDT"],
+            "time_scales": ["1d"],
             "enter": {
                 "type": "market"
             },
@@ -39,7 +39,7 @@
             "max_lto": 3
         },
         "RSIStrategy": {
-            "pairs": ["BTCUSDT"],
+            "pairs": ["BTCUSDT","XRPUSDT"],
             "time_scales": ["1d"],
             "enter": {
                 "type": "market"
@@ -52,53 +52,69 @@
                 "exit_expire": "market_exit"
             },
             "max_lto": 3
+        },
+        "NewStrategy": {
+            "pairs": ["XRPUSDT","ETHUSDT"],
+            "time_scales": ["1d"],
+            "enter": {
+                "type": "limit"
+            },
+            "exit": {
+                "type": "oco"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "market_exit"
+            },
+            "max_lto": 3
         }
     },
     "analysis": {
-        "indicators":{
-            "kmeans": ""
+        "indicators": {
+            "low":"",
+            "high":"",
+            "rsi":"",
+            "close":"",
+            "macd":"",
+            "ma": [50,200],
+            "trange": ""
         }
     },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
+        "report_path": "configs/market/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],
         "5m": ["1 day", 480],
         "15m": ["1 day", 96],
         "30m": ["1 week", 336],
-        "1h": ["2 weeks", 336],
+        "1h": ["1 week", 168],
         "2h": ["1 week", 84],
-        "4h": ["3 months", 540],
+        "4h": ["1 week", 42],
         "12h": ["1 month", 60],
-        "1d": ["1 year", 365],
+        "1d": ["3 months", 90],
         "1w": ["1 year", 52],
         "1M": ["1 year", 12]
     },
     "backtest":{
-        "start_time": "2020-01-11 13:00:00",
-        "end_time": "2020-01-11 13:00:00",
+        "start_time": "2019-05-12 12:15:00",
+        "end_time": "2020-05-19 13:00:00",
         "online": true
     },
     "visualization":{
         "observers":{
-            "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"],
-            "breakpoints": {
-                "1562371200000":"decision_time",
-                "1562803200000":"result.enter.time"
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
+        },
+        "indicators": {
+            "rsi":"",
+            "macd":"",
+            "ma": [50,200],
+            "bband": {
+                "timeperiod": 5,
+                "nbdevup": 2,
+                "nbdevdn": 2
             }
-        },
-        "indicators":{
-            "aroon": "",
-            "aroonosc": "",
-            "market_classifier": "fractal_aroon",
-            "fractal_line_3": "",
-            "fractal_aroon": "",
-            "fractal_aroonosc": "",
-            "support_dbscan": "",
-            "resistance_dbscan": ""
-        },
-        "patterns": ["bearish_fractal_3", "bullish_fractal_3"]
+        }
     }
 }

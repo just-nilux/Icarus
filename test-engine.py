@@ -384,8 +384,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 3.3: Get the onserver
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
-        observer.qc(ikarus_time, df_balance, lto_list+nto_list),
-        observer.qc_leak(ikarus_time, df_balance, lto_list+nto_list),
+        observer.quote_asset(ikarus_time, df_balance, lto_list+nto_list),
+        observer.quote_asset_leak(ikarus_time, df_balance, lto_list+nto_list),
         observer.balance(ikarus_time, df_balance)
     ]
     observer_objs = list(await asyncio.gather(*observer_list))

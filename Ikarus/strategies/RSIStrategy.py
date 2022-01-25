@@ -27,8 +27,8 @@ class RSIStrategy(StrategyBase):
             time_dict = analysis_dict[ao_pair]
             
             # NOTE: Enter only if there is a move from the state 'oversold' to 'none'
-            if time_dict['1d']['rsi'][-2] < self.lower_limit and \
-                self.lower_limit < time_dict['1d']['rsi'][-1] < self.upper_limit:
+            if time_dict[self.min_period]['rsi'][-2] < self.lower_limit and \
+                self.lower_limit < time_dict[self.min_period]['rsi'][-1] < self.upper_limit:
 
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
@@ -90,8 +90,8 @@ class RSIStrategy(StrategyBase):
             time_dict = analysis_dict[lto['pair']]
 
             # NOTE: Exit only if there is a move from the state 'overbought' to 'none'
-            if time_dict['1d']['rsi'][-2] > self.upper_limit and \
-                self.lower_limit < time_dict['1d']['rsi'][-1] < self.upper_limit:
+            if time_dict[self.min_period]['rsi'][-2] > self.upper_limit and \
+                self.lower_limit < time_dict[self.min_period]['rsi'][-1] < self.upper_limit:
 
                 # TODO: Add info log: market exit decided
                 lto['exit'] = await StrategyBase._create_exit_module(
