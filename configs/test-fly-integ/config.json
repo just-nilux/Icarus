@@ -1,7 +1,6 @@
 {
     "tag": "test-bot",
     "log-level": "DEBUG",
-    "files": [".\\test\\data\\btcusdt_15m_202005121212_202005191213.csv"],
     "credential_file": ".\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
@@ -71,7 +70,7 @@
         }
     },
     "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
+        "report_path": "configs/test-fly-integ/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],
@@ -93,12 +92,8 @@
     },
     "visualization":{
         "observers":{
-            "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"],
-            "breakpoints": {
-                "1562371200000":"decision_time",
-                "1562803200000":"result.enter.time"
-            }
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
         },
         "indicators": {
             "rsi":"",

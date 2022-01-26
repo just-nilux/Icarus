@@ -28,10 +28,10 @@ class Observer():
         return observation_obj.get()
 
 
-    async def qc(self, ikarus_time, df_balance, lto_list):
+    async def quote_asset(self, ikarus_time, df_balance, lto_list):
         # NOTE: As a principle all the observer item that will be  visualized should not have an extra level of indent
         observation_obj = {}
-        observation_obj['type'] = 'qc'
+        observation_obj['type'] = 'quote_asset'
         observation_obj['timestamp'] = ikarus_time
         observation_obj['free'] = df_balance.loc[self.config['broker']['quote_currency'],'free']
         observation_obj['in_trade'] = eval_total_capital_in_lto(lto_list)
@@ -40,9 +40,9 @@ class Observer():
         return observation_obj
 
 
-    async def qc_leak(self, ikarus_time, df_balance, lto_list):
+    async def quote_asset_leak(self, ikarus_time, df_balance, lto_list):
         observation_obj = {}
-        observation_obj['type'] = 'qc_leak'
+        observation_obj['type'] = 'quote_asset_leak'
         observation_obj['timestamp'] = ikarus_time
 
         free = df_balance.loc[self.config['broker']['quote_currency'],'free']

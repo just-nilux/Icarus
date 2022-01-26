@@ -69,20 +69,20 @@
             ]
         },
         {
-            "name": "test-engine",
+            "name": "backtest",
             "type": "python",
             "request": "launch",
-            "program": ".\\test-engine.py",
+            "program": ".\\backtest.py",
             "console": "integratedTerminal",
             "args": [
                 ".\\configs\\market_state\\config.json"
             ]
         },
         {
-            "name": "live-engine",
+            "name": "live-trade",
             "type": "python",
             "request": "launch",
-            "program": ".\\live-engine.py",
+            "program": ".\\live-trade.py",
             "console": "integratedTerminal",
             "args": [
                 ".\\configs\\live\\config.json"

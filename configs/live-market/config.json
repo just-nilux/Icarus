@@ -72,8 +72,8 @@
     },
     "visualization":{
         "observers":{
-            "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"]
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
         },
         "indicators": ["ma", "bband", "rsi", "macd"]
     }

@@ -27,8 +27,8 @@ class MACDStrategy(StrategyBase):
             time_dict = analysis_dict[ao_pair]
             
             # NOTE: Enter only when 'macd' line goes above the 'macdsignal' line
-            if time_dict['1d']['macd']['macd'][-2] < time_dict['1d']['macd']['macdsignal'][-2] and \
-                time_dict['1d']['macd']['macd'][-1] > time_dict['1d']['macd']['macdsignal'][-1]:
+            if time_dict[self.min_period]['macd']['macd'][-2] < time_dict[self.min_period]['macd']['macdsignal'][-2] and \
+                time_dict[self.min_period]['macd']['macd'][-1] > time_dict[self.min_period]['macd']['macdsignal'][-1]:
 
                 trade_obj = copy.deepcopy(GenericObject.trade)
                 trade_obj['status'] = STAT_OPEN_ENTER
@@ -90,8 +90,8 @@ class MACDStrategy(StrategyBase):
             time_dict = analysis_dict[lto['pair']]
 
             # NOTE: Enter only when 'macd' line goes below the 'macdsignal' line
-            if time_dict['1d']['macd']['macd'][-2] > time_dict['1d']['macd']['macdsignal'][-2] and \
-                time_dict['1d']['macd']['macd'][-1] < time_dict['1d']['macd']['macdsignal'][-1]:
+            if time_dict[self.min_period]['macd']['macd'][-2] > time_dict[self.min_period]['macd']['macdsignal'][-2] and \
+                time_dict[self.min_period]['macd']['macd'][-1] < time_dict[self.min_period]['macd']['macdsignal'][-1]:
 
                 # TODO: Add info log: market exit decided
                 lto['exit'] = await StrategyBase._create_exit_module(
