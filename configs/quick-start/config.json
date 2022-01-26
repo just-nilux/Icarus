@@ -81,7 +81,7 @@
         }
     },
     "statistics": {
-        "report_path": "configs/market/stat.txt"
+        "report_path": "configs/quick-start/stat.txt"
     },
     "time_scales": {
         "1m": ["12 hours", 720],
@@ -109,12 +109,9 @@
         "indicators": {
             "rsi":"",
             "macd":"",
-            "ma": [50,200],
-            "bband": {
-                "timeperiod": 5,
-                "nbdevup": 2,
-                "nbdevdn": 2
-            }
-        }
+            "trange":"",
+            "ma": [50,200]
+        },
+        "patterns":[]
     }
 }
