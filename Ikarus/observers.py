@@ -3,8 +3,8 @@ Observers are the configurable read-only units. They simply collect data at the 
 '''
 import logging
 import pandas as pd
-from Ikarus.objects import GenericObject
-from Ikarus.utils import eval_total_capital_in_lto, safe_multiply, safe_substract, safe_sum
+from .objects import GenericObject
+from .utils import eval_total_capital_in_lto, safe_multiply, safe_substract, safe_sum
 
 class Observer():
 

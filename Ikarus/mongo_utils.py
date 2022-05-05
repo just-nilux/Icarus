@@ -1,9 +1,9 @@
-from Ikarus.exceptions import NotImplementedException
+from .exceptions import NotImplementedException
 from pymongo import MongoClient, DESCENDING
 import logging
 import asyncio
 import motor.motor_asyncio
-from Ikarus.enums import *
+from .enums import *
 from time import time, sleep
 import copy
 import bson

@@ -2,7 +2,7 @@ import asyncio
 import copy
 import logging
 import talib as ta
-from Ikarus.exceptions import NotImplementedException
+from .exceptions import NotImplementedException
 from sklearn.cluster import KMeans, DBSCAN, MeanShift
 from sklearn.metrics import silhouette_score
 import pandas as pd

@@ -1,7 +1,7 @@
 import pandas as pd
 from .enums import *
 from .utils import calculate_fee, safe_substract, safe_sum
-from Ikarus.strategies.StrategyBase import StrategyBase
+from .strategies.StrategyBase import StrategyBase
 from .exceptions import NotImplementedException
 import logging
 

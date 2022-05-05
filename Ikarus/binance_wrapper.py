@@ -1,10 +1,10 @@
-from Ikarus.strategies.StrategyBase import StrategyBase
-from Ikarus.exceptions import NotImplementedException
+from .strategies.StrategyBase import StrategyBase
+from .exceptions import NotImplementedException
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
-from Ikarus.enums import *
-from Ikarus import notifications
+from .enums import *
+from . import notifications
 import asyncio
 import pandas as pd
 import logging

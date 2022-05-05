@@ -1,6 +1,6 @@
 import logging
-from Ikarus.enums import *
-from Ikarus import mongo_utils
+from .enums import *
+from . import mongo_utils
 import json
 import sys
 import os

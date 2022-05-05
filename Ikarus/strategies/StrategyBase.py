@@ -1,7 +1,7 @@
 import json
 import logging
 from binance.helpers import round_step_size
-from Ikarus.enums import *
+from ..enums import *
 import bson
 import abc
 import itertools
