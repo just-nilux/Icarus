@@ -59,9 +59,6 @@
             "kmeans": ""
         }
     },
-    "statistics": {
-        "report_path": "C:/Users/bilko/PycharmProjects/trade-bot/test/sessions/test-fly-integ/stat.txt"
-    },
     "time_scales": {
         "1m": ["12 hours", 720],
         "5m": ["1 day", 480],

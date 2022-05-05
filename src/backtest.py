@@ -12,6 +12,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
 import sys
+import os
 import time
 import bson
 from itertools import chain, groupby
@@ -50,7 +51,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 
 def setup_logger(_log_lvl):
     global logger
-    log_filename = 'log/test-ikarus-app.log'
+    log_filename = '../log/test-ikarus-app.log'
     logger = logging.getLogger('app')
     logger.setLevel(logging.DEBUG)
 
@@ -482,7 +483,7 @@ if __name__ == '__main__':
     setup_logger(config['log-level'])
 
     # Setup initial objects
-    stats = performance.Statistics(config, mongocli) 
+    stats = performance.Statistics(config, mongocli, os.path.dirname(str(sys.argv[1]))) 
     observer = observers.Observer(config)
     analyzer = analyzers.Analyzer(config)
 

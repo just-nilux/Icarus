@@ -1,7 +1,7 @@
 {
     "tag": "test-bot",
     "log-level": "DEBUG",
-    "credential_file": ".\\test_credentials.json",
+    "credential_file": "../test_credentials.json",
     "mongodb":{
         "host": "localhost",
         "port": 27017,
@@ -80,9 +80,6 @@
             "trange": ""
         }
     },
-    "statistics": {
-        "report_path": "configs/quick-start/stat.txt"
-    },
     "time_scales": {
         "1m": ["12 hours", 720],
         "5m": ["1 day", 480],
@@ -98,7 +95,7 @@
     },
     "backtest":{
         "start_time": "2019-05-12 12:15:00",
-        "end_time": "2020-05-19 13:00:00",
+        "end_time": "2019-06-19 13:00:00",
         "online": true
     },
     "visualization":{

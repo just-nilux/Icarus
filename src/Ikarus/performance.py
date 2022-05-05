@@ -12,10 +12,11 @@ from .utils import safe_substract
 class Statistics():
     # You can not manage something that you can not measure
 
-    def __init__(self, _config, _mongocli):
+    def __init__(self, _config, _mongocli, _statfile):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
         self.mongocli = _mongocli
+        self.statfile = _statfile
         self.config = _config
 
         # TODO: This ehader section can be coınfigured based on desired stats
@@ -120,7 +121,7 @@ class Statistics():
         """
         Iterate over the stat dict and print in a proper format
         """        
-        f = open(self.config['statistics']['report_path'],'w')
+        f = open(self.statfile+"/stat.txt",'w')
         for key, item in self.stat.items():
             if type(item) != list:
                 f.write(key + "\n" )
