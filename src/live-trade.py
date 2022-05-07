@@ -3,20 +3,17 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils, lto_manipulator
+from Ikarus import performance, strategy_manager, binance_wrapper, notifications, analyzers, observers, mongo_utils
 from Ikarus.enums import *
-from Ikarus.exceptions import SysStatDownException, NotImplementedException
+from Ikarus.exceptions import SysStatDownException
 from Ikarus.utils import time_scale_to_second, get_min_scale, eval_total_capital, \
-    eval_total_capital_in_lto, calculate_fee, round_to_period, get_lto_phase
+    eval_total_capital_in_lto, calculate_fee, round_to_period, get_lto_phase, setup_logger
 import logging
 from logging.handlers import TimedRotatingFileHandler
-import pandas as pd
 import sys
-import copy
 import bson
 import time
-from itertools import chain, groupby
-import operator
+from itertools import chain
 import itertools
 import more_itertools
 from Ikarus.resource_allocator import ResourceAllocator
@@ -24,39 +21,6 @@ from Ikarus.resource_allocator import ResourceAllocator
 
 # Global Variables
 FLAG_SYSTEM_STATUS = True
-
-
-def setup_logger(_log_lvl):
-    # TODO: Logger can be directed to tel
-    global logger
-    log_filename = 'log/ikarus-app.log'
-    logger = logging.getLogger('app')
-    logger.setLevel(logging.DEBUG)
-
-    rfh = TimedRotatingFileHandler(filename=log_filename,
-                                   when='H',
-                                   interval=1,
-                                   backupCount=5)
-
-    rfh.setLevel(_log_lvl)
-
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-
-    # create formatter and add it to the handle
-    # rs
-    #formatter = logging.Formatter('[{}] [{}] [{}] [{}]'.format('%(asctime)s','%(name)26s','%(levelname)8s', '%(message)s'))
-    formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
-        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
-    formatter.converter = time.gmtime # Use the UTC Time
-    rfh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(rfh)
-    logger.addHandler(ch)
-
-    logger.info('logger has been set')
 
 
 async def wait_until(dt):
@@ -533,7 +497,7 @@ if __name__ == "__main__":
         clean=config['mongodb']['clean']) # NOTE: Normally it is False
 
     # Initialize and configure objects
-    setup_logger(config['log-level'])
+    setup_logger(logger, config['log']['level'], config['log']['file'])
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli) 

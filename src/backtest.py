@@ -1,45 +1,27 @@
 from Ikarus.strategies.StrategyBase import StrategyBase
 import asyncio
-from binance import Client, AsyncClient
+from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, performance, strategy_manager, notifications, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, performance, strategy_manager, analyzers, observers, mongo_utils
 from Ikarus.enums import *
-from Ikarus.exceptions import NotImplementedException
-from Ikarus.utils import time_scale_to_second, get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, \
-    get_min_scale, round_to_period, eval_total_capital, eval_total_capital_in_lto, calculate_fee
+from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
+    eval_total_capital_in_lto, calculate_fee, setup_logger
 import logging
-from logging.handlers import TimedRotatingFileHandler
 import pandas as pd
 import sys
 import os
-import time
 import bson
-from itertools import chain, groupby
-import operator
+from itertools import chain
 import itertools
 from Ikarus.resource_allocator import ResourceAllocator 
 from Ikarus import balance_manager
-from decimal import Decimal, getcontext
-#from scripts.visualize_test_session import visualize_online
 
 # Global Variables
 SYSTEM_STATUS = 0
 STATUS_TIMEOUT = 0
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
-    """
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
     bar = fill * filledLength + '-' * (length - filledLength)
@@ -47,36 +29,6 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     # Print New Line on Complete
     if iteration == total: 
         print()
-
-
-def setup_logger(_log_lvl):
-    global logger
-    log_filename = '../log/test-ikarus-app.log'
-    logger = logging.getLogger('app')
-    logger.setLevel(logging.DEBUG)
-
-    rfh = TimedRotatingFileHandler(filename=log_filename,
-                                   when='H',
-                                   interval=1,
-                                   backupCount=5)
-
-    rfh.setLevel(_log_lvl)
-
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
-        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
-    formatter.converter = time.gmtime # Use the UTC Time
-    rfh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(rfh)
-    logger.addHandler(ch)
-
-    logger.info('logger has been set')
 
 
 async def write_updated_ltos_to_db(lto_list):
@@ -480,7 +432,7 @@ if __name__ == '__main__':
         clean=config['mongodb']['clean'])
     
     # Initialize and configure objects
-    setup_logger(config['log-level'])
+    setup_logger(logger, config['log']['level'], config['log']['file'])
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli, os.path.dirname(str(sys.argv[1]))) 

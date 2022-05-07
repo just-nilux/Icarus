@@ -1,6 +1,9 @@
 {
     "tag": "test-bot",
-    "log-level": "DEBUG",
+    "log":{
+        "level": "DEBUG",
+        "file": "../log/test-ikarus-app.log"
+    },
     "credential_file": "../test_credentials.json",
     "mongodb":{
         "host": "localhost",

@@ -1,19 +1,32 @@
 '''
 Observers are the configurable read-only units. They simply collect data at the end of each execution cycle
 '''
+from dataclasses import dataclass, field
+import dataclasses
 import logging
+import string
 import pandas as pd
 from multipledispatch import dispatch
 from json import JSONEncoder
+import json
 import collections.abc
 import numpy as np
 import copy
+import bson
 
 class ObjectEncoder(JSONEncoder):
     def default(self, o):
         if type(o) == np.int64:
             return int(o)
         return o.get()
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+        def default(self, o):
+            if dataclasses.is_dataclass(o):
+                return dataclasses.asdict(o)
+            return super().default(o)
+
+
 
 
 class GenericObject():
@@ -142,3 +155,59 @@ class GenericObject():
         for keyword in obj_path:
             current_level = current_level[keyword]
         return current_level
+
+@dataclass
+class Trade():
+    id: string
+    decision_time: int
+    status: string
+    strategy: string
+    pair: string 
+    enter: dict = field(default_factory=dict)
+    exit: dict = field(default_factory=dict)
+    history: dict = field(default_factory=dict)
+    action: string = ''
+
+    def set_enter(self,enter_order):
+        self.enter=enter_order
+
+
+@dataclass
+class LimitOrder():
+    expire: bson.Int64
+    price: float
+    quantity: float
+    amount: float
+    fee: float = 0.0
+    orderId: int = 0
+
+
+@dataclass
+class OCOOrder():
+    expire: bson.Int64
+    limitPrice: float
+    stopPrice: float
+    stopLimitPrice: float
+    quantity: float
+    amount: float
+    fee: float = 0.0
+    orderId: int = 0
+    stopLimit_orderId: int = 0
+
+
+@dataclass
+class MarketOrder():
+    quantity: float
+    amount: float
+    fee: float = 0.0
+    orderId: int = 0
+    # TODO: Check if price is a member
+
+
+if __name__ == "__main__":
+    #limit_order = LimitOrder(0,0,0,0)
+    trade = Trade('',0,'','','')
+    trade.set_enter(LimitOrder(0,0,0,0))
+    print(type(trade.enter) == LimitOrder)
+    trade_Str = json.dumps(trade, cls=EnhancedJSONEncoder)
+    pass

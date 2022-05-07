@@ -3,6 +3,10 @@ import pandas as pd
 import more_itertools
 from .enums import *
 from decimal import ROUND_DOWN, Decimal
+import logging
+from logging.handlers import TimedRotatingFileHandler
+import time
+
 
 def calculate_fee(amount, fee, digit=8):
     return round(safe_multiply(amount,fee), digit)
@@ -227,3 +231,31 @@ def filter_lot_size(quantity, symbol_info):
         return quantity
     else:
         return None
+
+
+def setup_logger(logger, log_level, log_file):
+    logger = logging.getLogger('app')
+    logger.setLevel(logging.DEBUG)
+
+    rfh = TimedRotatingFileHandler(filename=log_file,
+                                   when='H',
+                                   interval=1,
+                                   backupCount=5)
+
+    rfh.setLevel(log_level)
+
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
+        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
+    formatter.converter = time.gmtime # Use the UTC Time
+    rfh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(rfh)
+    logger.addHandler(ch)
+
+    logger.info('logger has been set')
