@@ -13,6 +13,7 @@ import collections.abc
 import numpy as np
 import copy
 import bson
+from enum import Enum
 
 class ObjectEncoder(JSONEncoder):
     def default(self, o):
@@ -156,19 +157,40 @@ class GenericObject():
             current_level = current_level[keyword]
         return current_level
 
+
+class TradeResult(str, Enum):
+    NONE = ''
+    ENTER_EXP = 'enter_expire'
+    MAN_CHANGE = 'manual_change'
+    EXIT_EXP = 'exit_expire'
+    CLOSED = 'closed'
+
+
+class TradeState(str, Enum):
+    OPEN_ENTER = 'open_enter'
+    ENTER_EXP = 'enter_expire'
+    WAITING_EXIT = 'waiting_exit'
+    OPEN_EXIT = 'open_exit'
+    EXIT_EXP = 'exit_expire'
+    CLOSED = 'closed'
+
+
 @dataclass
 class Trade():
-    id: string
-    decision_time: int
-    status: string
+    decision_time: bson.Int64
     strategy: string
-    pair: string 
+    pair: string
+    id: string = ''
+    status: TradeState = TradeState.OPEN_ENTER
     enter: dict = field(default_factory=dict)
     exit: dict = field(default_factory=dict)
     history: dict = field(default_factory=dict)
-    action: string = ''
+    action: bool = False
 
     def set_enter(self,enter_order):
+        self.enter=enter_order
+
+    def set_exit(self,enter_order):
         self.enter=enter_order
 
 
@@ -176,10 +198,18 @@ class Trade():
 class LimitOrder():
     expire: bson.Int64
     price: float
-    quantity: float
-    amount: float
+    amount: float = 0.0
+    quantity: float = 0.0
     fee: float = 0.0
     orderId: int = 0
+    def __post_init__(self):
+        if self.quantity == 0.0 and self.amount != 0.0:
+            self.amount / (self.price * (1 + self.fee))
+        elif self.quantity != 0.0 and self.amount == 0.0:
+            self.amount = float(self.price * self.quantity)
+        else:
+            # TODO: Error on initialization
+            pass
 
 
 @dataclass
@@ -204,10 +234,28 @@ class MarketOrder():
     # TODO: Check if price is a member
 
 
+@dataclass
+class TradeResult():
+    result: TradeResult = TradeResult.NONE
+    enter: dict = field(default_factory=dict)
+    exit: dict = field(default_factory=dict)
+    profit: float = 0.0
+    live_time: int = 0
+
+
+class Order:
+    type: string = '' # type(trade.enter).__name__
+    time: bson.Int64 = 0
+    price: float = 0.0
+    quantity: float = 0.0
+    amount: float = 0.0
+    fee: float = 0.0
+
+
 if __name__ == "__main__":
     #limit_order = LimitOrder(0,0,0,0)
-    trade = Trade('',0,'','','')
-    trade.set_enter(LimitOrder(0,0,0,0))
+    trade = Trade(0,'NewStrategy','BTCUSDT')
+    trade.set_enter(LimitOrder(0,2,quantity=3))
     print(type(trade.enter) == LimitOrder)
     trade_Str = json.dumps(trade, cls=EnhancedJSONEncoder)
     pass
