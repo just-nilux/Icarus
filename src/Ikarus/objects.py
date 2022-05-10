@@ -158,15 +158,25 @@ class GenericObject():
         return current_level
 
 
-class TradeResult(str, Enum):
-    NONE = ''
+class EAction(str, Enum):
+    NONE = None
+    CANCEL = 'cancel'
+    UPDATE = 'update'
+    POSTPONE = 'postpone'
+    MARKET_ENTER = 'market_enter'
+    MARKET_EXIT = 'market_exit'
+    EXEC_EXIT = 'execute_exit'
+
+
+class ECause(str, Enum):
+    NONE = None
     ENTER_EXP = 'enter_expire'
     MAN_CHANGE = 'manual_change'
     EXIT_EXP = 'exit_expire'
     CLOSED = 'closed'
 
 
-class TradeState(str, Enum):
+class EState(str, Enum):
     OPEN_ENTER = 'open_enter'
     ENTER_EXP = 'enter_expire'
     WAITING_EXIT = 'waiting_exit'
@@ -176,86 +186,87 @@ class TradeState(str, Enum):
 
 
 @dataclass
-class Trade():
-    decision_time: bson.Int64
-    strategy: string
-    pair: string
-    id: string = ''
-    status: TradeState = TradeState.OPEN_ENTER
-    enter: dict = field(default_factory=dict)
-    exit: dict = field(default_factory=dict)
-    history: dict = field(default_factory=dict)
-    action: bool = False
-
-    def set_enter(self,enter_order):
-        self.enter=enter_order
-
-    def set_exit(self,enter_order):
-        self.enter=enter_order
-
-
-@dataclass
-class LimitOrder():
-    expire: bson.Int64
-    price: float
-    amount: float = 0.0
-    quantity: float = 0.0
+class Order:
+    price: float = 0
+    amount: float = None
+    quantity: float = None
     fee: float = 0.0
-    orderId: int = 0
+    orderId: int = None
     def __post_init__(self):
-        if self.quantity == 0.0 and self.amount != 0.0:
+        if self.quantity == None and self.amount == None:
+            pass
+        elif self.quantity == None:
             self.amount / (self.price * (1 + self.fee))
-        elif self.quantity != 0.0 and self.amount == 0.0:
+        elif self.amount == None:
             self.amount = float(self.price * self.quantity)
         else:
             # TODO: Error on initialization
             pass
 
-
-@dataclass
-class OCOOrder():
-    expire: bson.Int64
-    limitPrice: float
-    stopPrice: float
-    stopLimitPrice: float
-    quantity: float
-    amount: float
-    fee: float = 0.0
-    orderId: int = 0
-    stopLimit_orderId: int = 0
+    def set_price(self, price):
+        self.amount = float(self.price * self.quantity)
 
 
 @dataclass
-class MarketOrder():
-    quantity: float
-    amount: float
-    fee: float = 0.0
-    orderId: int = 0
-    # TODO: Check if price is a member
+class Market(Order):
+    pass
+
+
+@dataclass
+class Limit(Order):
+    expire: bson.Int64 = None
+
+
+@dataclass
+class OCO(Order):
+    expire: bson.Int64 = None
+    stopPrice: float = None
+    stopLimitPrice: float = None
+    stopLimit_orderId: int = None
+
+
+@dataclass
+class Result(Order):
+    type: string = '' # type(trade.enter).__name__
+    time: bson.Int64 = None
 
 
 @dataclass
 class TradeResult():
-    result: TradeResult = TradeResult.NONE
-    enter: dict = field(default_factory=dict)
-    exit: dict = field(default_factory=dict)
+    cause: EResult = EResult.NONE
+    enter: Result = None
+    exit: Result = None
     profit: float = 0.0
     live_time: int = 0
 
 
-class Order:
-    type: string = '' # type(trade.enter).__name__
-    time: bson.Int64 = 0
-    price: float = 0.0
-    quantity: float = 0.0
-    amount: float = 0.0
-    fee: float = 0.0
+@dataclass
+class Trade():
+    decision_time: bson.Int64
+    strategy: string
+    pair: string
+    id: string = ''
+    status: EState = EState.OPEN_ENTER
+    enter: dict = None
+    exit: dict = None
+    result: TradeResult = None
+    action: EAction = EAction.NONE
+
+    def set_enter(self,enter_order):
+        self.enter=enter_order
+
+    def set_exit(self,exit_order):
+        self.exit=exit_order
+
+    def set_action(self,action):
+        self.action=action
 
 
 if __name__ == "__main__":
     #limit_order = LimitOrder(0,0,0,0)
     trade = Trade(0,'NewStrategy','BTCUSDT')
-    trade.set_enter(LimitOrder(0,2,quantity=3))
-    print(type(trade.enter) == LimitOrder)
+    Limit(3,quantity=2)
+    trade.set_enter(Limit(123, quantity=3))
+    #print(type(trade.enter) == LimitOrder)
     trade_Str = json.dumps(trade, cls=EnhancedJSONEncoder)
     pass
