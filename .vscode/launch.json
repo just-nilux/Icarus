@@ -12,6 +12,14 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Strategy",
+            "type": "python",
+            "request": "launch",
+            "module": "Ikarus.strategies.ObjectStrategy",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src"
+        },
+        {
             "name": "notification",
             "type": "python",
             "request": "launch",

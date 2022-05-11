@@ -14,6 +14,7 @@ import numpy as np
 import copy
 import bson
 from enum import Enum
+from .utils import safe_multiply
 
 class ObjectEncoder(JSONEncoder):
     def default(self, o):
@@ -157,15 +158,20 @@ class GenericObject():
             current_level = current_level[keyword]
         return current_level
 
+class EOrderType(str, Enum):
+    MARKET = 'Market'
+    LIMIT = 'Limit'
+    OCO = 'OCO'
 
-class EAction(str, Enum):
+
+class ECommand(str, Enum):
     NONE = None
-    CANCEL = 'cancel'
-    UPDATE = 'update'
-    POSTPONE = 'postpone'
-    MARKET_ENTER = 'market_enter'
-    MARKET_EXIT = 'market_exit'
-    EXEC_EXIT = 'execute_exit'
+    CANCEL = 'cancel'                   # Cancel order
+    UPDATE = 'update'                   # Update order (CANCEL + EXEC_X)
+    MARKET_ENTER = 'market_enter'       # Do market enter
+    MARKET_EXIT = 'market_exit'         # Do market exit
+    EXEC_EXIT = 'execute_exit'          # Execute exit order   
+    EXEC_ENTER = 'execute_exit'         # Execute enter order
 
 
 class ECause(str, Enum):
@@ -190,21 +196,26 @@ class Order:
     price: float = 0
     amount: float = None
     quantity: float = None
-    fee: float = 0.0
+    fee: float = 0.0                    # Only for having an estimation in amount calculation
     orderId: int = None
     def __post_init__(self):
         if self.quantity == None and self.amount == None:
             pass
         elif self.quantity == None:
-            self.amount / (self.price * (1 + self.fee))
+            # TODO: Safe operator integration
+            self.quantity = self.amount / (self.price * (1 + self.fee))
         elif self.amount == None:
+            # TODO: Safe operator integration
             self.amount = float(self.price * self.quantity)
         else:
             # TODO: Error on initialization
             pass
 
     def set_price(self, price):
-        self.amount = float(self.price * self.quantity)
+        #self.amount = float(self.price * self.quantity)
+        self.price = price
+        self.amount = safe_multiply(self.price, self.quantity)
+        self.fee = safe_multiply(self.amount, self.fee)
 
 
 @dataclass
@@ -233,7 +244,7 @@ class Result(Order):
 
 @dataclass
 class TradeResult():
-    cause: EResult = EResult.NONE
+    cause: ECause = ECause.NONE
     enter: Result = None
     exit: Result = None
     profit: float = 0.0
@@ -250,7 +261,7 @@ class Trade():
     enter: dict = None
     exit: dict = None
     result: TradeResult = None
-    action: EAction = EAction.NONE
+    action: ECommand = ECommand.NONE
 
     def set_enter(self,enter_order):
         self.enter=enter_order
@@ -263,10 +274,11 @@ class Trade():
 
 
 if __name__ == "__main__":
-    #limit_order = LimitOrder(0,0,0,0)
+
     trade = Trade(0,'NewStrategy','BTCUSDT')
     Limit(3,quantity=2)
     trade.set_enter(Limit(123, quantity=3))
+    trade.enter
     #print(type(trade.enter) == LimitOrder)
     trade_Str = json.dumps(trade, cls=EnhancedJSONEncoder)
     pass

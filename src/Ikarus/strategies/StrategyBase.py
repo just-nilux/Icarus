@@ -6,9 +6,10 @@ import bson
 import abc
 import itertools
 import statistics as st
-from ..objects import GenericObject
+from ..objects import EOrderType, EnhancedJSONEncoder
 import math
-from ..utils import get_lto_phase, safe_sum, filter_lot_size, round_step_downward, truncate, safe_multiply, safe_substract
+from ..utils import get_lto_phase, safe_sum, round_step_downward, truncate, safe_multiply, safe_substract
+from .. import binance_filters as filters
 import more_itertools
 import copy
 
@@ -197,16 +198,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         pass
 
 
-    @abc.abstractclassmethod
-    async def on_enter_postpone(self):
-        pass
-
-
-    @abc.abstractclassmethod
-    async def on_exit_postpone(self):
-        pass
-
-
     @staticmethod
     async def on_market_exit(self, lto, analysis_dict):
         #lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
@@ -281,99 +272,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def _create_enter_module(type, enter_price, enter_ref_amount, expire_time):
-
-        # NOTE: amount = enter_price * enter_quantity
-        #       amount is excluded from the fees
-
-        # NOTE: enter_ref_amount is the total quantity of the quote currency that will be used for the trade.
-        #       It includes the stake amount and the transaction fee (comission)
-        
-        # NOTE: It is assumed that the fee is paid in the quote currency not BNB.
-        #       For BNB, some generalizations and details needs to be implemented
-        enter_quantity = enter_ref_amount / (enter_price * (1 + StrategyBase.fee))
-
-        if type == TYPE_LIMIT:
-            enter_module = {
-                TYPE_LIMIT: {
-                    "price": float(enter_price),
-                    "quantity": float(enter_quantity),
-                    "fee": float(enter_price * enter_quantity * StrategyBase.fee),
-                    "amount": float(enter_quantity * enter_price),
-                    "expire": expire_time,
-                    "orderId": ""
-                    },
-                }
-        elif type == TYPE_MARKET:
-            # TODO: For market buy it, the quantity is needed, but the price is volatile and unknown.
-            #       It is impossible to know the fee exactly. Some guess might be added, or simply
-            #       the quantity might be guessed roughly to not to exceed the max allowed capital
-            enter_module = {
-                TYPE_MARKET: {
-                    "price": float(enter_price),
-                    "quantity": float(enter_quantity),
-                    "fee": float(enter_price * enter_quantity * StrategyBase.fee),
-                    "amount": float(enter_quantity * enter_price),
-                    "orderId": ""
-                    },
-                }
-        else: pass # Internal Error
-
-        # NOTE: Actually no difference in the objects, in terms of value and te stucture
-        #       Only the difference is, one is full of certain values, the other is about expectations
-        return enter_module
-
-
-    @staticmethod
-    async def _create_exit_module(type, enter_price, enter_quantity, exit_price, expire_time):
-        
-        # NOTE: amount = exit_price * enter_quantity
-
-        # TODO: receive stopPrice and stopLimitPrice directly as argument
-        if type == TYPE_OCO:
-            exit_module = {
-                TYPE_OCO: {
-                    "limitPrice": float(exit_price),
-                    "stopPrice": float(enter_price)*0.995,           # Auto-execute stop loss if the amount go below %0.05
-                    "stopLimitPrice": float(enter_price)*0.994,      # Lose max %0.06 of the amount
-                    "quantity": float(enter_quantity),
-                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
-                    "amount": float(exit_price * enter_quantity),
-                    "expire": expire_time,
-                    "orderId": "",
-                    "stopLimit_orderId": ""
-                }
-            }
-        elif type == TYPE_LIMIT:
-            exit_module = {
-                TYPE_LIMIT: {
-                    "price": float(exit_price),
-                    "quantity": float(enter_quantity),
-                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
-                    "amount": float(exit_price * enter_quantity),
-                    "expire": expire_time,
-                    "orderId": ""
-                    },
-                }
-        elif type == TYPE_MARKET:
-            # NOTE: Even if there is no exact price to calcualte fee, some rough valuyes can be given
-            #       It would also be helpful if this last closed price method works as expected.
-            exit_module = {
-                TYPE_MARKET: {
-                    "price": float(exit_price),
-                    "quantity": float(enter_quantity),
-                    "fee": float(enter_quantity * exit_price * StrategyBase.fee),
-                    "amount": float(exit_price * enter_quantity),
-                    "orderId": ""
-                    },
-                }
-            pass
-        else: pass # Internal Error
-        return exit_module
-
-
-    @staticmethod
-    async def apply_exchange_filters(lto,  symbol_info):
+    def apply_exchange_filters(trade_order,  symbol_info):
+        # TODO: Make the function orer specific using trade_order instead of trade
         """
         - Call this method prior to any order placement
         - Apply the filter of exchange pair
@@ -382,75 +282,41 @@ class StrategyBase(metaclass=abc.ABCMeta):
             costs time. Maybe in future 
         - Separating enter and exit does not make any sense since the filters are valid for both side.
         Returns:
-            dict: enter or exit module
+            Order: enter or exit module
         """ 
 
-        # NOTE: It is guarantee that there will only be 1 type of enter or exit in the lto
-        phase = get_lto_phase(lto)
-        module = more_itertools.one(lto[phase].values())
-        type = more_itertools.one(lto[phase].keys())
-        exit_qty = lto['result']['enter']['quantity']
-        copy_module = copy.deepcopy(module)
+        # LOT_SIZE
+        # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#lot_size
+        if result := filters.lot_size(trade_order.quantity, symbol_info): 
+            trade_order.quantity = result
+        else: 
+            #logger.error(f"Filter failure: LOT_SIZE. {trade.strategy} in phase {phase} with quantity {str(trade.enter.quantity)}")
+            return None
 
-        if phase == 'enter':
-            if type == TYPE_LIMIT:
-                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))                        # Fixing PRICE_FILTER: tickSize
-                if module['price'] > float(symbol_info['filters'][0]['maxPrice']):
-                    print(json.dumps(copy_module))
-                    # TODO: BUG: NEXT: Add proper error handling or check for the prices
-                if result := filter_lot_size(module['quantity'], symbol_info): module['quantity'] = result
-                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(module['quantity'])}"); return None
+        # PRICE_FILTER
+        # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#price_filter
+        if type(trade_order).__name__ == EOrderType.MARKET:
+            pass
 
-            elif type == TYPE_MARKET:
-                if result := filter_lot_size(module['quantity'], symbol_info): module['quantity'] = result
-                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(module['quantity'])}"); return None
+        elif type(trade_order).__name__ == EOrderType.LIMIT:
+            trade_order.set_price(round_step_downward(trade_order.price, float(symbol_info['filters'][0]['tickSize'])))                        # Fixing PRICE_FILTER: tickSize
+            if trade_order.price > float(symbol_info['filters'][0]['maxPrice']):
+                pass
+                # TODO: BUG: NEXT: Add proper error handling or check for the prices
 
-        elif phase == 'exit':
-            # TODO: NEXT: Add _id for the phase exit lot size filter errors
-            if type == TYPE_OCO:
-                module['limitPrice'] = round_step_downward(module['limitPrice'], float(symbol_info['filters'][0]['tickSize']))              # Fixing PRICE_FILTER: tickSize
-                module['stopPrice'] = round_step_downward(module['stopPrice'], float(symbol_info['filters'][0]['tickSize']))
-                module['stopLimitPrice'] = round_step_downward(module['stopLimitPrice'], float(symbol_info['filters'][0]['tickSize']))
-                if result := filter_lot_size(exit_qty, symbol_info): module['quantity'] = result           # NOTE: Enter quantity will be used to exit
-                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(exit_qty)}"); return None
+        elif type(trade_order).__name__ == EOrderType.OCO:
+            trade_order.set_price(round_step_downward(trade_order.price, float(symbol_info['filters'][0]['tickSize'])))              # Fixing PRICE_FILTER: tickSize
+            trade_order.stopPrice = round_step_downward(trade_order.stopPrice, float(symbol_info['filters'][0]['tickSize']))
+            trade_order.stopLimitPrice = round_step_downward(trade_order.stopLimitPrice, float(symbol_info['filters'][0]['tickSize']))
 
-            elif type == TYPE_LIMIT:
-                module['price'] = round_step_downward(module['price'], float(symbol_info['filters'][0]['tickSize']))    
-                if result := filter_lot_size(exit_qty, symbol_info): module['quantity'] = result           # NOTE: Enter quantity will be used to exit
-                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(exit_qty)}"); return None
-
-            elif type == TYPE_MARKET:
-                if result := filter_lot_size(exit_qty, symbol_info): module['quantity'] = result
-                else: logger.error(f"Filter failure: LOT_SIZE. {lto['strategy']} in phase {phase} with quantity {str(exit_qty)}"); return None
-
-        else: pass
-
-        # TODO: MIN_NOTIONAL filter is not checked for the phase_exit and TYPE_OCO
-        if type == TYPE_OCO:
-            # NOTE: According to https://binance-docs.github.io/apidocs/spot/en/#filters MIN_NOTIONAL section, for OCO and stoploss,
-            #       stopPrice is used
-            if not await StrategyBase.check_min_notional(
-                module['stopPrice'], 
-                module['quantity'], 
-                symbol_info):
-                logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(module)}")
+            if not filters.min_notional(trade_order.stopPrice, trade_order.quantity, symbol_info):
+                logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
                 return None
-            # NOTE: Be careful about the limitPrice
-            module['amount'] = safe_multiply(module['quantity'], module['limitPrice'])
-        else:
-            if not await StrategyBase.check_min_notional(
-                module['price'], 
-                module['quantity'], 
-                symbol_info):
-                logger.warn(f"NTO object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(module)}")
-                return None
-            module['amount'] = safe_multiply(module['quantity'], module['price'])
-        
-        module['fee'] = safe_multiply(module['amount'], StrategyBase.fee)
-        return module
 
+        # MIN_NOTIONAL
+        # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#min_notional
+        if not filters.min_notional(trade_order.price, trade_order.quantity, symbol_info):
+            logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
+            return None
 
-    @staticmethod
-    async def check_min_notional(price, quantity, symbol_info): 
-        return (safe_multiply(price, quantity) > float(symbol_info['filters'][3]['minNotional']))  # if valid: True, else: False
-
+        return True

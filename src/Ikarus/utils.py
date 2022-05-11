@@ -225,13 +225,6 @@ def get_lto_phase(lto):
     else:
         raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')
 
-def filter_lot_size(quantity, symbol_info): 
-    quantity = round_step_downward(quantity, float(symbol_info['filters'][2]['stepSize']))
-    if float(symbol_info['filters'][2]['minQty']) < quantity < float(symbol_info['filters'][2]['maxQty']):
-        return quantity
-    else:
-        return None
-
 
 def setup_logger(logger, log_level, log_file):
     logger = logging.getLogger('app')
