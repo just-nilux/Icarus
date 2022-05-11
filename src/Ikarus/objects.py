@@ -256,12 +256,13 @@ class Trade():
     decision_time: bson.Int64
     strategy: string
     pair: string
-    id: string = ''
+    _id: string = ''
     status: EState = EState.OPEN_ENTER
     enter: dict = None
     exit: dict = None
     result: TradeResult = None
-    action: ECommand = ECommand.NONE
+    command: ECommand = ECommand.NONE
+    update_history: list = field(default_factory=list)
 
     def set_enter(self,enter_order):
         self.enter=enter_order
@@ -269,8 +270,8 @@ class Trade():
     def set_exit(self,exit_order):
         self.exit=exit_order
 
-    def set_action(self,action):
-        self.action=action
+    def set_command(self,command):
+        self.command=command
 
 
 if __name__ == "__main__":

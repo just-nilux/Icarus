@@ -38,7 +38,7 @@ class ObjectStrategy(StrategyBase):
             )
 
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
-            trade = Trade(int(ikarus_time), self.name, ao_pair, action=ECommand.EXEC_ENTER)
+            trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
             trade.set_exit(exit_limit_order)
 
@@ -51,7 +51,7 @@ class ObjectStrategy(StrategyBase):
     async def on_update(self, trade, ikarus_time):
         # TODO: Give a call to methods that calculates exit point
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
-        trade.set_action(ECommand.UPDATE)
+        trade.set_command(ECommand.UPDATE)
         trade.expire = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
         trade.set_price(trade.price*0.9)
 
@@ -59,17 +59,17 @@ class ObjectStrategy(StrategyBase):
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
         if not await StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             # TODO: This is a critical case where the exit order failed to pass filters. Decide what to do
-            return None
-        return trade
+            return False
+        return True
 
 
     async def on_cancel(self, trade):
-        trade.action = ECommand.CANCEL
+        trade.command = ECommand.CANCEL
         trade.result.cause = ECause.ENTER_EXP
 
 
     async def on_waiting_exit(self, trade, analysis_dict):
-        trade.action = ECommand.EXEC_EXIT
+        trade.command = ECommand.EXEC_EXIT
         if not await StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             # TODO: This is a critical case where the exit order failed to pass filters. Decide what to do
             return None
