@@ -41,9 +41,6 @@ class ObjectStrategy(StrategyBase):
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
             trade.set_exit(exit_limit_order)
-
-            if not await StrategyBase.apply_exchange_filters(trade.enter, self.symbol_info[trade.pair]):
-                return None
             
             return trade
 

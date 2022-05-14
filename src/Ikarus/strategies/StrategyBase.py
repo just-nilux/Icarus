@@ -1,17 +1,15 @@
 import json
 import logging
 from binance.helpers import round_step_size
+from sqlalchemy import false
 from ..enums import *
 import bson
 import abc
 import itertools
-import statistics as st
-from ..objects import EOrderType, EnhancedJSONEncoder
-import math
-from ..utils import get_lto_phase, safe_sum, round_step_downward, truncate, safe_multiply, safe_substract
+from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder
+from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract
 from .. import binance_filters as filters
-import more_itertools
-import copy
+from ..exceptions import NotImplementedException
 
 logger = logging.getLogger('app')
 
@@ -50,20 +48,16 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def is_lto_dead(lto):
-        conditions = [
-            # lto.get('action','') in [ACTN_CANCEL, ACTN_MARKET_EXIT], # evaluate nad make decision if TRUE
-            lto.get('action','') == ACTN_CANCEL,                       # evaluate nad make decision if TRUE
-            lto.get('status','') == STAT_CLOSED                        # evaluate and make decision if TRUE
-        ]
-        if not any(conditions): # Skip evaluation if non of this is true (LTO will be alive until the next cycle)
-            return False
-        
-        return True
+    async def is_lto_dead(trade):
+      
+        if trade.action == ECommand.CANCEL or trade.status == EState.CLOSED:
+            return True     # Trade is dead
+        else:
+            return False    # Trade is alive # Skip evaluation if non of this is true (LTO will be alive until the next cycle)
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
+    async def run_logic(self, analysis_dict, trade_list, ikarus_time, total_qc, free_qc):
         """[summary]
 
         Args:
@@ -91,24 +85,24 @@ class StrategyBase(metaclass=abc.ABCMeta):
         alive_lto_counter = 0
         in_trade_capital = 0
         dead_lto_capital = 0
-        for lto_idx in range(len(lto_list)):
-            lto_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, lto_list[lto_idx], ikarus_time)
-            pair_grouped_ltos[lto_list[lto_idx]['pair']] = lto_list[lto_idx]
+        for lto_idx in range(len(trade_list)):
+            trade_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time)
+            pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
             # TODO: Make this function non-awaitable
-            if not await StrategyBase.is_lto_dead(lto_list[lto_idx]): 
+            if not await StrategyBase.is_lto_dead(trade_list[lto_idx]): 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
                 #in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
                 # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance
                 #       market_exit is not considered as dead lto
                 #       The result of the OCO orders is unknown
-                in_trade_capital = safe_sum(in_trade_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
+                in_trade_capital = safe_sum(in_trade_capital, trade_list[lto_idx].enter.amount)
                 alive_lto_counter += 1
                 # NOTE: TYPE_MARKET PHASE:_EXIT LTOs are considered as alive right here. Not sure if it is a good approach
             else:
                 # Dead capital
-                dead_lto_capital = safe_sum(dead_lto_capital, more_itertools.one(lto_list[lto_idx][PHASE_ENTER].values())['amount'])
+                dead_lto_capital = safe_sum(dead_lto_capital, trade_list[lto_idx].enter.amount)
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
         total_lto_slot = min(self.max_lto, len(self.config['pairs']))
@@ -143,54 +137,43 @@ class StrategyBase(metaclass=abc.ABCMeta):
                     continue
 
             # Perform evaluation
-            if nto:= await self.make_decision(analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
+            if trade:= await self.make_decision(analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
                 
                 # Apply exchange filters
-                # NOTE: This only works for phase_enter
-                if result := await StrategyBase.apply_exchange_filters(nto, self.symbol_info[ao_pair]): 
-                    nto['enter'][self.config['enter']['type']] = result
-                else: continue
+                if not StrategyBase.apply_exchange_filters(trade.enter, self.symbol_info[ao_pair]): 
+                    continue
 
-                trade_objects.append(nto)
+                trade_objects.append(trade)
                 empty_lto_slot -= 1
 
         return trade_objects
 
 
     @staticmethod
-    async def handle_lto_logic(self, analysis_dict, lto, ikarus_time):
+    async def handle_lto_logic(self, analysis_dict, trade, ikarus_time):
 
         """
         This function decides what to do for the LTOs based on their 'status'
         """        
         
-        if lto['status'] == STAT_ENTER_EXP:
-            if self.config['action_mapping'][STAT_ENTER_EXP] == ACTN_CANCEL or lto['history'].count(STAT_ENTER_EXP) > 1:
-                return await self.on_cancel(lto)
+        if trade.status == EState.ENTER_EXP:
+            if self.config['action_mapping'][EState.ENTER_EXP] == ECommand.CANCEL:
+                await self.on_cancel(trade)
 
-            elif self.config['action_mapping'][STAT_ENTER_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_ENTER_EXP) <= 1:
-                # NOTE: postponed_candles = 1 means 2 candle
-                #       If only 1 candle is desired to be postponed, then it means we will wait for newly started candle to close so postponed_candles will be 0
-                return await self.on_enter_postpone(lto, ikarus_time)
+        elif trade.status == EState.EXIT_EXP:
+            if self.config['action_mapping'][EState.EXIT_EXP] == ECommand.UPDATE:
+                is_success = await self.on_update(trade, ikarus_time)
 
-        elif lto['status'] == STAT_EXIT_EXP:
-
-            if self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_UPDATE:
-                return await self.on_update(lto, ikarus_time)
-
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_POSTPONE and lto['history'].count(STAT_EXIT_EXP) <= 1:
-                return await self.on_exit_postpone(lto, ikarus_time)
-
-            elif self.config['action_mapping'][STAT_EXIT_EXP] == ACTN_MARKET_EXIT or lto['history'].count(STAT_EXIT_EXP) > 1:
+            elif self.config['action_mapping'][EState.EXIT_EXP] == ECommand.MARKET_EXIT:
                 # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that
-                return await StrategyBase.on_market_exit(self, lto, analysis_dict)
+                is_success = await StrategyBase.on_market_exit(self, trade, analysis_dict)
 
-        elif lto['status'] == STAT_WAITING_EXIT:
+        elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # NOTE: expire of the exit_module can be calculated after the trade entered
-            return await self.on_waiting_exit(lto, analysis_dict)
+            return await self.on_waiting_exit(trade, analysis_dict)
 
-        return lto
+        return trade
 
 
     @abc.abstractclassmethod
@@ -199,12 +182,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def on_market_exit(self, lto, analysis_dict):
+    async def on_market_exit(self, trade, analysis_dict):
+        # TODO: Create market exit logic
+        raise NotImplementedException()
+        '''
         #lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-        
-        # NOTE: enter and exit modules represents the base idea before starting to a trade. Thus
-        lto['update_history'].append(copy.deepcopy(lto['exit'][self.config['exit']['type']]))
-        
+                
         lto['exit'] = await StrategyBase._create_exit_module(
             TYPE_MARKET,
             0,
@@ -213,13 +196,14 @@ class StrategyBase(metaclass=abc.ABCMeta):
             0)
         
         lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
+        trade.exi
         
-        lto['action'] = ACTN_MARKET_EXIT
+        trade.command = ECommand.MARKET_EXIT
 
         self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
-
-        return lto
-
+        '''
+        return trade
+        
 
 
     @abc.abstractclassmethod
@@ -240,20 +224,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 callable(subclass.dump_to) or 
                 NotImplemented)
 
-    #@abc.abstractmethod
-    #async def run(self, analysis_dict, lto_list, df_balance, ikarus_time=None):
-    #    """Load in the data set"""
-    #    raise NotImplementedError
 
     @staticmethod
     def _eval_future_candle_time(start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
-
-
-    @staticmethod
-    async def _postpone(lto, phase, type, expire_time):
-        lto['action'] = ACTN_POSTPONE
-        lto[phase][type]['expire'] = expire_time
-        return lto
 
 
     @staticmethod

@@ -185,7 +185,7 @@ async def get_pair_min_period_mapping(config):
     return pair_min_period_mapping
 
 
-async def get_min_scale(ordered_scales, pool):
+def get_min_scale(ordered_scales, pool):
     
     for scale in ordered_scales:
         if scale in pool:
