@@ -1,20 +1,25 @@
 '''
 Observers are the configurable read-only units. They simply collect data at the end of each execution cycle
 '''
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 import dataclasses
-import logging
 import string
-import pandas as pd
 from multipledispatch import dispatch
 from json import JSONEncoder
 import json
-import collections.abc
 import numpy as np
 import copy
 import bson
 from enum import Enum
-from .utils import safe_multiply
+from .safe_operators import safe_multiply
+
+def trade_list_to_json(trade_list):
+    return [json.dumps(trade, cls=EnhancedJSONEncoder) for trade in trade_list]
+
+
+def trade_list_to_dict(trade_list):
+    return [asdict(trade) for trade in trade_list]
+
 
 class ObjectEncoder(JSONEncoder):
     def default(self, o):
@@ -27,7 +32,6 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             if dataclasses.is_dataclass(o):
                 return dataclasses.asdict(o)
             return super().default(o)
-
 
 
 
@@ -171,7 +175,7 @@ class ECommand(str, Enum):
     MARKET_ENTER = 'market_enter'       # Do market enter
     MARKET_EXIT = 'market_exit'         # Do market exit
     EXEC_EXIT = 'execute_exit'          # Execute exit order   
-    EXEC_ENTER = 'execute_exit'         # Execute enter order
+    EXEC_ENTER = 'execute_enter'        # Execute enter order
 
 
 class ECause(str, Enum):
@@ -183,6 +187,7 @@ class ECause(str, Enum):
 
 
 class EState(str, Enum):
+    WAITING_ENTER = 'waiting_enter'
     OPEN_ENTER = 'open_enter'
     ENTER_EXP = 'enter_expire'
     WAITING_EXIT = 'waiting_exit'
@@ -193,6 +198,8 @@ class EState(str, Enum):
 
 @dataclass
 class Order:
+    # NOTE: If the change of an field affects others,
+    #       then it is performed via a setter.
     price: float = 0
     amount: float = None
     quantity: float = None
@@ -256,8 +263,7 @@ class Trade():
     decision_time: bson.Int64
     strategy: string
     pair: string
-    _id: string = ''
-    status: EState = EState.OPEN_ENTER
+    status: EState = EState.WAITING_ENTER
     enter: dict = None
     exit: dict = None
     result: TradeResult = None
@@ -273,13 +279,36 @@ class Trade():
     def set_command(self,command):
         self.command=command
 
+    def clear_command(self):
+        self.command=ECommand.NONE
+
+
+def order_from_dict(order_data):
+    order = Order()
+    if 'expire' not in order_data.keys():
+        order = Market()
+    else:
+        if 'stopPrice' not in order_data.keys():
+            order = Limit()
+        else:
+            order = OCO()
+            order.stopPrice = order_data['stopPrice']
+            order.stopLimitPrice = order_data['stopLimitPrice']
+            order.stopLimit_orderId = order_data['stopLimit_orderId']
+        order.expire = order_data['expire']
+    order.price = order_data['price']
+    order.amount = order_data['amount']
+    order.quantity = order_data['quantity']
+    order.fee = order_data['fee']
+    order.orderId = order_data['orderId']
+    return order
+
+
+def trade_from_dict(data):
+    return Trade(data['decision_time'], data['strategy'], data['pair'], EState(data['status']),
+        order_from_dict(data['enter']), order_from_dict(data['exit']), data['result'],
+        ECommand(data['command']), data['update_history'])
+    
 
 if __name__ == "__main__":
-
-    trade = Trade(0,'NewStrategy','BTCUSDT')
-    Limit(3,quantity=2)
-    trade.set_enter(Limit(123, quantity=3))
-    trade.enter
-    #print(type(trade.enter) == LimitOrder)
-    trade_Str = json.dumps(trade, cls=EnhancedJSONEncoder)
     pass

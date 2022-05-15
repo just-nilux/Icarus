@@ -1,12 +1,14 @@
 from copy import Error
 import pandas as pd
 import more_itertools
+
+from .objects import EState
 from .enums import *
 from decimal import ROUND_DOWN, Decimal
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import time
-
+from .safe_operators import *
 
 def calculate_fee(amount, fee, digit=8):
     return round(safe_multiply(amount,fee), digit)
@@ -39,25 +41,13 @@ def truncate(num,n):
                 return float(temp)      
     return float(temp)
 
-def safe_divide(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) / Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
-def safe_multiply(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) * Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
-def safe_sum(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) + Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
-def safe_substract(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) - Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
 def time_scale_to_second(interval: str):
     return time_scale_to_minute(interval) * 60
 
 def time_scale_to_milisecond(interval: str):
     return time_scale_to_minute(interval) * 60 * 1000
 
-def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_ratio=1):
+def eval_total_capital(df_balance, live_trade_list, quote_currency, max_capital_use_ratio=1):
     # Toal capital: Free QC + LTO_enter
     free_qc = df_balance.loc[quote_currency,'free']
 
@@ -69,18 +59,18 @@ def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_rat
     #           : these LTOs needs be omitted
     #   'enter_expire': then it is marked to be handled by the their strategy but the balance is still locked in LTO
 
-    in_trade_qc = eval_total_capital_in_lto(lto_list)
+    in_trade_qc = eval_total_capital_in_lto(live_trade_list)
 
     total_qc = safe_sum(free_qc, in_trade_qc)
     return safe_multiply(total_qc, max_capital_use_ratio)
 
-def eval_total_capital_in_lto(lto_list):
+def eval_total_capital_in_lto(trade_list):
     in_trade_qc = 0
-    for lto in lto_list:
+    for trade in trade_list:
         # Omit the LTOs that are closed, because their use of amount returned to df_balance (by broker or by lto_update of test-engine)
-        if lto['status'] != STAT_CLOSED:
+        if trade.status != EState.CLOSED:
             # NOTE: It is assumed that each object may only have 1 TYPE of exit or enter
-            in_trade_qc = safe_sum(in_trade_qc, more_itertools.one(lto[PHASE_ENTER].values())['amount'])
+            in_trade_qc = safe_sum(in_trade_qc, trade.enter.amount)
     return in_trade_qc
 
 async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
