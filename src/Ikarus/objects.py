@@ -184,6 +184,10 @@ class ECause(str, Enum):
     MAN_CHANGE = 'manual_change'
     EXIT_EXP = 'exit_expire'
     CLOSED = 'closed'
+    CLOSED_STOP_LOSS = 'closed_stop_loss' # 'oco_stoploss'
+    # Previously:
+    #   lto_list[i]['result']['cause'] = STAT_CLOSED
+    #   lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
 
 
 class EState(str, Enum):
@@ -218,11 +222,13 @@ class Order:
             # TODO: Error on initialization
             pass
 
-    def set_price(self, price):
+    def set_price(self, price, fee_rate=0):
         #self.amount = float(self.price * self.quantity)
         self.price = price
         self.amount = safe_multiply(self.price, self.quantity)
-        self.fee = safe_multiply(self.amount, self.fee)
+
+        if fee_rate:
+            self.fee = safe_multiply(self.amount, fee_rate)
 
 
 @dataclass
@@ -279,8 +285,42 @@ class Trade():
     def set_command(self,command):
         self.command=command
 
-    def clear_command(self):
-        self.command=ECommand.NONE
+    def set_result_enter(self, time, quantity=None, price=None, fee=None):
+
+        if not quantity: quantity = self.enter.quantity
+        if not price: price = self.enter.price
+        if not fee: fee = self.result.enter.fee
+
+        self.status = EState.WAITING_EXIT
+        self.result.enter.type = type(self.enter).__name__.lower()
+        self.result.enter.time = time
+        self.result.enter.quantity = quantity
+        self.result.enter.set_price(price)
+        self.result.enter.fee = fee
+
+    def set_result_exit(self, time, quantity=None, price=None, fee=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
+
+        if not quantity: quantity = self.exit.quantity
+        if not price: price = self.exit.price
+
+        self.status = status
+        self.result.cause = cause
+        self.result.exit.type = type(self.exit).__name__.lower()
+        self.result.exit.time = time
+        self.result.exit.quantity = quantity
+        self.result.exit.set_price(price)
+
+        if fee:
+            self.result.exit.fee = fee
+        elif fee_rate:
+            self.result.exit.fee = round(safe_multiply(self.result.exit.amount,fee_rate),8)
+
+        self.result.profit = self.result.exit.amount \
+            - self.result.enter.amount \
+            - self.result.enter.fee \
+            - self.result.exit.fee
+
+        self.result.live_time = self.result.exit.time - self.result.enter.time
 
 
 def order_from_dict(order_data):

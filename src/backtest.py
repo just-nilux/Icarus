@@ -1,3 +1,4 @@
+from Ikarus.objects import *
 from Ikarus.strategies.StrategyBase import StrategyBase
 import asyncio
 from binance import AsyncClient
@@ -31,52 +32,46 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         print()
 
 
-async def write_updated_ltos_to_db(lto_list):
-
-    for lto in lto_list:
+async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
+    # TODO: Move queries outside of this script
+    for trade in trade_list:
 
         # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
-        if lto['status'] == STAT_CLOSED:
+        if trade.status == EState.CLOSED:
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
-            result_insert = await mongocli.do_insert_one("hist-trades",lto)
-            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
+            result_insert = await mongocli.do_insert_one("hist-trades",trade)
+            result_remove = await mongocli.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
 
-            if lto['result']['cause'] == STAT_CLOSED:
-                hto_stat = await stats.eval_hto_stat(lto)
+            if trade.result.cause == ECause.CLOSED:
+                hto_stat = await stats.eval_hto_stat(trade) # TODO : REFACTORING
                 pass
 
         # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
+        elif trade.status in [ EState.OPEN_EXIT, EState.WAITING_EXIT, EState.EXIT_EXP]:
             # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
             # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
-                {'_id': lto['_id']},
-                {'$set': {'status': lto['status'],
-                        'exit':lto['exit'],
-                        'result.enter':lto['result']['enter'],
-                        'history':lto['history'],
-                        'update_history':lto['update_history']
+                {'_id': trade._id},
+                {'$set': {'status': trade.status,
+                        'exit': json.dumps(trade.exit, cls=EnhancedJSONEncoder),
+                        'result.enter': json.dumps(trade.result.enter),
+                        'update_history': trade.update_history
                     }})
                 
-        elif lto['status'] == STAT_OPEN_ENTER:
+        elif trade.status == EState.OPEN_ENTER:
             # - STAT_OPEN_ENTER might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
-                {'_id': lto['_id']},
-                {'$set': {'status': lto['status'], 'enter':lto['enter'], 'history':lto['history'] }})
+                {'_id': trade._id},
+                {'$set': {'status': trade.status, 'enter':json.dumps(trade.enter, cls=EnhancedJSONEncoder) }}) # NOTE: REFACTORING: history removed
 
-        # NOTE: These two below are not applicable
-        elif lto['status'] == STAT_PART_CLOSED_ENTER:
-            pass
-        elif lto['status'] == STAT_PART_CLOSED_EXIT:
-            pass
         else:
             pass
 
 
-async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
+async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance):
     """
     Args:
         lto_dict (dict): will be updated (status, result, exit sections)
@@ -90,143 +85,76 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
     """
     # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
 
-    for i in range(len(lto_list)):
-        pair = lto_list[i]['pair']
+    for i in range(len(trade_list)):
+        pair = trade_list[i].pair
 
         # 1.2.1: Check trades and update status
-        strategy_min_scale = strategy_period_mapping[lto_list[i]['strategy']]
+        strategy_min_scale = strategy_period_mapping[trade_list.strategy]
         last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
-        if lto_list[i]['status'] == STAT_OPEN_ENTER:
+        if trade_list[i].status == EState.OPEN_ENTER:
             # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
-            if TYPE_LIMIT in lto_list[i]['enter'].keys():
+            if type(trade_list[i].enter) == Limit:
 
                 # Check if the open enter trade is filled else if the trade is expired
-                if float(last_kline['low']) < lto_list[i]['enter'][TYPE_LIMIT]['price']:
+                if float(last_kline['low']) < trade_list[i].enter.price:
 
                     # NOTE: Since this is testing, no dust created, perfect conversion
-                    # TODO: If the enter is successfull then the exit order should be placed. This is only required in DEPLOY
-                    lto_list[i]['status'] = STAT_WAITING_EXIT
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['enter']['type'] = TYPE_LIMIT
-                    lto_list[i]['result']['enter']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['enter']['price'] = lto_list[i]['enter'][TYPE_LIMIT]['price']
-                    lto_list[i]['result']['enter']['quantity'] = lto_list[i]['enter'][TYPE_LIMIT]['quantity']
-                    lto_list[i]['result']['enter']['amount'] = lto_list[i]['result']['enter']['price'] * lto_list[i]['result']['enter']['quantity']
-                    lto_list[i]['result']['enter']['fee'] = lto_list[i]['enter'][TYPE_LIMIT]['fee']
-
+                    # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
+                    
+                    trade_list[i].set_result_enter(last_closed_candle_open_time)
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['enter'], TYPE_LIMIT)
+                    is_success = balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter)
 
-                elif int(lto_list[i]['enter'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
+                elif int(trade_list[i].enter.expire) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
-                    lto_list[i]['status'] = STAT_ENTER_EXP
-                    lto_list[i]['history'].append(lto_list[i]['status'])
+                    trade_list[i].status = EState.ENTER_EXP
+                    # NOTE: No update on command because it is, only placed by the strategies
 
             else:
                 # TODO: Internal Error
                 pass
 
-        elif lto_list[i]['status'] == STAT_PART_CLOSED_ENTER:
-            # Ignore for the tests
-            pass
+        elif trade_list[i].status == EState.OPEN_EXIT:
 
-        elif lto_list[i]['status'] == STAT_OPEN_EXIT:
-
-            # TODO: Remove this statement and do not use STAT_OPEN_EXIT, use STAT_WAITING_EXIT
-            if TYPE_MARKET in lto_list[i]['exit'].keys():
-                # TODO: NEXT: Direct the flow from here to strategies to be updated
-                #       An alternative might be like setting the status as STAT_WAITING_EXIT
-                #       and skipping this evaluation, which makes sense
-                #       Because TYPE_MARKET exit orders requires to eb checked in each cycle if the condiditon is met
-                lto_list[i]['status'] = STAT_WAITING_EXIT
-                lto_list[i]['history'].append(lto_list[i]['status'])
-                pass
-
-            elif TYPE_LIMIT in lto_list[i]['exit'].keys():
+            if type(trade_list[i].exit) == Limit:
 
                 # Check if the open sell trade is filled or stoploss is taken
-                if float(last_kline['high']) > lto_list[i]['exit'][TYPE_LIMIT]['price']:
+                if float(last_kline['high']) > trade_list[i].exit.price:
 
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = STAT_CLOSED
-
-                    lto_list[i]['result']['exit']['type'] = TYPE_LIMIT
-                    lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_LIMIT]['price']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_LIMIT]['quantity'] 
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
-                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
-                    # NOTE: Exit quantity and the enter quantity is assumed to be the same
-
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
-                        - lto_list[i]['result']['enter']['amount'] \
-                        - lto_list[i]['result']['enter']['fee'] \
-                        - lto_list[i]['result']['exit']['fee']
-                    
-                    lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+                    trade_list[i].set_result_exit(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
 
-                elif int(lto_list[i]['exit'][TYPE_LIMIT]['expire']) <= last_closed_candle_open_time:
-                    lto_list[i]['status'] = STAT_EXIT_EXP
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    
-                else:
-                    pass
+                elif int(trade_list[i].exit.expire) <= last_closed_candle_open_time:
+                    trade_list[i].status = EState.EXIT_EXP
 
-            elif TYPE_OCO in lto_list[i]['exit'].keys():
+
+            elif type(trade_list[i].exit) == OCO:
                 # NOTE: Think about the worst case and check the stop loss first.
 
-                if float(last_kline['low']) < lto_list[i]['exit'][TYPE_OCO]['stopPrice']:
+                if float(last_kline['low']) < trade_list[i].exit.stopPrice:
                     # Stop Loss takens
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = STAT_CLOSED
-                    lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
-                    lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['stopLimitPrice']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
-                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
-
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
-                        - lto_list[i]['result']['enter']['amount'] \
-                        - lto_list[i]['result']['enter']['fee'] \
-                        - lto_list[i]['result']['exit']['fee']
-                    lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+                    trade_list[i].set_result_exit(last_closed_candle_open_time,
+                        cause=ECause.CLOSED_STOP_LOSS,
+                        price=trade_list[i].exit.stopLimitPrice,
+                        fee_rate=StrategyBase.fee)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
                 
-                elif float(last_kline['high']) > lto_list[i]['exit'][TYPE_OCO]['limitPrice']:
+                elif float(last_kline['high']) > trade_list[i].exit.price:
                     # Limit taken
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = STAT_CLOSED
-
-                    lto_list[i]['result']['exit']['type'] = 'oco_limit'
-                    lto_list[i]['result']['exit']['time'] = last_closed_candle_open_time
-                    lto_list[i]['result']['exit']['price'] = lto_list[i]['exit'][TYPE_OCO]['limitPrice']
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_OCO]['quantity']
-                    lto_list[i]['result']['exit']['amount'] = lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity']
-                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
-
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
-                        - lto_list[i]['result']['enter']['amount'] \
-                        - lto_list[i]['result']['enter']['fee'] \
-                        - lto_list[i]['result']['exit']['fee']
-                    lto_list[i]['result']['liveTime'] = lto_list[i]['result']['exit']['time'] - lto_list[i]['result']['enter']['time']
+                    trade_list[i].set_result_exit(last_closed_candle_open_time,
+                        fee_rate=StrategyBase.fee)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, lto_list[i]['result']['exit'])
+                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
 
-                elif int(lto_list[i]['exit'][TYPE_OCO]['expire']) <= last_closed_candle_open_time:
-                    lto_list[i]['status'] = STAT_EXIT_EXP
-                    lto_list[i]['history'].append(lto_list[i]['status'])
+                elif int(trade_list[i].exit.expire) <= last_closed_candle_open_time:
+                    trade_list[i].status = EState.EXIT_EXP
 
                 else:
                     pass
@@ -234,16 +162,12 @@ async def update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance):
             else:
                 # TODO: Internal Error
                 pass
-                
-        elif lto_list[i]['status'] == STAT_PART_CLOSED_EXIT:
-            # Ignore for the tests
-            pass
 
         else:
             # TODO: Internal Error
             pass
 
-    return lto_list, df_balance
+    return trade_list, df_balance
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
@@ -284,11 +208,12 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     # 1.2 Get live trade objects (LTOs)
     # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
-    lto_list = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
+    live_trade_dicts = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
-    lto_list, df_balance = await update_ltos(lto_list, data_dict, strategy_period_mapping, df_balance)
+    live_trade_list = [trade_from_dict(trade_dict) for trade_dict in live_trade_dicts]
+    live_trade_list, df_balance = await update_ltos(live_trade_list, data_dict, strategy_period_mapping, df_balance)
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await analyzer.sample_analyzer(data_dict)
@@ -298,14 +223,13 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 2.2: Algorithm is the only authority to make decision
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     logger.debug('Phase 2')
-    total_qc = eval_total_capital(df_balance, lto_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
-    total_qc_in_lto = eval_total_capital_in_lto(lto_list)
+    total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
+    total_qc_in_lto = eval_total_capital_in_lto(live_trade_list)
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
     grouped_ltos = {}
-    if len(lto_list):
-        for lto_obj in lto_list:
-            grouped_ltos.setdefault(lto_obj['strategy'], []).append(lto_obj)
+    for live_trade in live_trade_list:
+        grouped_ltos.setdefault(live_trade.strategy, []).append(live_trade)
 
     strategy_tasks = []
     for active_strategy in active_strategies:
@@ -317,28 +241,30 @@ async def application(strategy_list, bwrapper, ikarus_time):
             df_balance.loc[config['broker']['quote_currency'],'free'])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
-    nto_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
+    new_trade_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
 
     # 2.3: Execute LTOs and NTOs if any
-    if len(nto_list) or len(lto_list):
+    if len(new_trade_list) or len(live_trade_list):
         # 2.3.1: Execute the TOs
-        df_balance, lto_list, nto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, df_balance, lto_list, data_dict))
+        # NOTE: If there is any error during execution, then it the trade can be removed/fixed and the error can be handled inside the execute_decisison
+        bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list, data_dict)
         # TODO: Investigate if the lto_list and the nto_list is updated directly (which means no need for re-assignment)
 
     #################### Phase 3: Perform post-calculation tasks ####################
 
-    if len(nto_list):
+    if len(new_trade_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        result = await mongocli.do_insert_many("live-trades",nto_list)
+        result = await mongocli.do_insert_many("live-trades", trade_list_to_dict(new_trade_list))         # TODO: TEST_REFACTORING
+
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
-    await write_updated_ltos_to_db(lto_list)
+    await write_updated_ltos_to_db(live_trade_list)
 
     # 3.3: Get the onserver
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
-        observer.quote_asset(ikarus_time, df_balance, lto_list+nto_list),
-        observer.quote_asset_leak(ikarus_time, df_balance, lto_list+nto_list),
+        observer.quote_asset(ikarus_time, df_balance, live_trade_list+new_trade_list),
+        observer.quote_asset_leak(ikarus_time, df_balance, live_trade_list+new_trade_list),
         observer.balance(ikarus_time, df_balance)
     ]
     observer_objs = list(await asyncio.gather(*observer_list))
@@ -378,7 +304,7 @@ async def main():
         meta_data_pool.append(strategy_obj.meta_do)
     meta_data_pool = set(chain(*meta_data_pool))
 
-    ikarus_cycle_period = await get_min_scale(config['time_scales'].keys(), strategy_periods)
+    ikarus_cycle_period = get_min_scale(config['time_scales'].keys(), strategy_periods)
     if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration

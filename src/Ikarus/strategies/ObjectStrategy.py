@@ -1,5 +1,5 @@
 import statistics as st
-from ..objects import ECause, Trade, Limit, ECommand
+from ..objects import ECause, Trade, Limit, ECommand, TradeResult
 from ..enums import *
 from .StrategyBase import StrategyBase
 import json
@@ -41,7 +41,8 @@ class ObjectStrategy(StrategyBase):
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
             trade.set_exit(exit_limit_order)
-            
+            trade.result = TradeResult()
+
             return trade
 
 
