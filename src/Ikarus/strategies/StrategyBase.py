@@ -48,9 +48,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def is_lto_dead(trade):
+    def is_lto_dead(trade):
       
-        if trade.action == ECommand.CANCEL or trade.status == EState.CLOSED:
+        if trade.command == ECommand.CANCEL or trade.status == EState.CLOSED:
             return True     # Trade is dead
         else:
             return False    # Trade is alive # Skip evaluation if non of this is true (LTO will be alive until the next cycle)
@@ -90,8 +90,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
-            # TODO: Make this function non-awaitable
-            if not await StrategyBase.is_lto_dead(trade_list[lto_idx]): 
+            if not StrategyBase.is_lto_dead(trade_list[lto_idx]): 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
                 #in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
                 # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance

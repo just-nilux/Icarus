@@ -8,4 +8,4 @@ from . import StrategyBase,\
     RSIStrategy, \
     MACDStrategy, \
     UpTrenderMarket, \
-    ObjectStrategy
+    TestLimitLimit

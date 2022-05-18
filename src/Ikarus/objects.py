@@ -282,10 +282,10 @@ class Trade():
     def set_exit(self,exit_order):
         self.exit=exit_order
 
-    def set_command(self,command):
-        self.command=command
+    def reset_command(self):
+        self.command=ECommand.NONE
 
-    def set_result_enter(self, time, quantity=None, price=None, fee=None):
+    def set_result_enter(self, time, quantity=None, price=None, fee=None, fee_rate=None):
 
         if not quantity: quantity = self.enter.quantity
         if not price: price = self.enter.price
@@ -296,7 +296,11 @@ class Trade():
         self.result.enter.time = time
         self.result.enter.quantity = quantity
         self.result.enter.set_price(price)
-        self.result.enter.fee = fee
+
+        if fee:
+            self.result.enter.fee = fee
+        elif fee_rate:
+            self.result.enter.fee = round(safe_multiply(self.result.enter.amount,fee_rate),8)
 
     def set_result_exit(self, time, quantity=None, price=None, fee=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
 
@@ -344,9 +348,28 @@ def order_from_dict(order_data):
     return order
 
 
+def result_from_dict(data):
+        result = TradeResult(cause=data['cause'], profit=data['profit'], live_time=data['live_time'])
+        if data['enter'] != None:
+            result.enter = Result(order_from_dict(data['enter']))
+            result.enter.time = data['enter']['time']
+            result.enter.type = data['enter']['type']
+        else:
+            result.enter = Result()
+        
+        if data['exit'] != None:
+            result.exit = Result(order_from_dict(data['exit']))
+            result.exit.time = data['exit']['time']
+            result.exit.type = data['exit']['type']
+        else:
+            result.exit = Result()
+
+        return result
+
+
 def trade_from_dict(data):
     return Trade(data['decision_time'], data['strategy'], data['pair'], EState(data['status']),
-        order_from_dict(data['enter']), order_from_dict(data['exit']), data['result'],
+        order_from_dict(data['enter']), order_from_dict(data['exit']), result_from_dict(data['result']),
         ECommand(data['command']), data['update_history'])
     
 

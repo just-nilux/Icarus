@@ -1,14 +1,14 @@
 import statistics as st
-from ..objects import ECause, Trade, Limit, ECommand, TradeResult
+from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult
 from ..enums import *
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class ObjectStrategy(StrategyBase):
+class TestLimitLimit(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__("ObjectStrategy", _config, _symbol_info)
+        super().__init__("TestLimitLimit", _config, _symbol_info)
         return
 
 
@@ -21,8 +21,8 @@ class ObjectStrategy(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = min(time_dict[self.min_period]['low'][-10:])
-            exit_price = max(time_dict[self.min_period]['high'][-10:])
+            enter_price = time_dict[self.min_period]['close'] * 0.995 # Enter
+            exit_price = time_dict[self.min_period]['close']
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -41,7 +41,9 @@ class ObjectStrategy(StrategyBase):
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
             trade.set_exit(exit_limit_order)
-            trade.result = TradeResult()
+            result = TradeResult()
+            result.enter, result.exit = Result(), Result()
+            trade.result = result
 
             return trade
 
@@ -68,7 +70,7 @@ class ObjectStrategy(StrategyBase):
 
     async def on_waiting_exit(self, trade, analysis_dict):
         trade.command = ECommand.EXEC_EXIT
-        if not await StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
+        if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             # TODO: This is a critical case where the exit order failed to pass filters. Decide what to do
             return None
         return trade

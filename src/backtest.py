@@ -89,7 +89,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
         pair = trade_list[i].pair
 
         # 1.2.1: Check trades and update status
-        strategy_min_scale = strategy_period_mapping[trade_list.strategy]
+        strategy_min_scale = strategy_period_mapping[trade_list[i].strategy]
         last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
@@ -103,7 +103,8 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                     # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
                     
-                    trade_list[i].set_result_enter(last_closed_candle_open_time)
+                    # TODO: REFACTORING: Why the enter moudle has no fee
+                    trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     is_success = balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter)
 
@@ -167,7 +168,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
             # TODO: Internal Error
             pass
 
-    return trade_list, df_balance
+    return trade_list
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
@@ -213,7 +214,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
     live_trade_list = [trade_from_dict(trade_dict) for trade_dict in live_trade_dicts]
-    live_trade_list, df_balance = await update_ltos(live_trade_list, data_dict, strategy_period_mapping, df_balance)
+    live_trade_list = await update_ltos(live_trade_list, data_dict, strategy_period_mapping, df_balance)
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await analyzer.sample_analyzer(data_dict)
@@ -223,8 +224,11 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 2.2: Algorithm is the only authority to make decision
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     logger.debug('Phase 2')
+    # Total usable qc
     total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
-    total_qc_in_lto = eval_total_capital_in_lto(live_trade_list)
+    
+    # Total qc in use. Thus total_qc >= total_qc_in_lto
+    total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
     grouped_ltos = {}
