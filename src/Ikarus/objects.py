@@ -17,8 +17,11 @@ def trade_list_to_json(trade_list):
     return [json.dumps(trade, cls=EnhancedJSONEncoder) for trade in trade_list]
 
 
-def trade_list_to_dict(trade_list):
-    return [asdict(trade) for trade in trade_list]
+def trade_to_dict(trade):
+    trade_dict = asdict(trade)
+    if trade_dict['_id'] == None: 
+        del trade_dict['_id']
+    return trade_dict
 
 
 class ObjectEncoder(JSONEncoder):
@@ -275,6 +278,7 @@ class Trade():
     result: TradeResult = None
     command: ECommand = ECommand.NONE
     update_history: list = field(default_factory=list)
+    _id: str = None
 
     def set_enter(self,enter_order):
         self.enter=enter_order
@@ -349,28 +353,34 @@ def order_from_dict(order_data):
 
 
 def result_from_dict(data):
-        result = TradeResult(cause=data['cause'], profit=data['profit'], live_time=data['live_time'])
+        if not isinstance(data, dict):
+            return None
+
+        trade_result = TradeResult()
+        if 'cause' in  data: trade_result.cause=data['cause']
+        if 'profit' in  data: trade_result.profit=data['profit']
+        if 'live_time' in  data: trade_result.live_time=data['live_time']
         if data['enter'] != None:
-            result.enter = Result(order_from_dict(data['enter']))
-            result.enter.time = data['enter']['time']
-            result.enter.type = data['enter']['type']
+            trade_result.enter = Result(order_from_dict(data['enter']))
+            trade_result.enter.time = data['enter']['time']
+            trade_result.enter.type = data['enter']['type']
         else:
-            result.enter = Result()
+            trade_result.enter = Result()
         
         if data['exit'] != None:
-            result.exit = Result(order_from_dict(data['exit']))
-            result.exit.time = data['exit']['time']
-            result.exit.type = data['exit']['type']
+            trade_result.exit = Result(order_from_dict(data['exit']))
+            trade_result.exit.time = data['exit']['time']
+            trade_result.exit.type = data['exit']['type']
         else:
-            result.exit = Result()
+            trade_result.exit = Result()
 
-        return result
+        return trade_result
 
 
 def trade_from_dict(data):
     return Trade(data['decision_time'], data['strategy'], data['pair'], EState(data['status']),
         order_from_dict(data['enter']), order_from_dict(data['exit']), result_from_dict(data['result']),
-        ECommand(data['command']), data['update_history'])
+        ECommand(data['command']), data['update_history'], _id=data['_id'])
     
 
 if __name__ == "__main__":

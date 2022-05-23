@@ -258,7 +258,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
     if len(new_trade_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
-        result = await mongocli.do_insert_many("live-trades", trade_list_to_dict(new_trade_list))         # TODO: TEST_REFACTORING
+        result = await mongocli.do_insert_many("live-trades", [trade_to_dict(new_trade) for new_trade in new_trade_list])         # TODO: TEST_REFACTORING
 
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]

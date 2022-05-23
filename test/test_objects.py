@@ -33,7 +33,7 @@ class test_trade_from_dict(unittest.TestCase):
         trade_original = Trade(1557705600000, 'ObjectStrategy', 'XRPUSDT', EState.OPEN_ENTER, 
             Limit(0.2906, 4749.5664, 16344.0, 0.0, 1652629743339, 1559001600000),
             Limit(0.3372, 5511.510271497884, 16344.929630776644, 0.0, None, 1559001600000),
-            None, ECommand.NONE, [])
+            None, ECommand.NONE, [], _id="ObjectId('628120f012791ee7ba')")
         self.assertEqual(trade_dict, trade_original)
 
     def setUp(self):
@@ -43,6 +43,24 @@ class test_trade_from_dict(unittest.TestCase):
         #print(self._testMethodName)
         pass
 
+class test_trade_to_dict(unittest.TestCase):
+    def test_id_does_not_exit(self):
+        trade = Trade(123, "strategy", "pair")
+        trade_dict= trade_to_dict(trade)
+        self.assertFalse('_id' in trade_dict)
+
+    def test_id_exit(self):
+        trade = Trade(123, "strategy", "pair", _id="stringid")
+        trade_dict = trade_to_dict(trade)
+        self.assertTrue('_id' in trade_dict)
+
+
+    def setUp(self):
+        print(self.id())
+    
+    def tearDown(self):
+        #print(self._testMethodName)
+        pass
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
