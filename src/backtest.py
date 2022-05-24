@@ -40,7 +40,7 @@ async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
         # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
         if trade.status == EState.CLOSED:
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
-            result_insert = await mongocli.do_insert_one("hist-trades",trade)
+            result_insert = await mongocli.do_insert_one("hist-trades",asdict(trade))
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
 
             if trade.result.cause == ECause.CLOSED:
@@ -55,8 +55,8 @@ async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
                 "live-trades",
                 {'_id': trade._id},
                 {'$set': {'status': trade.status,
-                        'exit': json.dumps(trade.exit, cls=EnhancedJSONEncoder),
-                        'result.enter': json.dumps(trade.result.enter),
+                        'exit': asdict(trade.exit),
+                        'result.enter': asdict(trade.result.enter),
                         'update_history': trade.update_history
                     }})
                 
@@ -65,7 +65,7 @@ async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': trade._id},
-                {'$set': {'status': trade.status, 'enter':json.dumps(trade.enter, cls=EnhancedJSONEncoder) }}) # NOTE: REFACTORING: history removed
+                {'$set': {'status': trade.status, 'enter': asdict(trade.enter) }}) # NOTE: REFACTORING: history removed
 
         else:
             pass

@@ -333,7 +333,9 @@ class Trade():
 
 def order_from_dict(order_data):
     order = Order()
-    if 'expire' not in order_data.keys():
+    if 'type' in order_data.keys():
+        order = Result()
+    elif 'expire' not in order_data.keys():
         order = Market()
     else:
         if 'stopPrice' not in order_data.keys():
@@ -361,14 +363,14 @@ def result_from_dict(data):
         if 'profit' in  data: trade_result.profit=data['profit']
         if 'live_time' in  data: trade_result.live_time=data['live_time']
         if data['enter'] != None:
-            trade_result.enter = Result(order_from_dict(data['enter']))
+            trade_result.enter = order_from_dict(data['enter'])
             trade_result.enter.time = data['enter']['time']
             trade_result.enter.type = data['enter']['type']
         else:
             trade_result.enter = Result()
         
         if data['exit'] != None:
-            trade_result.exit = Result(order_from_dict(data['exit']))
+            trade_result.exit = order_from_dict(data['exit'])
             trade_result.exit.time = data['exit']['time']
             trade_result.exit.type = data['exit']['type']
         else:

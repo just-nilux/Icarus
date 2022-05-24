@@ -132,7 +132,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
             # Continue if the LTO of the pair is not dead
             if ao_pair in pair_grouped_ltos.keys():
-                if not await StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
+                if not StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
                     continue
 
             # Perform evaluation

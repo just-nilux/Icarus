@@ -21,8 +21,8 @@ class TestLimitLimit(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 0.995 # Enter
-            exit_price = time_dict[self.min_period]['close']
+            enter_price = time_dict[self.min_period]['close'] * 1.05 # Enter
+            exit_price = time_dict[self.min_period]['close'] * 0.95
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
