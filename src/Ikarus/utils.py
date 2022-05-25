@@ -1,8 +1,6 @@
-from copy import Error
 import pandas as pd
-import more_itertools
-
-from .objects import EState
+import os
+from .objects import EState, trade_from_dict
 from .enums import *
 from decimal import ROUND_DOWN, Decimal
 import logging
@@ -79,24 +77,17 @@ async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed = []
     for hto in hto_list:
-
-        # Ideal enter and exit types
-        enter_type = config['strategy'][hto['strategy']]['enter']['type']
-        exit_type = config['strategy'][hto['strategy']]['exit']['type']
-        # NOTE: These ideal types only change in market_exit action which is handled in get_exit_expire_hto
-
-        if exit_type == TYPE_OCO: plannedPriceName = 'limitPrice'
-        elif exit_type == TYPE_LIMIT or exit_type == TYPE_MARKET: plannedPriceName = 'price'
+        trade = trade_from_dict(hto)
 
         hto_dict = {
-            "_id": hto['_id'],
-            "strategy": hto['strategy'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][enter_type]['price'],
-            "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][exit_type][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price']
+            "_id": trade._id,
+            "strategy": trade.strategy,
+            "decision_time": trade.decision_time,
+            "enterTime": trade.result.enter.time,
+            "enterPrice": trade.enter.price, # NOTE: I do not know why we dont have trade.result.enter.price
+            "exitTime": trade.result.exit.time,
+            "exitPrice": trade.exit.price,
+            "sellPrice": trade.result.exit.price
         }
         hto_closed.append(hto_dict)
 
@@ -216,20 +207,23 @@ def get_lto_phase(lto):
         raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')
 
 
-def setup_logger(logger, log_level, log_file):
+def setup_logger(logger, log_config):
+    if log_config.get('clear',False):
+        os.remove(log_config['file'])
+
     logger = logging.getLogger('app')
     logger.setLevel(logging.DEBUG)
 
-    rfh = TimedRotatingFileHandler(filename=log_file,
+    rfh = TimedRotatingFileHandler(filename=log_config['file'],
                                    when='H',
                                    interval=1,
                                    backupCount=5)
 
-    rfh.setLevel(log_level)
+    rfh.setLevel(log_config['level'])
 
     # create console handler with a higher log level
     ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
+    ch.setLevel(logging.WARNING)
 
     # create formatter and add it to the handlers
     formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',

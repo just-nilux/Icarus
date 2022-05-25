@@ -86,7 +86,11 @@ class StrategyBase(metaclass=abc.ABCMeta):
         in_trade_capital = 0
         dead_lto_capital = 0
         for lto_idx in range(len(trade_list)):
-            trade_list[lto_idx] = await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time)
+
+            # If handle_lto_logic fails then it means that the trade_list[lto_idx] is unchanged.
+            if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time):
+                self.logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
+
             pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
@@ -154,10 +158,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
         """
         This function decides what to do for the LTOs based on their 'status'
         """        
-        
+        is_success = False
         if trade.status == EState.ENTER_EXP:
             if self.config['action_mapping'][EState.ENTER_EXP] == ECommand.CANCEL:
-                await self.on_cancel(trade)
+                is_success = await self.on_cancel(trade)
 
         elif trade.status == EState.EXIT_EXP:
             if self.config['action_mapping'][EState.EXIT_EXP] == ECommand.UPDATE:
@@ -170,9 +174,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
         elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # NOTE: expire of the exit_module can be calculated after the trade entered
-            return await self.on_waiting_exit(trade, analysis_dict)
+            is_success = await self.on_waiting_exit(trade, analysis_dict)
 
-        return trade
+        return is_success
 
 
     @abc.abstractclassmethod
@@ -263,7 +267,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             trade_order.quantity = result
         else: 
             #logger.error(f"Filter failure: LOT_SIZE. {trade.strategy} in phase {phase} with quantity {str(trade.enter.quantity)}")
-            return None
+            return False
 
         # PRICE_FILTER
         # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#price_filter
@@ -283,12 +287,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
             if not filters.min_notional(trade_order.stopPrice, trade_order.quantity, symbol_info):
                 logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
-                return None
+                return False
 
         # MIN_NOTIONAL
         # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#min_notional
         if not filters.min_notional(trade_order.price, trade_order.quantity, symbol_info):
             logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
-            return None
+            return False
 
         return True

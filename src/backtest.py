@@ -362,7 +362,7 @@ if __name__ == '__main__':
         clean=config['mongodb']['clean'])
     
     # Initialize and configure objects
-    setup_logger(logger, config['log']['level'], config['log']['file'])
+    setup_logger(logger, config['log'])
 
     # Setup initial objects
     stats = performance.Statistics(config, mongocli, os.path.dirname(str(sys.argv[1]))) 

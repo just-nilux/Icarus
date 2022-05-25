@@ -66,14 +66,14 @@ class TestLimitLimit(StrategyBase):
     async def on_cancel(self, trade):
         trade.command = ECommand.CANCEL
         trade.result.cause = ECause.ENTER_EXP
+        return True
 
 
     async def on_waiting_exit(self, trade, analysis_dict):
         trade.command = ECommand.EXEC_EXIT
         if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
-            # TODO: This is a critical case where the exit order failed to pass filters. Decide what to do
-            return None
-        return trade
+            return False
+        return True
 
 
     async def on_closed(self, lto):

@@ -9,7 +9,16 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src/Ikarus"
+        },
+        {
+            "name": "objects",
+            "type": "python",
+            "request": "launch",
+            "module": "Ikarus.objects",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src"
         },
         {
             "name": "Strategy",
@@ -62,8 +71,10 @@
             "request": "launch",
             "module": "Ikarus.scripts.visualize_test_session",
             "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
             "args": [
-                ".\\configs\\market\\config.json"
+                "${workspaceFolder}/configs/object/config.json",
+                "${workspaceFolder}/test_credentials.json"
             ]
         },
         {
@@ -80,10 +91,10 @@
             "name": "backtest",
             "type": "python",
             "request": "launch",
-            "program": ".\\backtest.py",
+            "program": "src/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\market_state\\config.json"
+                ".\\configs\\object\\config.json"
             ]
         },
         {
