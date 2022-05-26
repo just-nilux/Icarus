@@ -351,7 +351,10 @@ if __name__ == '__main__':
     
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
-    
+
+    if len(sys.argv) >=3:
+        config['credential_file'] = str(sys.argv[2])
+
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
 

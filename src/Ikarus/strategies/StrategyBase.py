@@ -176,6 +176,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
             # NOTE: expire of the exit_module can be calculated after the trade entered
             is_success = await self.on_waiting_exit(trade, analysis_dict)
 
+        else:
+            is_success = True
         return is_success
 
 

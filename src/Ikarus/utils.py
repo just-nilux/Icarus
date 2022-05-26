@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from .objects import EState, trade_from_dict
+from .objects import ECause, EState, trade_from_dict
 from .enums import *
 from decimal import ROUND_DOWN, Decimal
 import logging
@@ -71,7 +71,7 @@ def eval_total_capital_in_lto(trade_list):
             in_trade_qc = safe_sum(in_trade_qc, trade.enter.amount)
     return in_trade_qc
 
-async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
+async def get_closed_hto(config, mongocli, query={'result.cause':ECause.CLOSED}):
     # TODO: NEXT: All statistics needs to be changed a bit  to integrate market orders
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
@@ -84,29 +84,31 @@ async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
             "strategy": trade.strategy,
             "decision_time": trade.decision_time,
             "enterTime": trade.result.enter.time,
-            "enterPrice": trade.enter.price, # NOTE: I do not know why we dont have trade.result.enter.price
+            "enterPrice": trade.enter.price, 
             "exitTime": trade.result.exit.time,
             "exitPrice": trade.exit.price,
             "sellPrice": trade.result.exit.price
         }
+        # NOTE: No trade.result.enter.price is used because in each case Limit/Market enter the price value will be used directly
         hto_closed.append(hto_dict)
 
     df = pd.DataFrame(hto_closed)
     return df
 
 
-async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
+async def get_enter_expire_hto(mongocli, query={'result.cause':ECause.ENTER_EXP}):
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_ent_exp_list = []
     for hto in hto_list:
         # NOTE: HIGH: We dont know it the exit type is limit or not
+        trade = trade_from_dict(hto)
         hto_dict = {
-            "_id": hto['_id'],
-            "strategy": hto['strategy'],
-            "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: TYPE_LIMIT | TODO: use result enter price
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
+            "_id": trade._id,
+            "strategy": trade.strategy,
+            "decision_time": trade.decision_time,
+            "enterExpire": trade.enter.expire, # TODO: TYPE_LIMIT | TODO: use result enter price
+            "enterPrice": trade.enter.price,
         }
         hto_ent_exp_list.append(hto_dict)
 

@@ -8,4 +8,5 @@ from . import StrategyBase,\
     RSIStrategy, \
     MACDStrategy, \
     UpTrenderMarket, \
-    TestLimitLimit
+    TestLimitLimit, \
+    TestEnterExpire
