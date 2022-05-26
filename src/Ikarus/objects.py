@@ -277,7 +277,7 @@ class Trade():
     exit: dict = None
     result: TradeResult = None
     command: ECommand = ECommand.NONE
-    update_history: list = field(default_factory=list)
+    order_stash: list = field(default_factory=list)
     _id: str = None
 
     def set_enter(self,enter_order):
@@ -288,6 +288,9 @@ class Trade():
 
     def reset_command(self):
         self.command=ECommand.NONE
+
+    def stash_exit(self): # Stash the exit order when it will about to be updated
+        self.order_stash.append(copy.deepcopy(self.exit))
 
     def set_result_enter(self, time, quantity=None, price=None, fee=None, fee_rate=None):
 
@@ -305,6 +308,8 @@ class Trade():
             self.result.enter.fee = fee
         elif fee_rate:
             self.result.enter.fee = round(safe_multiply(self.result.enter.amount,fee_rate),8)
+
+        
 
     def set_result_exit(self, time, quantity=None, price=None, fee=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
 
@@ -382,7 +387,7 @@ def result_from_dict(data):
 def trade_from_dict(data):
     return Trade(data['decision_time'], data['strategy'], data['pair'], EState(data['status']),
         order_from_dict(data['enter']), order_from_dict(data['exit']), result_from_dict(data['result']),
-        ECommand(data['command']), data['update_history'], _id=data['_id'])
+        ECommand(data['command']), [order_from_dict(order) for order in data['order_stash']], _id=data['_id'])
     
 
 if __name__ == "__main__":

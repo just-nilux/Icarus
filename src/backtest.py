@@ -48,16 +48,15 @@ async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
                 pass
 
         # NOTE: Manual trade option is omitted, needs to be added
+        # TODO: REFACTORING: Why did you handle all of these 3 state in the same place?
         elif trade.status in [ EState.OPEN_EXIT, EState.WAITING_EXIT, EState.EXIT_EXP]:
-            # - The status might be changed from STAT_OPEN_ENTER or STAT_PART_CLOSED_ENTER to STAT_OPEN_EXIT (changes in result.enter and history)
-            # - The open_exit might be expired and postponed with some other changes in 'exit' item (changes in exit and history)
             result_update = await mongocli.do_update( 
                 "live-trades",
                 {'_id': trade._id},
                 {'$set': {'status': trade.status,
                         'exit': asdict(trade.exit),
                         'result.enter': asdict(trade.result.enter),
-                        'update_history': trade.update_history
+                        'order_stash': [asdict(order) for order in trade.order_stash]
                     }})
                 
         elif trade.status == EState.OPEN_ENTER:
@@ -106,7 +105,9 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                     # TODO: REFACTORING: Why the enter moudle has no fee
                     trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    is_success = balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter)
+                    if not balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter):
+                        logger.error(f"Function failed: balance_manager.buy().")
+                        # TODO: Fix the logic. The balance manager should be called prior
 
                 elif int(trade_list[i].enter.expire) <= last_closed_candle_open_time:
                     # Report the expiration to algorithm
@@ -125,9 +126,10 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                 if float(last_kline['high']) > trade_list[i].exit.price:
 
                     trade_list[i].set_result_exit(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
-
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
+                    if not balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit):
+                        logger.error(f"Function failed: balance_manager.sell().")
+                        # TODO: Fix the logic. The balance manager should be called prior
 
                 elif int(trade_list[i].exit.expire) <= last_closed_candle_open_time:
                     trade_list[i].status = EState.EXIT_EXP
@@ -168,7 +170,6 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
             # TODO: Internal Error
             pass
 
-    return trade_list
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
@@ -214,7 +215,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
     live_trade_list = [trade_from_dict(trade_dict) for trade_dict in live_trade_dicts]
-    live_trade_list = await update_ltos(live_trade_list, data_dict, strategy_period_mapping, df_balance)
+    await update_ltos(live_trade_list, data_dict, strategy_period_mapping, df_balance)
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await analyzer.sample_analyzer(data_dict)

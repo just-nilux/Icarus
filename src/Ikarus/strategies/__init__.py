@@ -9,4 +9,5 @@ from . import StrategyBase,\
     MACDStrategy, \
     UpTrenderMarket, \
     TestLimitLimit, \
-    TestEnterExpire
+    TestEnterExpire, \
+    TestLimitUpdate

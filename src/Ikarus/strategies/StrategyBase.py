@@ -165,7 +165,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         elif trade.status == EState.EXIT_EXP:
             if self.config['action_mapping'][EState.EXIT_EXP] == ECommand.UPDATE:
-                is_success = await self.on_update(trade, ikarus_time)
+                is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
 
             elif self.config['action_mapping'][EState.EXIT_EXP] == ECommand.MARKET_EXIT:
                 # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that

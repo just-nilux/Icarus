@@ -928,16 +928,14 @@ class TestBinanceWrapper():
         return do_dict
 
     def _execute_cancel(self, trade, df_balance):
-        # NOTE: No editing on trade
-        if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP, EState.CLOSED] : # TODO: REFACTORING: Why do we have CLOSED here
-            balance_manager.cancel_enter_order(df_balance, self.quote_currency, trade.enter)
+
+        if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP] : # NOTE: REFACTORING: EState.CLOSED was here as well
+            return balance_manager.cancel_enter_order(df_balance, self.quote_currency, trade.enter)
         elif trade.status in [EState.EXIT_EXP, EState.OPEN_EXIT]:
             base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
-            balance_manager.cancel_exit_order(df_balance, base_cur, trade.exit)
-        else: 
-            # TODO: Add error message
-            pass
-        return True
+            return balance_manager.cancel_exit_order(df_balance, base_cur, trade.exit)
+
+        return False
 
     # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
     def _execute_oco_sell(self, lto, df_balance):
@@ -1043,8 +1041,6 @@ class TestBinanceWrapper():
             lto_list (list): [description]
             df_balance (pd.DataFrame): [description]
 
-        Returns:
-            tuple: lto_list, df_balance
         """
         for i in range(len(trade_list)):
             if trade_list[i].command == ECommand.CANCEL:
@@ -1064,9 +1060,9 @@ class TestBinanceWrapper():
                     '''
                     # Place the order
                     if type(trade_list[i].exit) == OCO:
-                        self._execute_oco_sell(trade_list[i]) #TODO: REFACTORING
+                        self._execute_oco_sell(trade_list[i], df_balance) #TODO: REFACTORING
                     elif type(trade_list[i].exit) == Limit:
-                        self._execute_limit_sell(trade_list[i]) #TODO: REFACTORING
+                        self._execute_limit_sell(trade_list[i], df_balance) #TODO: REFACTORING
                     trade_list[i].reset_command()
                 else:
                     '''

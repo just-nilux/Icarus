@@ -28,7 +28,7 @@ class test_order_from_dict(unittest.TestCase):
 
 class test_trade_from_dict(unittest.TestCase):
     def test_limit(self):
-        data = {'_id': "ObjectId('628120f012791ee7ba')", 'decision_time': 1557705600000, 'strategy': 'ObjectStrategy', 'pair': 'XRPUSDT', 'status': 'open_enter', 'enter': {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'fee': 0.0, 'orderId': 1652629743339, 'expire': 1559001600000}, 'exit': {'price': 0.3372, 'amount': 5511.510271497884, 'quantity': 16344.929630776644, 'fee': 0.0, 'orderId': None, 'expire': 1559001600000}, 'result': None, 'command': 'None', 'update_history': []}
+        data = {'_id': "ObjectId('628120f012791ee7ba')", 'decision_time': 1557705600000, 'strategy': 'ObjectStrategy', 'pair': 'XRPUSDT', 'status': 'open_enter', 'enter': {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'fee': 0.0, 'orderId': 1652629743339, 'expire': 1559001600000}, 'exit': {'price': 0.3372, 'amount': 5511.510271497884, 'quantity': 16344.929630776644, 'fee': 0.0, 'orderId': None, 'expire': 1559001600000}, 'result': None, 'command': 'None', 'order_stash': []}
         trade_dict = trade_from_dict(data)
         trade_original = Trade(1557705600000, 'ObjectStrategy', 'XRPUSDT', EState.OPEN_ENTER, 
             Limit(0.2906, 4749.5664, 16344.0, 0.0, 1652629743339, 1559001600000),
