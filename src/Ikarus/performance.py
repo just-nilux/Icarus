@@ -1,4 +1,5 @@
 import logging
+from Ikarus.objects import ECause
 from .enums import *
 from . import mongo_utils
 import json
@@ -12,10 +13,11 @@ from .utils import safe_substract
 class Statistics():
     # You can not manage something that you can not measure
 
-    def __init__(self, _config, _mongocli):
+    def __init__(self, _config, _mongocli, _statfile):
         self.logger = logging.getLogger('app.{}'.format(__name__))
         self.logger.info('creating an instance of {}'.format(__name__))
         self.mongocli = _mongocli
+        self.statfile = _statfile
         self.config = _config
 
         # TODO: This ehader section can be coınfigured based on desired stats
@@ -67,9 +69,12 @@ class Statistics():
             "Total Time": "{:.2f} days".format((end_dt - start_dt).total_seconds() / (60*60*24)), # In second
             "Start Balance": "{:.2f} {}".format(start_balance, self.config['broker']['quote_currency']),
             "End Balance": "{:.2f} {}".format(end_balance, self.config['broker']['quote_currency']),
-            "Absolute Profit": "{:.2f} {}".format(absolute_profit[0]['sum'], self.config['broker']['quote_currency']),
             "Total Profit": "% {:.2f}".format((end_balance - start_balance)*100/start_balance),
         }
+
+        if len(absolute_profit):
+            general_stats["Absolute Profit"] = "{:.2f} {}".format(absolute_profit[0]['sum'], self.config['broker']['quote_currency'])
+
         # TODO: In case of no LTO or HTO, absolute_profit raises an key error
 
         self.stat['general'] = general_stats
@@ -88,9 +93,9 @@ class Statistics():
         strategy_stats = []
         strategy_stats.append(strategy)
         strategy_stats.append(int(await self.mongocli.count("live-trades", {'strategy':strategy})))
-        strategy_stats.append(int(await self.mongocli.count("hist-trades", {'strategy':strategy, 'result.cause':STAT_CLOSED})))
-        strategy_stats.append(int(await self.mongocli.count("hist-trades", {'strategy':strategy, 'result.cause':STAT_ENTER_EXP})))
-        strategy_stats.append(int(await self.mongocli.count("hist-trades", {'strategy':strategy, 'result.cause':STAT_EXIT_EXP})))
+        strategy_stats.append(int(await self.mongocli.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.CLOSED})))
+        strategy_stats.append(int(await self.mongocli.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.ENTER_EXP})))
+        strategy_stats.append(int(await self.mongocli.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.EXIT_EXP})))
 
         closed_pipe = [
             {"$match":{"strategy":{"$eq":strategy}, "result.cause":{"$eq":"closed"}}},
@@ -120,7 +125,7 @@ class Statistics():
         """
         Iterate over the stat dict and print in a proper format
         """        
-        f = open(self.config['statistics']['report_path'],'w')
+        f = open(self.statfile+"/stat.txt",'w')
         for key, item in self.stat.items():
             if type(item) != list:
                 f.write(key + "\n" )
@@ -148,16 +153,16 @@ class Statistics():
         pass
 
 
-    async def eval_hto_stat(self, hto):
+    async def eval_hto_stat(self, hist_trade):
 
         hto_stat = [ 
-            hto['_id'],
-            hto['strategy'],
-            hto['pair'],
-            datetime.fromtimestamp(hto['result']['enter']['time']/1000, timezone.utc),
-            datetime.fromtimestamp(hto['result']['exit']['time']/1000, timezone.utc),
-            safe_substract(hto['result']['exit']['amount'], hto['result']['enter']['amount']),
-            100*(hto['result']['exit']['price'] - hto['result']['enter']['price'])/hto['result']['enter']['price']
+            hist_trade._id,
+            hist_trade.strategy,
+            hist_trade.pair,
+            datetime.fromtimestamp(hist_trade.result.enter.time/1000, timezone.utc),
+            datetime.fromtimestamp(hist_trade.result.exit.time/1000, timezone.utc),
+            safe_substract(hist_trade.result.exit.amount, hist_trade.result.enter.amount),
+            100*(hist_trade.result.exit.price - hist_trade.result.enter.price)/hist_trade.result.enter.price
         ]
         return hto_stat
 

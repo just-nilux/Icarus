@@ -1,8 +1,12 @@
-from copy import Error
 import pandas as pd
-import more_itertools
+import os
+from .objects import ECause, EState, trade_from_dict
 from .enums import *
 from decimal import ROUND_DOWN, Decimal
+import logging
+from logging.handlers import TimedRotatingFileHandler
+import time
+from .safe_operators import *
 
 def calculate_fee(amount, fee, digit=8):
     return round(safe_multiply(amount,fee), digit)
@@ -35,25 +39,13 @@ def truncate(num,n):
                 return float(temp)      
     return float(temp)
 
-def safe_divide(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) / Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
-def safe_multiply(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) * Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
-def safe_sum(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) + Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
-def safe_substract(num1, num2, quant='0.00000001', rounding=None):
-    return float( (Decimal(str(num1)) - Decimal(str(num2))).quantize(Decimal(quant), rounding=rounding) )
-
 def time_scale_to_second(interval: str):
     return time_scale_to_minute(interval) * 60
 
 def time_scale_to_milisecond(interval: str):
     return time_scale_to_minute(interval) * 60 * 1000
 
-def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_ratio=1):
+def eval_total_capital(df_balance, live_trade_list, quote_currency, max_capital_use_ratio=1):
     # Toal capital: Free QC + LTO_enter
     free_qc = df_balance.loc[quote_currency,'free']
 
@@ -65,63 +57,58 @@ def eval_total_capital(df_balance, lto_list, quote_currency, max_capital_use_rat
     #           : these LTOs needs be omitted
     #   'enter_expire': then it is marked to be handled by the their strategy but the balance is still locked in LTO
 
-    in_trade_qc = eval_total_capital_in_lto(lto_list)
+    in_trade_qc = eval_total_capital_in_lto(live_trade_list)
 
     total_qc = safe_sum(free_qc, in_trade_qc)
     return safe_multiply(total_qc, max_capital_use_ratio)
 
-def eval_total_capital_in_lto(lto_list):
+def eval_total_capital_in_lto(trade_list):
     in_trade_qc = 0
-    for lto in lto_list:
+    for trade in trade_list:
         # Omit the LTOs that are closed, because their use of amount returned to df_balance (by broker or by lto_update of test-engine)
-        if lto['status'] != STAT_CLOSED:
+        if trade.status != EState.CLOSED:
             # NOTE: It is assumed that each object may only have 1 TYPE of exit or enter
-            in_trade_qc = safe_sum(in_trade_qc, more_itertools.one(lto[PHASE_ENTER].values())['amount'])
+            in_trade_qc = safe_sum(in_trade_qc, trade.enter.amount)
     return in_trade_qc
 
-async def get_closed_hto(config, mongocli, query={'result.cause':STAT_CLOSED}):
+async def get_closed_hto(config, mongocli, query={'result.cause':ECause.CLOSED}):
     # TODO: NEXT: All statistics needs to be changed a bit  to integrate market orders
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_closed = []
     for hto in hto_list:
-
-        # Ideal enter and exit types
-        enter_type = config['strategy'][hto['strategy']]['enter']['type']
-        exit_type = config['strategy'][hto['strategy']]['exit']['type']
-        # NOTE: These ideal types only change in market_exit action which is handled in get_exit_expire_hto
-
-        if exit_type == TYPE_OCO: plannedPriceName = 'limitPrice'
-        elif exit_type == TYPE_LIMIT or exit_type == TYPE_MARKET: plannedPriceName = 'price'
+        trade = trade_from_dict(hto)
 
         hto_dict = {
-            "_id": hto['_id'],
-            "strategy": hto['strategy'],
-            "decision_time": hto['decision_time'],
-            "enterTime": hto['result']['enter']['time'],
-            "enterPrice": hto['enter'][enter_type]['price'],
-            "exitTime": hto['result']['exit']['time'],
-            "exitPrice": hto['exit'][exit_type][plannedPriceName],
-            "sellPrice": hto['result']['exit']['price']
+            "_id": trade._id,
+            "strategy": trade.strategy,
+            "decision_time": trade.decision_time,
+            "enterTime": trade.result.enter.time,
+            "enterPrice": trade.enter.price, 
+            "exitTime": trade.result.exit.time,
+            "exitPrice": trade.exit.price,
+            "sellPrice": trade.result.exit.price
         }
+        # NOTE: No trade.result.enter.price is used because in each case Limit/Market enter the price value will be used directly
         hto_closed.append(hto_dict)
 
     df = pd.DataFrame(hto_closed)
     return df
 
 
-async def get_enter_expire_hto(mongocli, query={'result.cause':STAT_ENTER_EXP}):
+async def get_enter_expire_hto(mongocli, query={'result.cause':ECause.ENTER_EXP}):
     # Read Database to get hist-trades and dump to a DataFrame
     hto_list = await mongocli.do_find('hist-trades',query)
     hto_ent_exp_list = []
     for hto in hto_list:
         # NOTE: HIGH: We dont know it the exit type is limit or not
+        trade = trade_from_dict(hto)
         hto_dict = {
-            "_id": hto['_id'],
-            "strategy": hto['strategy'],
-            "decision_time": hto['decision_time'],
-            "enterExpire": hto['enter'][TYPE_LIMIT]['expire'],# TODO: TYPE_LIMIT | TODO: use result enter price
-            "enterPrice": hto['enter'][TYPE_LIMIT]['price'],
+            "_id": trade._id,
+            "strategy": trade.strategy,
+            "decision_time": trade.decision_time,
+            "enterExpire": trade.enter.expire, # TODO: TYPE_LIMIT | TODO: use result enter price
+            "enterPrice": trade.enter.price,
         }
         hto_ent_exp_list.append(hto_dict)
 
@@ -181,7 +168,7 @@ async def get_pair_min_period_mapping(config):
     return pair_min_period_mapping
 
 
-async def get_min_scale(ordered_scales, pool):
+def get_min_scale(ordered_scales, pool):
     
     for scale in ordered_scales:
         if scale in pool:
@@ -221,9 +208,33 @@ def get_lto_phase(lto):
     else:
         raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')
 
-def filter_lot_size(quantity, symbol_info): 
-    quantity = round_step_downward(quantity, float(symbol_info['filters'][2]['stepSize']))
-    if float(symbol_info['filters'][2]['minQty']) < quantity < float(symbol_info['filters'][2]['maxQty']):
-        return quantity
-    else:
-        return None
+
+def setup_logger(logger, log_config):
+    if log_config.get('clear',False):
+        os.remove(log_config['file'])
+
+    logger = logging.getLogger('app')
+    logger.setLevel(logging.DEBUG)
+
+    rfh = TimedRotatingFileHandler(filename=log_config['file'],
+                                   when='H',
+                                   interval=1,
+                                   backupCount=5)
+
+    rfh.setLevel(log_config['level'])
+
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.WARNING)
+
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('[{}][{}][{} - {}][{}][{}]'.format('%(asctime)s',
+        '%(filename)-21s','%(lineno)-3d','%(funcName)-24s','%(levelname)8s', '%(message)s'))
+    formatter.converter = time.gmtime # Use the UTC Time
+    rfh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(rfh)
+    logger.addHandler(ch)
+
+    logger.info('logger has been set')

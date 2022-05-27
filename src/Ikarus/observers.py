@@ -28,25 +28,25 @@ class Observer():
         return observation_obj.get()
 
 
-    async def quote_asset(self, ikarus_time, df_balance, lto_list):
+    async def quote_asset(self, ikarus_time, df_balance, trade_list):
         # NOTE: As a principle all the observer item that will be  visualized should not have an extra level of indent
         observation_obj = {}
         observation_obj['type'] = 'quote_asset'
         observation_obj['timestamp'] = ikarus_time
         observation_obj['free'] = df_balance.loc[self.config['broker']['quote_currency'],'free']
-        observation_obj['in_trade'] = eval_total_capital_in_lto(lto_list)
+        observation_obj['in_trade'] = eval_total_capital_in_lto(trade_list)
         observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
 
         return observation_obj
 
 
-    async def quote_asset_leak(self, ikarus_time, df_balance, lto_list):
+    async def quote_asset_leak(self, ikarus_time, df_balance, trade_list):
         observation_obj = {}
         observation_obj['type'] = 'quote_asset_leak'
         observation_obj['timestamp'] = ikarus_time
 
         free = df_balance.loc[self.config['broker']['quote_currency'],'free']
-        in_trade = eval_total_capital_in_lto(lto_list)
+        in_trade = eval_total_capital_in_lto(trade_list)
         observation_obj['total'] = safe_sum(free, in_trade)
         observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, self.config['risk_management']['max_capital_use_ratio']))
         observation_obj['real_free'] = free

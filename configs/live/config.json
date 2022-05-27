@@ -75,9 +75,6 @@
         "analyzers":{},
         "patterns": {}
     },
-    "statistics": {
-        "report_path": "configs/live/stat.txt"
-    },
     "time_scales": {
         "1m": ["12 hours", 720],
         "5m": ["1 day", 480],

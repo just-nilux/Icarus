@@ -17,6 +17,7 @@ from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scal
     safe_multiply, safe_divide, round_to_period
 from . import balance_manager
 import more_itertools
+from .objects import OCO, ECause, ECommand, EState, Limit, Market
 
 class BinanceWrapper():
 
@@ -926,20 +927,18 @@ class TestBinanceWrapper():
         self.logger.debug("decompose ended")
         return do_dict
 
-    async def _execute_cancel(self, lto, df_balance):
-        
-        if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP, STAT_CLOSED]:
-            balance_manager.cancel_enter_order(df_balance, self.quote_currency, lto[PHASE_ENTER][TYPE_LIMIT]) # NOTE: Enforcing TYPE_LIMIT
-        elif lto['status'] in [STAT_EXIT_EXP, STAT_OPEN_EXIT]:
-            base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
-            balance_manager.cancel_exit_order(df_balance, base_cur, more_itertools.one(lto[PHASE_EXIT].values())['quantity'])
-        else: 
-            # TODO: Add error message
-            pass
-        return True
+    def _execute_cancel(self, trade, df_balance):
+
+        if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP] : # NOTE: REFACTORING: EState.CLOSED was here as well
+            return balance_manager.cancel_enter_order(df_balance, self.quote_currency, trade.enter)
+        elif trade.status in [EState.EXIT_EXP, EState.OPEN_EXIT]:
+            base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
+            return balance_manager.cancel_exit_order(df_balance, base_cur, trade.exit)
+
+        return False
 
     # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
-    async def _execute_oco_sell(self, lto, df_balance):
+    def _execute_oco_sell(self, lto, df_balance):
         base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
         balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
 
@@ -949,32 +948,38 @@ class TestBinanceWrapper():
         return True
 
 
-    async def _execute_limit_sell(self, lto, df_balance):
-        base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
-        balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+    def _execute_limit_sell(self, trade, df_balance):
+        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
+        if balance_manager.place_exit_order(df_balance, base_cur, trade.exit): # NOTE: REFACTORING It was lto['result']['enter']['quantity']
+            trade.status = EState.OPEN_EXIT
+            trade.exit.orderId = int(time.time() * 1000)
+            return True
 
-        lto['status'] = STAT_OPEN_EXIT
-        lto['history'].append(lto['status'])
-        lto[PHASE_EXIT][TYPE_LIMIT]['orderId'] = int(time.time() * 1000)
-        return True
+        return False
 
 
-    async def _execute_limit_buy(self, lto, df_balance):
+    def _execute_limit_buy(self, trade, df_balance):
+        '''
+        Handles trade.state
+        '''
         # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
         #       timestamp values
 
         # NOTE: The order is only PLACED but not FILLED. No fee here
-        balance_manager.place_enter_order(df_balance, self.quote_currency, lto['enter'][TYPE_LIMIT])
-        lto[PHASE_ENTER][TYPE_LIMIT]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
-        return True
+        if balance_manager.place_enter_order(df_balance, self.quote_currency, trade.enter):
+            trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
+            trade.status = EState.OPEN_ENTER
+            return trade, True
+
+        return trade, False
 
 
-    async def _execute_market_buy(self, lto, df_balance, data_dict):
+    def _execute_market_buy(self, lto, df_balance, data_dict):
         lto['status'] = STAT_WAITING_EXIT
         lto['history'].append(lto['status'])
 
         # NOTE: The order is PLACED and FILLED
-        min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
         last_kline = data_dict[lto['pair']][min_scale].tail(1)
 
         lto['enter'][TYPE_MARKET]['orderId'] = int(time.time() * 1000) # Get the order id from the broker
@@ -991,8 +996,8 @@ class TestBinanceWrapper():
         return True
 
 
-    async def _execute_market_sell(self, lto, df_balance, data_dict):
-        min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+    def _execute_market_sell(self, lto, df_balance, data_dict):
+        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
         last_kline = data_dict[lto['pair']][min_scale].tail(1)
 
         lto['status'] = STAT_CLOSED
@@ -1018,7 +1023,7 @@ class TestBinanceWrapper():
         balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto['result']['exit'])
         return True
 
-    async def _execute_lto(self, lto_list, df_balance, data_dict):
+    def _execute_lto(self, trade_list, df_balance, data_dict):
         """
         Execution Logic:
         for i in range(len(lto_list)):
@@ -1036,133 +1041,112 @@ class TestBinanceWrapper():
             lto_list (list): [description]
             df_balance (pd.DataFrame): [description]
 
-        Returns:
-            tuple: lto_list, df_balance
         """
-        for i in range(len(lto_list)):
-            if 'action' in lto_list[i].keys():
-                if lto_list[i]['action'] == ACTN_CANCEL:
-                    # NOTE: Currently the ACTN_CANCEL is only allowed to be used by the PHASE_ENTER LTOs
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
+        for i in range(len(trade_list)):
+            if trade_list[i].command == ECommand.CANCEL:
 
-                    await self._execute_cancel(lto_list[i], df_balance)
-                    
-                elif lto_list[i]['action'] == ACTN_UPDATE:
-                    
-                    # Cancel the order
-                    if await self._execute_cancel(lto_list[i], df_balance):
-                        '''
-                        No need to check the error case because if the order could not be placed due to some reason,
-                        there is no way other then retry. Status will stay like 'STAT_EXIT_EXP', lto_update will not do anything,
-                        strategy will create a new update action and send it here in the next cycle
-                        '''
-                        # Place the order
-                        exit_type = more_itertools.one(lto_list[i][PHASE_EXIT].keys())
-                        if exit_type == TYPE_OCO:
-                            await self._execute_oco_sell(lto_list[i])
-                        elif exit_type == TYPE_LIMIT:
-                            await self._execute_limit_sell(lto_list[i])
-                    else:
-                        '''
-                        If the cancel failed, then the exit orders are still there.
-                        So do not create new order and keep the status as exit_expired
-                        '''
-                        pass
-                    pass
+                if self._execute_cancel(trade_list[i], df_balance):
+                    trade_list[i].status = EState.CLOSED
+                    trade_list[i].reset_command()
                 
-                elif lto_list[i]['action'] == ACTN_MARKET_ENTER:
+            elif trade_list[i].command == ECommand.UPDATE:
+                # First cancel, then place the new order
+                # Cancel the order
+                if self._execute_cancel(trade_list[i], df_balance):
+                    '''
+                    No need to check the error case because if the order could not be placed due to some reason,
+                    there is no way other then retry. Status will stay like 'STAT_EXIT_EXP', lto_update will not do anything,
+                    strategy will create a new update action and send it here in the next cycle
+                    '''
+                    # Place the order
+                    if type(trade_list[i].exit) == OCO:
+                        self._execute_oco_sell(trade_list[i], df_balance) #TODO: REFACTORING
+                    elif type(trade_list[i].exit) == Limit:
+                        self._execute_limit_sell(trade_list[i], df_balance) #TODO: REFACTORING
+                    trade_list[i].reset_command()
+                else:
+                    '''
+                    If the cancel failed, then the exit orders are still there.
+                    So do not create new order and keep the status as exit_expired
+                    '''
                     pass
+                pass
+            
+            elif trade_list[i].command == ECommand.MARKET_ENTER:
+                pass
+            
+            elif trade_list[i].command == ECommand.MARKET_EXIT:
+                # NOTE: MARKET_EXIT cannot fail, so no error case
+                # NOTE: Cancelling the current algo order and placing market order will not cause any change in the df_balance. Thus commented out.
+                #balance_manager.cancel_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
+                #balance_manager.place_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
+                base_cur = trade_list[i].pair.replace(self.config['broker']['quote_currency'],'')
+                balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, trade_list[i].exit)
+
+                min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade_list[i].strategy]['time_scales'])
+                last_kline = data_dict[trade_list[i].pair][min_scale].tail(1)
+
+                # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
+                #             For the sake of simplicity closed price of the last candle is used in the market sell
+                #             by assumming that the 'close' price is pretty close to the 'open' of the future
+
+                trade_list[i].set_result_exit(bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)),
+                    cause=ECause.EXIT_EXP, price=float(last_kline['close']), fee_rate=StrategyBase.fee)
                 
-                elif lto_list[i]['action'] == ACTN_MARKET_EXIT:
-                    
-                    # NOTE: Cancelling the current algo order and placing market order will not cause any change in the df_balance. Thus commented out.
-                    #balance_manager.cancel_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
-                    #balance_manager.place_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
-                    base_cur = lto_list[i]['pair'].replace(self.config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto_list[i][PHASE_EXIT][TYPE_MARKET])
+                # Since the type(trade_list[i]) == Market currently, no manual intervention
+                #lto_list[i]['result']['exit']['type'] = TYPE_MARKET
+                trade_list[i].reset_command()
 
-                    lto_list[i]['status'] = STAT_CLOSED
-                    lto_list[i]['history'].append(lto_list[i]['status'])
-                    lto_list[i]['result']['cause'] = STAT_EXIT_EXP
+            elif trade_list[i].command == ECommand.EXEC_EXIT:
+                # If the enter is successful and the algorithm decides to execute the exit order
 
-                    min_scale = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto_list[i]['strategy']]['time_scales'])
-                    last_kline = data_dict[lto_list[i]['pair']][min_scale].tail(1)
+                # NOTE: TYPE_MARKET orders executed and closed right here
+                is_success = False
 
-                    # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
-                    #             For the sake of simplicity closed price of the last candle is used in the market sell
-                    #             by assumming that the 'close' price is pretty close to the 'open' of the future
+                if type(trade_list[i].exit) == Market:
+                    is_success = self._execute_market_sell(trade_list[i], df_balance, data_dict)
+                elif type(trade_list[i].exit) == Limit:
+                    is_success = self._execute_limit_sell(trade_list[i], df_balance) # trade_list[i] is mutable so problem
+                elif type(trade_list[i].exit) == OCO:
+                    is_success = self._execute_oco_sell(trade_list[i], df_balance)
+                else: pass # TODO: Internal Error
 
-                    lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                    lto_list[i]['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
-                    lto_list[i]['result']['exit']['price'] = float(last_kline['close'])
-                    lto_list[i]['result']['exit']['quantity'] = lto_list[i]['exit'][TYPE_MARKET]['quantity']
-                    lto_list[i]['result']['exit']['amount'] = float(lto_list[i]['result']['exit']['price'] * lto_list[i]['result']['exit']['quantity'])
-                    lto_list[i]['result']['exit']['fee'] = calculate_fee(lto_list[i]['result']['exit']['amount'], StrategyBase.fee)
+                if is_success:
+                    trade_list[i].reset_command()
 
-                    lto_list[i]['result']['profit'] = lto_list[i]['result']['exit']['amount'] \
-                        - lto_list[i]['result']['enter']['amount'] \
-                        - lto_list[i]['result']['enter']['fee'] \
-                        - lto_list[i]['result']['exit']['fee']
+        #return trade_list, df_balance # TODO: REFACTORING: CONTINUE
 
 
-                elif lto_list[i]['action'] == ACTN_EXEC_EXIT:
-                    # If the enter is successfull and the algorithm decides to execute the exit order
-
-                    # NOTE: TYPE_MARKET orders executed and closed right here
-                    if TYPE_MARKET in lto_list[i]['exit'].keys():
-                        await self._execute_market_sell(lto_list[i], df_balance, data_dict)
-                    elif TYPE_LIMIT in lto_list[i]['exit'].keys():
-                        await self._execute_limit_sell(lto_list[i], df_balance)
-                    elif TYPE_OCO in lto_list[i]['exit'].keys():
-                        await self._execute_oco_sell(lto_list[i], df_balance)
-                    else: pass # TODO: Internal Error
-
-                # Postpone can be for the enter or the exit phase
-                elif lto_list[i]['action'] == ACTN_POSTPONE:
-                    if lto_list[i]['status'] == STAT_ENTER_EXP:
-                        lto_list[i]['status'] = STAT_OPEN_ENTER
-                        lto_list[i]['history'].append(lto_list[i]['status'])
-
-                    elif lto_list[i]['status'] == STAT_EXIT_EXP:
-                        lto_list[i]['status'] = STAT_OPEN_EXIT
-                        lto_list[i]['history'].append(lto_list[i]['status'])
-                        pass
-                    else: pass
-
-                # Delete the action, after the action is taken
-                del lto_list[i]['action']
-
-        return lto_list, df_balance
-
-
-    async def _execute_nto(self, nto_list, df_balance, data_dict):
+    def _execute_nto(self, new_trades, df_balance, data_dict):
         """
+        Handles trade.command
         Args:
-            nto_list (list): [description]
+            new_trades (list): [description]
             df_balances (pd.DataFrame): [description]
 
         Returns:
-            tuple: nto_list, df_balance
+            list: new_trades
         """
-        for i in range(len(nto_list)):
-            # NOTE: The status values other than STAT_OPEN_ENTER is here for lto update
-            if nto_list[i]['status'] == STAT_OPEN_ENTER:
-                
-                # TODO: Consider using the direct enter and exit types rather than checking the keys with a order
-                if TYPE_MARKET in nto_list[i]['enter'].keys():
-                    await self._execute_market_buy(nto_list[i], df_balance, data_dict)
 
-                elif TYPE_LIMIT in nto_list[i]['enter'].keys():
-                    await self._execute_limit_buy(nto_list[i], df_balance)
+        for i in range(len(new_trades)):
 
-                else: pass # TODO: Internal Error
+            if new_trades[i].command == ECommand.NONE:
+                continue
+
+            # NOTE: If the order successfully executed then reset the command.
+            if type(new_trades[i].enter) == Market:
+                if self._execute_market_buy(new_trades[i], df_balance, data_dict): 
+                    new_trades[i].command = ECommand.NONE
+
+            elif type(new_trades[i].enter) == Limit:
+                new_trades[i], is_success = self._execute_limit_buy(new_trades[i], df_balance)
+                if is_success: new_trades[i].command = ECommand.NONE
 
             else: pass # TODO: Internal Error
-        return nto_list, df_balance
 
 
-    async def execute_decision(self, nto_list, df_balance, lto_list, data_dict):
+
+    def execute_decision(self, new_trades, df_balance, live_trades, data_dict):
         """
         'execute_decision' method is responsible for
             - execute new to's
@@ -1182,18 +1166,16 @@ class TestBinanceWrapper():
             trade_dict (dict): [description]
             df_balances (pd.DataFrame): [description]
 
-        Returns:
-            tuple: result, df_balances
         """
 
         # Execute decsisions about ltos
-        lto_list, df_balance = await self._execute_lto(lto_list, df_balance, data_dict)
+        self._execute_lto(live_trades, df_balance, data_dict)
 
         # Execute new trade objects
-        nto_list, df_balance = await self._execute_nto(nto_list, df_balance, data_dict)
+        self._execute_nto(new_trades, df_balance, data_dict)
             
         # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
         #       exactly as the broker. 
         # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
 
-        return df_balance, lto_list, nto_list
+        #return live_trades, new_trades

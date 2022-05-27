@@ -7,4 +7,7 @@ from . import StrategyBase,\
     RandomStrategy2, \
     RSIStrategy, \
     MACDStrategy, \
-    UpTrenderMarket
+    UpTrenderMarket, \
+    TestLimitLimit, \
+    TestEnterExpire, \
+    TestLimitUpdate
