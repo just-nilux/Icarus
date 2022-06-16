@@ -209,14 +209,27 @@ class Order:
     #       then it is performed via a setter.
     price: float = 0
     amount: float = None
+    # NOTE: The amount causes some kind of confusion around here. The point is:
+    #   It is either evaluated by the price and quantity
+    #   It is used in the evaluation of the quantity (by the help of price)
+    # When the amount is provided it is provided as the NEXT NEXT REFACTORING
     quantity: float = None
     fee: float = 0.0                    # Only for having an estimation in amount calculation
     orderId: int = None
     def __post_init__(self):
+
+        # NOTE: It is assumed that the price is a mandatory field:
+        #   In Limit and OCO it needs to be known anyway
+        #   In Market, initially the total_amount is known, and the target is to evaluate quantity. Thus the price needs
+        #   to be known again.
+        assert(self.price != 0)
+
         if self.quantity == None and self.amount == None:
             pass
         elif self.quantity == None:
             # TODO: Safe operator integration
+            # quantity * price = gross_amount = net_amount + fee = (total_amount*(1-fee_rate)) + (total_amount*fee_rate) 
+            # total_amount + total_amount *r = a
             self.quantity = self.amount / (self.price * (1 + self.fee))
         elif self.amount == None:
             # TODO: Safe operator integration
