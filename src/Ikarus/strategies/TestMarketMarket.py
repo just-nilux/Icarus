@@ -1,0 +1,67 @@
+from ..objects import ECause, Market, Result, Trade, ECommand, TradeResult
+from ..enums import *
+from .StrategyBase import StrategyBase
+import json
+from ..utils import time_scale_to_minute
+
+class TestLimitUpdate(StrategyBase):
+
+    def __init__(self, _config, _symbol_info={}):
+        super().__init__("TestMarketMarket", _config, _symbol_info)
+        return
+
+
+    async def run(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
+        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc)
+
+
+    async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
+
+            time_dict = analysis_dict[ao_pair]
+
+            # Calculate enter/exit prices
+            enter_price = time_dict[self.min_period]['close']
+            enter_ref_amount=pairwise_alloc_share
+
+            enter_quantity = enter_ref_amount / enter_price
+
+            enter_order = Market(enter_price, quantity=enter_quantity)
+            Market(
+                enter_price,
+                price=enter_price,
+                expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
+            )
+
+
+            # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
+            trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
+            trade.set_enter(enter_order)
+            #trade.set_exit(exit_order)
+            result = TradeResult()
+            result.enter, result.exit = Result(), Result()
+            trade.result = result
+
+            return trade
+
+
+# NOTE: No update needed
+#    async def on_update(self, trade, ikarus_time, **kwargs):
+
+
+# NOTE: No cancel needed
+#    async def on_cancel(self, trade):
+
+
+    async def on_waiting_exit(self, trade, analysis_dict):
+        trade.command = ECommand.EXEC_EXIT
+
+        # NOTE: The orders contain the initial idea. For market orders, it is meaningless to have others except quantity
+        trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close']) )
+
+        if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
+            return False
+        return True
+
+
+    async def on_closed(self, lto):
+        return lto
