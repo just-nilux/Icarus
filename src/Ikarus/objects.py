@@ -207,7 +207,7 @@ class EState(str, Enum):
 class Order:
     # NOTE: If the change of an field affects others,
     #       then it is performed via a setter.
-    price: float = 0
+    price: float = None
     amount: float = None
     # NOTE: The amount causes some kind of confusion around here. The point is:
     #   It is either evaluated by the price and quantity
@@ -222,9 +222,9 @@ class Order:
         #   In Limit and OCO it needs to be known anyway
         #   In Market, initially the total_amount is known, and the target is to evaluate quantity. Thus the price needs
         #   to be known again.
-        assert(self.price != 0)
+        #assert(self.price != 0)
 
-        if self.quantity == None and self.amount == None:
+        if self.quantity == None and self.amount == None and self.price == None:
             pass
         elif self.quantity == None:
             # TODO: Safe operator integration

@@ -4,7 +4,7 @@ from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class TestLimitUpdate(StrategyBase):
+class TestMarketMarket(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
         super().__init__("TestMarketMarket", _config, _symbol_info)
@@ -26,12 +26,6 @@ class TestLimitUpdate(StrategyBase):
             enter_quantity = enter_ref_amount / enter_price
 
             enter_order = Market(enter_price, quantity=enter_quantity)
-            Market(
-                enter_price,
-                price=enter_price,
-                expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
-            )
-
 
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)

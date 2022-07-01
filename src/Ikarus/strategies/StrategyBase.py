@@ -181,10 +181,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         return is_success
 
 
-    @abc.abstractclassmethod
-    async def on_update(self):
-        pass
-
 
     @staticmethod
     async def on_market_exit(self, trade, analysis_dict):
@@ -290,6 +286,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
             if not filters.min_notional(trade_order.stopPrice, trade_order.quantity, symbol_info):
                 logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
                 return False
+
+        # TODO: Create a mechanism to properly apply min notional filter to market orders
+        # NOTE: Temporary workaround for min_notional evaluation for the Market orders.
+        #       The issue is min notional is applicable to market orders as well but it requires 5min average
 
         # MIN_NOTIONAL
         # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#min_notional
