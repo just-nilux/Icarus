@@ -23,9 +23,7 @@ class TestMarketMarket(StrategyBase):
             enter_price = time_dict[self.min_period]['close']
             enter_ref_amount=pairwise_alloc_share
 
-            enter_quantity = enter_ref_amount / enter_price
-
-            enter_order = Market(enter_price, quantity=enter_quantity)
+            enter_order = Market(amount=enter_ref_amount, price=enter_price)
 
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)

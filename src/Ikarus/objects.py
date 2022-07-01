@@ -11,7 +11,7 @@ import numpy as np
 import copy
 import bson
 from enum import Enum
-from .safe_operators import safe_multiply
+from .safe_operators import safe_divide, safe_multiply, safe_sum
 
 def trade_list_to_json(trade_list):
     return [json.dumps(trade, cls=EnhancedJSONEncoder) for trade in trade_list]
@@ -205,6 +205,35 @@ class EState(str, Enum):
 
 @dataclass
 class Order:
+    '''
+    NOTE: Initially the known parameters might be:
+        quantity: Market Sell
+        price ( + amount ): Limit Buy/Sell
+           
+        In all of the enter cases there is an allocated amount. The quantity is evaluated based on the price.
+        Even in the case of Market Buy: we evaluate the quantity by dividing the amount to the last closed price
+    
+    Method of Order creation:
+        Market(amount=allocated_amount, price=last_closed_price) # Market Buy
+            - quantity evaluated
+            - quantity used in order
+        Market(quantity=enter_quantity price=last_closed_price) # Market Sell
+            - amount evaluated
+            - quantity used in order
+        Limit(amount=allocated_amount, price=target_price)  # Limit Buy
+            - quantity is evaluated
+            - quantity and price used in order
+        Limit(quantity=enter_quantity, price=target_price)  # Limit Sell
+            - amount is evaluated
+            - quantity and price used in order
+        OCO()  # OCO Buy
+            - 
+            - 
+        OCO()  # OCO Sell
+            - 
+            - 
+    '''
+    #       
     # NOTE: If the change of an field affects others,
     #       then it is performed via a setter.
     price: float = None
@@ -227,13 +256,12 @@ class Order:
         if self.quantity == None and self.amount == None and self.price == None:
             pass
         elif self.quantity == None:
-            # TODO: Safe operator integration
             # quantity * price = gross_amount = net_amount + fee = (total_amount*(1-fee_rate)) + (total_amount*fee_rate) 
             # total_amount + total_amount *r = a
-            self.quantity = self.amount / (self.price * (1 + self.fee))
+            self.quantity = safe_divide(self.amount, safe_multiply(self.price, safe_sum(1, self.fee)) )
+
         elif self.amount == None:
-            # TODO: Safe operator integration
-            self.amount = float(self.price * self.quantity)
+            self.amount = safe_multiply(self.price, self.quantity) # TODO: REFACTORING: What about the fee?
         else:
             # TODO: Error on initialization
             pass
@@ -241,6 +269,14 @@ class Order:
     def set_price(self, price, fee_rate=0):
         #self.amount = float(self.price * self.quantity)
         self.price = price
+        self.amount = safe_multiply(self.price, self.quantity)
+
+        if fee_rate:
+            self.fee = safe_multiply(self.amount, fee_rate)
+
+    def set_quantity(self, quantity, fee_rate=0):
+        #self.amount = float(self.price * self.quantity)
+        self.quantity = quantity
         self.amount = safe_multiply(self.price, self.quantity)
 
         if fee_rate:
