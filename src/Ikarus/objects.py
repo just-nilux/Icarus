@@ -232,6 +232,23 @@ class Order:
         OCO()  # OCO Sell
             - 
             - 
+
+    Fee Calculation:
+        https://www.binance.com/en/support/faq/e85d6e703b874674840122196b89780a
+        Trading fees are always charged in the asset you receive. For example:
+            if you buy ETH/USDT, the fee is paid in ETH. 
+            If you sell ETH/USDT, the fee is paid in USDT.
+
+        For example:
+            You place an order to buy 10 ETH for 3,452.55 USDT each:
+            Trading fee = 10 ETH * 0.1% = 0.01 ETH
+            Or you place an order to sell 10 ETH for 3,452.55 USDT each:
+            Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
+
+        Afterwards the fee is substracted from the amount to get the "net" result. As a result:
+            You will receive 10 - 0.01 = 9.99 ETH
+            You will reveive 3452.55 - 34.5255 = 3418.0245 USDT
+
     '''
     #       
     # NOTE: If the change of an field affects others,
