@@ -65,14 +65,71 @@ class test_trade_to_dict(unittest.TestCase):
 
 class test_fee_calculation(unittest.TestCase):
     def test_buy(self):
-        pass
+        # NOTE: The order created by using amount so it should be enter.
+
+        price=0.2906
+        amount=4749.5664
+        fee_rate = 0.001
+
+        order = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+        target_fee = safe_multiply(safe_divide(amount, price), fee_rate)
+        self.assertEqual(target_fee, order.fee)
+
 
     def test_sell(self):
-        pass
+        price=0.2906
+        quantity=4749.5664
+        fee_rate = 0.001
+
+        order = Limit(price=price, quantity=quantity, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+        target_fee = safe_multiply(safe_multiply(quantity, price), fee_rate)
+        self.assertEqual(target_fee, order.fee)
+
+
+    def test_set_price(self):
+        price=0.2906
+        price_to_set=0.25
+        quantity=4749.5664
+        amount=1187.3916
+        fee_rate = 0.001
+
+        # Test sell limit order
+        order_sell = Limit(price=price, quantity=quantity, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+        order_sell.set_price(price=price_to_set, is_buy=False)
+        target_fee = safe_multiply(safe_multiply(quantity, price_to_set), fee_rate)
+        self.assertEqual(target_fee, order_sell.fee)
+
+        # Test buy limit order
+        order_buy = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+        order_buy.set_price(price=price_to_set, is_buy=True)
+        target_fee = safe_multiply(safe_divide(amount, price_to_set), fee_rate)
+        self.assertEqual(target_fee, order_buy.fee)
+
+
+    def test_set_quantity(self):
+        price=0.2906
+        quantity=4749.5664
+        quantity_to_set=4500.123
+        amount=1187.3916
+        fee_rate = 0.001
+
+        # Test sell limit order
+        order_sell = Limit(price=price, quantity=quantity, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+        order_sell.set_quantity(quantity=quantity_to_set, is_buy=False)
+        target_fee = safe_multiply(safe_multiply(quantity_to_set, price), fee_rate)
+        self.assertEqual(target_fee, order_sell.fee)
+
+        # Test buy limit order
+        order_buy = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+        order_buy.set_quantity(quantity=quantity_to_set, is_buy=True)
+        target_fee = safe_multiply(quantity_to_set, fee_rate)
+        self.assertEqual(target_fee, order_buy.fee)
+
 
     def setUp(self):
         print(self.id())
     
+
     def tearDown(self):
         #print(self._testMethodName)
         pass

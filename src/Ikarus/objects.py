@@ -293,23 +293,30 @@ class Order:
             # TODO: Error on initialization
             pass
 
-    def set_price(self, price, use_amount_for_fee_calc=True) -> None:
+    def set_price(self, price, is_buy=True) -> None:
         self.price = price
-        self.amount = safe_multiply(self.price, self.quantity)
 
-        if use_amount_for_fee_calc:
-            self.fee = safe_multiply(self.amount, self.fee_rate)
-        else:
+        if is_buy:
+            # NOTE: We're buying. The fixed parameter is amount. The fee is in the quantity
+            self.quantity = safe_divide(self.amount, self.price)
             self.fee = safe_multiply(self.quantity, self.fee_rate)
+        else:
+            # NOTE: We're selling. The fixed parameter is quantity. The fee is in the amount
+            self.amount = safe_multiply(self.price, self.quantity)
+            self.fee = safe_multiply(self.amount, self.fee_rate)
 
-    def set_quantity(self, quantity, use_amount_for_fee_calc=True) -> None:
+    def set_quantity(self, quantity, is_buy=True) -> None:
         self.quantity = quantity
-        self.amount = safe_multiply(self.price, self.quantity)
 
-        if use_amount_for_fee_calc:
-            self.fee = safe_multiply(self.amount, self.fee_rate)
-        else:
+        if is_buy:
+            # NOTE: We're buying. The fixed parameter is amount. The fee is in the quantity
+            # NOTE: The amount is fixed but due to change in quantity it may change a bit.
+            self.amount = safe_multiply(self.price, self.quantity)
             self.fee = safe_multiply(self.quantity, self.fee_rate)
+        else:
+            # NOTE: We're selling. The fixed parameter is quantity. The fee is in the amount
+            self.amount = safe_multiply(self.price, self.quantity)
+            self.fee = safe_multiply(self.amount, self.fee_rate)
 
 
 @dataclass
@@ -481,7 +488,12 @@ def trade_from_dict(data):
     
 
 if __name__ == "__main__":
-    order = Order()
-    trade = Trade(123, "strategy", "pair",enter=order)
-    print(trade_to_dict(trade))
+    price=0.2906
+    price_to_set=0.25
+    quantity=4749.5664
+    amount=1187.3916
+    fee_rate = 0.001
+
+    order_buy = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
+    order_buy.set_price(price=price_to_set, use_amount_for_fee_calc=False)
     pass
