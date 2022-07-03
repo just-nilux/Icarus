@@ -11,7 +11,7 @@ import numpy as np
 import copy
 import bson
 from enum import Enum
-from .safe_operators import safe_divide, safe_multiply, safe_sum
+from .safe_operators import safe_divide, safe_multiply, safe_substract, safe_sum
 
 def trade_list_to_json(trade_list):
     return [json.dumps(trade, cls=EnhancedJSONEncoder) for trade in trade_list]
@@ -249,10 +249,16 @@ class Order:
             You will receive 10 - 0.01 = 9.99 ETH
             You will reveive 3452.55 - 34.5255 = 3418.0245 USDT
 
+        TLDR:
+            From the Order object point of view the fee can be evaluated by the quantity or the amount
+            If the pair ETH/USDT is used and we buy ETH using USDT, then the fee is evaluated and charged in ETH
+            If the pair ETH/USDT is used and we sell ETH using USDT (buy USDT using ETH), then the fee is evaluated and charged in USDT
+
     '''
     #       
     # NOTE: If the change of an field affects others,
     #       then it is performed via a setter.
+
     price: float = None
     amount: float = None
     # NOTE: The amount causes some kind of confusion around here. The point is:
@@ -260,44 +266,50 @@ class Order:
     #   It is used in the evaluation of the quantity (by the help of price)
     # When the amount is provided it is provided as the NEXT NEXT REFACTORING
     quantity: float = None
-    fee: float = 0.0                    # Only for having an estimation in amount calculation
+    fee_rate: float = 0.0
+    fee: float = 0.0
     orderId: int = None
-    def __post_init__(self):
 
-        # NOTE: It is assumed that the price is a mandatory field:
-        #   In Limit and OCO it needs to be known anyway
-        #   In Market, initially the total_amount is known, and the target is to evaluate quantity. Thus the price needs
-        #   to be known again.
-        #assert(self.price != 0)
+    def __post_init__(self):
 
         if self.quantity == None and self.amount == None and self.price == None:
             pass
         elif self.quantity == None:
-            # quantity * price = gross_amount = net_amount + fee = (total_amount*(1-fee_rate)) + (total_amount*fee_rate) 
-            # total_amount + total_amount *r = a
-            self.quantity = safe_divide(self.amount, safe_multiply(self.price, safe_sum(1, self.fee)) )
+            # NOTE: If the quantity is unknown it is probably the buy side.
+            self.quantity = safe_divide(self.amount, self.price)
+            self.fee = safe_multiply(self.quantity, self.fee_rate)
+            #self.quantity = safe_substract(self.quantity, self.fee)
+            # NOTE: The quantity should not be affacted by the future fees but in the below, the amount can be affacted
+            #   Since it has no effect on the order.
 
         elif self.amount == None:
-            self.amount = safe_multiply(self.price, self.quantity) # TODO: REFACTORING: What about the fee?
+            # NOTE: If the amount is unknown (and the quantity is known) it is probably the sell side.
+            self.amount = safe_multiply(self.price, self.quantity)
+            self.fee = safe_multiply(self.amount, self.fee_rate)
+            #self.amount = safe_substract(self.amount, self.fee)
+            # NOTE: Fee is not substracted from the amount because it is not done on the above (considering quantity).
+
         else:
             # TODO: Error on initialization
             pass
 
-    def set_price(self, price, fee_rate=0):
-        #self.amount = float(self.price * self.quantity)
+    def set_price(self, price, use_amount_for_fee_calc=True) -> None:
         self.price = price
         self.amount = safe_multiply(self.price, self.quantity)
 
-        if fee_rate:
-            self.fee = safe_multiply(self.amount, fee_rate)
+        if use_amount_for_fee_calc:
+            self.fee = safe_multiply(self.amount, self.fee_rate)
+        else:
+            self.fee = safe_multiply(self.quantity, self.fee_rate)
 
-    def set_quantity(self, quantity, fee_rate=0):
-        #self.amount = float(self.price * self.quantity)
+    def set_quantity(self, quantity, use_amount_for_fee_calc=True) -> None:
         self.quantity = quantity
         self.amount = safe_multiply(self.price, self.quantity)
 
-        if fee_rate:
-            self.fee = safe_multiply(self.amount, fee_rate)
+        if use_amount_for_fee_calc:
+            self.fee = safe_multiply(self.amount, self.fee_rate)
+        else:
+            self.fee = safe_multiply(self.quantity, self.fee_rate)
 
 
 @dataclass
@@ -402,6 +414,18 @@ class Trade():
         self.result.live_time = self.result.exit.time - self.result.enter.time
 
 
+def is_trade_phase_enter(trade: Trade) -> bool:
+
+    if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP, EState.WAITING_ENTER]:
+        return True
+
+    elif trade.status in [EState.OPEN_EXIT, EState.EXIT_EXP, EState.WAITING_EXIT]:
+        return False
+
+    else:
+        raise Exception(f'LTO {trade.id} status {trade.status}')
+
+
 def order_from_dict(order_data):
     order = Order()
     if 'type' in order_data.keys():
@@ -457,4 +481,7 @@ def trade_from_dict(data):
     
 
 if __name__ == "__main__":
+    order = Order()
+    trade = Trade(123, "strategy", "pair",enter=order)
+    print(trade_to_dict(trade))
     pass

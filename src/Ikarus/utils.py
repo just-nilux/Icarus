@@ -192,17 +192,6 @@ def round_to_period(current_time, period_min, direction='floor', offset=0):
         raise Exception(f'Unknown direction: {direction}')
     return int(rounded_time)
 
-def get_lto_phase(lto):
-
-    if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP]:
-        return PHASE_ENTER
-
-    elif lto['status'] in [STAT_EXIT_EXP, STAT_OPEN_EXIT, STAT_WAITING_EXIT]:
-        return PHASE_EXIT
-
-    else:
-        raise Exception(f'LTO {lto["_id"]} status {lto["status"]}')
-
 
 def setup_logger(logger, log_config):
     if log_config.get('clear',False):
