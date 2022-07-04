@@ -4,16 +4,15 @@ from src.Ikarus.objects import *
 
 class test_order_from_dict(unittest.TestCase):
     def test_limit(self):
-        order_data = {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'fee': 0.0, 'fee_rate': 0.0, 'orderId': 1652629743339, 'expire': 1559001600000}
+        order_data = {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'orderId': 1652629743339, 'expire': 1559001600000}
         limit_from_dict = order_from_dict(order_data)
-        limit_original = Limit(price=0.2906, amount=4749.5664, quantity=16344.0, 
-            fee=0.0, fee_rate=0.0, orderId=1652629743339, expire=1559001600000)
+        limit_original = Limit(price=0.2906, amount=4749.5664, quantity=16344.0, orderId=1652629743339, expire=1559001600000)
         self.assertEqual(limit_from_dict, limit_original)
 
     def test_market(self):
-        order_data = {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'fee': 0.0, 'fee_rate': 0.0, 'orderId': 1652629743339}
+        order_data = {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'orderId': 1652629743339}
         market_from_dict = order_from_dict(order_data)
-        market_original = Market(price=0.2906, amount=4749.5664, quantity=16344.0, fee=0.0, fee_rate=0.0, orderId=1652629743339)
+        market_original = Market(price=0.2906, amount=4749.5664, quantity=16344.0, orderId=1652629743339)
         self.assertEqual(market_from_dict, market_original)
 
     def test_oco(self):
@@ -32,8 +31,8 @@ class test_trade_from_dict(unittest.TestCase):
         data = {'_id': "ObjectId('628120f012791ee7ba')", 'decision_time': 1557705600000, 'strategy': 'ObjectStrategy', 'pair': 'XRPUSDT', 'status': 'open_enter', 'enter': {'price': 0.2906, 'amount': 4749.5664, 'quantity': 16344.0, 'fee': 0.0, 'orderId': 1652629743339, 'expire': 1559001600000}, 'exit': {'price': 0.3372, 'amount': 5511.510271497884, 'quantity': 16344.929630776644, 'fee': 0.0, 'orderId': None, 'expire': 1559001600000}, 'result': None, 'command': 'None', 'order_stash': []}
         trade_dict = trade_from_dict(data)
         trade_original = Trade(1557705600000, 'ObjectStrategy', 'XRPUSDT', EState.OPEN_ENTER, 
-            Limit(0.2906, 4749.5664, 16344.0, 0.0 ,0.0, 1652629743339, 1559001600000),
-            Limit(0.3372, 5511.510271497884, 16344.929630776644, 0.0, 0.0, None, 1559001600000),
+            Limit(0.2906, 4749.5664, 16344.0, 1652629743339, 1559001600000),
+            Limit(0.3372, 5511.510271497884, 16344.929630776644, None, 1559001600000),
             None, ECommand.NONE, [], _id="ObjectId('628120f012791ee7ba')")
         self.assertEqual(trade_dict, trade_original)
 
@@ -58,81 +57,12 @@ class test_trade_to_dict(unittest.TestCase):
 
     def setUp(self):
         print(self.id())
-    
+
+
     def tearDown(self):
         #print(self._testMethodName)
         pass
 
-class test_fee_calculation(unittest.TestCase):
-    def test_buy(self):
-        # NOTE: The order created by using amount so it should be enter.
-
-        price=0.2906
-        amount=4749.5664
-        fee_rate = 0.001
-
-        order = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
-        target_fee = safe_multiply(safe_divide(amount, price), fee_rate)
-        self.assertEqual(target_fee, order.fee)
-
-
-    def test_sell(self):
-        price=0.2906
-        quantity=4749.5664
-        fee_rate = 0.001
-
-        order = Limit(price=price, quantity=quantity, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
-        target_fee = safe_multiply(safe_multiply(quantity, price), fee_rate)
-        self.assertEqual(target_fee, order.fee)
-
-
-    def test_set_price(self):
-        price=0.2906
-        price_to_set=0.25
-        quantity=4749.5664
-        amount=1187.3916
-        fee_rate = 0.001
-
-        # Test sell limit order
-        order_sell = Limit(price=price, quantity=quantity, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
-        order_sell.set_price(price=price_to_set, is_buy=False)
-        target_fee = safe_multiply(safe_multiply(quantity, price_to_set), fee_rate)
-        self.assertEqual(target_fee, order_sell.fee)
-
-        # Test buy limit order
-        order_buy = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
-        order_buy.set_price(price=price_to_set, is_buy=True)
-        target_fee = safe_multiply(safe_divide(amount, price_to_set), fee_rate)
-        self.assertEqual(target_fee, order_buy.fee)
-
-
-    def test_set_quantity(self):
-        price=0.2906
-        quantity=4749.5664
-        quantity_to_set=4500.123
-        amount=1187.3916
-        fee_rate = 0.001
-
-        # Test sell limit order
-        order_sell = Limit(price=price, quantity=quantity, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
-        order_sell.set_quantity(quantity=quantity_to_set, is_buy=False)
-        target_fee = safe_multiply(safe_multiply(quantity_to_set, price), fee_rate)
-        self.assertEqual(target_fee, order_sell.fee)
-
-        # Test buy limit order
-        order_buy = Limit(price=price, amount=amount, fee_rate=fee_rate, orderId=1652629743339, expire=1559001600000)
-        order_buy.set_quantity(quantity=quantity_to_set, is_buy=True)
-        target_fee = safe_multiply(quantity_to_set, fee_rate)
-        self.assertEqual(target_fee, order_buy.fee)
-
-
-    def setUp(self):
-        print(self.id())
-    
-
-    def tearDown(self):
-        #print(self._testMethodName)
-        pass
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -206,6 +206,9 @@ class EState(str, Enum):
 @dataclass
 class Order:
     '''
+    NOTE: Orders has nothing to do with the fees, they contain the quantity, the price and the amount 
+        before the fees applied
+
     NOTE: Initially the known parameters might be:
         quantity: Market Sell
         price ( + amount ): Limit Buy/Sell
@@ -233,27 +236,6 @@ class Order:
             - 
             - 
 
-    Fee Calculation:
-        https://www.binance.com/en/support/faq/e85d6e703b874674840122196b89780a
-        Trading fees are always charged in the asset you receive. For example:
-            if you buy ETH/USDT, the fee is paid in ETH. 
-            If you sell ETH/USDT, the fee is paid in USDT.
-
-        For example:
-            You place an order to buy 10 ETH for 3,452.55 USDT each:
-            Trading fee = 10 ETH * 0.1% = 0.01 ETH
-            Or you place an order to sell 10 ETH for 3,452.55 USDT each:
-            Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
-
-        Afterwards the fee is substracted from the amount to get the "net" result. As a result:
-            You will receive 10 - 0.01 = 9.99 ETH
-            You will reveive 3452.55 - 34.5255 = 3418.0245 USDT
-
-        TLDR:
-            From the Order object point of view the fee can be evaluated by the quantity or the amount
-            If the pair ETH/USDT is used and we buy ETH using USDT, then the fee is evaluated and charged in ETH
-            If the pair ETH/USDT is used and we sell ETH using USDT (buy USDT using ETH), then the fee is evaluated and charged in USDT
-
     '''
     #       
     # NOTE: If the change of an field affects others,
@@ -261,62 +243,32 @@ class Order:
 
     price: float = None
     amount: float = None
-    # NOTE: The amount causes some kind of confusion around here. The point is:
-    #   It is either evaluated by the price and quantity
-    #   It is used in the evaluation of the quantity (by the help of price)
-    # When the amount is provided it is provided as the NEXT NEXT REFACTORING
     quantity: float = None
-    fee_rate: float = 0.0
-    fee: float = 0.0
     orderId: int = None
 
     def __post_init__(self):
 
         if self.quantity == None and self.amount == None and self.price == None:
             pass
+
         elif self.quantity == None:
-            # NOTE: If the quantity is unknown it is probably the buy side.
             self.quantity = safe_divide(self.amount, self.price)
-            self.fee = safe_multiply(self.quantity, self.fee_rate)
-            #self.quantity = safe_substract(self.quantity, self.fee)
-            # NOTE: The quantity should not be affacted by the future fees but in the below, the amount can be affacted
-            #   Since it has no effect on the order.
 
         elif self.amount == None:
-            # NOTE: If the amount is unknown (and the quantity is known) it is probably the sell side.
             self.amount = safe_multiply(self.price, self.quantity)
-            self.fee = safe_multiply(self.amount, self.fee_rate)
-            #self.amount = safe_substract(self.amount, self.fee)
-            # NOTE: Fee is not substracted from the amount because it is not done on the above (considering quantity).
 
         else:
             # TODO: Error on initialization
             pass
 
-    def set_price(self, price, is_buy=True) -> None:
+    def set_price(self, price) -> None:
         self.price = price
+        self.amount = safe_multiply(self.price, self.quantity)
 
-        if is_buy:
-            # NOTE: We're buying. The fixed parameter is amount. The fee is in the quantity
-            self.quantity = safe_divide(self.amount, self.price)
-            self.fee = safe_multiply(self.quantity, self.fee_rate)
-        else:
-            # NOTE: We're selling. The fixed parameter is quantity. The fee is in the amount
-            self.amount = safe_multiply(self.price, self.quantity)
-            self.fee = safe_multiply(self.amount, self.fee_rate)
 
-    def set_quantity(self, quantity, is_buy=True) -> None:
+    def set_quantity(self, quantity) -> None:
         self.quantity = quantity
-
-        if is_buy:
-            # NOTE: We're buying. The fixed parameter is amount. The fee is in the quantity
-            # NOTE: The amount is fixed but due to change in quantity it may change a bit.
-            self.amount = safe_multiply(self.price, self.quantity)
-            self.fee = safe_multiply(self.quantity, self.fee_rate)
-        else:
-            # NOTE: We're selling. The fixed parameter is quantity. The fee is in the amount
-            self.amount = safe_multiply(self.price, self.quantity)
-            self.fee = safe_multiply(self.amount, self.fee_rate)
+        self.amount = safe_multiply(self.price, self.quantity)
 
 
 @dataclass
@@ -341,6 +293,8 @@ class OCO(Order):
 class Result(Order):
     type: string = '' # type(trade.enter).__name__
     time: bson.Int64 = None
+    fee_rate: float = 0.0
+    fee: float = 0.0
 
 
 @dataclass
@@ -351,6 +305,30 @@ class TradeResult():
     profit: float = 0.0
     live_time: int = 0
 
+
+'''
+Fee Calculation is handled in the creation of the Result() objects:
+    https://www.binance.com/en/support/faq/e85d6e703b874674840122196b89780a
+    Trading fees are always charged in the asset you receive. For example:
+        if you buy ETH/USDT, the fee is paid in ETH. 
+        If you sell ETH/USDT, the fee is paid in USDT.
+
+    For example:
+        You place an order to buy 10 ETH for 3,452.55 USDT each:
+        Trading fee = 10 ETH * 0.1% = 0.01 ETH
+        Or you place an order to sell 10 ETH for 3,452.55 USDT each:
+        Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
+
+    Afterwards the fee is substracted from the amount to get the "net" result. As a result:
+        You will receive 10 - 0.01 = 9.99 ETH
+        You will reveive 3452.55 - 34.5255 = 3418.0245 USDT
+
+    TLDR:
+        From the Order object point of view the fee can be evaluated by the quantity or the amount
+        If the pair ETH/USDT is used and we buy ETH using USDT, then the fee is evaluated and charged in ETH
+        If the pair ETH/USDT is used and we sell ETH using USDT (buy USDT using ETH), then the fee is evaluated and charged in USDT
+
+'''
 
 @dataclass
 class Trade():
@@ -377,47 +355,55 @@ class Trade():
     def stash_exit(self): # Stash the exit order when it will about to be updated
         self.order_stash.append(copy.deepcopy(self.exit))
 
-    def set_result_enter(self, time, quantity=None, price=None, fee=None, fee_rate=None):
+    def set_result_enter(self, time, quantity=None, price=None, fee_rate=0):
+        '''
+            Result modules (enter or exit) contains 
+            - The paid fee for the order execution
+            - The total value(amount) of the received asset in the quote currency after the fee
+        '''
+        if quantity: 
+            self.result.enter.quantity = quantity
+        else:
+            self.result.enter.quantity = self.enter.quantity
 
-        if not quantity: quantity = self.enter.quantity
-        if not price: price = self.enter.price
-        if not fee: fee = self.result.enter.fee
+        if price: 
+            self.result.enter.price = price
+        else:
+            self.result.enter.price = self.enter.price
 
         self.status = EState.WAITING_EXIT
         self.result.enter.type = type(self.enter).__name__.lower()
         self.result.enter.time = time
-        self.result.enter.quantity = quantity
-        self.result.enter.set_price(price)
 
-        if fee:
-            self.result.enter.fee = fee
-        elif fee_rate:
-            self.result.enter.fee = round(safe_multiply(self.result.enter.amount,fee_rate),8)
-
+        # Evaluate the fee on the quantity and the amount after fee
+        self.result.enter.fee = safe_multiply(self.result.enter.quantity, fee_rate)
+        self.result.enter.quantity = safe_substract(self.result.enter.quantity, self.result.enter.fee)
+        self.result.enter.amount = safe_multiply(self.result.enter.quantity, self.result.enter.price)
         
 
-    def set_result_exit(self, time, quantity=None, price=None, fee=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
+    def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
 
-        if not quantity: quantity = self.exit.quantity
-        if not price: price = self.exit.price
+        if quantity: 
+            self.result.enter.quantity = quantity
+        else:
+            self.result.enter.quantity = self.enter.quantity
+
+        if price: 
+            self.result.enter.price = price
+        else:
+            self.result.enter.price = self.enter.price
 
         self.status = status
         self.result.cause = cause
         self.result.exit.type = type(self.exit).__name__.lower()
         self.result.exit.time = time
-        self.result.exit.quantity = quantity
-        self.result.exit.set_price(price)
 
-        if fee:
-            self.result.exit.fee = fee
-        elif fee_rate:
-            self.result.exit.fee = round(safe_multiply(self.result.exit.amount,fee_rate),8)
+        # Evaluate the fee on the quantity and the amount after fee
+        self.result.exit.amount = safe_multiply(self.result.exit.price, self.result.exit.quantity)
+        self.result.exit.fee = safe_multiply(self.result.exit.amount, fee_rate)
+        self.result.enter.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
-        self.result.profit = self.result.exit.amount \
-            - self.result.enter.amount \
-            - self.result.enter.fee \
-            - self.result.exit.fee
-
+        self.result.profit = self.result.exit.amount - self.result.enter.amount
         self.result.live_time = self.result.exit.time - self.result.enter.time
 
 
@@ -437,6 +423,8 @@ def order_from_dict(order_data):
     order = Order()
     if 'type' in order_data.keys():
         order = Result()
+        order.fee_rate = order_data['fee_rate']
+        order.fee = order_data['fee']
     elif 'expire' not in order_data.keys():
         order = Market()
     else:
@@ -451,7 +439,6 @@ def order_from_dict(order_data):
     order.price = order_data['price']
     order.amount = order_data['amount']
     order.quantity = order_data['quantity']
-    order.fee = order_data['fee']
     order.orderId = order_data['orderId']
     return order
 
