@@ -328,6 +328,11 @@ Fee Calculation is handled in the creation of the Result() objects:
         If the pair ETH/USDT is used and we buy ETH using USDT, then the fee is evaluated and charged in ETH
         If the pair ETH/USDT is used and we sell ETH using USDT (buy USDT using ETH), then the fee is evaluated and charged in USDT
 
+
+    NOTE: Binance do not keep the net profit. It keeps the "Total" which corresponds to result.enter/exit.amount + result.enter/exit.fee
+    Date(UTC)	        Market	Type	Price	Amount	Total	Fee	Fee Coin
+    2022-05-09 23:44:48	BTCUSDT	BUY	30150	0.01662	501.093	0.00125301	BNB
+
 '''
 
 @dataclass
@@ -384,14 +389,14 @@ class Trade():
     def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
 
         if quantity: 
-            self.result.enter.quantity = quantity
+            self.result.exit.quantity = quantity
         else:
-            self.result.enter.quantity = self.enter.quantity
+            self.result.exit.quantity = self.result.enter.quantity # Exit qty is the entered qty as default
 
         if price: 
-            self.result.enter.price = price
+            self.result.exit.price = price
         else:
-            self.result.enter.price = self.enter.price
+            self.result.exit.price = self.exit.price
 
         self.status = status
         self.result.cause = cause

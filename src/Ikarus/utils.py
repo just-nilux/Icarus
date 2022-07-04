@@ -8,8 +8,6 @@ from logging.handlers import TimedRotatingFileHandler
 import time
 from .safe_operators import *
 
-def calculate_fee(amount, fee, digit=8):
-    return round(safe_multiply(amount,fee), digit)
 
 def time_scale_to_minute(interval: str):
     seconds_per_unit = {

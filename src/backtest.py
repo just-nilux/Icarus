@@ -7,7 +7,7 @@ import json
 from Ikarus import binance_wrapper, performance, strategy_manager, analyzers, observers, mongo_utils
 from Ikarus.enums import *
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
-    eval_total_capital_in_lto, calculate_fee, setup_logger
+    eval_total_capital_in_lto, setup_logger
 import logging
 import pandas as pd
 import sys

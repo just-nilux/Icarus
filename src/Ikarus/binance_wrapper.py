@@ -13,7 +13,7 @@ import bson
 import time
 from itertools import chain, groupby
 import copy
-from .utils import time_scale_to_second, get_min_scale, calculate_fee, time_scale_to_milisecond, get_lto_phase, \
+from .utils import time_scale_to_second, get_min_scale, time_scale_to_milisecond, \
     safe_multiply, safe_divide, round_to_period
 from . import balance_manager
 import more_itertools

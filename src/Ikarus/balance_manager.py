@@ -1,17 +1,12 @@
 from .enums import *
-from .utils import calculate_fee, safe_substract, safe_sum
+from .utils import safe_substract, safe_sum
 from .strategies.StrategyBase import StrategyBase
 
 
 def buy(df_balance, quote_cur, base_cur, result_enter):
 
-    calculated_fee = calculate_fee(result_enter.amount, StrategyBase.fee)
-    if df_balance.loc[quote_cur,'locked'] < result_enter.amount or df_balance.loc[quote_cur, 'free'] < calculated_fee:
+    if df_balance.loc[quote_cur,'locked'] < result_enter.amount:
         return False
-
-    # Cut the fee first
-    df_balance.loc[quote_cur, 'free'] = safe_substract(df_balance.loc[quote_cur, 'free'], calculated_fee)
-    # Remove the enter amount from quote currency
 
     # NOTE: Cut the amount from the 'locked' since the enter amount is located to there until execution
     df_balance.loc[quote_cur, 'locked'] = safe_substract(df_balance.loc[quote_cur, 'locked'], result_enter.amount)
@@ -30,15 +25,12 @@ def buy(df_balance, quote_cur, base_cur, result_enter):
     return True
 
 def sell(df_balance, quote_cur, base_cur, result_exit):
-    # NOTE: Since the fee's in the order section shows the expectation, fee needs to be recalculated
-    #       I cannot imagine a case where these two is diffent but just to be safe...
-    calculated_fee = calculate_fee(result_exit.amount, StrategyBase.fee)
-    if df_balance.loc[base_cur,'locked'] < result_exit.quantity or df_balance.loc[quote_cur,'free'] < calculated_fee:
+
+    if df_balance.loc[base_cur,'locked'] < result_exit.quantity:
         return False
 
     # NOTE: Locked base_cur will be withdrew and deposited to free qc
     df_balance.loc[base_cur,'locked'] = safe_substract(df_balance.loc[base_cur,'locked'], result_exit.quantity)
-    df_balance.loc[quote_cur,'free'] = safe_substract(df_balance.loc[quote_cur,'free'], result_exit.fee)
     df_balance.loc[quote_cur,'free'] = safe_sum(df_balance.loc[quote_cur,'free'], result_exit.amount)
 
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
