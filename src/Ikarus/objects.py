@@ -406,9 +406,9 @@ class Trade():
         # Evaluate the fee on the quantity and the amount after fee
         self.result.exit.amount = safe_multiply(self.result.exit.price, self.result.exit.quantity)
         self.result.exit.fee = safe_multiply(self.result.exit.amount, fee_rate)
-        self.result.enter.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
+        self.result.exit.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
-        self.result.profit = self.result.exit.amount - self.result.enter.amount
+        self.result.profit = safe_substract(self.result.exit.amount, self.result.enter.amount)
         self.result.live_time = self.result.exit.time - self.result.enter.time
 
 
@@ -425,6 +425,9 @@ def is_trade_phase_enter(trade: Trade) -> bool:
 
 
 def order_from_dict(order_data):
+    if not order_data:
+        return None
+
     order = Order()
     if 'type' in order_data.keys():
         order = Result()
