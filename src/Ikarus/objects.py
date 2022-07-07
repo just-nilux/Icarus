@@ -366,6 +366,7 @@ class Trade():
             - The paid fee for the order execution
             - The total value(amount) of the received asset in the quote currency after the fee
         '''
+        self.result.enter = Result()
         if quantity: 
             self.result.enter.quantity = quantity
         else:
@@ -387,7 +388,7 @@ class Trade():
         
 
     def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
-
+        self.result.exit = Result()
         if quantity: 
             self.result.exit.quantity = quantity
         else:
@@ -463,15 +464,11 @@ def result_from_dict(data):
             trade_result.enter = order_from_dict(data['enter'])
             trade_result.enter.time = data['enter']['time']
             trade_result.enter.type = data['enter']['type']
-        else:
-            trade_result.enter = Result()
         
         if data['exit'] != None:
             trade_result.exit = order_from_dict(data['exit'])
             trade_result.exit.time = data['exit']['time']
             trade_result.exit.type = data['exit']['type']
-        else:
-            trade_result.exit = Result()
 
         return trade_result
 

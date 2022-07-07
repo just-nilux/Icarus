@@ -35,7 +35,6 @@ class TestLimitLimit(StrategyBase):
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
             result = TradeResult()
-            result.enter, result.exit = Result(), Result()
             trade.result = result
 
             return trade

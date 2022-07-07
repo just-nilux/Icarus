@@ -28,9 +28,7 @@ class TestMarketMarket(StrategyBase):
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_order)
-            #trade.set_exit(exit_order)
             result = TradeResult()
-            result.enter, result.exit = Result(), Result()
             trade.result = result
 
             return trade
