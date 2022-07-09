@@ -4,7 +4,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, performance, strategy_manager, analyzers, observers, mongo_utils
+from Ikarus import binance_wrapper, strategy_manager, analyzers, observers, mongo_utils, trade_statistics
 from Ikarus.enums import *
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
@@ -44,7 +44,7 @@ async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
             result_remove = await mongocli.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
 
             if trade.result.cause == ECause.CLOSED:
-                hto_stat = await stats.eval_hto_stat(trade) # TODO : REFACTORING
+                hto_stat = trade_statistics.eval_hto_stat(trade) # TODO : REFACTORING
                 pass
 
         # NOTE: Manual trade option is omitted, needs to be added
@@ -345,7 +345,7 @@ async def main():
         await application(strategy_list, bwrapper, start_time)
 
     # Evaluate the statistics
-    await stats.main()
+    await trade_statistics.main(config, mongocli)
 
 
 if __name__ == '__main__':
@@ -369,7 +369,6 @@ if __name__ == '__main__':
     setup_logger(logger, config['log'])
 
     # Setup initial objects
-    stats = performance.Statistics(config, mongocli, os.path.dirname(str(sys.argv[1]))) 
     observer = observers.Observer(config)
     analyzer = analyzers.Analyzer(config)
 

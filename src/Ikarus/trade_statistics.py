@@ -14,7 +14,7 @@ import pandas as pd
 ''' You can not manage something that you can not measure '''
 
 
-async def eval_hto_stat(hist_trade):
+def eval_hto_stat(hist_trade):
 
     hto_stat = [ 
         hist_trade._id,
@@ -29,7 +29,7 @@ async def eval_hto_stat(hist_trade):
 
 
 
-async def eval_balance_stats(stats, mongo_client):
+async def eval_balance_stats(stats, config, mongo_client):
     start_obs = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=1, n=2) # pymongo.ASCENDING
     end_obs = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=-1) # pymongo.ASCENDING
 
@@ -49,7 +49,7 @@ async def eval_balance_stats(stats, mongo_client):
     stats['Balance'] = balance_stat
 
 
-async def eval_strategy_stats(stats, mongo_client):
+async def eval_strategy_stats(stats, config, mongo_client):
 
     stats['Strategies'] = {}
     for strategy in config['strategy'].keys():
@@ -97,17 +97,13 @@ def tabulate_stats(stats, filename):
     f.close()
 
 
-async def main():
-    mongo_client = mongo_utils.MongoClient(config['mongodb']['host'], 
-        config['mongodb']['port'], 
-        config['tag'],
-        clean=False)
+async def main(config, mongo_client):
     stats = {}
     stats['Generation Date'] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     stats['Start Time'] = config['backtest']['start_time']
     stats['End Time'] = config['backtest']['end_time']
-    await eval_balance_stats(stats, mongo_client)
-    await eval_strategy_stats(stats, mongo_client)
+    await eval_balance_stats(stats, config, mongo_client)
+    await eval_strategy_stats(stats, config, mongo_client)
     
     f = open(os.path.dirname(str(sys.argv[1])) + "/stats.json",'w')
     json.dump(stats, f,  indent=4)
@@ -124,5 +120,10 @@ if __name__ == "__main__":
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
 
+    mongo_client = mongo_utils.MongoClient(config['mongodb']['host'], 
+        config['mongodb']['port'], 
+        config['tag'],
+        clean=False)
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(main(mongo_client))

@@ -392,7 +392,7 @@ class Trade():
         if quantity: 
             self.result.exit.quantity = quantity
         else:
-            self.result.exit.quantity = self.result.enter.quantity # Exit qty is the entered qty as default
+            self.result.exit.quantity = self.exit.quantity # Exit qty is already gets the result.enter.quantity
 
         if price: 
             self.result.exit.price = price
