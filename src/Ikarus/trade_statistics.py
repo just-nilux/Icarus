@@ -46,6 +46,9 @@ async def eval_balance_stats(stats, config, mongo_client):
     balance_stat['End Balance'] = balances.loc[config['broker']['quote_currency']]['free'] + open_trade_amount['sum']
     balance_stat['Absolute Profit'] = balance_stat['End Balance'] - balance_stat['Start Balance']
     balance_stat['Percentage Profit'] = balance_stat['Absolute Profit']*100/balance_stat['Start Balance']
+
+    #TODO:  Add dust amount to statistics
+
     stats['Balance'] = balance_stat
 
 
@@ -126,4 +129,4 @@ if __name__ == "__main__":
         clean=False)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(mongo_client))
+    loop.run_until_complete(main(config, mongo_client))

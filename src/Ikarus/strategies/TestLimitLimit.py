@@ -61,7 +61,7 @@ class TestLimitLimit(StrategyBase):
         return True
 
 
-    async def on_waiting_exit(self, trade, analysis_dict, ikarus_time):
+    async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
         exit_price = time_dict[self.min_period]['close'] * 0.95
@@ -69,7 +69,7 @@ class TestLimitLimit(StrategyBase):
         exit_limit_order = Limit(
             exit_price,
             quantity=trade.result.enter.quantity,
-            expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
+            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],15,time_scale_to_minute(self.min_period))
         )
         trade.set_exit(exit_limit_order)
 

@@ -42,7 +42,7 @@ class TestMarketMarket(StrategyBase):
 #    async def on_cancel(self, trade):
 
 
-    async def on_waiting_exit(self, trade, analysis_dict):
+    async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         trade.command = ECommand.EXEC_EXIT
 
         # NOTE: The orders contain the initial idea. For market orders, it is meaningless to have others except quantity

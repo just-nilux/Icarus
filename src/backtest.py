@@ -91,6 +91,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
         strategy_min_scale = strategy_period_mapping[trade_list[i].strategy]
         last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
+        base_cur = pair.replace(config['broker']['quote_currency'],'')
 
         if trade_list[i].status == EState.OPEN_ENTER:
             # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
@@ -99,12 +100,9 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                 # Check if the open enter trade is filled else if the trade is expired
                 if float(last_kline['low']) < trade_list[i].enter.price:
 
-                    # NOTE: Since this is testing, no dust created, perfect conversion
                     # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
                     
-                    # TODO: REFACTORING: Why the enter moudle has no fee
                     trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
-                    base_cur = pair.replace(config['broker']['quote_currency'],'')
                     if not balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter):
                         logger.error(f"Function failed: balance_manager.buy().")
                         # TODO: Fix the logic. The balance manager should be called prior
@@ -360,9 +358,9 @@ if __name__ == '__main__':
         cred_info = json.load(cred_file)
 
     logger = logging.getLogger('app')
-    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
-        config['mongodb']['port'], 
-        config['tag'],
+    mongocli = mongo_utils.MongoClient(host=config['mongodb']['host'], 
+        port=config['mongodb']['port'], 
+        db=config['tag'],
         clean=config['mongodb']['clean'])
     
     # Initialize and configure objects

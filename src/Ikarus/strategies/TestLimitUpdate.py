@@ -68,7 +68,7 @@ class TestLimitUpdate(StrategyBase):
         return True
 
 
-    async def on_waiting_exit(self, trade, analysis_dict):
+    async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         trade.command = ECommand.EXEC_EXIT
         if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             return False

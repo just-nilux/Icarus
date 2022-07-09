@@ -959,9 +959,6 @@ class TestBinanceWrapper():
 
 
     def _execute_limit_buy(self, trade, df_balance):
-        '''
-        Handles trade.state
-        '''
         # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
         #       timestamp values
 
@@ -995,7 +992,25 @@ class TestBinanceWrapper():
         return trade, False
 
 
-    def _execute_market_sell(self, lto, df_balance, data_dict):
+    def _execute_market_sell(self, trade, df_balance, data_dict):
+        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
+        last_kline = data_dict[trade.pair][min_scale].tail(1)
+
+        trade.set_result_exit( bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)), 
+            price=float(last_kline['close']),
+            fee_rate=StrategyBase.fee)
+
+        # NOTE: The order is PLACED and FILLED
+        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
+
+        if balance_manager.place_exit_order(df_balance, base_cur, trade.exit):
+            balance_manager.sell(df_balance, self.quote_currency, base_cur, trade.result.exit)
+            trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
+            trade.status = EState.CLOSED
+            return trade, True
+            
+        return trade, False
+
         min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
         last_kline = data_dict[lto['pair']][min_scale].tail(1)
 
