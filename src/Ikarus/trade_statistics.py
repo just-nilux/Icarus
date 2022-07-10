@@ -47,6 +47,13 @@ async def eval_balance_stats(stats, config, mongo_client):
     balance_stat['Absolute Profit'] = balance_stat['End Balance'] - balance_stat['Start Balance']
     balance_stat['Percentage Profit'] = balance_stat['Absolute Profit']*100/balance_stat['Start Balance']
 
+    trade_fee_pipe = [
+        {"$match":{"result.cause":{"$eq":"closed"}}},
+        {"$project": {"trade_fee": {"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]}}},
+        {"$group": {"_id": '', "trade_fee_sum": {"$sum": '$trade_fee'}}},
+    ]
+    trade_fee_group = await mongo_client.do_aggregate('hist-trades',trade_fee_pipe)
+    balance_stat['Paid Fee'] = trade_fee_group[0]['trade_fee_sum']
     #TODO:  Add dust amount to statistics
 
     stats['Balance'] = balance_stat
@@ -57,7 +64,7 @@ async def eval_strategy_stats(stats, config, mongo_client):
     stats['Strategies'] = {}
     for strategy in config['strategy'].keys():
         strategy_stat = {}
-        strategy_stat['Live Trades'] = int(await mongo_client.count("live-trades", {'strategy':strategy}))
+        strategy_stat['Live'] = int(await mongo_client.count("live-trades", {'strategy':strategy}))
         strategy_stat['Closed'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.CLOSED}))
         strategy_stat['Enter Expired'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.ENTER_EXP}))
         strategy_stat['Exit Expired'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.EXIT_EXP}))
@@ -68,9 +75,9 @@ async def eval_strategy_stats(stats, config, mongo_client):
         ]
         closed_profit = await mongo_client.do_find("hist-trades", closed_pipe)
         if closed_profit != []: 
-            strategy_stat['Closed Expired'] = closed_profit['sum']
+            strategy_stat['Closed Profit'] = closed_profit['sum']
         else: 
-            strategy_stat['Closed Expired'] = 0
+            strategy_stat['Closed Profit'] = 0
 
         exit_expire_pipe = [
             {"$match":{"strategy":{"$eq":strategy}, "result.cause":{"$eq":"exit_expire"}}},
@@ -78,9 +85,9 @@ async def eval_strategy_stats(stats, config, mongo_client):
         ]
         exit_expire_profit = await mongo_client.do_find("hist-trades", exit_expire_pipe)
         if exit_expire_profit != []: 
-            strategy_stat['Exit Expired Expired'] = exit_expire_profit['sum']
+            strategy_stat['Exit Expired Profit'] = exit_expire_profit['sum']
         else: 
-            strategy_stat['Exit Expired Expired'] = 0
+            strategy_stat['Exit Expired Profit'] = 0
         stats['Strategies'][strategy] = strategy_stat
 
 

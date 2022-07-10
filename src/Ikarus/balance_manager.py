@@ -24,6 +24,7 @@ def buy(df_balance, quote_cur, base_cur, result_enter):
     df_balance['total'] = df_balance['free'] + df_balance['locked']
     return True
 
+
 def sell(df_balance, quote_cur, base_cur, result_exit):
 
     if df_balance.loc[base_cur,'locked'] < result_exit.quantity:

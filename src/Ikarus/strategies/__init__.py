@@ -11,4 +11,5 @@ from . import StrategyBase,\
     TestLimitLimit, \
     TestEnterExpire, \
     TestLimitUpdate, \
-    TestMarketMarket
+    TestMarketMarket, \
+    TestLimitMarket
