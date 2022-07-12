@@ -174,16 +174,12 @@ class StrategyBase(metaclass=abc.ABCMeta):
         elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # NOTE: expire of the exit_module can be calculated after the trade entered
-            is_success = await self.on_waiting_exit(trade, analysis_dict)
+            is_success = await self.on_waiting_exit(trade, analysis_dict, ikarus_time=ikarus_time)
 
         else:
             is_success = True
         return is_success
 
-
-    @abc.abstractclassmethod
-    async def on_update(self):
-        pass
 
 
     @staticmethod
@@ -266,7 +262,8 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # LOT_SIZE
         # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#lot_size
         if result := filters.lot_size(trade_order.quantity, symbol_info): 
-            trade_order.quantity = result
+            #trade_order.quantity = result
+            trade_order.set_quantity(result)
         else: 
             #logger.error(f"Filter failure: LOT_SIZE. {trade.strategy} in phase {phase} with quantity {str(trade.enter.quantity)}")
             return False
@@ -290,6 +287,14 @@ class StrategyBase(metaclass=abc.ABCMeta):
             if not filters.min_notional(trade_order.stopPrice, trade_order.quantity, symbol_info):
                 logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
                 return False
+
+
+
+        # TODO: Create a mechanism to properly apply min notional filter to market orders
+        # NOTE: Temporary workaround for min_notional evaluation for the Market orders.
+        #       The issue is min notional is applicable to market orders as well but it requires 5min average
+
+
 
         # MIN_NOTIONAL
         # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#min_notional

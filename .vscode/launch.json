@@ -42,10 +42,11 @@
             "name": "performance",
             "type": "python",
             "request": "launch",
-            "program": ".\\Ikarus\\performance.py",
+            "module": "Ikarus.performance",
             "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
             "args": [
-                ".\\configs\\multi_strategy\\config.json"
+                "..\\configs\\test\\LimitLimit\\config.json"
             ]
         },
         {
@@ -94,7 +95,7 @@
             "program": "src/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\object\\config.json"
+                ".\\configs\\test\\LimitLimit\\config.json"
             ]
         },
         {

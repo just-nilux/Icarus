@@ -10,8 +10,8 @@ import bson
 class MongoClient():
 
     
-    def __init__(self, _host, _port, _db='bot', clean=False) -> None:
-        self.client = motor.motor_asyncio.AsyncIOMotorClient(host=_host, port=_port)
+    def __init__(self, host, port, db='bot', clean=False) -> None:
+        self.client = motor.motor_asyncio.AsyncIOMotorClient(host=host, port=port)
 
         # TODO: Implement normal client as well. It is hard to test with asycn cli
         #self.normal_client = MongoClient(host=_host, port=_port)
@@ -20,8 +20,8 @@ class MongoClient():
 
         # Drop the db if it is no the main one
         if clean:
-            self.client.drop_database(_db)
-        self.db_bot = self.client[_db]
+            self.client.drop_database(db)
+        self.db_bot = self.client[db]
 
 
     async def get_collection_names(self):

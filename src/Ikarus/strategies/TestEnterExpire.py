@@ -22,7 +22,6 @@ class TestEnterExpire(StrategyBase):
 
             # Calculate enter/exit prices
             enter_price = time_dict[self.min_period]['close'] * 0.5 # Expect to never enter
-            exit_price = time_dict[self.min_period]['close'] * 0.95
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -31,16 +30,9 @@ class TestEnterExpire(StrategyBase):
                 expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
             )
 
-            exit_limit_order = Limit(
-                exit_price,
-                quantity=enter_limit_order.quantity,
-                expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
-            )
-
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
-            trade.set_exit(exit_limit_order)
             result = TradeResult()
             result.enter, result.exit = Result(), Result()
             trade.result = result

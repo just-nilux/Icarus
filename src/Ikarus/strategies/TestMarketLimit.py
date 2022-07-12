@@ -1,14 +1,14 @@
 import statistics as st
-from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult
+from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult, Market
 from ..enums import *
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class TestLimitLimit(StrategyBase):
+class TestMarketLimit(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__("TestLimitLimit", _config, _symbol_info)
+        super().__init__("TestMarketLimit", _config, _symbol_info)
         return
 
 
@@ -21,19 +21,14 @@ class TestLimitLimit(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 1.05 # Enter
+            enter_price = time_dict[self.min_period]['close']
             enter_ref_amount=pairwise_alloc_share
 
-            enter_limit_order = Limit(
-                enter_price,
-                amount=enter_ref_amount,
-                expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
-            )
-
+            enter_order = Market(amount=enter_ref_amount, price=enter_price)
 
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
-            trade.set_enter(enter_limit_order)
+            trade.set_enter(enter_order)
             result = TradeResult()
             trade.result = result
 
@@ -55,12 +50,6 @@ class TestLimitLimit(StrategyBase):
         return True
 
 
-    async def on_cancel(self, trade):
-        trade.command = ECommand.CANCEL
-        trade.result.cause = ECause.ENTER_EXP
-        return True
-
-
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
@@ -77,7 +66,6 @@ class TestLimitLimit(StrategyBase):
         if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             return False
         return True
-
 
     async def on_closed(self, lto):
         return lto

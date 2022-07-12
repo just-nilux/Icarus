@@ -10,4 +10,7 @@ from . import StrategyBase,\
     UpTrenderMarket, \
     TestLimitLimit, \
     TestEnterExpire, \
-    TestLimitUpdate
+    TestLimitUpdate, \
+    TestMarketMarket, \
+    TestLimitMarket, \
+    TestMarketLimit
