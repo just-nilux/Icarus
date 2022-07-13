@@ -1,4 +1,4 @@
-from Ikarus.objects import ECause
+from .objects import ECause
 from .enums import *
 from . import mongo_utils
 import json
@@ -52,8 +52,8 @@ async def eval_balance_stats(stats, config, mongo_client):
         {"$project": {"trade_fee": {"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]}}},
         {"$group": {"_id": '', "trade_fee_sum": {"$sum": '$trade_fee'}}},
     ]
-    trade_fee_group = await mongo_client.do_aggregate('hist-trades',trade_fee_pipe)
-    balance_stat['Paid Fee'] = trade_fee_group[0]['trade_fee_sum']
+    if trade_fee_group := await mongo_client.do_aggregate('hist-trades',trade_fee_pipe):
+        balance_stat['Paid Fee'] = trade_fee_group[0]['trade_fee_sum']
     #TODO:  Add dust amount to statistics
 
     stats['Balance'] = balance_stat

@@ -1076,7 +1076,9 @@ class TestBinanceWrapper():
                     if type(trade_list[i].exit) == OCO:
                         self._execute_oco_sell(trade_list[i], df_balance) #TODO: REFACTORING
                     elif type(trade_list[i].exit) == Limit:
-                        self._execute_limit_sell(trade_list[i], df_balance) #TODO: REFACTORING
+                        self._execute_limit_sell(trade_list[i], df_balance)
+                    elif type(trade_list[i].exit) == Market:
+                        self._execute_market_sell(trade_list[i], df_balance, data_dict)
                     trade_list[i].reset_command()
                 else:
                     '''

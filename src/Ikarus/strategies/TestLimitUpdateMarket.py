@@ -1,14 +1,14 @@
 import statistics as st
-from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult
+from ..objects import ECause, Market, Trade, Limit, ECommand, TradeResult
 from ..enums import *
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class TestLimitLimit(StrategyBase):
+class TestLimitUpdateMarket(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__("TestLimitLimit", _config, _symbol_info)
+        super().__init__("TestLimitUpdateMarket", _config, _symbol_info)
         return
 
 
@@ -30,7 +30,6 @@ class TestLimitLimit(StrategyBase):
                 expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
             )
 
-
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
@@ -40,12 +39,13 @@ class TestLimitLimit(StrategyBase):
             return trade
 
 
-    async def on_update(self, trade, ikarus_time):
-        # TODO: Give a call to methods that calculates exit point
+    async def on_update(self, trade, ikarus_time, **kwargs):
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
-        trade.set_command(ECommand.UPDATE)
-        trade.expire = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
-        trade.set_price(trade.price*0.9)
+        trade.command = ECommand.UPDATE
+        trade.stash_exit()
+        close_price = kwargs['analysis_dict'][trade.pair][self.min_period]['close'] 
+        trade.set_exit( Market(quantity=trade.result.enter.quantity, price=close_price) )
+
 
         # Apply the filters
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
@@ -64,7 +64,7 @@ class TestLimitLimit(StrategyBase):
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
-        exit_price = time_dict[self.min_period]['close'] * 0.95
+        exit_price = time_dict[self.min_period]['close'] * 1.5
 
         exit_limit_order = Limit(
             exit_price,

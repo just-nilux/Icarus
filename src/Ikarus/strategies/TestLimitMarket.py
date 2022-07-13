@@ -41,15 +41,14 @@ class TestLimitMarket(StrategyBase):
 
 
     async def on_update(self, trade, ikarus_time):
-        # TODO: Give a call to methods that calculates exit point
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
-        trade.set_command(ECommand.UPDATE)
+        trade.command = ECommand.UPDATE
         trade.expire = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
         trade.set_price(trade.price*0.9)
 
         # Apply the filters
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
-        if not await StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
+        if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             # TODO: This is a critical case where the exit order failed to pass filters. Decide what to do
             return False
         return True

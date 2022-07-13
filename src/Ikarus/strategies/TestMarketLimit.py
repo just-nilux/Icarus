@@ -44,7 +44,7 @@ class TestMarketLimit(StrategyBase):
 
         # Apply the filters
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
-        if not await StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
+        if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             # TODO: This is a critical case where the exit order failed to pass filters. Decide what to do
             return False
         return True
