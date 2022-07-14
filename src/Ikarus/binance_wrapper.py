@@ -927,7 +927,7 @@ class TestBinanceWrapper():
         self.logger.debug("decompose ended")
         return do_dict
 
-    def _execute_cancel(self, trade, df_balance):
+    def _execute_cancel(self, trade, df_balance) -> bool:
 
         if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP] : # NOTE: REFACTORING: EState.CLOSED was here as well
             return balance_manager.cancel_enter_order(df_balance, self.quote_currency, trade.enter)
@@ -938,17 +938,17 @@ class TestBinanceWrapper():
         return False
 
     # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
-    def _execute_oco_sell(self, lto, df_balance):
-        base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
-        balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
+    def _execute_oco_sell(self, trade, df_balance) -> bool:
+        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
+        if balance_manager.place_exit_order(df_balance, base_cur, trade.exit):
+            trade.status = EState.OPEN_EXIT
+            trade.exit.orderId = int(time.time() * 1000)
+            trade.exit.stop_limit_orderId = trade.exit.orderId + 1
+            return True
+        return False
 
-        lto['status'] = STAT_OPEN_EXIT
-        lto['history'].append(lto['status'])
-        lto[PHASE_EXIT][TYPE_OCO]['orderId'] = int(time.time() * 1000)
-        return True
 
-
-    def _execute_limit_sell(self, trade, df_balance):
+    def _execute_limit_sell(self, trade, df_balance) -> bool:
         base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
         if balance_manager.place_exit_order(df_balance, base_cur, trade.exit): # NOTE: REFACTORING It was lto['result']['enter']['quantity']
             trade.status = EState.OPEN_EXIT

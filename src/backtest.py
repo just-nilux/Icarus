@@ -136,11 +136,11 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
             elif type(trade_list[i].exit) == OCO:
                 # NOTE: Think about the worst case and check the stop loss first.
 
-                if float(last_kline['low']) < trade_list[i].exit.stopPrice:
+                if float(last_kline['low']) < trade_list[i].exit.stop_price:
                     # Stop Loss takens
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        cause=ECause.CLOSED_STOP_LOSS,
-                        price=trade_list[i].exit.stopLimitPrice,
+                        cause=ECause.CLOSED_STOP_LIMIT, #TODO: REFACTORING: Checkout if it is good to have stoploss or not
+                        price=trade_list[i].exit.stop_limit_price,
                         fee_rate=StrategyBase.fee)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
@@ -152,7 +152,9 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                         fee_rate=StrategyBase.fee)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
+                    if not balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit):
+                        logger.error(f"Function failed: balance_manager.sell().")
+                        # TODO: Fix the logic. The balance manager should be called prior
 
                 elif int(trade_list[i].exit.expire) <= last_closed_candle_open_time:
                     trade_list[i].status = EState.EXIT_EXP

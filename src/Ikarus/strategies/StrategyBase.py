@@ -281,10 +281,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         elif type(trade_order).__name__ == EOrderType.OCO:
             trade_order.set_price(round_step_downward(trade_order.price, float(symbol_info['filters'][0]['tickSize'])))              # Fixing PRICE_FILTER: tickSize
-            trade_order.stopPrice = round_step_downward(trade_order.stopPrice, float(symbol_info['filters'][0]['tickSize']))
-            trade_order.stopLimitPrice = round_step_downward(trade_order.stopLimitPrice, float(symbol_info['filters'][0]['tickSize']))
+            trade_order.stop_price = round_step_downward(trade_order.stop_price, float(symbol_info['filters'][0]['tickSize']))
+            trade_order.stop_limit_price = round_step_downward(trade_order.stop_limit_price, float(symbol_info['filters'][0]['tickSize']))
 
-            if not filters.min_notional(trade_order.stopPrice, trade_order.quantity, symbol_info):
+            if not filters.min_notional(trade_order.stop_price, trade_order.quantity, symbol_info):
                 logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
                 return False
 

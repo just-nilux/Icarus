@@ -187,7 +187,7 @@ class ECause(str, Enum):
     MAN_CHANGE = 'manual_change'
     EXIT_EXP = 'exit_expire'
     CLOSED = 'closed'
-    CLOSED_STOP_LOSS = 'closed_stop_loss' # 'oco_stoploss'
+    CLOSED_STOP_LIMIT = 'closed_stop_limit' # 'oco_stoploss'
     # Previously:
     #   lto_list[i]['result']['cause'] = STAT_CLOSED
     #   lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
@@ -283,10 +283,11 @@ class Limit(Order):
 
 @dataclass
 class OCO(Order):
+    # NOTE: When Selling, stop_price > stop_limit_price
     expire: bson.Int64 = None
-    stopPrice: float = None
-    stopLimitPrice: float = None
-    stopLimit_orderId: int = None
+    stop_price: float = None            # Price to trigger stop limit order
+    stop_limit_price: float = None      # Price of stop limit order
+    stop_limit_orderId: int = None
 
 
 @dataclass
@@ -437,13 +438,13 @@ def order_from_dict(order_data):
     elif 'expire' not in order_data.keys():
         order = Market()
     else:
-        if 'stopPrice' not in order_data.keys():
+        if 'stop_price' not in order_data.keys():
             order = Limit()
         else:
             order = OCO()
-            order.stopPrice = order_data['stopPrice']
-            order.stopLimitPrice = order_data['stopLimitPrice']
-            order.stopLimit_orderId = order_data['stopLimit_orderId']
+            order.stop_price = order_data['stop_price']
+            order.stop_limit_price = order_data['stop_limit_price']
+            order.stop_limit_orderId = order_data['stop_limit_orderId']
         order.expire = order_data['expire']
     order.price = order_data['price']
     order.amount = order_data['amount']
