@@ -2,14 +2,12 @@ import json
 import logging
 from binance.helpers import round_step_size
 from sqlalchemy import false
-from ..enums import *
 import bson
 import abc
 import itertools
 from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder
 from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract
 from .. import binance_filters as filters
-from ..exceptions import NotImplementedException
 
 logger = logging.getLogger('app')
 
@@ -160,16 +158,11 @@ class StrategyBase(metaclass=abc.ABCMeta):
         """        
         is_success = False
         if trade.status == EState.ENTER_EXP:
-            if self.config['action_mapping'][EState.ENTER_EXP] == ECommand.CANCEL:
-                is_success = await self.on_cancel(trade)
+            is_success = await self.on_cancel(trade)
 
         elif trade.status == EState.EXIT_EXP:
-            if self.config['action_mapping'][EState.EXIT_EXP] == ECommand.UPDATE:
-                is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
+            is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
 
-            elif self.config['action_mapping'][EState.EXIT_EXP] == ECommand.MARKET_EXIT:
-                # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that
-                is_success = await StrategyBase.on_market_exit(self, trade, analysis_dict)
 
         elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
@@ -179,33 +172,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         else:
             is_success = True
         return is_success
-
-
-
-    @staticmethod
-    async def on_market_exit(self, trade, analysis_dict):
-        # TODO: Create market exit logic
-        raise NotImplementedException()
-        '''
-        #lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-                
-        lto['exit'] = await StrategyBase._create_exit_module(
-            TYPE_MARKET,
-            0,
-            lto['result'][PHASE_ENTER]['quantity'],
-            analysis_dict[lto['pair']][self.min_period]['close'],
-            0)
         
-        lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
-        trade.exi
-        
-        trade.command = ECommand.MARKET_EXIT
-
-        self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
-        '''
-        return trade
-        
-
 
     @abc.abstractclassmethod
     async def on_waiting_exit(self):
@@ -228,21 +195,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _eval_future_candle_time(start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
-
-
-    @staticmethod
-    async def _config_market_exit(lto, type):
-        # TODO: NEXT NEXT Integrate fee to market order
-        #       Continue here
-        # TODO: Integrate price to market order, even if it has no use
-        #       For now, it works and I am not gonna touch it for a rework
-        lto['action'] = ACTN_MARKET_EXIT
-        lto['exit'][TYPE_MARKET] = {
-            'amount': lto['exit'][type]['amount'],
-            'quantity': lto['exit'][type]['quantity'],
-            'orderId': '',
-        }
-        return lto
 
 
     @staticmethod

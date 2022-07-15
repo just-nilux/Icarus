@@ -1,5 +1,4 @@
 from .objects import ECause
-from .enums import *
 from . import mongo_utils
 import json
 import sys

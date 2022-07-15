@@ -1,4 +1,3 @@
-from .enums import *
 from .utils import safe_substract, safe_sum
 from .strategies.StrategyBase import StrategyBase
 

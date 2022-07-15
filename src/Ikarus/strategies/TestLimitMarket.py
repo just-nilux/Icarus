@@ -1,6 +1,5 @@
 import statistics as st
 from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult, Market
-from ..enums import *
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute

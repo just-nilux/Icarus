@@ -1,5 +1,4 @@
 from ..objects import ECause, Market, Result, Trade, ECommand, TradeResult
-from ..enums import *
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute

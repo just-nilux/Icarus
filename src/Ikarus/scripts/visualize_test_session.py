@@ -1,8 +1,9 @@
 import asyncio
+from ..objects import EState
 from .. import mongo_utils, binance_wrapper
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
-from ..enums import *
+ 
 from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
 from binance import AsyncClient
 import pandas as pd
@@ -41,9 +42,9 @@ async def visualize_online(bwrapper, mongocli, config):
     df_pair_list = list(await asyncio.gather(*df_list))
 
     for idx, item in enumerate(pair_scale_mapping.items()):
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(config, mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
 
         fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
 
@@ -68,9 +69,9 @@ async def visualize_dashboard(bwrapper, mongocli, config):
 
     for idx, item in enumerate(pair_scale_mapping.items()):
         # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(config, mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
 
         #fplot.buy_sell_dashboard(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]

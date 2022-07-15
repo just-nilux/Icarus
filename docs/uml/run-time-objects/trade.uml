@@ -1,6 +1,41 @@
 
 @startuml
 
+enum EOrderType {
+    MARKET = 'Market'
+    LIMIT = 'Limit'
+    OCO = 'OCO'
+}
+
+enum ECommand {
+    NONE = None
+    CANCEL = 'cancel'
+    UPDATE = 'update'
+    MARKET_ENTER = 'market_enter'
+    MARKET_EXIT = 'market_exit' 
+    EXEC_EXIT = 'execute_exit'
+    EXEC_ENTER = 'execute_enter'
+}
+
+enum ECause {
+    NONE = None
+    ENTER_EXP = 'enter_expire'
+    MAN_CHANGE = 'manual_change'
+    EXIT_EXP = 'exit_expire'
+    CLOSED = 'closed'
+    CLOSED_STOP_LIMIT = 'closed_stop_limit'
+}
+
+enum EState {
+   WAITING_ENTER = 'waiting_enter'
+    OPEN_ENTER = 'open_enter'
+    ENTER_EXP = 'enter_expire'
+    WAITING_EXIT = 'waiting_exit'
+    OPEN_EXIT = 'open_exit'
+    EXIT_EXP = 'exit_expire'
+    CLOSED = 'closed'
+}
+
 abstract class Order {
     price: float
     amount: float
@@ -23,6 +58,21 @@ class OCO {
     stop_price: float
     stop_limit_price: float
     stop_limit_orderId: int 
+}
+
+class Result {
+    type: string
+    time: bson.Int64
+    fee_rate: float
+    fee: float
+}
+
+class TradeResult{
+    cause: ECause
+    enter: Result
+    exit: Result
+    profit: float
+    live_time: int
 }
 
 

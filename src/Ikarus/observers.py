@@ -3,7 +3,6 @@ Observers are the configurable read-only units. They simply collect data at the 
 '''
 import logging
 import pandas as pd
-from .objects import GenericObject
 from .utils import eval_total_capital_in_lto, safe_multiply, safe_substract, safe_sum
 
 class Observer():
@@ -16,16 +15,15 @@ class Observer():
 
 
     async def balance(self, ikarus_time, df_balance):
-        observation_obj = GenericObject()
+        observation_obj = {}
         df_balance.reset_index(level=0, inplace=True)
-        # TODO: Convert this function to use dicts directly instead of custom GenericObjects
         observer_item = list(df_balance.T.to_dict().values())
-        observation_obj.load('type','balance')
-        observation_obj.load('timestamp', ikarus_time)
-        observation_obj.load('balances',observer_item)
+        observation_obj['type'] = 'balance'
+        observation_obj['timestamp'] = ikarus_time
+        observation_obj['balances'] = observer_item
 
         # BUG: This function updates df_balance
-        return observation_obj.get()
+        return observation_obj
 
 
     async def quote_asset(self, ikarus_time, df_balance, trade_list):

@@ -3,10 +3,7 @@ from pymongo import MongoClient, DESCENDING
 import logging
 import asyncio
 import motor.motor_asyncio
-from .enums import *
-from time import time, sleep
-import copy
-import bson
+
 class MongoClient():
 
     
@@ -81,7 +78,7 @@ class MongoClient():
 
         Args:
             col (string): db collection
-            item_list (list): Dictionary of GenericObject
+            item_list (list): 
         """        
         result = await self.db_bot[col].insert_many(item_list)
         self.logger.debug(f"do_insert_many [{col}]: inserted ids {result.inserted_ids}")
@@ -131,80 +128,3 @@ class MongoClient():
         assert len(doc_list) > 0, "No document"
         return doc_list
 
-
-async def test1():
-    from objects import GenericObject
-
-    to1, to2, to3, to4= GenericObject('trade'), GenericObject('trade'), GenericObject('trade'), GenericObject('trade')
-    to1.load('status',STAT_OPEN_ENTER)
-    to2.load('status',STAT_OPEN_ENTER)
-    to3.load('status',STAT_OPEN_EXIT)
-    to4.load('status',STAT_CLOSED)
-
-    trade_dict = dict({'BTCUSDT':to1, 'XRPUSDT':to2, 'AVAXUSDT':to3, 'USDTTRY':to4})
-
-    # Insert
-    print('Before insert many:')
-    result = await mongocli.do_insert_many("live-trades",trade_dict)
-    
-    # Find
-    lto_list = await mongocli.do_find('live-trades',{})
-    lto_list_updated = copy.deepcopy(lto_list)
-
-    print('lto_list:',lto_list)
-    
-    # Update the values in the lto_list
-    for i, lto in enumerate(lto_list):
-        if lto['status'] == STAT_OPEN_ENTER:
-            lto_list_updated[i]['status'] = STAT_OPEN_EXIT
-        elif lto['status'] == STAT_OPEN_EXIT:
-            lto_list_updated[i]['status'] = STAT_CLOSED
-        pass
-
-    
-    # Write the lto_list to the
-    for lto, lto_upd in zip(lto_list,lto_list_updated):
-        if lto['status'] != lto_upd['status']:
-            result_update = await mongocli.do_update(
-                "live-trades",
-                {'_id': lto['_id']},
-                {'$set': {'status': lto_upd['status']}})
-        print(lto['pair'],'result_update:',result_update)
-    
-    
-    # Delete
-    result_delete = await mongocli.do_delete_many('live-trades',{'status':STAT_CLOSED})
-    
-    return True
-
-
-async def test2():
-
-    pipe = [
-        {"$match":{"result.cause":{"$eq":"exit_expire"}}},
-        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
-    ]
-    exit_expire_profit = await mongocli.do_find("hist-trades", pipe)
-    print('observer.result.profit: exit_expire : {}'.format(exit_expire_profit['sum']))
-    
-    pipe = [
-        {"$match":{"result.cause":{"$eq":"closed"}}},
-        {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
-    ]
-    closed_profit = await mongocli.do_find("hist-trades", pipe)
-    print('observer.result.profit: closed : {}'.format(closed_profit['sum']))
-
-    last_balance = await mongocli.get_n_doc("observer")
-    for balance in last_balance['balances']:
-        if balance['asset'] == 'USDT':
-            usdt_balance = balance['total']
-            break
-    print('Final equity : {}'.format(usdt_balance))
-
-    return True
-
-
-if __name__ == "__main__":
-    mongocli = MongoClient("localhost", 27017, 'test-bot')
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(test2())

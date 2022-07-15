@@ -3,7 +3,6 @@ from .exceptions import NotImplementedException
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
-from .enums import *
 from . import notifications
 import asyncio
 import pandas as pd
@@ -1011,31 +1010,6 @@ class TestBinanceWrapper():
             
         return trade, False
 
-        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
-        last_kline = data_dict[lto['pair']][min_scale].tail(1)
-
-        lto['status'] = STAT_CLOSED
-        lto['history'].append(lto['status'])
-        lto['result']['cause'] = STAT_CLOSED
-
-        lto['result']['exit']['type'] = TYPE_MARKET
-        lto['result']['exit']['time'] = bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale))
-        lto['result']['exit']['price'] = float(last_kline['close'])
-        lto['result']['exit']['quantity'] = lto['exit'][TYPE_MARKET]['quantity']
-        lto['result']['exit']['amount'] = float(lto['result']['exit']['price'] * lto['result']['exit']['quantity'])
-        lto['result']['exit']['fee'] = calculate_fee(lto['result']['exit']['amount'], StrategyBase.fee)
-
-        lto['result']['profit'] = lto['result']['exit']['amount'] \
-            - lto['result']['enter']['amount'] \
-            - lto['result']['enter']['fee'] \
-            - lto['result']['exit']['fee']
-        lto['result']['liveTime'] = lto['result']['exit']['time'] - lto['result']['enter']['time']
-
-        # TODO: result.enter.quantity shoudl be copied to exit.x.quantity as well
-        base_cur = lto['pair'].replace(self.config['broker']['quote_currency'],'')
-        balance_manager.place_exit_order(df_balance, base_cur, lto['result']['enter']['quantity'])
-        balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, lto['result']['exit'])
-        return True
 
     def _execute_lto(self, trade_list, df_balance, data_dict):
         """

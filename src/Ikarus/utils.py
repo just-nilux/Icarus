@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 from .objects import ECause, EState, trade_from_dict
-from .enums import *
 from decimal import ROUND_DOWN, Decimal
 import logging
 from logging.handlers import TimedRotatingFileHandler
