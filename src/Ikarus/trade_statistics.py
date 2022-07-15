@@ -70,6 +70,7 @@ async def eval_strategy_stats(stats, config, mongo_client):
         strategy_stat['Enter Expired'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.ENTER_EXP}))
         strategy_stat['Exit Expired'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.EXIT_EXP}))
 
+        # TODO: Calculate and record the profit of ECause.CLOSED, ECause.CLOSED_STOP_LIMIT seperately 
         closed_pipe = [
             {"$match":{"strategy":{"$eq":strategy}, "result.cause":{"$in": [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]}}},
             {"$group": {"_id": '', "sum": {"$sum": '$result.profit'}}},
