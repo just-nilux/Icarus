@@ -3,6 +3,9 @@ from pymongo import MongoClient, DESCENDING
 import logging
 import asyncio
 import motor.motor_asyncio
+from .objects import EState, ECause
+from dataclasses import asdict
+import trade_statistics
 
 class MongoClient():
 
@@ -128,3 +131,39 @@ class MongoClient():
         assert len(doc_list) > 0, "No document"
         return doc_list
 
+async def update_live_trades(mongo_client, trade_list): # TODO: REFACTOR: checkout
+    # TODO: Move queries outside of this script
+    for trade in trade_list:
+
+        # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
+        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
+        if trade.status == EState.CLOSED:
+            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
+            result_insert = await mongo_client.do_insert_one("hist-trades",asdict(trade))
+            result_remove = await mongo_client.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
+
+            if trade.result.cause == ECause.CLOSED:
+                hto_stat = trade_statistics.eval_hto_stat(trade) # TODO : REFACTORING
+                pass
+
+        # NOTE: Manual trade option is omitted, needs to be added
+        # TODO: REFACTORING: Why did you handle all of these 3 state in the same place?
+        elif trade.status in [ EState.OPEN_EXIT, EState.WAITING_EXIT, EState.EXIT_EXP]:
+            result_update = await mongo_client.do_update( 
+                "live-trades",
+                {'_id': trade._id},
+                {'$set': {'status': trade.status,
+                        'exit': asdict(trade.exit),
+                        'result.enter': asdict(trade.result.enter),
+                        'order_stash': [asdict(order) for order in trade.order_stash]
+                    }})
+                
+        elif trade.status == EState.OPEN_ENTER:
+            # - STAT_OPEN_ENTER might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
+            result_update = await mongo_client.do_update( 
+                "live-trades",
+                {'_id': trade._id},
+                {'$set': {'status': trade.status, 'enter': asdict(trade.enter) }}) # NOTE: REFACTORING: history removed
+
+        else:
+            pass

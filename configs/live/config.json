@@ -21,7 +21,7 @@
     },
     "broker": {
         "quote_currency": "USDT",
-        "credit_currency": "TRY"
+        "fee_rate": 0.001
     },
     "risk_management":{
         "max_capital_use_ratio": 0.99
@@ -30,16 +30,6 @@
         "AlwaysEnter": {
             "pairs": ["SHIBUSDT", "HOTUSDT"],
             "time_scales": ["1m","5m"],
-            "enter": {
-                "type": "limit"
-            },
-            "exit": {
-                "type": "oco"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            },
             "max_lto": 1
         },
         "AlwaysEnter90": {

@@ -13,7 +13,6 @@ logger = logging.getLogger('app')
 
 class StrategyBase(metaclass=abc.ABCMeta):
     # NOTE: fee can stay here until a better place is found
-    fee = 0
 
     def __init__(self, _name, _config, _symbol_info):
         self.name = _name
@@ -22,8 +21,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         self.config = _config['strategy'][self.name]
         self.max_lto = self.config.get('max_lto',1)
 
-        # NOTE: Assigning the fee multiple times is not the most optimal solution
-        StrategyBase.fee = _config['broker'].get('fee', 0)
         # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
         # TODO: Make proper handling for symbol_info

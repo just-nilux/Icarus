@@ -20,8 +20,7 @@
     ],
     "broker": {
         "quote_currency": "USDT",
-        "credit_currency": "TRY",
-        "fee": 0.001
+        "fee_rate": 0.001
     },
     "risk_management":{
         "max_capital_use_ratio": 0.95
@@ -30,10 +29,6 @@
         "TestLimitOCO": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            },
             "max_lto": 3
         }
     },

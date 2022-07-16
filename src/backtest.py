@@ -1,25 +1,20 @@
 from Ikarus.objects import *
-from Ikarus.strategies.StrategyBase import StrategyBase
 import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus import binance_wrapper, strategy_manager, analyzers, observers, mongo_utils, trade_statistics
+from Ikarus.binance_wrapper import TestBinanceWrapper
+from Ikarus import strategy_manager, analyzers, observers, mongo_utils, trade_statistics
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
 import logging
-import pandas as pd
 import sys
-import os
 import bson
 from itertools import chain
 import itertools
 from Ikarus.resource_allocator import ResourceAllocator 
 from Ikarus import balance_manager
 
-# Global Variables
-SYSTEM_STATUS = 0
-STATUS_TIMEOUT = 0
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
@@ -29,44 +24,6 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     # Print New Line on Complete
     if iteration == total: 
         print()
-
-
-async def write_updated_ltos_to_db(trade_list): # TODO: REFACTOR: checkout
-    # TODO: Move queries outside of this script
-    for trade in trade_list:
-
-        # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
-        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
-        if trade.status == EState.CLOSED:
-            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
-            result_insert = await mongocli.do_insert_one("hist-trades",asdict(trade))
-            result_remove = await mongocli.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
-
-            if trade.result.cause == ECause.CLOSED:
-                hto_stat = trade_statistics.eval_hto_stat(trade) # TODO : REFACTORING
-                pass
-
-        # NOTE: Manual trade option is omitted, needs to be added
-        # TODO: REFACTORING: Why did you handle all of these 3 state in the same place?
-        elif trade.status in [ EState.OPEN_EXIT, EState.WAITING_EXIT, EState.EXIT_EXP]:
-            result_update = await mongocli.do_update( 
-                "live-trades",
-                {'_id': trade._id},
-                {'$set': {'status': trade.status,
-                        'exit': asdict(trade.exit),
-                        'result.enter': asdict(trade.result.enter),
-                        'order_stash': [asdict(order) for order in trade.order_stash]
-                    }})
-                
-        elif trade.status == EState.OPEN_ENTER:
-            # - STAT_OPEN_ENTER might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
-            result_update = await mongocli.do_update( 
-                "live-trades",
-                {'_id': trade._id},
-                {'$set': {'status': trade.status, 'enter': asdict(trade.enter) }}) # NOTE: REFACTORING: history removed
-
-        else:
-            pass
 
 
 async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance):
@@ -101,7 +58,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
 
                     # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
                     
-                    trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
+                    trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
                     if not balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter):
                         logger.error(f"Function failed: balance_manager.buy().")
                         # TODO: Fix the logic. The balance manager should be called prior
@@ -122,7 +79,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                 # Check if the open sell trade is filled or stoploss is taken
                 if float(last_kline['high']) > trade_list[i].exit.price:
 
-                    trade_list[i].set_result_exit(last_closed_candle_open_time, fee_rate=StrategyBase.fee)
+                    trade_list[i].set_result_exit(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     if not balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit):
                         logger.error(f"Function failed: balance_manager.sell().")
@@ -140,7 +97,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
                         cause=ECause.CLOSED_STOP_LIMIT, #TODO: REFACTORING: Checkout if it is good to have stoploss or not
                         price=trade_list[i].exit.stop_limit_price,
-                        fee_rate=StrategyBase.fee)
+                        fee_rate=TestBinanceWrapper.fee_rate)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
@@ -148,7 +105,7 @@ async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance
                 elif float(last_kline['high']) > trade_list[i].exit.price:
                     # Limit taken
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        fee_rate=StrategyBase.fee)
+                        fee_rate=TestBinanceWrapper.fee_rate)
 
                     base_cur = pair.replace(config['broker']['quote_currency'],'')
                     if not balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit):
@@ -262,7 +219,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
 
 
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
-    await write_updated_ltos_to_db(live_trade_list)
+    await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
     # 3.3: Get the onserver
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
@@ -282,7 +239,7 @@ async def main():
     # Create a Async Binance client and receive initial information
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    bwrapper = TestBinanceWrapper(client, config)
     all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
@@ -312,7 +269,7 @@ async def main():
     if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration
-    binance_wrapper.TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
+    TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
     initial_observation_item = {
