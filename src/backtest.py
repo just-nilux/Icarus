@@ -3,7 +3,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus.binance_wrapper import TestBinanceWrapper
+from Ikarus.broker import TestBinanceWrapper, sync_trades_of_backtest
 from Ikarus import strategy_manager, analyzers, observers, mongo_utils, trade_statistics
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
@@ -24,108 +24,6 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     # Print New Line on Complete
     if iteration == total: 
         print()
-
-
-async def update_ltos(trade_list, data_dict, strategy_period_mapping, df_balance):
-    """
-    Args:
-        lto_dict (dict): will be updated (status, result, exit sections)
-        data_dict (dict): used for getting the candle to see if trade status needs to change
-        current_ts (ts): used for info sections of ltos
-        df_balance (pd.DataFrame): When a lto go from STAT_OPEN_EXIT to STAT_CLOSED or STAT_OPEN_ENTER to STAT_OPEN_EXIT
-        it needs to be updated in terms of 'free' and 'locked'                                               
-
-    Returns:
-        dict: lto_dict
-    """
-    # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
-
-    for i in range(len(trade_list)):
-        pair = trade_list[i].pair
-
-        # 1.2.1: Check trades and update status
-        strategy_min_scale = strategy_period_mapping[trade_list[i].strategy]
-        last_kline = data_dict[pair][strategy_min_scale].tail(1)
-        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
-        base_cur = pair.replace(config['broker']['quote_currency'],'')
-
-        if trade_list[i].status == EState.OPEN_ENTER:
-            # NOTE: There is 2 method to enter: TYPE_LIMIT and TYPE_MARKET. Since market executed directly, it is not expected to have market at this stage
-            if type(trade_list[i].enter) == Limit:
-
-                # Check if the open enter trade is filled else if the trade is expired
-                if float(last_kline['low']) < trade_list[i].enter.price:
-
-                    # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
-                    
-                    trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
-                    if not balance_manager.buy(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.enter):
-                        logger.error(f"Function failed: balance_manager.buy().")
-                        # TODO: Fix the logic. The balance manager should be called prior
-
-                elif int(trade_list[i].enter.expire) <= last_closed_candle_open_time:
-                    # Report the expiration to algorithm
-                    trade_list[i].status = EState.ENTER_EXP
-                    # NOTE: No update on command because it is, only placed by the strategies
-
-            else:
-                # TODO: Internal Error
-                pass
-
-        elif trade_list[i].status == EState.OPEN_EXIT:
-
-            if type(trade_list[i].exit) == Limit:
-
-                # Check if the open sell trade is filled or stoploss is taken
-                if float(last_kline['high']) > trade_list[i].exit.price:
-
-                    trade_list[i].set_result_exit(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
-                    base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    if not balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit):
-                        logger.error(f"Function failed: balance_manager.sell().")
-                        # TODO: Fix the logic. The balance manager should be called prior
-
-                elif int(trade_list[i].exit.expire) <= last_closed_candle_open_time:
-                    trade_list[i].status = EState.EXIT_EXP
-
-
-            elif type(trade_list[i].exit) == OCO:
-                # NOTE: Think about the worst case and check the stop loss first.
-
-                if float(last_kline['low']) < trade_list[i].exit.stop_price:
-                    # Stop Loss takens
-                    trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        cause=ECause.CLOSED_STOP_LIMIT, #TODO: REFACTORING: Checkout if it is good to have stoploss or not
-                        price=trade_list[i].exit.stop_limit_price,
-                        fee_rate=TestBinanceWrapper.fee_rate)
-
-                    base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit)
-                
-                elif float(last_kline['high']) > trade_list[i].exit.price:
-                    # Limit taken
-                    trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        fee_rate=TestBinanceWrapper.fee_rate)
-
-                    base_cur = pair.replace(config['broker']['quote_currency'],'')
-                    if not balance_manager.sell(df_balance, config['broker']['quote_currency'], base_cur, trade_list[i].result.exit):
-                        logger.error(f"Function failed: balance_manager.sell().")
-                        # TODO: Fix the logic. The balance manager should be called prior
-
-                elif int(trade_list[i].exit.expire) <= last_closed_candle_open_time:
-                    trade_list[i].status = EState.EXIT_EXP
-
-                else:
-                    pass
-
-            else:
-                # TODO: Internal Error
-                pass
-
-        else:
-            # TODO: Internal Error
-            pass
-
 
 
 async def application(strategy_list, bwrapper, ikarus_time):
@@ -171,7 +69,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 1.3: Query the status of LTOs from the Broker
     # 1.4: Update the LTOs
     live_trade_list = [trade_from_dict(trade_dict) for trade_dict in live_trade_dicts]
-    await update_ltos(live_trade_list, data_dict, strategy_period_mapping, df_balance)
+    await sync_trades_of_backtest(live_trade_list, data_dict, strategy_period_mapping, df_balance, config['broker']['quote_currency'])
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await analyzer.sample_analyzer(data_dict)

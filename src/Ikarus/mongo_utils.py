@@ -5,7 +5,7 @@ import asyncio
 import motor.motor_asyncio
 from .objects import EState, ECause
 from dataclasses import asdict
-import trade_statistics
+from . import trade_statistics
 
 class MongoClient():
 

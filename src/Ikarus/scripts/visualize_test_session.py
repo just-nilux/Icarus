@@ -1,6 +1,6 @@
 import asyncio
 from ..objects import EState
-from .. import mongo_utils, binance_wrapper
+from .. import broker, mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
  
@@ -96,7 +96,7 @@ async def main():
     if config['backtest']['online']:
         client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                         api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-        bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+        bwrapper = broker.TestBinanceWrapper(client, config)
         mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
             config['mongodb']['port'], 
             config['tag'],
