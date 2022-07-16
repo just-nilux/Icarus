@@ -30,18 +30,10 @@ class TestLimitUpdate(StrategyBase):
                 expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
             )
 
-            exit_limit_order = Limit(
-                exit_price,
-                quantity=enter_limit_order.quantity,
-                expire=StrategyBase._eval_future_candle_time(ikarus_time,15,time_scale_to_minute(self.min_period))
-            )
-
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
             trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
-            trade.set_exit(exit_limit_order)
             result = TradeResult()
-            result.enter, result.exit = Result(), Result()
             trade.result = result
 
             return trade
@@ -68,6 +60,17 @@ class TestLimitUpdate(StrategyBase):
 
 
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
+        time_dict = analysis_dict[trade.pair]
+
+        exit_price = time_dict[self.min_period]['close'] * 1.5
+
+        exit_limit_order = Limit(
+            exit_price,
+            quantity=trade.result.enter.quantity,
+            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],15,time_scale_to_minute(self.min_period))
+        )
+        trade.set_exit(exit_limit_order)
+
         trade.command = ECommand.EXEC_EXIT
         if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             return False

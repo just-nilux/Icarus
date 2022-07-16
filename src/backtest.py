@@ -13,7 +13,6 @@ import bson
 from itertools import chain
 import itertools
 from Ikarus.resource_allocator import ResourceAllocator 
-from Ikarus import balance_manager
 
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
