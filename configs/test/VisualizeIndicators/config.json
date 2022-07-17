@@ -1,0 +1,72 @@
+{
+    "tag": "test-bot",
+    "log":{
+        "level": "DEBUG",
+        "file": "log/test-ikarus-app.log",
+        "clear": true
+    },
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "balances": [
+        {
+            "asset": "USDT", 
+            "free": 10000, 
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+         "fee_rate": 0.001
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.9
+    },
+    "strategy": {
+        "TestLimitUpdate": {
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1d"],
+            "max_lto": 3
+        },
+        "TestMarketMarket": {
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1d"],
+            "max_lto": 3
+        }
+    },
+    "time_scales": {
+        "1m": ["12 hours", 720],
+        "5m": ["1 day", 480],
+        "15m": ["1 day", 96],
+        "30m": ["1 week", 336],
+        "1h": ["1 week", 168],
+        "2h": ["1 week", 84],
+        "4h": ["1 week", 42],
+        "12h": ["1 month", 60],
+        "1d": ["3 months", 90],
+        "1w": ["1 year", 52],
+        "1M": ["1 year", 12]
+    },
+    "backtest":{
+        "start_time": "2019-05-12 12:15:00",
+        "end_time": "2019-06-19 13:00:00",
+        "online": true
+    },
+    "visualization":{
+        "observers":{
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
+        },
+        "indicators": {
+            "rsi": {"timeperiod":14},
+            "macd": {"fastperiod":12, "slowperiod":26, "signalperiod":9},
+            "trange": {},
+            "ma": {"timeperiod":50},
+            "parallel_ma": [{"timeperiod":7}, {"timeperiod":14}]
+        },
+        "patterns":[]
+    }
+}

@@ -1,7 +1,7 @@
 import asyncio
 from ..objects import EState
 from pymongo import ASCENDING, DESCENDING
-from .. import mongo_utils, binance_wrapper
+from .. import broker, mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
 from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
@@ -91,7 +91,7 @@ async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                     api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    bwrapper = broker.TestBinanceWrapper(client, config)
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],
