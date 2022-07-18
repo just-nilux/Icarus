@@ -972,9 +972,9 @@ class TestBinanceWrapper(BrokerWrapper):
         if balance_manager.place_enter_order(df_balance, self.quote_currency, trade.enter):
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.OPEN_ENTER
-            return trade, True
+            return True
 
-        return trade, False
+        return False
 
 
     def execute_market_buy(self, trade, df_balance, data_dict):
@@ -993,9 +993,9 @@ class TestBinanceWrapper(BrokerWrapper):
             balance_manager.buy(df_balance, self.quote_currency, base_cur, trade.result.enter)
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.WAITING_EXIT
-            return trade, True
+            return True
             
-        return trade, False
+        return False
 
 
     def execute_market_sell(self, trade, df_balance, data_dict):
@@ -1013,9 +1013,9 @@ class TestBinanceWrapper(BrokerWrapper):
             balance_manager.sell(df_balance, self.quote_currency, base_cur, trade.result.exit)
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.CLOSED
-            return trade, True
+            return True
             
-        return trade, False
+        return False
 
 
     def _execute_lto(self, trade_list, df_balance, data_dict):
