@@ -48,8 +48,6 @@ class ECommand(str, Enum):
     NONE = None
     CANCEL = 'cancel'                   # Cancel order
     UPDATE = 'update'                   # Update order (CANCEL + EXEC_X)
-    MARKET_ENTER = 'market_enter'       # Do market enter
-    MARKET_EXIT = 'market_exit'         # Do market exit
     EXEC_EXIT = 'execute_exit'          # Execute exit order   
     EXEC_ENTER = 'execute_enter'        # Execute enter order
 

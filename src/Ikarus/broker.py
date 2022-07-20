@@ -1068,31 +1068,6 @@ class TestBinanceWrapper(BrokerWrapper):
                     '''
                     pass
                 pass
-            
-            elif trade_list[i].command == ECommand.MARKET_ENTER:
-                pass
-            
-            elif trade_list[i].command == ECommand.MARKET_EXIT:
-                # NOTE: MARKET_EXIT cannot fail, so no error case
-                # NOTE: Cancelling the current algo order and placing market order will not cause any change in the df_balance. Thus commented out.
-                #balance_manager.cancel_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
-                #balance_manager.place_exit_order(df_balance, base_cur, more_itertools.one(lto_list[i][PHASE_EXIT].values())['quantity'])
-                base_cur = trade_list[i].pair.replace(self.config['broker']['quote_currency'],'')
-                balance_manager.sell(df_balance, self.config['broker']['quote_currency'], base_cur, trade_list[i].exit)
-
-                min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade_list[i].strategy]['time_scales'])
-                last_kline = data_dict[trade_list[i].pair][min_scale].tail(1)
-
-                # NOTE: TEST: Simulation of the market sell is normally the open price of the future candle,
-                #             For the sake of simplicity closed price of the last candle is used in the market sell
-                #             by assumming that the 'close' price is pretty close to the 'open' of the future
-
-                trade_list[i].set_result_exit(bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)),
-                    cause=ECause.EXIT_EXP, price=float(last_kline['close']), fee_rate=TestBinanceWrapper.fee_rate)
-                
-                # Since the type(trade_list[i]) == Market currently, no manual intervention
-                #lto_list[i]['result']['exit']['type'] = TYPE_MARKET
-                trade_list[i].reset_command()
 
             elif trade_list[i].command == ECommand.EXEC_EXIT:
                 # If the enter is successful and the algorithm decides to execute the exit order

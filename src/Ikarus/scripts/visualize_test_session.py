@@ -4,7 +4,7 @@ from .. import broker, mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
  
-from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
+from ..utils import get_pair_min_period_mapping
 from binance import AsyncClient
 import pandas as pd
 import json
@@ -68,16 +68,14 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     df_pair_list = list(await asyncio.gather(*df_list))
 
     for idx, item in enumerate(pair_scale_mapping.items()):
-        # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
-        closed_trades = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
+        enter_expired_trades = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':EState.ENTER_EXP, 'pair':item[0]})
+        exit_expired_trades = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
+        closed_trades = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':EState.CLOSED, 'pair':item[0]})
 
-        #fplot.buy_sell_dashboard(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
-        dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire
-        dashboard_data_pack[item[0]]['df_exit_expire'] = df_exit_expire
-        dashboard_data_pack[item[0]]['df_closed'] = closed_trades
+        dashboard_data_pack[item[0]]['enter_expired_trades'] = enter_expired_trades
+        dashboard_data_pack[item[0]]['df_exit_expire'] = exit_expired_trades
+        dashboard_data_pack[item[0]]['closed_trades'] = closed_trades
 
     # Get observer objects
     for obs_type, obs_list in config['visualization']['observers'].items():

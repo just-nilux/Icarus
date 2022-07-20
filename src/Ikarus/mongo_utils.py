@@ -3,7 +3,7 @@ from pymongo import MongoClient, DESCENDING
 import logging
 import asyncio
 import motor.motor_asyncio
-from .objects import EState, ECause
+from .objects import EState, ECause, trade_from_dict
 from dataclasses import asdict
 from . import trade_statistics
 
@@ -167,3 +167,7 @@ async def update_live_trades(mongo_client, trade_list): # TODO: REFACTOR: checko
 
         else:
             pass
+
+async def query_trades(mongo_client, col, query={}):
+    trade_list = await mongo_client.do_find(col,query)
+    return [trade_from_dict(hto) for hto in trade_list]

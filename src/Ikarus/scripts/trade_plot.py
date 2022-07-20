@@ -19,10 +19,8 @@ def plot_oco_frame():
     pass
 
 
-def write_descriptions(trade_list) -> None:
-
+def write_profits(trade_list):
     for trade in trade_list:
-        
         if trade.result.exit.price < trade.result.enter.price:
             rect_top = trade.result.enter.price
         else:
@@ -30,8 +28,16 @@ def write_descriptions(trade_list) -> None:
 
         profit_perc = trade.result.profit / trade.result.enter.amount
         fplt.add_text((trade.result.exit.time, rect_top), "%{:.2f}".format(profit_perc), color='#000000', anchor=(1,0))
-        fplt.add_text((trade.decision_time, trade.result.enter.price), "{}".format(trade.strategy), color='#000000')
-        
+
+
+def write_strategy_names(trade_list):
+    for trade in trade_list:
+        fplt.add_text((trade.decision_time, trade.enter.price), "{}".format(trade.strategy), color='#000000')
+
+
+def write_descriptions(trade_list) -> None:
+    write_profits(trade_list)
+    write_strategy_names(trade_list)        
 
 
 def plot_exit_orders(trade_list) -> None:
@@ -46,11 +52,14 @@ def plot_exit_orders(trade_list) -> None:
 
 def plot_enter_orders(trade_list) -> None:
     for trade in trade_list:
-        if trade.cause = ECause.Enter
-
-        fplt.add_line((trade.decision_time, trade.result.enter.price),
-            (trade.result.exit.time, trade.result.enter.price),
-            color='#0000FF', width=3, interactive=False)
+        if trade.result.cause == ECause.ENTER_EXP:
+            fplt.add_line((trade.decision_time, trade.enter.price),
+                (trade.enter.expire, trade.enter.price),
+                color='#9900ff', interactive=False)
+        elif trade.result.cause == ECause.CLOSED:
+            fplt.add_line((trade.decision_time, trade.result.enter.price),
+                (trade.result.exit.time, trade.result.enter.price),
+                color='#0000FF', width=3, interactive=False)
 
 
 def scatter_buy_points(ax, trade_list) -> None:

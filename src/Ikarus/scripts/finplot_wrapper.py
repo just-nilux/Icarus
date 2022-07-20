@@ -193,9 +193,8 @@ def _add_time_separator(df):
 
 
 def _add_enter_expire_tos(enter_expired_trades):
-    for trade in enter_expired_trades:
-        fplt.add_line((row['decision_time'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
-        fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
+    trade_plot.plot_enter_orders(enter_expired_trades)
+    trade_plot.write_strategy_names(enter_expired_trades)
 
 
 def _add_exit_expire_tos(df_exit_expire):
@@ -250,15 +249,15 @@ def change_asset():
         fplt.volume_ocv(dashboard_data[symbol]['df']['open close volume'.split()], ax=axo)
         ax.set_visible(xaxis=True)
 
-        if not dashboard_data[symbol]['df_enter_expire'].empty:
-            _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['df_enter_expire']))
+        if dashboard_data[symbol]['enter_expired_trades']:
+            _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['enter_expired_trades']))
 
         # Exit expired trade visualization
         if not dashboard_data[symbol]['df_exit_expire'].empty:
             _add_exit_expire_tos(deepcopy(dashboard_data[symbol]['df_exit_expire']))
 
-        if dashboard_data[symbol]['df_closed']:
-            _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['df_closed'])) # NOTE: Plot the closed ones last to make sure they are in front
+        if dashboard_data[symbol]['closed_trades']:
+            _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['closed_trades'])) # NOTE: Plot the closed ones last to make sure they are in front
 
     # restores saved zoom position, if in range
     fplt.refresh()
