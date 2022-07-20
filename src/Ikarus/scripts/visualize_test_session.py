@@ -71,13 +71,13 @@ async def visualize_dashboard(bwrapper, mongocli, config):
         # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
         df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
         df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
+        closed_trades = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
 
         #fplot.buy_sell_dashboard(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire
         dashboard_data_pack[item[0]]['df_exit_expire'] = df_exit_expire
-        dashboard_data_pack[item[0]]['df_closed'] = df_closed
+        dashboard_data_pack[item[0]]['df_closed'] = closed_trades
 
     # Get observer objects
     for obs_type, obs_list in config['visualization']['observers'].items():

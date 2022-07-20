@@ -14,6 +14,7 @@ from pyqtgraph import QtGui
 import pyqtgraph as pg
 from copy import deepcopy
 from . import observer_plot
+from . import trade_plot
 
 dashboard_data = {}
 ax, axo, ctrl_panel = '', '', ''
@@ -191,11 +192,10 @@ def _add_time_separator(df):
         last_period = period
 
 
-def _add_enter_expire_tos(df_enter_expire):
-    for idx, row in df_enter_expire.iterrows():
+def _add_enter_expire_tos(enter_expired_trades):
+    for trade in enter_expired_trades:
         fplt.add_line((row['decision_time'], row['enterPrice']), (row['enterExpire'], row['enterPrice']), color='#9900ff', interactive=False)
         fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
-
 
 
 def _add_exit_expire_tos(df_exit_expire):
@@ -208,54 +208,11 @@ def _add_exit_expire_tos(df_exit_expire):
         fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
 
 
-def _add_closed_tos(ax, df_closed):
-    # Closed trade visualization (result.exit.type: limit or oco_limit)
-    for idx, row in df_closed.iterrows():
-        # NOTE: Calculation is based on "sellPrice" but the rect is based on "exitPrice"
-        profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-
-        # Stoploss taken
-        if profit_perc < 0:
-            trade_color = '#FF9090'
-            rect_lower_limit = row['sellPrice']
-
-        # Limit taken
-        else:
-            trade_color = '#60FF60'
-            rect_lower_limit = row['enterPrice']
-
-        rect_upper_limit = max(row['exitPrice'], row['enterPrice'])
-        fplt.add_rect((row['decision_time'], rect_upper_limit), (row['exitTime'], rect_lower_limit), color=trade_color, interactive=False)
-        fplt.add_text((row['exitTime'], rect_upper_limit), "%{:.2f}".format(profit_perc), color='#000000', anchor=(1,0))
-        fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
-        fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitTime'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-
-
-    # TODO: Visualiztion of updated order, exit target price and sel price become the same if it is updated
-    #               # sellPrice and exitPrice become the same and the rectangle does not appear
-    df_closed.set_index('decision_time',inplace=True)
-    duplicate_filter = df_closed.index.duplicated(keep=False)
-    plot_spec = {'color':'#0000ff','style':'t2', 'ax':ax, 'legend':'Decision Point'}
-    _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
-
-    df_closed.set_index('exitTime',inplace=True)
-    duplicate_filter = df_closed.index.duplicated(keep=False)
-    plot_spec = {'color':'#ff0000','style':'v', 'ax':ax, 'legend':'Sell Point'}
-    _scatter_wrapper(serie=df_closed['sellPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
-
-    df_closed.set_index('enterTime',inplace=True)
-    duplicate_filter = df_closed.index.duplicated(keep=False)
-    plot_spec = {'color':'#00ff00','style':'^', 'ax':ax, 'legend':'Buy Point'}
-    _scatter_wrapper(serie=df_closed['enterPrice'], duplicate_filter=duplicate_filter, plot_spec=plot_spec)
-
-
-def _scatter_wrapper(serie, duplicate_filter, plot_spec):
-    # Visualize Non-duplicates
-    serie[~duplicate_filter].plot(kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'], legend=plot_spec['legend'])
-
-    # Visualize Duplicates
-    for row in serie[duplicate_filter].to_frame().iterrows():
-        fplt.plot(x=row[0], y=float(row[1]), kind='scatter', color=plot_spec['color'], width=2, ax=plot_spec['ax'], zoomscale=False, style=plot_spec['style'])
+def _add_closed_tos(ax, closed_trades):
+    trade_plot.write_descriptions(closed_trades)
+    trade_plot.plot_exit_orders(closed_trades)
+    trade_plot.plot_enter_orders(closed_trades)
+    trade_plot.plot_buy_sell_points(ax, closed_trades)
 
 
 def change_asset():
@@ -300,7 +257,7 @@ def change_asset():
         if not dashboard_data[symbol]['df_exit_expire'].empty:
             _add_exit_expire_tos(deepcopy(dashboard_data[symbol]['df_exit_expire']))
 
-        if not dashboard_data[symbol]['df_closed'].empty:
+        if dashboard_data[symbol]['df_closed']:
             _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['df_closed'])) # NOTE: Plot the closed ones last to make sure they are in front
 
     # restores saved zoom position, if in range

@@ -90,7 +90,7 @@ async def get_closed_hto(config, mongocli, query={'result.cause':ECause.CLOSED})
         hto_closed.append(hto_dict)
 
     df = pd.DataFrame(hto_closed)
-    return df
+    return [trade_from_dict(hto) for hto in hto_list]
 
 
 async def get_enter_expire_hto(mongocli, query={'result.cause':ECause.ENTER_EXP}):

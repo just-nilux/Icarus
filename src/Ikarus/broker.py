@@ -1136,7 +1136,7 @@ class TestBinanceWrapper(BrokerWrapper):
                     new_trades[i].command = ECommand.NONE
 
             elif type(new_trades[i].enter) == Limit:
-                new_trades[i], is_success = self.execute_limit_buy(new_trades[i], df_balance)
+                is_success = self.execute_limit_buy(new_trades[i], df_balance)
                 if is_success: new_trades[i].command = ECommand.NONE
 
             else: pass # TODO: Internal Error

@@ -36,11 +36,7 @@
         "indicators": {
             "low":"",
             "high":"",
-            "rsi":"",
-            "close":"",
-            "macd":"",
-            "ma": [50,200],
-            "trange": ""
+            "close":""
         }
     },
     "time_scales": {
