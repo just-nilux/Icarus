@@ -197,14 +197,11 @@ def _add_enter_expire_tos(enter_expired_trades):
     trade_plot.write_strategy_names(enter_expired_trades)
 
 
-def _add_exit_expire_tos(df_exit_expire):
-    for idx, row in df_exit_expire.iterrows():
-        fplt.add_rect((row['decision_time'], row['exitPrice']), (row['exitExpire'], row['enterPrice']), color='#FFFF00', interactive=True)
-        profit_perc = 100*(row['sellPrice']-row['enterPrice'])/row['enterPrice']
-        fplt.add_text((row['exitExpire'], row['exitPrice']), "%{:.2f}".format(profit_perc), color='#000000',anchor=(1,0))
-        fplt.add_text((row['decision_time'], row['enterPrice']), "{}".format(row['strategy']), color='#000000')
-        fplt.add_line((row['decision_time'], row['enterPrice']), (row['exitExpire'], row['enterPrice']), color='#0000FF', width=3, interactive=False)
-        fplt.add_line((row['decision_time'], row['sellPrice']), (row['exitExpire'], row['sellPrice']), color='#0000FF', width=3, interactive=False)
+def _add_exit_expire_tos(ax, df_exit_expire):
+    trade_plot.plot_exit_orders(df_exit_expire)
+    trade_plot.plot_enter_orders(df_exit_expire)
+    trade_plot.write_descriptions(df_exit_expire)
+    trade_plot.plot_buy_sell_points(ax, df_exit_expire)
 
 
 def _add_closed_tos(ax, closed_trades):
@@ -253,8 +250,8 @@ def change_asset():
             _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['enter_expired_trades']))
 
         # Exit expired trade visualization
-        if not dashboard_data[symbol]['df_exit_expire'].empty:
-            _add_exit_expire_tos(deepcopy(dashboard_data[symbol]['df_exit_expire']))
+        if dashboard_data[symbol]['exit_expired_trades']:
+            _add_exit_expire_tos(ax, deepcopy(dashboard_data[symbol]['exit_expired_trades']))
 
         if dashboard_data[symbol]['closed_trades']:
             _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['closed_trades'])) # NOTE: Plot the closed ones last to make sure they are in front

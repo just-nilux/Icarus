@@ -11,45 +11,6 @@ import json
 import sys
 from datetime import datetime
 
-async def visualize_offline():
-    # Read Database to get hist-trades and dump to a DataFrame
-
-    df = pd.read_csv(config['files'][0])
-    df = df.set_index(['open_time'])
-
-    #df_enter_expire = await get_enter_expire_hto(mongocli)
-    #df_exit_expire = await get_exit_expire_hto(mongocli)
-    #df_closed = await get_closed_hto(mongocli)
-
-    fplot.buy_sell(df)
-
-    pass
-
-
-async def visualize_online(bwrapper, mongocli, config):
-
-    start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
-    start_timestamp = int(datetime.timestamp(start_time))*1000
-    end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
-    end_timestamp = int(datetime.timestamp(end_time))*1000
-
-    pair_scale_mapping = await get_pair_min_period_mapping(config)
-
-    df_list = []
-    for pair,scale in pair_scale_mapping.items(): 
-        df_list.append(bwrapper.get_historical_klines(start_timestamp, end_timestamp, pair, scale))
-
-    df_pair_list = list(await asyncio.gather(*df_list))
-
-    for idx, item in enumerate(pair_scale_mapping.items()):
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
-
-        fplot.buy_sell(df_pair_list[idx], df_closed=df_closed, df_enter_expire=df_enter_expire, df_exit_expire=df_exit_expire, title=f'{item[0]} - {item[1]}')
-
-    pass
-
 
 async def visualize_dashboard(bwrapper, mongocli, config):
 
@@ -74,7 +35,7 @@ async def visualize_dashboard(bwrapper, mongocli, config):
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['enter_expired_trades'] = enter_expired_trades
-        dashboard_data_pack[item[0]]['df_exit_expire'] = exit_expired_trades
+        dashboard_data_pack[item[0]]['exit_expired_trades'] = exit_expired_trades
         dashboard_data_pack[item[0]]['closed_trades'] = closed_trades
 
     # Get observer objects
@@ -100,8 +61,6 @@ async def main():
             config['tag'],
             clean=False)
         await visualize_dashboard(bwrapper, mongocli, config)
-    else:
-        await visualize_offline()
 
 
 if __name__ == '__main__':
