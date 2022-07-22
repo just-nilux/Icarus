@@ -1,0 +1,22 @@
+{
+    "Generation Date": "10/07/2022 00:05:07",
+    "Start Time": "2019-05-12 12:15:00",
+    "End Time": "2019-06-19 13:00:00",
+    "Balance": {
+        "Start Balance": 10000.0,
+        "End Balance": 14700.45426285,
+        "Absolute Profit": 4700.45426285,
+        "Percentage Profit": 47.004542628500005,
+        "Paid Fee": 434.17901053
+    },
+    "Strategies": {
+        "TestMarketMarket": {
+            "Live Trades": 1,
+            "Closed": 18,
+            "Enter Expired": 0,
+            "Exit Expired": 0,
+            "Closed Expired": 4915.08376623,
+            "Exit Expired Expired": 0
+        }
+    }
+}

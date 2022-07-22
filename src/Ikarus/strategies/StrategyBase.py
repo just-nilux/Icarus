@@ -17,7 +17,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
     def __init__(self, _name, _config, _symbol_info):
         self.name = _name
         self.alloc_ratio = 0
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy'][self.name]
         self.max_lto = self.config.get('max_lto',1)
 
@@ -68,7 +67,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
-            self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
+            logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
             return []
 
         # Initialize trade_dict to be filled
@@ -84,7 +83,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
             # If handle_lto_logic fails then it means that the trade_list[lto_idx] is unchanged.
             if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time):
-                self.logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
+                logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
             pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
             

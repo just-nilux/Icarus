@@ -11,6 +11,9 @@ from itertools import groupby
 from operator import itemgetter
 from .utils import time_scale_to_milisecond
 
+logger = logging.getLogger('app')
+
+
 class Analyzer():
     """
     The duty of Analyzer class is to provide analysis objects.
@@ -23,7 +26,6 @@ class Analyzer():
     #       however they are not "awaitable". Thus each one-liner lambda expression should be an awaitable method
 
     def __init__(self, analysis_config):
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.analysis_config = analysis_config
         self.current_time_df={}
         return

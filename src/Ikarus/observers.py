@@ -5,12 +5,14 @@ import logging
 import pandas as pd
 from .utils import eval_total_capital_in_lto, safe_multiply, safe_substract, safe_sum
 
+logger = logging.getLogger('app')
+
+
 class Observer():
 
     def __init__(self, _config):
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config
-        self.logger.info('creating an instance of {}'.format(__name__))
+        logger.info('creating an instance of {}'.format(__name__))
         self.equity = None
 
 

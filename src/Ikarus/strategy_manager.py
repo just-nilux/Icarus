@@ -2,11 +2,13 @@ import logging
 from binance.helpers import round_step_size
 from . import strategies
 # TODO: Make the StrategyManager static and use it so
+
+logger = logging.getLogger('app')
+
+
 class StrategyManager():
 
     def __init__(self, _config, _symbol_info, _mongo_cli) -> None:
-
-        self.logger = logging.getLogger('app.{}'.format(__name__))
 
         self.strategy_list = []
         self.strategy_names = []
@@ -41,14 +43,14 @@ class StrategyManager():
         res_alloc = await self.mongo_cli.do_find('strmgr_plugin',{'type':'resource_allocation'})
         
         if len(res_alloc) == 0:
-            self.logger.debug(f'No new resource_allocation object in {"strmgr_plugin"}')
+            logger.debug(f'No new resource_allocation object in {"strmgr_plugin"}')
             return
 
         # Feed the config changes to related strategies
         for strategy in self.strategy_list:
             strategy.strategywise_alloc_rate = res_alloc[0]['strategy'][strategy.name]
 
-        self.logger.info(f'Resource allocated: {res_alloc[0]["strategy"]}')
+        logger.info(f'Resource allocated: {res_alloc[0]["strategy"]}')
 
         # Delete the consumed plugin objects from DB
         # NOTE: A resource_allocation object has no use after it is consumed. If no document in strmgr_plugin then its okay.

@@ -213,16 +213,6 @@ def _add_closed_tos(ax, closed_trades):
 
 def change_asset():
     '''Resets and recalculates everything, and plots for the first time.'''
-    '''
-    dashboard_data = {
-        'BTCUSDT':{
-            'df':pd.DataFrame,
-            'df_enter_expire':pd.DataFrame,
-            ...
-        }
-        ...
-    }
-    '''
     # save window zoom position before resetting
     #fplt._savewindata(fplt.windows[0])
 

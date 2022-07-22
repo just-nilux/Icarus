@@ -7,6 +7,9 @@ from .objects import EState, ECause, trade_from_dict
 from dataclasses import asdict
 from . import trade_statistics
 
+logger = logging.getLogger('app')
+
+
 class MongoClient():
 
     
@@ -15,8 +18,7 @@ class MongoClient():
 
         # TODO: Implement normal client as well. It is hard to test with asycn cli
         #self.normal_client = MongoClient(host=_host, port=_port)
-        self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.logger.debug('Mongo client initiated')
+        logger.debug('Mongo client initiated')
 
         # Drop the db if it is no the main one
         if clean:
@@ -44,7 +46,7 @@ class MongoClient():
         if type(query) == dict:
             result = self.db_bot[col].find(query)
             docs = await result.to_list(None)
-            self.logger.debug(f"do_find [{col}]: total found document: {len(docs)}")
+            logger.debug(f"do_find [{col}]: total found document: {len(docs)}")
         elif type(query) == list:
             async for doc in self.db_bot[col].aggregate(query):
                 docs=doc
@@ -71,7 +73,7 @@ class MongoClient():
 
         result = await self.db_bot[col].insert_one(item)
         
-        self.logger.debug(f'do_insert_one [{col}]: inserted id "{result.inserted_id}"')
+        logger.debug(f'do_insert_one [{col}]: inserted id "{result.inserted_id}"')
         return result
 
 
@@ -84,7 +86,7 @@ class MongoClient():
             item_list (list): 
         """        
         result = await self.db_bot[col].insert_many(item_list)
-        self.logger.debug(f"do_insert_many [{col}]: inserted ids {result.inserted_ids}")
+        logger.debug(f"do_insert_many [{col}]: inserted ids {result.inserted_ids}")
         return result
 
 
@@ -96,7 +98,7 @@ class MongoClient():
             update (dict): update rule
         """
         result = await self.db_bot[col].update_one(query, update)
-        if '_id' in query.keys(): self.logger.debug(f"do_update [{col}]: \"{query['_id']}\"")
+        if '_id' in query.keys(): logger.debug(f"do_update [{col}]: \"{query['_id']}\"")
         return result
 
 
@@ -110,7 +112,7 @@ class MongoClient():
         prev_count = await self.count(col)
         result = self.db_bot[col].delete_many(query)
         after_count = await self.count(col)
-        self.logger.debug(f"do_delete [{col}]: prev count {prev_count}, after count {after_count}")
+        logger.debug(f"do_delete [{col}]: prev count {prev_count}, after count {after_count}")
         return result
 
 # Specific Methods:

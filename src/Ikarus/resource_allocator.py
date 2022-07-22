@@ -1,12 +1,14 @@
 import math
 import logging
 
+logger = logging.getLogger('app')
+
+
 class ResourceAllocator():
 
     def __init__(self, _strategy_names, _mongo_cli) -> None:
         self.strategy_names = _strategy_names
         self.mongo_cli = _mongo_cli
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         pass
 
     async def allocate(self):
@@ -15,7 +17,7 @@ class ResourceAllocator():
 
         res_alloc_obj = self.alloc_default()
         result = await self.strategy_manager_plugin(res_alloc_obj)
-        self.logger.debug(f'Resource Allocate object "{result.inserted_id}" inserted')
+        logger.debug(f'Resource Allocate object "{result.inserted_id}" inserted')
         return result
 
 

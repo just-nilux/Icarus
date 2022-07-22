@@ -14,13 +14,17 @@ def plot_rectangle_frame(h1,h2,v1,v2):
 
 
 def colorize_exit_order(trade):
-    rect_bot=trade.result.enter.price
-    rect_top=trade.result.exit.price
-    color = '#60FF60'
+
     if trade.result.exit.price < trade.result.enter.price:
-        rect_bot, rect_top = rect_top, rect_bot
+        rect_bot=trade.result.exit.price
+        rect_top=trade.result.enter.price
         color = '#FF9090'
-    
+    else:
+        rect_bot=trade.result.enter.price
+        rect_top=trade.result.exit.price
+        color = '#60FF60'
+
+
     if trade.order_stash:
         # If there is stashed orders then use the "expire" of last stashed order
         fplt.add_rect((trade.order_stash[-1].expire, rect_top), (trade.result.exit.time, rect_bot), color=color, interactive=False)
@@ -32,6 +36,7 @@ def colorize_exit_order(trade):
 
 def plot_exit_order_frames(trade):
 
+    # TODO: The logic can be improved a bit more
     if not trade.order_stash:
         if type(trade.exit) == Market:
             fplt.add_line((trade.result.enter.time, trade.result.enter.price), 

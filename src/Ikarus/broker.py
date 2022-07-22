@@ -9,7 +9,6 @@ import logging
 import json
 import bson
 import time
-from itertools import chain, groupby
 import copy
 from .utils import time_scale_to_second, get_min_scale, time_scale_to_milisecond, \
     safe_multiply, safe_divide, round_to_period
@@ -61,8 +60,7 @@ class BinanceWrapper(BrokerWrapper):
         self.client = _client
         self.config = _config
         self.telbot = _telbot
-        self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.logger.info('creating an instance of {}'.format(__name__))
+        logger.info('creating an instance of {}'.format(__name__))
 
         # Set reference currencies
         self.quote_currency = _config['broker']['quote_currency']
@@ -179,7 +177,7 @@ class BinanceWrapper(BrokerWrapper):
 
     async def decompose(self, meta_data_pool, composit_klines):
 
-        self.logger.debug("decompose started")
+        logger.debug("decompose started")
         do_dict = dict()
         for idx, meta_data in enumerate(meta_data_pool):
             
@@ -193,11 +191,11 @@ class BinanceWrapper(BrokerWrapper):
             df = df.astype(float)
 
             if len(df) != int(self.config['time_scales'][meta_data[0]][1]-1):
-                self.logger.warn(f"Missing historical candle for {meta_data[1]} {meta_data[0]}: {len(df)} instead of {self.config['time_scales'][meta_data[0]][1]-1}")
+                logger.warn(f"Missing historical candle for {meta_data[1]} {meta_data[0]}: {len(df)} instead of {self.config['time_scales'][meta_data[0]][1]-1}")
 
             do_dict[meta_data[1]][meta_data[0]] = df
 
-        self.logger.debug("decompose ended")
+        logger.debug("decompose ended")
         return do_dict
 
 
@@ -240,7 +238,7 @@ class BinanceWrapper(BrokerWrapper):
         Returns:
             list: lto_list
         """
-        self.logger.debug('get_lto_orders started')
+        logger.debug('get_lto_orders started')
 
         # Check the status of LTOs:
         coroutines = []
@@ -261,7 +259,7 @@ class BinanceWrapper(BrokerWrapper):
             for order in list(await asyncio.gather(*coroutines)):
                 lto_orders_dict[order['orderId']] = order
         
-        self.logger.debug('get_lto_orders started')
+        logger.debug('get_lto_orders started')
 
         return lto_orders_dict
 
@@ -278,14 +276,14 @@ class BinanceWrapper(BrokerWrapper):
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC)
 
         except Exception as e:
-            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return False
 
         else:
             response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
-            self.logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order placed: {response_limit_maker["orderId"]}')
-            self.logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order placed: {response_stoploss["orderId"]}')
+            logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order placed: {response_limit_maker["orderId"]}')
+            logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order placed: {response_stoploss["orderId"]}')
 
             lto['exit'][TYPE_OCO]['orderId'] = response_limit_maker['orderId']
             lto['exit'][TYPE_OCO]['stopLimit_orderId'] = response_stoploss['orderId']
@@ -305,12 +303,12 @@ class BinanceWrapper(BrokerWrapper):
                 price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_LIMIT]['price'])
 
         except Exception as e:
-            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return False
 
         else:
-            self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
 
             lto['status'] = STAT_OPEN_EXIT
@@ -327,12 +325,12 @@ class BinanceWrapper(BrokerWrapper):
                 price=f'%.{self.pricePrecision}f' % lto[PHASE_ENTER][TYPE_LIMIT]['price'])
 
         except Exception as e:
-            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            self.logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_LIMIT]))
+            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_LIMIT]))
             return False
 
         else:
-            self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_ENTER][TYPE_LIMIT]['orderId'] = response['orderId']
 
             lto['status'] = STAT_OPEN_ENTER
@@ -352,19 +350,19 @@ class BinanceWrapper(BrokerWrapper):
                 orderId=lto[phase][type]['orderId'])
 
         except Exception as e:
-            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
             # TODO: Notification: ERROR
             return False
 
         else:
             if phase == PHASE_EXIT and type == TYPE_OCO:
                 response_stoploss, response_limit_maker = response['orderReports'][0], response['orderReports'][1]
-                self.logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
-                self.logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
+                logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
+                logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
                 self.telbot.send_constructed_msg('lto', *[lto['_id'], phase, response_limit_maker["orderId"], 'canceled'])
 
             else:
-                self.logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
+                logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
                 self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], phase, response["orderId"], 'canceled'])
             return True
 
@@ -374,16 +372,16 @@ class BinanceWrapper(BrokerWrapper):
             response = await self.client.order_market_buy(
                 symbol=lto['pair'],
                 quantity=lto[PHASE_ENTER][TYPE_MARKET]['quantity'])
-            self.logger.debug(json.dumps(response))
-            self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
+            logger.debug(json.dumps(response))
+            logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
 
         except Exception as e:
-            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            self.logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_MARKET]))
+            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_MARKET]))
             return False
 
         else:
-            self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_ENTER][TYPE_MARKET]['orderId'] = response['orderId']
 
             lto['status'] = STAT_WAITING_EXIT
@@ -414,16 +412,16 @@ class BinanceWrapper(BrokerWrapper):
             response = await self.client.order_market_sell(
                 symbol=lto['pair'],
                 quantity=lto[PHASE_EXIT][TYPE_MARKET]['quantity'])
-            self.logger.debug(json.dumps(response))
-            self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
+            logger.debug(json.dumps(response))
+            logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
 
         except Exception as e:
-            self.logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            self.logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
+            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
+            logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
             return False
 
         else:
-            self.logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             lto[PHASE_EXIT][TYPE_MARKET]['orderId'] = response['orderId']
 
             lto['status'] = STAT_CLOSED
@@ -479,7 +477,7 @@ class BinanceWrapper(BrokerWrapper):
         """
         for i in range(len(lto_list)):
             if 'action' in lto_list[i].keys():
-                self.logger.info(f"Handling action: \"{lto_list[i]['action']}\" for lto: \"{lto_list[i]['_id']}\"")
+                logger.info(f"Handling action: \"{lto_list[i]['action']}\" for lto: \"{lto_list[i]['_id']}\"")
                 if lto_list[i]['action'] == ACTN_CANCEL:
                     # NOTE: Assuming that the phase: enter
                     if await self._execute_cancel(lto_list[i]): # Close the LTO if the enter order canceled
@@ -522,7 +520,7 @@ class BinanceWrapper(BrokerWrapper):
                             quantity=lto_list[i]['pair']) # TODO: left with typo to not to execute
 
                     except Exception as e:
-                        self.logger.error(f"{lto_list[i]['strategy']} - {lto_list[i]['pair']}: {e}")
+                        logger.error(f"{lto_list[i]['strategy']} - {lto_list[i]['pair']}: {e}")
                         # TODO: Notification
 
                     else:
@@ -582,13 +580,13 @@ class BinanceWrapper(BrokerWrapper):
                     if lto_list[i]['status'] == STAT_ENTER_EXP:
                         lto_list[i]['status'] = STAT_OPEN_ENTER
                         lto_list[i]['history'].append(lto_list[i]['status'])
-                        self.logger.info(f'LTO {lto_list[i]["enter"]["limit"]["orderId"]}: postponed the ENTER to {lto_list[i]["enter"]["limit"]["expire"]}')
+                        logger.info(f'LTO {lto_list[i]["enter"]["limit"]["orderId"]}: postponed the ENTER to {lto_list[i]["enter"]["limit"]["expire"]}')
 
                     elif lto_list[i]['status'] == STAT_EXIT_EXP:
                         lto_list[i]['status'] = STAT_OPEN_EXIT
                         lto_list[i]['history'].append(lto_list[i]['status'])
                         exit_type = self.config["strategy"][lto_list[i]['strategy']]["exit"]["type"]
-                        self.logger.info(f'LTO {lto_list[i]["exit"][exit_type]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][exit_type]["expire"]}')
+                        logger.info(f'LTO {lto_list[i]["exit"][exit_type]["orderId"]}: postponed the EXIT to {lto_list[i]["exit"][exit_type]["expire"]}')
 
                     else: pass
 
@@ -666,10 +664,10 @@ class BinanceWrapper(BrokerWrapper):
         
         # Execute decsisions about ltos
         lto_list = await self._execute_lto(lto_list)
-        self.logger.debug('lto handling completed')
+        logger.debug('lto handling completed')
         # Execute new trade objects
         nto_list = await self._execute_nto(nto_list)      
-        self.logger.debug('nto handling completed')
+        logger.debug('nto handling completed')
 
         # TODO: Consider returning trade_dict, because:
         #   - orders may not be accepted by the broker
@@ -691,8 +689,7 @@ class TestBinanceWrapper(BrokerWrapper):
 
         self.client = _client
         self.config = _config
-        self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.logger.info('creating an instance of {}'.format(__name__))
+        logger.info('creating an instance of {}'.format(__name__))
 
         # Set reference currencies
         self.quote_currency = _config['broker']['quote_currency']
@@ -873,7 +870,7 @@ class TestBinanceWrapper(BrokerWrapper):
             tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=session_end_time )))
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
         self.downloaded_data = await self.decompose(meta_data_pool, composit_klines)
-        self.logger.debug('download ended')
+        logger.debug('download ended')
 
         # The returned dict supposed to be used by the visulize_indicators.py
         return self.downloaded_data
@@ -915,7 +912,7 @@ class TestBinanceWrapper(BrokerWrapper):
 
     async def decompose(self, meta_data_pool, composit_klines):
 
-        self.logger.debug("decompose started")
+        logger.debug("decompose started")
         do_dict = dict()
         for idx, meta_data in enumerate(meta_data_pool):
             
@@ -930,7 +927,7 @@ class TestBinanceWrapper(BrokerWrapper):
             df = df.astype(float)
             do_dict[meta_data[1]][meta_data[0]] = df
 
-        self.logger.debug("decompose ended")
+        logger.debug("decompose ended")
         return do_dict
 
     def execute_cancel(self, trade, df_balance) -> bool:
@@ -1221,8 +1218,9 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
 
                 if float(last_kline['low']) < trade_list[i].exit.stop_price:
                     # Stop Loss takens
+                    # NOTE: Previously "cause=ECause.CLOSED_STOP_LIMIT" statement were here
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        cause=ECause.CLOSED_STOP_LIMIT, #TODO: REFACTORING: Checkout if it is good to have stoploss or not
+                        cause=ECause.CLOSED, # NOTE: 22.07.2022 Tested a bit and no problem observed
                         price=trade_list[i].exit.stop_limit_price,
                         fee_rate=TestBinanceWrapper.fee_rate)
 

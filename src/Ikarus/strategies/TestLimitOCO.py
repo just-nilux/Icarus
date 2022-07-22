@@ -20,7 +20,7 @@ class TestLimitOCO(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 1.05 # Enter
+            enter_price = time_dict[self.min_period]['close'] * 0.95 # Enter
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -40,6 +40,7 @@ class TestLimitOCO(StrategyBase):
 
 
     async def on_update(self, trade, ikarus_time):
+        raise Exception("This place will blow up due to trade.set_price() statemetn below")
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
         trade.set_command(ECommand.UPDATE)
         trade.expire = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
@@ -65,6 +66,10 @@ class TestLimitOCO(StrategyBase):
         target_price = time_dict[self.min_period]['close'] * 1.01
         stop_price = time_dict[self.min_period]['close'] * 0.99
         stop_limit_price = time_dict[self.min_period]['close'] * 0.989
+
+        #target_price = trade.result.enter.price * 1.05
+        #stop_price = trade.result.enter.price * 0.95
+        #stop_limit_price = trade.result.enter.price * 0.949
 
         exit_oco_order = OCO(
             price=target_price,
