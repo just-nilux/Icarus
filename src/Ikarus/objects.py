@@ -56,7 +56,6 @@ class ECause(str, Enum):
     NONE = None
     ENTER_EXP = 'enter_expire'
     MAN_CHANGE = 'manual_change'
-    EXIT_EXP = 'exit_expire'
     CLOSED = 'closed'
     CLOSED_STOP_LIMIT = 'closed_stop_limit' # 'oco_stoploss'
     # Previously:

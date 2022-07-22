@@ -159,7 +159,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         elif trade.status == EState.EXIT_EXP:
             is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
 
-
         elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # NOTE: expire of the exit_module can be calculated after the trade entered

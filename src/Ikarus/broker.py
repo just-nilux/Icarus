@@ -1220,7 +1220,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                     # Stop Loss takens
                     # NOTE: Previously "cause=ECause.CLOSED_STOP_LIMIT" statement were here
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        cause=ECause.CLOSED, # NOTE: 22.07.2022 Tested a bit and no problem observed
+                        cause=ECause.CLOSED_STOP_LIMIT, # NOTE: 22.07.2022 Tested a bit and no problem observed
                         price=trade_list[i].exit.stop_limit_price,
                         fee_rate=TestBinanceWrapper.fee_rate)
 

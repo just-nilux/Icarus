@@ -1,5 +1,5 @@
 import asyncio
-from ..objects import EState
+from ..objects import ECause, EState
 from .. import broker, mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
@@ -29,14 +29,12 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     df_pair_list = list(await asyncio.gather(*df_list))
 
     for idx, item in enumerate(pair_scale_mapping.items()):
-        enter_expired_trades = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':EState.ENTER_EXP, 'pair':item[0]})
-        exit_expired_trades = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
-        closed_trades = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':EState.CLOSED, 'pair':item[0]})
+        canceled = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':ECause.ENTER_EXP, 'pair':item[0]})
+        closed = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.CLOSED,ECause.CLOSED_STOP_LIMIT]}, 'pair':item[0]})
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
-        dashboard_data_pack[item[0]]['enter_expired_trades'] = enter_expired_trades
-        dashboard_data_pack[item[0]]['exit_expired_trades'] = exit_expired_trades
-        dashboard_data_pack[item[0]]['closed_trades'] = closed_trades
+        dashboard_data_pack[item[0]]['canceled'] = canceled
+        dashboard_data_pack[item[0]]['closed'] = closed
 
     # Get observer objects
     for obs_type, obs_list in config['visualization']['observers'].items():

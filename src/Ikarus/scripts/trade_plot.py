@@ -98,15 +98,11 @@ def write_strategy_names(trade_list):
         fplt.add_text((trade.decision_time, trade.enter.price), "{}".format(trade.strategy), color='#000000')
 
 
-def write_descriptions(trade_list) -> None:
-    write_profits(trade_list)
-    write_strategy_names(trade_list)        
-
-
 def plot_exit_orders(trade_list) -> None:
     for trade in trade_list:
         colorize_exit_order(trade)
         plot_exit_order_frames(trade)
+
 
 def plot_enter_orders(trade_list) -> None:
     for trade in trade_list:
@@ -114,7 +110,10 @@ def plot_enter_orders(trade_list) -> None:
             fplt.add_line((trade.decision_time, trade.enter.price),
                 (trade.enter.expire, trade.enter.price),
                 color='#9900ff', interactive=False)
-        elif trade.result.cause == ECause.CLOSED:
+        
+        # There is no scenario where "cause = ECause.EXIT_EXP". The updated orders simply go with ECause.CLOSED
+        # NOTE: If it is required to get updatd orders only, then the query might look for {"order_stash": "null"} 
+        elif trade.result.cause in [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]: 
             fplt.add_line((trade.decision_time, trade.result.enter.price),
                 (trade.result.exit.time, trade.result.enter.price),
                 color='#0000FF', width=3, interactive=False)
@@ -152,3 +151,15 @@ def plot_buy_sell_points(ax, trade_list) -> None:
     scatter_buy_points(ax, trade_list)
     scatter_sell_points(ax, trade_list)
 
+
+def plot_canceled_orders(enter_expired_trades):
+    plot_enter_orders(enter_expired_trades)
+    write_strategy_names(enter_expired_trades)
+
+
+def plot_closed_orders(ax, closed_trades):
+    write_profits(closed_trades)
+    write_strategy_names(closed_trades) 
+    plot_exit_orders(closed_trades)
+    plot_enter_orders(closed_trades)
+    plot_buy_sell_points(ax, closed_trades)

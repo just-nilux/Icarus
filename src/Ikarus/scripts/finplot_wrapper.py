@@ -192,25 +192,6 @@ def _add_time_separator(df):
         last_period = period
 
 
-def _add_enter_expire_tos(enter_expired_trades):
-    trade_plot.plot_enter_orders(enter_expired_trades)
-    trade_plot.write_strategy_names(enter_expired_trades)
-
-
-def _add_exit_expire_tos(ax, df_exit_expire):
-    trade_plot.plot_exit_orders(df_exit_expire)
-    trade_plot.plot_enter_orders(df_exit_expire)
-    trade_plot.write_descriptions(df_exit_expire)
-    trade_plot.plot_buy_sell_points(ax, df_exit_expire)
-
-
-def _add_closed_tos(ax, closed_trades):
-    trade_plot.write_descriptions(closed_trades)
-    trade_plot.plot_exit_orders(closed_trades)
-    trade_plot.plot_enter_orders(closed_trades)
-    trade_plot.plot_buy_sell_points(ax, closed_trades)
-
-
 def change_asset():
     '''Resets and recalculates everything, and plots for the first time.'''
     # save window zoom position before resetting
@@ -236,15 +217,11 @@ def change_asset():
         fplt.volume_ocv(dashboard_data[symbol]['df']['open close volume'.split()], ax=axo)
         ax.set_visible(xaxis=True)
 
-        if dashboard_data[symbol]['enter_expired_trades']:
-            _add_enter_expire_tos(deepcopy(dashboard_data[symbol]['enter_expired_trades']))
+        if dashboard_data[symbol]['canceled']:
+            trade_plot.plot_canceled_orders(deepcopy(dashboard_data[symbol]['canceled']))
 
-        # Exit expired trade visualization
-        if dashboard_data[symbol]['exit_expired_trades']:
-            _add_exit_expire_tos(ax, deepcopy(dashboard_data[symbol]['exit_expired_trades']))
-
-        if dashboard_data[symbol]['closed_trades']:
-            _add_closed_tos(ax, deepcopy(dashboard_data[symbol]['closed_trades'])) # NOTE: Plot the closed ones last to make sure they are in front
+        if dashboard_data[symbol]['closed']:
+            trade_plot.plot_closed_orders(ax, deepcopy(dashboard_data[symbol]['closed']))
 
     # restores saved zoom position, if in range
     fplt.refresh()
