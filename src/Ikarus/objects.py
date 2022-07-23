@@ -281,7 +281,7 @@ class Trade():
         self.result.exit.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
         self.result.profit = safe_substract(self.result.exit.amount, self.result.enter.amount)
-        self.result.live_time = self.result.exit.time - self.result.enter.time
+        self.result.live_time = self.result.exit.time - self.decision_time
 
 
 def is_trade_phase_enter(trade: Trade) -> bool:

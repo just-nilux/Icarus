@@ -1016,24 +1016,6 @@ class TestBinanceWrapper(BrokerWrapper):
 
 
     def _execute_lto(self, trade_list, df_balance, data_dict):
-        """
-        Execution Logic:
-        for i in range(len(lto_list)):
-            if 'action' in lto_list[i].keys():
-                1. cancel
-                    In case of enter expire, it might be decided to cancel the order
-                2. update
-                    cancel the prev order and place the same type of order with updated values
-                3. market_enter
-                    In case of enter expire, it might be decided to enter with market order
-                4. market_exit
-                    In case of exit expire, it might be decided to exit with market order
-
-        Args:
-            lto_list (list): [description]
-            df_balance (pd.DataFrame): [description]
-
-        """
         for i in range(len(trade_list)):
             if trade_list[i].command == ECommand.CANCEL:
 
@@ -1082,8 +1064,6 @@ class TestBinanceWrapper(BrokerWrapper):
 
                 if is_success:
                     trade_list[i].reset_command()
-
-        #return trade_list, df_balance # TODO: REFACTORING: CONTINUE
 
 
     def _execute_nto(self, new_trades, df_balance, data_dict):
@@ -1152,17 +1132,7 @@ class TestBinanceWrapper(BrokerWrapper):
 
 
 async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping, df_balance, quote_currency):
-    """
-    Args:
-        lto_dict (dict): will be updated (status, result, exit sections)
-        data_dict (dict): used for getting the candle to see if trade status needs to change
-        current_ts (ts): used for info sections of ltos
-        df_balance (pd.DataFrame): When a lto go from STAT_OPEN_EXIT to STAT_CLOSED or STAT_OPEN_ENTER to STAT_OPEN_EXIT
-        it needs to be updated in terms of 'free' and 'locked'                                               
 
-    Returns:
-        dict: lto_dict
-    """
     # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
     for i in range(len(trade_list)):
         pair = trade_list[i].pair

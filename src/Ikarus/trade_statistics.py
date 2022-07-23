@@ -1,3 +1,5 @@
+from numpy import average
+from .safe_operators import safe_divide, safe_sum, safe_substract
 from .objects import ECause
 from . import mongo_utils
 import json
@@ -6,7 +8,6 @@ import os
 import asyncio
 from datetime import datetime, timezone
 from tabulate import tabulate
-from .utils import safe_substract
 import pandas as pd
 
 
@@ -42,27 +43,43 @@ async def eval_balance_stats(stats, config, mongo_client):
 
     balances = pd.DataFrame(end_obs[0]['balances'])
     balances.set_index('asset', inplace=True)
-    balance_stat['End Balance'] = balances.loc[config['broker']['quote_currency']]['free'] + open_trade_amount['sum']
-    balance_stat['Absolute Profit'] = balance_stat['End Balance'] - balance_stat['Start Balance']
-    balance_stat['Percentage Profit'] = balance_stat['Absolute Profit']*100/balance_stat['Start Balance']
+    balance_stat['End Balance'] = safe_sum(balances.loc[config['broker']['quote_currency']]['free'], open_trade_amount['sum'],  quant='0.01')
+    balance_stat['Absolute Profit'] = safe_substract(balance_stat['End Balance'], balance_stat['Start Balance'], quant='0.01')
+    balance_stat['Percentage Profit'] = safe_divide(balance_stat['Absolute Profit']*100, balance_stat['Start Balance'], quant='0.01')
 
     trade_fee_pipe = [
-        {"$match":{"result.cause":{"$eq":"closed"}}},
+        {"$match":{"result.cause":{"$in": [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]}}},
         {"$project": {"trade_fee": {"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]}}},
         {"$group": {"_id": '', "trade_fee_sum": {"$sum": '$trade_fee'}}},
     ]
     if trade_fee_group := await mongo_client.do_aggregate('hist-trades',trade_fee_pipe):
         balance_stat['Paid Fee'] = trade_fee_group[0]['trade_fee_sum']
+    else:
+        balance_stat['Paid Fee'] = 0
     #TODO:  Add dust amount to statistics
 
     stats['Balance'] = balance_stat
 
 
-async def eval_strategy_stats(stats, config, mongo_client):
+async def eval_secondary_strategy_stats(stats, config, mongo_client):
+
+    primary_stats = pd.DataFrame(stats['Strategies'].values(), index=stats['Strategies'].keys())
+    primary_stats_sum = primary_stats[['Live', 'Closed', 'Closed OCO Stop Limit', 'Enter Expired']].sum(axis=1)
+    primary_stats_closed_sum = primary_stats[['Closed', 'Closed OCO Stop Limit']].sum(axis=1)
+
+    primary_stats['Daily Trade Create Rate'] = primary_stats_sum.divide(stats['Total Time in Day']).round(2)
+    primary_stats['Trade Enter Rate'] = primary_stats_closed_sum.divide(primary_stats_sum - primary_stats['Live']).round(2)
+    primary_stats['Win Rate'] = primary_stats['Win Count'].divide(primary_stats[['Win Count', 'Lose Count']].sum(axis=1)).round(2)
+    primary_stats['Average Profit'] = primary_stats['Closed Profit'].divide(primary_stats_closed_sum).round(2)
+    stats['Strategies'] = primary_stats.T.to_dict()
+
+
+async def eval_primary_strategy_stats(stats, config, mongo_client):
 
     stats['Strategies'] = {}
     for strategy in config['strategy'].keys():
         strategy_stat = {}
+        strategy_stat['Pairs'] = config['strategy'][strategy]['pairs']
         strategy_stat['Live'] = int(await mongo_client.count("live-trades", {'strategy':strategy}))
         strategy_stat['Closed'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.CLOSED}))
         strategy_stat['Closed OCO Stop Limit'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.CLOSED_STOP_LIMIT}))
@@ -79,8 +96,31 @@ async def eval_strategy_stats(stats, config, mongo_client):
         else: 
             strategy_stat['Closed Profit'] = 0
 
+        # Number of Win and Losses
+        closed_trades_pipe = [
+            {"$match":{"strategy":{"$eq":strategy}, "result.cause":{"$in": [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]}}}
+        ]
+        closed_trades = await mongo_utils.do_aggregate_trades(mongo_client, "hist-trades", closed_trades_pipe)
+
+        # Number of Win and Lose
+        win_count, lose_count = 0, 0
+        for trade in closed_trades:
+            if trade.result.profit > 0: win_count+=1
+            else: lose_count+=1
+        strategy_stat['Win Count'] = win_count
+        strategy_stat['Lose Count'] = lose_count
+
+
+        live_time_list = [trade.result.live_time/(1000*60*60*24) for trade in closed_trades]
+        strategy_stat['Min Lifetime'] = min(live_time_list)
+        strategy_stat['Max Lifetime'] = max(live_time_list)
+        strategy_stat['Average Lifetime'] = round(average(live_time_list),2)
+
+
         stats['Strategies'][strategy] = strategy_stat
 
+    strategy_values = pd.DataFrame(stats['Strategies'].values())
+    stats['Strategies']['Total'] = strategy_values.sum().to_dict()
 
 # TODO: Not Tested Yet
 def tabulate_stats(stats, filename):
@@ -103,9 +143,18 @@ async def main(config, mongo_client):
     stats['Generation Date'] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     stats['Start Time'] = config['backtest']['start_time']
     stats['End Time'] = config['backtest']['end_time']
+
+    start_obs = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=1, n=2) # pymongo.ASCENDING
+    end_obs = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=-1) # pymongo.ASCENDING
+    start_dt = datetime.fromtimestamp(start_obs[1]['timestamp']/1000, timezone.utc)
+    end_dt = datetime.fromtimestamp(end_obs[0]['timestamp']/1000, timezone.utc)
+    stats['Total Time in Day'] = safe_divide((end_dt - start_dt).total_seconds(), 60*60*24) # In second
+
     await eval_balance_stats(stats, config, mongo_client)
-    await eval_strategy_stats(stats, config, mongo_client)
-    
+    await eval_primary_strategy_stats(stats, config, mongo_client)
+    await eval_secondary_strategy_stats(stats, config, mongo_client)
+
+
     f = open(os.path.dirname(str(sys.argv[1])) + "/stats.json",'w')
     json.dump(stats, f,  indent=4)
     f.close()

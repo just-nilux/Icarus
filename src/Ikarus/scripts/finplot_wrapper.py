@@ -156,33 +156,6 @@ def fplot(filename=None):
     fplt.show()
 
 
-def buy_sell(df, df_closed=pd.DataFrame(), df_enter_expire=pd.DataFrame(), df_exit_expire=pd.DataFrame(), title='Buy/Sell Plot'):
-
-    if df.empty:
-        print('OCHL is empty')
-        return
-    fplt.display_timezone = datetime.timezone.utc
-
-    ax = fplt.create_plot(title)
-    fplt.candlestick_ochl(df[['open', 'close', 'high', 'low']], ax=ax, colorfunc=fplt.strength_colorfilter)
-    # Add period separator lines
-    #_add_time_separator(df)
-
-    # Enter expired trade visualization
-    if not df_enter_expire.empty:
-        _add_enter_expire_tos(df_enter_expire)
-
-    # Exit expired trade visualization
-    if not df_exit_expire.empty:
-        _add_exit_expire_tos(df_exit_expire)
-
-    if not df_closed.empty:
-        _add_closed_tos(ax, df_closed) # NOTE: Plot the closed ones last to make sure they are in front
-
-    fplt.add_legend('', ax=ax)
-    fplt.show()
-
-
 def _add_time_separator(df):
     periods = pd.to_datetime(df.index, unit='ms').strftime('%H')
     last_period = ''
@@ -356,7 +329,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     #fplot()
-    buy_sell()
     #fplot_volume()
     #fplot_2row()
     #fplot_2row_scatter()

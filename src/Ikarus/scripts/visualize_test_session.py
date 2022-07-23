@@ -29,8 +29,8 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     df_pair_list = list(await asyncio.gather(*df_list))
 
     for idx, item in enumerate(pair_scale_mapping.items()):
-        canceled = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':ECause.ENTER_EXP, 'pair':item[0]})
-        closed = await mongo_utils.query_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.CLOSED,ECause.CLOSED_STOP_LIMIT]}, 'pair':item[0]})
+        canceled = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':ECause.ENTER_EXP, 'pair':item[0]})
+        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.CLOSED,ECause.CLOSED_STOP_LIMIT]}, 'pair':item[0]})
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['canceled'] = canceled
