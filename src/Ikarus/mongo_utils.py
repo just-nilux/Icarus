@@ -151,11 +151,15 @@ async def update_live_trades(mongo_client, trade_list): # TODO: REFACTOR: checko
         # NOTE: Manual trade option is omitted, needs to be added
         # TODO: REFACTORING: Why did you handle all of these 3 state in the same place?
         elif trade.status in [ EState.OPEN_EXIT, EState.WAITING_EXIT, EState.EXIT_EXP]:
+
+            if trade.exit: update_val_trade_exit = asdict(trade.exit)
+            else: update_val_trade_exit = None
+
             result_update = await mongo_client.do_update( 
                 "live-trades",
                 {'_id': trade._id},
                 {'$set': {'status': trade.status,
-                        'exit': asdict(trade.exit),
+                        'exit': update_val_trade_exit,
                         'result.enter': asdict(trade.result.enter),
                         'order_stash': [asdict(order) for order in trade.order_stash]
                     }})

@@ -6,4 +6,5 @@ from . import StrategyBase,\
     TestLimitMarket, \
     TestMarketLimit, \
     TestLimitUpdateMarket, \
-    TestLimitOCO
+    TestLimitOCO, \
+    SampleRSI

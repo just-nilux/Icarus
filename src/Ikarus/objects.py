@@ -225,6 +225,12 @@ class Trade():
     def set_exit(self,exit_order):
         self.exit=exit_order
 
+    def reset_exit(self):
+        self.exit=None
+
+    def set_command(self, command):
+        self.command=command
+
     def reset_command(self):
         self.command=ECommand.NONE
 

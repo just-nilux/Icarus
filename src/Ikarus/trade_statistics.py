@@ -40,10 +40,12 @@ async def eval_balance_stats(stats, config, mongo_client):
         {"$group": {"_id": '', "sum": {"$sum": '$enter.amount'}}},
     ]
     open_trade_amount = await mongo_client.do_find("live-trades", open_trade_pipe)
+    if not open_trade_amount: open_trade_sum = 0
+    else: open_trade_sum = open_trade_amount['sum'] #TODO: This might need to be open_trade_amount[0]['sum']
 
     balances = pd.DataFrame(end_obs[0]['balances'])
     balances.set_index('asset', inplace=True)
-    balance_stat['End Balance'] = safe_sum(balances.loc[config['broker']['quote_currency']]['free'], open_trade_amount['sum'],  quant='0.01')
+    balance_stat['End Balance'] = safe_sum(balances.loc[config['broker']['quote_currency']]['free'],open_trade_sum,  quant='0.01')
     balance_stat['Absolute Profit'] = safe_substract(balance_stat['End Balance'], balance_stat['Start Balance'], quant='0.01')
     balance_stat['Percentage Profit'] = safe_divide(balance_stat['Absolute Profit']*100, balance_stat['Start Balance'], quant='0.01')
 
