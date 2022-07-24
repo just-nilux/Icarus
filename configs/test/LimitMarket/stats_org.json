@@ -1,0 +1,22 @@
+{
+    "Generation Date": "10/07/2022 23:20:31",
+    "Start Time": "2019-05-12 12:15:00",
+    "End Time": "2019-06-19 13:00:00",
+    "Balance": {
+        "Start Balance": 10000.0,
+        "End Balance": 6620.4855,
+        "Absolute Profit": -3379.5145,
+        "Percentage Profit": -33.795145,
+        "Paid Fee": 0.0
+    },
+    "Strategies": {
+        "TestLimitMarket": {
+            "Live": 1,
+            "Closed": 18,
+            "Enter Expired": 0,
+            "Exit Expired": 0,
+            "Closed Profit": -3379.5144999999998,
+            "Exit Expired Profit": 0
+        }
+    }
+}

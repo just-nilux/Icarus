@@ -1,79 +1,105 @@
-@startjson
-[{
-    "_id": "current timestamp",
-    "decision_time": "[dt index of obj creation]",
-    "strategy": "['strategy name']",
-    "status": "",
-    "enter": {
-      "limit": {
-        "price": "",
-        "quantity": "",
-        "amount": "",
-        "expire": "",
-        "orderId": "",
-        "fee": ""
-      },
-      "market": {
-        "quantity": "",
-        "amount": "",
-        "orderId": "",
-        "fee": ""
-      }
-    },
-    "exit": {
-      "oco": {
-        "limitPrice": "",
-        "stopPrice": "",
-        "stopLimitPrice": "",
-        "quantity": "",
-        "amount": "",
-        "expire": "",
-        "orderId": "",
-        "stopLimit_orderId": "",
-        "fee": ""
-      },
-      "limit": {
-        "price": "",
-        "quantity": "",
-        "amount": "",
-        "expire": "",
-        "orderId": "",
-        "fee": ""
-      },
-      "market": {
-        "quantity": "",
-        "amount": "",
-        "orderId": "",
-        "fee": ""
-      }
-    },
-    "result": {
-      "cause": "",
-      "enter": {
-        "type": "",
-        "time": "",
-        "price": "",
-        "quantity": "",
-        "amount": "",
-        "fee": ""
-      },
-      "exit": {
-        "type": "",
-        "time": "",
-        "price": "",
-        "quantity": "",
-        "amount": "",
-        "fee": ""
-      },
-      "profit": 0,
-      "liveTime": 0
-    },
-    "history":["open_enter", "open_exit", "closed"],
-    "action": "[optional and transitory]"
-  },
-  {}
-]
-@endjson
+
+@startuml
+
+enum EOrderType {
+    MARKET = 'Market'
+    LIMIT = 'Limit'
+    OCO = 'OCO'
+}
+
+enum ECommand {
+    NONE = None
+    CANCEL = 'cancel'
+    UPDATE = 'update'
+    MARKET_ENTER = 'market_enter'
+    MARKET_EXIT = 'market_exit' 
+    EXEC_EXIT = 'execute_exit'
+    EXEC_ENTER = 'execute_enter'
+}
+
+enum ECause {
+    NONE = None
+    ENTER_EXP = 'enter_expire'
+    MAN_CHANGE = 'manual_change'
+    EXIT_EXP = 'exit_expire'
+    CLOSED = 'closed'
+    CLOSED_STOP_LIMIT = 'closed_stop_limit'
+}
+
+enum EState {
+   WAITING_ENTER = 'waiting_enter'
+    OPEN_ENTER = 'open_enter'
+    ENTER_EXP = 'enter_expire'
+    WAITING_EXIT = 'waiting_exit'
+    OPEN_EXIT = 'open_exit'
+    EXIT_EXP = 'exit_expire'
+    CLOSED = 'closed'
+}
+
+abstract class Order {
+    price: float
+    amount: float
+    quantity: float
+    orderId: int
+
+    +void set_price(self, price)
+    +void set_quantity(self, quantity)
+}
+
+class Market {
+}
+
+class Limit {
+    expire: bson.Int64  
+}
+
+class OCO {
+    expire: bson.Int64
+    stop_price: float
+    stop_limit_price: float
+    stop_limit_orderId: int 
+}
+
+class Result {
+    type: string
+    time: bson.Int64
+    fee_rate: float
+    fee: float
+}
+
+class TradeResult{
+    cause: ECause
+    enter: Result
+    exit: Result
+    profit: float
+    live_time: int
+}
+
+
+class Trade {
+    decision_time: bson.Int64
+    strategy: string
+    pair: string
+    status: EState
+    enter: Order
+    exit: Order
+    result: TradeResult
+    command: ECommand
+    order_stash: list
+    +void set_enter(self, enter_order)
+    +void set_exit(self, exit_order)
+    +void reset_command(self)
+    +void stash_exit(self)
+    +void set_result_enter(...)
+    +void set_result_exit(...):
+}
+
+Order <|--- Market
+Order <|--- Limit
+Order <|--- OCO
+
+@enduml
+
 
 1. This object is created once when the "ENTER" decision is made with certain conditions.
   1.1 If no enter decision is made, then the [pair1] object will not be created at all

@@ -1,7 +1,11 @@
 {
     "tag": "test-bot",
-    "log-level": "DEBUG",
-    "credential_file": ".\\test_credentials.json",
+    "log":{
+        "level": "DEBUG",
+        "file": "log/test-ikarus-app.log",
+        "clear": true
+    },
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
         "port": 27017,
@@ -16,41 +20,20 @@
     ],
     "broker": {
         "quote_currency": "USDT",
-        "credit_currency": "TRY",
-        "fee": 0.001
+         "fee_rate": 0.001
     },
     "risk_management":{
-        "max_capital_use_ratio": 0.99
+        "max_capital_use_ratio": 0.9
     },
     "strategy": {
-        "MACDStrategy": {
-            "pairs": ["BTCUSDT","ETHUSDT"],
+        "TestLimitUpdate": {
+            "pairs": ["XRPUSDT", "BTCUSDT"],
             "time_scales": ["1d"],
-            "enter": {
-                "type": "market"
-            },
-            "exit": {
-                "type": "market"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "market_exit"
-            },
             "max_lto": 3
         },
-        "RSIStrategy": {
-            "pairs": ["BTCUSDT","ETHUSDT"],
+        "TestMarketMarket": {
+            "pairs": ["XRPUSDT", "ETHUSDT"],
             "time_scales": ["1d"],
-            "enter": {
-                "type": "market"
-            },
-            "exit": {
-                "type": "market"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "market_exit"
-            },
             "max_lto": 3
         }
     },
@@ -62,11 +45,7 @@
             "close":"",
             "macd":"",
             "ma": [50,200],
-            "bband": {
-                "timeperiod": 5,
-                "nbdevup": 2,
-                "nbdevdn": 2
-            }
+            "trange": ""
         }
     },
     "time_scales": {
@@ -84,7 +63,7 @@
     },
     "backtest":{
         "start_time": "2019-05-12 12:15:00",
-        "end_time": "2020-05-19 13:00:00",
+        "end_time": "2019-06-19 13:00:00",
         "online": true
     },
     "visualization":{
@@ -95,12 +74,9 @@
         "indicators": {
             "rsi":"",
             "macd":"",
-            "ma": [50,200],
-            "bband": {
-                "timeperiod": 5,
-                "nbdevup": 2,
-                "nbdevdn": 2
-            }
-        }
+            "trange":"",
+            "ma": [50,200]
+        },
+        "patterns":[]
     }
 }

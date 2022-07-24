@@ -1,13 +1,13 @@
 import statistics as st
-from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult
+from ..objects import OCO, ECause, Result, Trade, Limit, ECommand, TradeResult
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class TestLimitLimit(StrategyBase):
+class TestLimitOCO(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__("TestLimitLimit", _config, _symbol_info)
+        super().__init__("TestLimitOCO", _config, _symbol_info)
         return
 
 
@@ -20,7 +20,7 @@ class TestLimitLimit(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 1.05 # Enter
+            enter_price = time_dict[self.min_period]['close'] * 0.95 # Enter
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -40,7 +40,7 @@ class TestLimitLimit(StrategyBase):
 
 
     async def on_update(self, trade, ikarus_time):
-        # TODO: Give a call to methods that calculates exit point
+        raise Exception("This place will blow up due to trade.set_price() statemetn below")
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
         trade.set_command(ECommand.UPDATE)
         trade.expire = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
@@ -63,14 +63,23 @@ class TestLimitLimit(StrategyBase):
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
-        exit_price = time_dict[self.min_period]['close'] * 0.95
+        target_price = time_dict[self.min_period]['close'] * 1.01
+        stop_price = time_dict[self.min_period]['close'] * 0.99
+        stop_limit_price = time_dict[self.min_period]['close'] * 0.989
 
-        exit_limit_order = Limit(
-            exit_price,
+        #target_price = trade.result.enter.price * 1.05
+        #stop_price = trade.result.enter.price * 0.95
+        #stop_limit_price = trade.result.enter.price * 0.949
+
+        exit_oco_order = OCO(
+            price=target_price,
             quantity=trade.result.enter.quantity,
+            stop_price=stop_price,
+            stop_limit_price=stop_limit_price,
             expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],15,time_scale_to_minute(self.min_period))
         )
-        trade.set_exit(exit_limit_order)
+
+        trade.set_exit(exit_oco_order)
 
         trade.command = ECommand.EXEC_EXIT
         if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):

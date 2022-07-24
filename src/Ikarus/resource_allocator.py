@@ -1,22 +1,23 @@
 import math
-from .enums import *
 import logging
+
+logger = logging.getLogger('app')
+
 
 class ResourceAllocator():
 
     def __init__(self, _strategy_names, _mongo_cli) -> None:
         self.strategy_names = _strategy_names
         self.mongo_cli = _mongo_cli
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         pass
 
     async def allocate(self):
         # Clear all the resource_allocation if any
-        await self.mongo_cli.do_delete_many(COLL_STR_MGR_PLUGIN, {'type':'resource_allocation'})
+        await self.mongo_cli.do_delete_many('strmgr_plugin', {'type':'resource_allocation'})
 
         res_alloc_obj = self.alloc_default()
         result = await self.strategy_manager_plugin(res_alloc_obj)
-        self.logger.debug(f'Resource Allocate object "{result.inserted_id}" inserted')
+        logger.debug(f'Resource Allocate object "{result.inserted_id}" inserted')
         return result
 
 
@@ -36,5 +37,5 @@ class ResourceAllocator():
 
     async def strategy_manager_plugin(self, res_alloc_obj):
         # Insert data to DB
-        return await self.mongo_cli.do_insert_one(COLL_STR_MGR_PLUGIN, res_alloc_obj)
+        return await self.mongo_cli.do_insert_one('strmgr_plugin', res_alloc_obj)
 

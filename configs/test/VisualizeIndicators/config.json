@@ -5,7 +5,7 @@
         "file": "log/test-ikarus-app.log",
         "clear": true
     },
-    "credential_file": "test_credentials.json",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
         "port": 27017,
@@ -20,32 +20,21 @@
     ],
     "broker": {
         "quote_currency": "USDT",
-        "credit_currency": "TRY",
-        "fee": 0
+         "fee_rate": 0.001
     },
     "risk_management":{
-        "max_capital_use_ratio": 0.95
+        "max_capital_use_ratio": 0.9
     },
     "strategy": {
-        "TestLimitLimit": {
+        "TestLimitUpdate": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            },
             "max_lto": 3
-        }
-    },
-    "analysis": {
-        "indicators": {
-            "low":"",
-            "high":"",
-            "rsi":"",
-            "close":"",
-            "macd":"",
-            "ma": [50,200],
-            "trange": ""
+        },
+        "TestMarketMarket": {
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1d"],
+            "max_lto": 3
         }
     },
     "time_scales": {
@@ -72,10 +61,11 @@
             "quote_asset_leak":["binary"]
         },
         "indicators": {
-            "rsi":"",
-            "macd":"",
-            "trange":"",
-            "ma": [50,200]
+            "rsi": {"timeperiod":14},
+            "macd": {"fastperiod":12, "slowperiod":26, "signalperiod":9},
+            "trange": {},
+            "ma": {"timeperiod":50},
+            "parallel_ma": [{"timeperiod":7}, {"timeperiod":14}]
         },
         "patterns":[]
     }

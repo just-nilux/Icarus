@@ -26,7 +26,7 @@
         "max_capital_use_ratio": 0.95
     },
     "strategy": {
-        "TestEnterExpire": {
+        "TestLimitUpdateMarket": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3

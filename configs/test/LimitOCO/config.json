@@ -5,7 +5,7 @@
         "file": "log/test-ikarus-app.log",
         "clear": true
     },
-    "credential_file": "test_credentials.json",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
         "port": 27017,
@@ -20,13 +20,13 @@
     ],
     "broker": {
         "quote_currency": "USDT",
-         "fee_rate": 0
+        "fee_rate": 0.001
     },
     "risk_management":{
         "max_capital_use_ratio": 0.95
     },
     "strategy": {
-        "TestEnterExpire": {
+        "TestLimitOCO": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3

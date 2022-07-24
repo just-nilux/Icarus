@@ -20,8 +20,7 @@
     ],
     "broker": {
         "quote_currency": "USDT",
-        "credit_currency": "TRY",
-        "fee": 0
+         "fee_rate": 0
     },
     "risk_management":{
         "max_capital_use_ratio": 0.95
@@ -30,10 +29,6 @@
         "TestLimitMarket": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "update"
-            },
             "max_lto": 3
         }
     },
@@ -41,11 +36,7 @@
         "indicators": {
             "low":"",
             "high":"",
-            "rsi":"",
-            "close":"",
-            "macd":"",
-            "ma": [50,200],
-            "trange": ""
+            "close":""
         }
     },
     "time_scales": {
@@ -70,13 +61,6 @@
         "observers":{
             "quote_asset":["free", "total", "in_trade"],
             "quote_asset_leak":["binary"]
-        },
-        "indicators": {
-            "rsi":"",
-            "macd":"",
-            "trange":"",
-            "ma": [50,200]
-        },
-        "patterns":[]
+        }
     }
 }

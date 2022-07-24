@@ -1,10 +1,9 @@
 import asyncio
-
+from ..objects import EState
 from pymongo import ASCENDING, DESCENDING
-from .. import mongo_utils, binance_wrapper
+from .. import broker, mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
-from ..enums import *
 from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
 from binance import AsyncClient
 import pandas as pd
@@ -31,19 +30,19 @@ async def visualize_online(bwrapper, mongocli, config):
 
     for idx, pair in enumerate(pair_scale_mapping.keys()):
         df_enter_expire = await get_enter_expire_hto(mongocli, {
-            'result.cause':STAT_ENTER_EXP, 
+            'result.cause':EState.ENTER_EXP, 
             'pair':pair, 
             'decision_time': { '$gte': start_timestamp}, 
             'enter.limit.expire': { '$lte': end_timestamp}
             })
         df_exit_expire = await get_exit_expire_hto(config, mongocli, {
-            'result.cause':STAT_EXIT_EXP, 
+            'result.cause':EState.EXIT_EXP, 
             'pair':pair, 
             'decision_time': { '$gte': start_timestamp}, 
             'result.exit.time': { '$lte': end_timestamp}
             })
         df_closed = await get_closed_hto(config, mongocli, {
-            'result.cause':STAT_CLOSED, 
+            'result.cause':EState.CLOSED, 
             'pair':pair, 
             'decision_time': { '$gte': start_timestamp}, 
             'result.exit.time': { '$lte': end_timestamp}
@@ -71,9 +70,9 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     # Get trade objects
     for idx, item in enumerate(pair_scale_mapping.items()):
         # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':STAT_ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':STAT_EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(config, mongocli, {'result.cause':STAT_CLOSED, 'pair':item[0]})
+        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
+        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
+        df_closed = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire
@@ -92,7 +91,7 @@ async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                     api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    bwrapper = broker.TestBinanceWrapper(client, config)
     mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
         config['mongodb']['port'], 
         config['tag'],

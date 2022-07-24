@@ -38,133 +38,6 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 
 
-class GenericObject():
-
-    templates = dict()
-    
-    trade = {
-        "strategy": "",
-        "status": "",
-        "decision_time": "",
-        "enter": {
-        },
-        "exit": {
-        },
-        "result": {
-            "cause": "",
-            "enter": {
-                "type": "",
-                "time": "",
-                "price": "",
-                "quantity": "",
-                "amount": ""
-            },
-            "exit": {
-                "type": "",
-                "time": "",
-                "price": "",
-                "quantity": "",
-                "amount": ""
-            },
-            "profit": 0,
-            "liveTime": 0
-        },
-        "history": [],
-        "update_history": []
-    }
-    # TODO: Adding states to 'history' is currently manual and cumbersome.
-    #       It can be automated if an update method is used by the GenericObject class
-    templates['observation'] = {
-        "equity": 0
-    }
-
-    templates['analysis'] = {}
-    
-    templates['data'] = {}
-
-    market = {
-        "quantity": "",
-        "amount": ""
-    }
-    
-    oco = {
-        "limitPrice": "",
-        "stopPrice": "",
-        "stopLimitPrice": "",
-        "stopLimit_orderId": "",
-        "quantity": "",
-        "amount": "",
-        "expire": "",
-        "orderId": "",
-        "stopLimit_orderId": ""
-    }
-    
-    limit = {
-        "price": "",
-        "quantity": "",
-        "amount": "",
-        "expire": "",
-        "orderId": ""
-    }
-
-    def __init__(self, template_name=None):
-        if template_name is None:
-            self._obj = dict()
-        else:
-            self._obj = copy.deepcopy(GenericObject.templates[template_name])
-
-    @dispatch(dict)
-    def load(self, item):     
-        self._data_obj = item
-        pass
-
-    @dispatch(str, object)
-    def load(self, keyword, item):
-        self._obj[keyword] = item
-        pass
-
-    @dispatch(list, object)
-    def load(self, obj_path, item):
-
-        #TODO: Generic solution needs to be added
-        # Temporary quick fix
-        if len(obj_path) == 2:
-            self._obj[obj_path[0]][obj_path[1]] = item
-        elif len(obj_path) == 3:
-            self._obj[obj_path[0]][obj_path[1]][obj_path[2]] = item
-        pass
-
-    def dump(self):
-        pass
-
-    @staticmethod
-    def nested_update(obj, key, value):
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                if isinstance(v, (dict, list)):
-                    GenericObject.nested_update(v, key, value)
-                elif k == key:
-                    obj[k] = value
-        elif isinstance(obj, list):
-            for item in obj:
-                GenericObject.nested_update(item, key, value)
-        return obj
-
-    @dispatch()
-    def get(self):
-        return self._obj
-
-    @dispatch(str)
-    def get(self, keyword):
-        return self._obj[keyword]
-
-    @dispatch(list)
-    def get(self, obj_path):
-        current_level = self._obj
-        for keyword in obj_path:
-            current_level = current_level[keyword]
-        return current_level
-
 class EOrderType(str, Enum):
     MARKET = 'Market'
     LIMIT = 'Limit'
@@ -175,8 +48,6 @@ class ECommand(str, Enum):
     NONE = None
     CANCEL = 'cancel'                   # Cancel order
     UPDATE = 'update'                   # Update order (CANCEL + EXEC_X)
-    MARKET_ENTER = 'market_enter'       # Do market enter
-    MARKET_EXIT = 'market_exit'         # Do market exit
     EXEC_EXIT = 'execute_exit'          # Execute exit order   
     EXEC_ENTER = 'execute_enter'        # Execute enter order
 
@@ -185,9 +56,8 @@ class ECause(str, Enum):
     NONE = None
     ENTER_EXP = 'enter_expire'
     MAN_CHANGE = 'manual_change'
-    EXIT_EXP = 'exit_expire'
     CLOSED = 'closed'
-    CLOSED_STOP_LOSS = 'closed_stop_loss' # 'oco_stoploss'
+    CLOSED_STOP_LIMIT = 'closed_stop_limit' # 'oco_stoploss'
     # Previously:
     #   lto_list[i]['result']['cause'] = STAT_CLOSED
     #   lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
@@ -283,10 +153,11 @@ class Limit(Order):
 
 @dataclass
 class OCO(Order):
+    # NOTE: When Selling, stop_price > stop_limit_price
     expire: bson.Int64 = None
-    stopPrice: float = None
-    stopLimitPrice: float = None
-    stopLimit_orderId: int = None
+    stop_price: float = None            # Price to trigger stop limit order
+    stop_limit_price: float = None      # Price of stop limit order
+    stop_limit_orderId: int = None
 
 
 @dataclass
@@ -354,6 +225,12 @@ class Trade():
     def set_exit(self,exit_order):
         self.exit=exit_order
 
+    def reset_exit(self):
+        self.exit=None
+
+    def set_command(self, command):
+        self.command=command
+
     def reset_command(self):
         self.command=ECommand.NONE
 
@@ -410,7 +287,7 @@ class Trade():
         self.result.exit.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
         self.result.profit = safe_substract(self.result.exit.amount, self.result.enter.amount)
-        self.result.live_time = self.result.exit.time - self.result.enter.time
+        self.result.live_time = self.result.exit.time - self.decision_time
 
 
 def is_trade_phase_enter(trade: Trade) -> bool:
@@ -437,13 +314,13 @@ def order_from_dict(order_data):
     elif 'expire' not in order_data.keys():
         order = Market()
     else:
-        if 'stopPrice' not in order_data.keys():
+        if 'stop_price' not in order_data.keys():
             order = Limit()
         else:
             order = OCO()
-            order.stopPrice = order_data['stopPrice']
-            order.stopLimitPrice = order_data['stopLimitPrice']
-            order.stopLimit_orderId = order_data['stopLimit_orderId']
+            order.stop_price = order_data['stop_price']
+            order.stop_limit_price = order_data['stop_limit_price']
+            order.stop_limit_orderId = order_data['stop_limit_orderId']
         order.expire = order_data['expire']
     order.price = order_data['price']
     order.amount = order_data['amount']

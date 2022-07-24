@@ -59,6 +59,7 @@ def bearish_fractal_3(x, y, axes):
     disable_ax_bot(axes)
     fplt.plot(x=x, y=y, kind='scatter', color='#ff00ff', width=2, ax=axes['ax'], zoomscale=False, style='d')
 
+def parallel_ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 
 # TA-LIB Indicators
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])

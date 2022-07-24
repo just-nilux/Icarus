@@ -11,6 +11,9 @@ from itertools import groupby
 from operator import itemgetter
 from .utils import time_scale_to_milisecond
 
+logger = logging.getLogger('app')
+
+
 class Analyzer():
     """
     The duty of Analyzer class is to provide analysis objects.
@@ -22,9 +25,8 @@ class Analyzer():
     # TODO: Normally lambda functions would be quite useful to have one-liner functions, 
     #       however they are not "awaitable". Thus each one-liner lambda expression should be an awaitable method
 
-    def __init__(self, _config):
-        self.logger = logging.getLogger('app.{}'.format(__name__))
-        self.config = _config
+    def __init__(self, analysis_config):
+        self.analysis_config = analysis_config
         self.current_time_df={}
         return
 
@@ -40,7 +42,7 @@ class Analyzer():
                 # Generate coroutines
                 indicator_coroutines = []
                 header = '_ind_'
-                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['analysis']['indicators'].keys()))
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config['indicators'].keys()))
                 for ind in indicator_method_names:
                     if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
@@ -50,7 +52,7 @@ class Analyzer():
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
-                for key, value in zip(self.config['analysis']['indicators'].keys(), analysis_output):
+                for key, value in zip(self.analysis_config['indicators'].keys(), analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -71,13 +73,13 @@ class Analyzer():
                 # Generate coroutines
                 indicator_coroutines = []
                 header = '_ind_'
-                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['indicators'].keys()))
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config['indicators'].keys()))
                 for ind in indicator_method_names:
                     if hasattr(self, ind): indicator_coroutines.append(getattr(self, ind)())
                     else: raise RuntimeError(f'Unknown indicator: "{ind}"')
 
                 header = '_pat_'
-                pattern_method_names = list(map(lambda orig_string: header + orig_string, self.config['visualization']['patterns'])) # Patterns do not take arg
+                pattern_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config['patterns'])) # Patterns do not take arg
                 for pat in pattern_method_names:
                     if hasattr(self, pat): indicator_coroutines.append(getattr(self, pat)())
                     else: raise RuntimeError(f'Unknown pattern: "{pat}"')
@@ -87,7 +89,7 @@ class Analyzer():
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
-                for key, value in zip(list(self.config['visualization']['indicators'].keys()) + self.config['visualization']['patterns'], analysis_output):
+                for key, value in zip(list(self.analysis_config['indicators'].keys()) + self.analysis_config['patterns'], analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -105,7 +107,7 @@ class Analyzer():
         #       Maybe the secondary analysis such as  S/R levels should be put under
         #       another category
 
-        analyzer = "_ind_" + self.config['visualization']['indicators']['market_classifier']
+        analyzer = "_ind_" + self.analysis_config['indicators']['market_classifier']
         if hasattr(self, analyzer):
             analysis_output = await getattr(self, analyzer)()
         
@@ -300,25 +302,22 @@ class Analyzer():
     async def _ind_llow(self): return self.current_time_df['low'].min()
     async def _ind_hhigh(self): return self.current_time_df['high'].max()
     async def _ind_close(self): return float(self.current_time_df['close'].tail(1))
-    # TODO: Find a way to standardize the low/high/close
+    async def _ind_parallel_ma(self): 
+        parallel_ma = {}
+        for kwargs in self.analysis_config['indicators']['parallel_ma']:
+            parallel_ma[kwargs['timeperiod']] = list(ta.MA(self.current_time_df['close'], **kwargs))
+        return parallel_ma
 
+    #########################################################################################################################################
     # Overlap Studies
     async def _ind_bband(self):
-        upperband, middleband, lowerband = ta.BBANDS(self.current_time_df['close'], 
-                                                        timeperiod=self.config['analysis']['indicators']['bband']['timeperiod'], 
-                                                        nbdevup=self.config['analysis']['indicators']['bband']['nbdevup'], 
-                                                        nbdevdn=self.config['analysis']['indicators']['bband']['nbdevdn'], 
-                                                        matype=0) # No config option for matype yet!
+        upperband, middleband, lowerband = ta.BBANDS(self.current_time_df['close'], **self.analysis_config['indicators']['bband'])
         return {'upper':list(upperband), 'middle': list(middleband), 'lower':list(lowerband)}
     async def _ind_dema(self): raise NotImplementedException('indicator')
     async def _ind_ema(self): raise NotImplementedException('indicator')
     async def _ind_ht_trendline(self): raise NotImplementedException('indicator')
     async def _ind_kama(self): raise NotImplementedException('indicator')
-    async def _ind_ma(self):
-        ma = {}
-        for param in self.config['analysis']['indicators']['ma']:
-            ma[param] = list(ta.MA(self.current_time_df['close'], timeperiod=param, matype=0))
-        return ma
+    async def _ind_ma(self): return list(ta.MA(self.current_time_df['close'], **self.analysis_config['indicators']['ma']))
     async def _ind_mama(self): raise NotImplementedException('indicator')
     async def _ind_mavp(self): raise NotImplementedException('indicator')
     async def _ind_midpoint(self): raise NotImplementedException('indicator')
@@ -333,19 +332,19 @@ class Analyzer():
 
 
     # Momentum Indicators
-    async def _ind_adx(self): return list(ta.ADX(self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], timeperiod=14))
-    async def _ind_adxr(self): return list(ta.ADXR(self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], timeperiod=14))
-    async def _ind_apo(self): return list(ta.APO(self.current_time_df['high'], fastperiod=12, slowperiod=26, matype=0))
+    async def _ind_adx(self): return list(ta.ADX(self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], **self.analysis_config['indicators']['adx']))
+    async def _ind_adxr(self): return list(ta.ADXR(self.current_time_df['high'], self.current_time_df['low'], self.current_time_df['close'], **self.analysis_config['indicators']['adxr']))
+    async def _ind_apo(self): return list(ta.APO(self.current_time_df['high'], **self.analysis_config['indicators']['apo']))
     async def _ind_aroon(self): 
-        aroondown, aroonup = ta.AROON(self.current_time_df['high'], self.current_time_df['low'], timeperiod=14)
+        aroondown, aroonup = ta.AROON(self.current_time_df['high'], self.current_time_df['low'], **self.analysis_config['indicators']['aroon'])
         return {'aroonup':list(aroonup), 'aroondown': list(aroondown)}
-    async def _ind_aroonosc(self): return list(ta.AROONOSC(self.current_time_df['high'], self.current_time_df['low'], timeperiod=14))
+    async def _ind_aroonosc(self): return list(ta.AROONOSC(self.current_time_df['high'], self.current_time_df['low'], **self.analysis_config['indicators']['aroonosc']))
     async def _ind_bop(self): raise NotImplementedException('indicator')
     async def _ind_cci(self): raise NotImplementedException('indicator')
     async def _ind_cmo(self): raise NotImplementedException('indicator')
     async def _ind_dx(self): raise NotImplementedException('indicator')
     async def _ind_macd(self):
-        macd, macdsignal, macdhist = ta.MACD(self.current_time_df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+        macd, macdsignal, macdhist = ta.MACD(self.current_time_df['close'], **self.analysis_config['indicators']['macd'])
         return {'macd':list(macd), 'macdsignal': list(macdsignal), 'macdhist':list(macdhist)}
     async def _ind_macdext(self): raise NotImplementedException('indicator')
     async def _ind_macdfix(self): raise NotImplementedException('indicator')
@@ -356,11 +355,12 @@ class Analyzer():
     async def _ind_plus_di(self): raise NotImplementedException('indicator')
     async def _ind_plus_dm(self): raise NotImplementedException('indicator')
     async def _ind_ppo(self): raise NotImplementedException('indicator')
-    async def _ind_roc(self): return list(ta.ROC(self.current_time_df['close'], timeperiod=10))
-    async def _ind_rocp(self): return list(ta.ROCP(self.current_time_df['close'], timeperiod=10))
-    async def _ind_rocr(self): return list(ta.ROCR(self.current_time_df['close'], timeperiod=10))
-    async def _ind_rocr100(self): return list(ta.ROCR100(self.current_time_df['close'], timeperiod=10))
-    async def _ind_rsi(self): return list(ta.RSI(self.current_time_df['close'], timeperiod=14))
+    async def _ind_roc(self): return list(ta.ROC(self.current_time_df['close'], **self.analysis_config['indicators']['roc']))
+    async def _ind_rocp(self): return list(ta.ROCP(self.current_time_df['close'], **self.analysis_config['indicators']['rocp']))
+    async def _ind_rocr(self): return list(ta.ROCR(self.current_time_df['close'], **self.analysis_config['indicators']['rocr']))
+    async def _ind_rocr100(self): return list(ta.ROCR100(self.current_time_df['close'], **self.analysis_config['indicators']['rocr100']))
+    async def _ind_rsi(self): 
+        return list(ta.RSI(self.current_time_df['close'], **self.analysis_config['indicators']['rsi']))
     async def _ind_stoch(self): raise NotImplementedException('indicator')
     async def _ind_stochhf(self): raise NotImplementedException('indicator')
     async def _ind_stochrsi(self): raise NotImplementedException('indicator')

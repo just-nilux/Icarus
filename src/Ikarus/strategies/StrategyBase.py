@@ -2,30 +2,24 @@ import json
 import logging
 from binance.helpers import round_step_size
 from sqlalchemy import false
-from ..enums import *
 import bson
 import abc
 import itertools
 from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder
 from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract
 from .. import binance_filters as filters
-from ..exceptions import NotImplementedException
 
 logger = logging.getLogger('app')
 
 class StrategyBase(metaclass=abc.ABCMeta):
     # NOTE: fee can stay here until a better place is found
-    fee = 0
 
     def __init__(self, _name, _config, _symbol_info):
         self.name = _name
         self.alloc_ratio = 0
-        self.logger = logging.getLogger('app.{}'.format(__name__))
         self.config = _config['strategy'][self.name]
         self.max_lto = self.config.get('max_lto',1)
 
-        # NOTE: Assigning the fee multiple times is not the most optimal solution
-        StrategyBase.fee = _config['broker'].get('fee', 0)
         # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
         # TODO: Make proper handling for symbol_info
@@ -73,7 +67,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
-            self.logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
+            logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
             return []
 
         # Initialize trade_dict to be filled
@@ -89,7 +83,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
             # If handle_lto_logic fails then it means that the trade_list[lto_idx] is unchanged.
             if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time):
-                self.logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
+                logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
             pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
             
@@ -160,16 +154,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
         """        
         is_success = False
         if trade.status == EState.ENTER_EXP:
-            if self.config['action_mapping'][EState.ENTER_EXP] == ECommand.CANCEL:
-                is_success = await self.on_cancel(trade)
+            is_success = await self.on_cancel(trade)
 
         elif trade.status == EState.EXIT_EXP:
-            if self.config['action_mapping'][EState.EXIT_EXP] == ECommand.UPDATE:
-                is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
-
-            elif self.config['action_mapping'][EState.EXIT_EXP] == ECommand.MARKET_EXIT:
-                # NOTE: Market exit requires the exit prices to be known, thus provide the analysis_dict to that
-                is_success = await StrategyBase.on_market_exit(self, trade, analysis_dict)
+            is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
 
         elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
@@ -179,33 +167,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         else:
             is_success = True
         return is_success
-
-
-
-    @staticmethod
-    async def on_market_exit(self, trade, analysis_dict):
-        # TODO: Create market exit logic
-        raise NotImplementedException()
-        '''
-        #lto = await StrategyBase._config_market_exit(lto, self.config['exit']['type'])
-                
-        lto['exit'] = await StrategyBase._create_exit_module(
-            TYPE_MARKET,
-            0,
-            lto['result'][PHASE_ENTER]['quantity'],
-            analysis_dict[lto['pair']][self.min_period]['close'],
-            0)
         
-        lto['exit'][TYPE_MARKET] = await StrategyBase.apply_exchange_filters(lto, self.symbol_info[lto['pair']])
-        trade.exi
-        
-        trade.command = ECommand.MARKET_EXIT
-
-        self.logger.info(f'LTO: market exit configured') # TODO: Add orderId
-        '''
-        return trade
-        
-
 
     @abc.abstractclassmethod
     async def on_waiting_exit(self):
@@ -228,21 +190,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _eval_future_candle_time(start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
-
-
-    @staticmethod
-    async def _config_market_exit(lto, type):
-        # TODO: NEXT NEXT Integrate fee to market order
-        #       Continue here
-        # TODO: Integrate price to market order, even if it has no use
-        #       For now, it works and I am not gonna touch it for a rework
-        lto['action'] = ACTN_MARKET_EXIT
-        lto['exit'][TYPE_MARKET] = {
-            'amount': lto['exit'][type]['amount'],
-            'quantity': lto['exit'][type]['quantity'],
-            'orderId': '',
-        }
-        return lto
 
 
     @staticmethod
@@ -281,10 +228,10 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         elif type(trade_order).__name__ == EOrderType.OCO:
             trade_order.set_price(round_step_downward(trade_order.price, float(symbol_info['filters'][0]['tickSize'])))              # Fixing PRICE_FILTER: tickSize
-            trade_order.stopPrice = round_step_downward(trade_order.stopPrice, float(symbol_info['filters'][0]['tickSize']))
-            trade_order.stopLimitPrice = round_step_downward(trade_order.stopLimitPrice, float(symbol_info['filters'][0]['tickSize']))
+            trade_order.stop_price = round_step_downward(trade_order.stop_price, float(symbol_info['filters'][0]['tickSize']))
+            trade_order.stop_limit_price = round_step_downward(trade_order.stop_limit_price, float(symbol_info['filters'][0]['tickSize']))
 
-            if not filters.min_notional(trade_order.stopPrice, trade_order.quantity, symbol_info):
+            if not filters.min_notional(trade_order.stop_price, trade_order.quantity, symbol_info):
                 logger.warn(f"Trade object skipped due to MIN_NOTIONAL filter for {symbol_info['symbol']}. NTO: {json.dumps(trade_order, cls=EnhancedJSONEncoder)}")
                 return False
 

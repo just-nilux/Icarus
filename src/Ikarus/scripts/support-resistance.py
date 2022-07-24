@@ -1,5 +1,5 @@
 import asyncio
-from Ikarus import mongo_utils, binance_wrapper
+from Ikarus import broker, mongo_utils
 #from scripts import finplot_wrapper as fplot
 import finplot_wrapper as fplot
 from Ikarus.enums import *
@@ -18,7 +18,7 @@ async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                     api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    bwrapper = broker.TestBinanceWrapper(client, config)
 
     meta_data_pool = []
     for name, strategy_config in config['strategy'].items():

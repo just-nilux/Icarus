@@ -131,4 +131,5 @@ dmypy.json
 # Custom files and folders
 test_credentials.json
 log/
-*stat.txt
+*stats.*
+*stat.*

@@ -8,7 +8,7 @@ from time import time as now, sleep
 import sys
 import asyncio
 from binance import AsyncClient
-from .. import binance_wrapper
+from .. import broker
 import datetime
 from itertools import chain
 import itertools
@@ -209,7 +209,7 @@ async def visualize_dashboard(bwrapper, config):
 
     global data_dict, analysis_dict
     data_dict = await bwrapper.download_all_data(meta_data_pool, start_timestamp, end_timestamp)
-    analyzer = Analyzer(config)
+    analyzer = Analyzer(config['visualization'])
     analysis_dict = await analyzer.visual_analysis(data_dict)
 
     indicators = list(config['visualization']['indicators'].keys()) + config['visualization']['patterns']
@@ -220,7 +220,7 @@ async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                     api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    bwrapper = broker.TestBinanceWrapper(client, config)
     await visualize_dashboard(bwrapper, config)
 
 
