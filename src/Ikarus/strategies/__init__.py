@@ -1,3 +1,5 @@
+from .sample import RSI, Aroon
+
 from . import StrategyBase,\
     TestLimitLimit, \
     TestEnterExpire, \
@@ -6,5 +8,4 @@ from . import StrategyBase,\
     TestLimitMarket, \
     TestMarketLimit, \
     TestLimitUpdateMarket, \
-    TestLimitOCO, \
-    SampleRSI
+    TestLimitOCO

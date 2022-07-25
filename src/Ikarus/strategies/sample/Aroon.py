@@ -1,27 +1,24 @@
-from ..objects import Market, Trade, ECommand, TradeResult
-from .StrategyBase import StrategyBase
+from ...objects import Market, Trade, ECommand, TradeResult
+from ..StrategyBase import StrategyBase
 
-class SampleRSI(StrategyBase):
+class Aroon(StrategyBase):
 
-    def __init__(self, _config, _symbol_info={}):
-        super().__init__("SampleRSI", _config, _symbol_info)
+    def __init__(self, _config, _symbol_info, **kwargs):
+        super().__init__("Aroon", _config, _symbol_info)
         return
 
 
     async def run(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
-        self.lower_limit = 30
-        self.upper_limit = 70
         return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc)
 
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
 
-            time_dict = analysis_dict[ao_pair]
+            aroon = analysis_dict[ao_pair][self.min_period]['aroon']
 
-            if time_dict[self.min_period]['rsi'][-2] < self.lower_limit and \
-                self.lower_limit < time_dict[self.min_period]['rsi'][-1] < self.upper_limit:
+            if aroon['aroonup'][-1] > aroon['aroondown'][-1] and aroon['aroonup'][-2] < aroon['aroondown'][-2]:
                 # BUY
-                enter_price = time_dict[self.min_period]['close']
+                enter_price = analysis_dict[ao_pair][self.min_period]['close']
                 enter_ref_amount=pairwise_alloc_share
 
                 enter_order = Market(amount=enter_ref_amount, price=enter_price)
@@ -38,10 +35,10 @@ class SampleRSI(StrategyBase):
 
 
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
-        time_dict = analysis_dict[trade.pair]
+        #time_dict = analysis_dict[trade.pair]
+        aroon = analysis_dict[trade.pair][self.min_period]['aroon']
 
-        if time_dict[self.min_period]['rsi'][-2] > self.upper_limit and \
-            self.lower_limit < time_dict[self.min_period]['rsi'][-1] < self.upper_limit:
+        if aroon['aroondown'][-1] > aroon['aroonup'][-1] and aroon['aroondown'][-2] < aroon['aroonup'][-2]:
 
             trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close']) )
 

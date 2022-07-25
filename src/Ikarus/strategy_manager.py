@@ -16,7 +16,7 @@ class StrategyManager():
             
             if hasattr(strategies,strategy_name):
                 strategy_class = getattr(getattr(strategies, strategy_name),strategy_name)
-                self.strategy_list.append(strategy_class(_config, _symbol_info))
+                self.strategy_list.append(strategy_class(_config, _symbol_info, **_config['strategy'][strategy_name].get('kwargs',{})))
                 self.strategy_names.append(strategy_name)
             else:
                 raise Exception(f'Unknown strategy: {strategy_name}!')

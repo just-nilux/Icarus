@@ -18,7 +18,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         self.name = _name
         self.alloc_ratio = 0
         self.config = _config['strategy'][self.name]
-        self.max_lto = self.config.get('max_lto',1)
+        self.max_live_trade = self.config.get('max_live_trade',1)
 
         # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
@@ -102,7 +102,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 dead_lto_capital = safe_sum(dead_lto_capital, trade_list[lto_idx].enter.amount)
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
-        total_lto_slot = min(self.max_lto, len(self.config['pairs']))
+        total_lto_slot = min(self.max_live_trade, len(self.config['pairs']))
         empty_lto_slot = total_lto_slot - alive_lto_counter
 
         if empty_lto_slot < 1:

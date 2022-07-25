@@ -86,14 +86,14 @@
             }
         },
         "indicators":{
-            "aroon": "",
-            "aroonosc": "",
+            "aroon": {},
+            "aroonosc": {},
             "market_classifier": "fractal_aroon",
-            "fractal_line_3": "",
-            "fractal_aroon": "",
-            "fractal_aroonosc": "",
-            "support_dbscan": "",
-            "resistance_dbscan": ""
+            "fractal_line_3": {},
+            "fractal_aroon": {},
+            "fractal_aroonosc": {},
+            "support_dbscan": {},
+            "resistance_dbscan": {}
         },
         "patterns": ["bearish_fractal_3", "bullish_fractal_3"]
     }
