@@ -10,3 +10,6 @@ def lot_size(quantity, symbol_info):
         return quantity
     else:
         return None
+
+# TODO: Percent price filter
+# https://dev.binance.vision/t/what-does-the-percent-price-filter-mean/134

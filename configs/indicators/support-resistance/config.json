@@ -86,15 +86,11 @@
             }
         },
         "indicators":{
-            "aroon": {},
-            "aroonosc": {},
+            "kmeans": {},
             "market_classifier": "fractal_aroon",
-            "fractal_line_3": {},
-            "fractal_aroon": {},
-            "fractal_aroonosc": {},
-            "support_dbscan": {},
-            "resistance_dbscan": {}
+            "support_dbscan": {"source":"bullish_fractal_3"},
+            "resistance_dbscan": {"source":"bearish_fractal_3"}
         },
-        "patterns": ["bearish_fractal_3", "bullish_fractal_3"]
+        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bearish_fractal_5"]
     }
 }

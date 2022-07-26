@@ -171,8 +171,8 @@ class Analyzer():
         return {'bearish':bearish_frac, 'bullish':bullish_frac}
 
     async def _ind_support_dbscan(self):
-        bullish_frac = np.nan_to_num(await self._pat_bullish_fractal_3()).reshape(-1,1)
-        #bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
+        source = '_pat_' + self.analysis_config['indicators']['resistance_dbscan']['source']
+        bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
 
         # Perform unidimentional clustering     
         eps = float(max(bullish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
@@ -191,10 +191,11 @@ class Analyzer():
         return sup_levels
 
     async def _ind_resistance_dbscan(self):
+        source = '_pat_' + self.analysis_config['indicators']['resistance_dbscan']['source']
         # NOTE: In order to yield validation points, nan values are assigned to 0. 
-        #       They are visualized but not in the appeared window
-        bearish_frac = np.nan_to_num(await self._pat_bearish_fractal_3()).reshape(-1,1)
-        #bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
+        #       They are visualized but not in the appeared window        
+
+        bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
 
         # Perform unidimentional clustering
         # TODO: NEXT: Find an algorithmic way of calculating epsilon
