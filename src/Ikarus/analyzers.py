@@ -171,23 +171,27 @@ class Analyzer():
         return {'bearish':bearish_frac, 'bullish':bullish_frac}
 
     async def _ind_support_dbscan(self):
-        source = '_pat_' + self.analysis_config['indicators']['resistance_dbscan']['source']
+        source = '_pat_' + self.analysis_config['indicators']['support_dbscan']['source']
         bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
 
-        # Perform unidimentional clustering     
-        eps = float(max(bullish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
-        dbscan = DBSCAN(eps=eps, min_samples=3) # It requires at least 3 point to call a cluster a region of s/r
+        # Perform unidimentional clustering
+
+        price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
 
         dbscan_bull = dbscan.fit_predict(bullish_frac)
         cls_tokens = np.unique(dbscan_bull)
         sup_levels = []
         for token in cls_tokens:
-            if token != -1:
-                indices = np.where(dbscan_bull == token)
-                sup_level = {}
-                sup_level['validation_point'] = indices[0][-1]
-                sup_level['centroids'] = bullish_frac[indices].reshape(1,-1)[0].tolist()
-                sup_levels.append(sup_level)
+            if token == -1:
+                continue
+            indices = np.where(dbscan_bull == token)
+            sup_level = {}
+            sup_level['validation_point'] = indices[0][min_samples-1]
+            sup_level['centroids'] = bullish_frac[indices].reshape(1,-1)[0].tolist()
+            sup_levels.append(sup_level)
         return sup_levels
 
     async def _ind_resistance_dbscan(self):
@@ -200,19 +204,22 @@ class Analyzer():
         # Perform unidimentional clustering
         # TODO: NEXT: Find an algorithmic way of calculating epsilon
         #       Because the epsilon values needs to be changed based on timeframe
-        eps = float(max(bearish_frac)* 0.005) # NOTE: Band of %0.5 unless optimized
-        dbscan = DBSCAN(eps=eps, min_samples=3) # It requires at least 3 point to call a cluster a region of s/r
+        price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
 
         dbscan_bear = dbscan.fit_predict(bearish_frac)
         cls_tokens = np.unique(dbscan_bear)
         res_levels = []
         for token in cls_tokens:
-            if token != -1:
-                indices = np.where(dbscan_bear == token)
-                res_level = {}
-                res_level['validation_point'] = indices[0][-1]
-                res_level['centroids'] = bearish_frac[indices].reshape(1,-1)[0].tolist()
-                res_levels.append(res_level)
+            if token == -1:
+                continue
+            indices = np.where(dbscan_bear == token)
+            res_level = {}
+            res_level['validation_point'] = indices[0][min_samples-1]
+            res_level['centroids'] = bearish_frac[indices].reshape(1,-1)[0].tolist()
+            res_levels.append(res_level)
         return res_levels
 
     async def _ind_support_mshift(self):
