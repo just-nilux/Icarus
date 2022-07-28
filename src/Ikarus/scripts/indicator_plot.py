@@ -22,6 +22,7 @@ def resistance_handler(x, y, axes):
     # Visualize Resistance Lines
     for sr_level_obj in y:
         sr_level = sr_level_obj['centroids']
+        fplt.add_text((x[0], mean(sr_level)), str(sr_level_obj['centroids_std']), color='#000000',anchor=(0,0), ax=axes['ax'])
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
         #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
         fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#FFCCCC')

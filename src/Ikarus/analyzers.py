@@ -185,7 +185,7 @@ class Analyzer():
         cls_tokens = np.unique(dbscan_bull)
         sup_levels = []
         for token in cls_tokens:
-            if token == -1:
+            if token <= 0:
                 continue
             indices = np.where(dbscan_bull == token)
             sup_level = {}
@@ -213,14 +213,34 @@ class Analyzer():
         cls_tokens = np.unique(dbscan_bear)
         res_levels = []
         for token in cls_tokens:
-            if token == -1:
+            if token <= 0:
                 continue
             indices = np.where(dbscan_bear == token)
             res_level = {}
             res_level['validation_point'] = indices[0][min_samples-1]
             res_level['centroids'] = bearish_frac[indices].reshape(1,-1)[0].tolist()
+            res_level['centroids_std'] = np.round(np.std(( np.diff(indices)[0] / len(dbscan_bear)) ), 5)
+            # NOTE: By dividing the indice diferences to len(dbscan_bear), we manage to represent the distance without the dependecy of number of candles:
+            #       For example, 
+            #           sr_level X has 3 members and the distances are 10 and 30 candles. Total num of candles 100. STD=10
+            #           sr_level Y has 3 members and the distances are 100 and 300 candles. Total num of candles 1000. STD=100
+            #       However if we were to use the ratio: distance/whole_distance we would get the same result: STD=0.1 in each case
+            #np.round((np.diff(indices)[0] / len(dbscan_bear)),3)
             res_levels.append(res_level)
+        #await self.support_resistance_validator(res_levels)
         return res_levels
+
+    async def support_resistance_validator(self, sr_level):
+        ''' 
+            What are the metrics that justify sr levels are correct?
+                - It should be tested multiple times.
+                    The number of members itself could be used as an indicator
+                - The timespan of the tests points should be as large as possible (adjacent test points are not meaningfull as far points)
+                    - Length of whole frame and the time span has dependency. Thus the positions of  members can be normalized/standardized.
+                      Then a span measuring function like standart deviation can be evaluated and be used as a reliablity indicator for that sr level
+            sr_level: [{"validation_point":x, "centroids":[213, 214, 215]}, {}]
+        '''
+        pass
 
     async def _ind_support_mshift(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())
