@@ -10,8 +10,20 @@ Support resistance levels are the key point to place an Limit order. It helps to
 
 ## Notes:
 - KMeans clustering requires to know the number of clusters (or needs to optimize). However the number of cluster(sup/res levels) are also a result of our evaluation. So it makes no sense to use KMeans for this case. Another downside is the outliers. Since outliers affects the center of the cluster, their existence is devient.
-
 - DBScan fits better for the clustering in that case. It connects the close points(based on the parameter epsilon) which is good to eliminate outliers since they are lonely.
+- https://therobusttrader.com/support-and-resistance/
+
+- You would want number of members to be high and the horizontal cumulation spread to be narrow
+density_score = (cluster_price_range/frame_price_range) / number of members
+
+## Measuring Reliability of the Calculated Levels
+Things to consider:
+- Number of Touches
+- Time
+
+horizontal_distribution_score = weighted_average(ordered_cluster, range(1,len(ordered_cluster)))
+vertical_distribution_score = (vertical_range(cluster) / vertical_range(chart)) / size(cluster)
+score = horizontal_distribution_score / vertical_distribution_score
 
 ## Example Implementation:
 

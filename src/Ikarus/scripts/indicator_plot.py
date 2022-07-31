@@ -10,7 +10,11 @@ def support_handler(x, y, axes):
     # Visualize Support Lines
     for sr_level_obj in y:
         sr_level = sr_level_obj['centroids']
-        fplt.add_text((x[0], mean(sr_level)), str(sr_level_obj['score']), color='#000000',anchor=(0,0), ax=axes['ax'])
+        hds = sr_level_obj.get('horizontal_distribution_score','')
+        vds = sr_level_obj.get('vertical_distribution_score','')
+        score_text = "HorDist:{}, VerDist:{}, Score:{}".format(hds, vds, round(hds/vds,2))
+        fplt.add_text((x[0], mean(sr_level)), score_text, color='#000000',anchor=(0,0), ax=axes['ax'])
+
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#0000FF', width=2, interactive=False)
         #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
         fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#CCCCFF')
@@ -23,7 +27,10 @@ def resistance_handler(x, y, axes):
     # Visualize Resistance Lines
     for sr_level_obj in y:
         sr_level = sr_level_obj['centroids']
-        fplt.add_text((x[0], mean(sr_level)), str(sr_level_obj['score']), color='#000000',anchor=(0,0), ax=axes['ax'])
+        hds = sr_level_obj.get('horizontal_distribution_score','')
+        vds = sr_level_obj.get('vertical_distribution_score','')
+        score_text = "HorDist:{}, VerDist:{}, Score:{}".format(hds, vds, round(hds/vds,2))
+        fplt.add_text((x[0], mean(sr_level)), score_text, color='#000000',anchor=(0,0), ax=axes['ax'])
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
         #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
         fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#FFCCCC')
@@ -103,9 +110,12 @@ def kmeans(x, y, axes):
         fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
 
 def support_dbscan(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def support_mshift(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_dbscan(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+def support_mshift(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_mshift(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+def support_kmeans(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
+def resistance_kmeans(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+
 
 def bullish_fractal_5(x, y, axes): 
     disable_ax_bot(axes)

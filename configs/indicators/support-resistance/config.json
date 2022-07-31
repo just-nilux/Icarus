@@ -1,7 +1,7 @@
 {
     "tag": "test-bot",
     "log-level": "DEBUG",
-    "credential_file": ".\\test_credentials.json",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
         "host": "localhost",
         "port": 27017,
@@ -86,11 +86,12 @@
             }
         },
         "indicators":{
-            "kmeans": {},
             "market_classifier": "fractal_aroon",
             "support_dbscan": {"source":"bullish_fractal_3"},
-            "resistance_dbscan": {"source":"bearish_fractal_3"}
+            "resistance_dbscan": {"source":"bearish_fractal_3"},
+            "support_kmeans": {},
+            "resistance_kmeans": {}
         },
-        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bearish_fractal_5"]
+        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bearish_fractal_5", "bullish_fractal_5"]
     }
 }

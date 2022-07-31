@@ -172,11 +172,11 @@ class Analyzer():
     async def _ind_support_dbscan(self):
         source = '_pat_' + self.analysis_config['indicators']['support_dbscan']['source']
         bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
-        price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
-        eps = float(price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
         min_samples = max(round(self.current_time_df.shape[0]/100),3)
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        return await Analyzer.eval_sup_res_dbscan_clusters(dbscan, bullish_frac)
+        return await Analyzer.eval_sup_res_clusters(dbscan, bullish_frac, dbscan.min_samples-1, chart_price_range)
 
 
     async def _ind_resistance_dbscan(self):
@@ -185,34 +185,47 @@ class Analyzer():
         #       They are visualized but not in the appeared window        
 
         bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
-        price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
-        eps = float(price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
         min_samples = max(round(self.current_time_df.shape[0]/100),3)
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        return await Analyzer.eval_sup_res_dbscan_clusters(dbscan, bearish_frac)
+        return await Analyzer.eval_sup_res_clusters(dbscan, bearish_frac, dbscan.min_samples-1, chart_price_range)
 
 
-    async def eval_sup_res_dbscan_clusters(dbscan, fractals):
-        dbscan_pred = dbscan.fit_predict(fractals)
-        cls_tokens = np.unique(dbscan_pred)
-        res_levels = []
+    async def eval_sup_res_clusters(algorithm, data_points, min_cluster_members, chart_price_range):
+        cluster_predictions = algorithm.fit_predict(data_points)
+        cls_tokens = np.unique(cluster_predictions)
+        sr_levels = []
         for token in cls_tokens:
-            if token <= 0:
+            # NOTE: Ignore outliers
+            if token == -1:
                 continue
-            indices = np.where(dbscan_pred == token)
-            res_level = {}
-            res_level['validation_point'] = indices[0][dbscan.min_samples-1]
-            res_level['centroids'] = fractals[indices].reshape(1,-1)[0].tolist()
-            res_level['score'] = await Analyzer.eval_sup_res_cluster_score(indices, len(dbscan_pred))
-            res_levels.append(res_level)
-        return res_levels
+
+            indices = np.where(cluster_predictions == token)
+            sr_level = {}
+            sr_level['centroids'] = data_points[indices].reshape(1,-1)[0].tolist()
+
+            # NOTE: Ignore the cluster if all of the members are 0, or the not enough cluster members
+            if not any(sr_level['centroids']) or len(indices[0])<=min_cluster_members:
+                continue
+
+            sr_level['validation_point'] = indices[0][min_cluster_members]
+            sr_level['horizontal_distribution_score'] = await Analyzer.eval_sup_res_cluster_horizontal_score(indices, len(cluster_predictions))
+            sr_level['vertical_distribution_score'] = await Analyzer.eval_sup_res_cluster_vertical_score(sr_level['centroids'], chart_price_range)
+
+            sr_levels.append(sr_level)
+        return sr_levels
 
 
-    async def eval_sup_res_cluster_score(indices, num_of_candle):
+    async def eval_sup_res_cluster_horizontal_score(indices, num_of_candle):
         # NOTE: By dividing the indice diferences to len(dbscan_bear), we manage to represent the distance without the dependecy of number of candles:
         weights = list(range(1,len(indices[0])))
         return np.round(np.average(np.diff(indices)[0] / num_of_candle, weights=weights),4)
 
+    async def eval_sup_res_cluster_vertical_score(centroids, chart_price_range):
+        cluster_price_range = max(centroids) - min(centroids)
+        cluster_price_range_perc = cluster_price_range / chart_price_range
+        return np.round(cluster_price_range_perc/len(centroids), 4)
 
     async def _ind_support_mshift(self):
         bullish_frac = np.array(await self._pat_bullish_fractal_3())
@@ -246,36 +259,34 @@ class Analyzer():
 
         return bearish_centroids
 
-    async def _ind_kmeans(self):
-        # Obtain the (time,high) and (time,low) pairs and merge
-        lows = np.array(self.current_time_df['low']).reshape(-1,1)
-        highs = np.array(self.current_time_df['high']).reshape(-1,1)
+    async def _ind_support_kmeans(self):
 
-        # Perform unidimentional clustering     
+        source = '_pat_' + self.analysis_config['indicators']['support_kmeans'].get('source','bullish_fractal_3')
+        min_cluster_members = self.analysis_config['indicators']['support_kmeans'].get('min_cluster_members', 3)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        data_points = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+
         km = KMeans(
             n_clusters=5, init='random',
             n_init=13, max_iter=300, 
             tol=1e-04, random_state=0
         )
-        # TODO: Filter out the anomalies
 
-        # Low Cluster
-        y_km = km.fit_predict(lows)
-        low_clusters = km.cluster_centers_[:,0]
-        cls_tokens = np.unique(y_km)
-        cls_centroids = []
-        for token in cls_tokens:
-            cls_centroids.append(lows[np.where(y_km == token)].reshape(1,-1)[0].tolist())
-    
-        # High Cluster
-        y_km = km.fit_predict(highs)
-        high_clusters = km.cluster_centers_[:,0]
-        high_cls_tokens = np.unique(y_km)
-        high_cls_centroids = []
-        for token in high_cls_tokens:
-            high_cls_centroids.append(highs[np.where(y_km == token)].reshape(1,-1)[0].tolist())
-    
-        return {'high_cls':high_cls_centroids, 'low_cls':cls_centroids}
+        return await Analyzer.eval_sup_res_clusters(km, data_points, min_cluster_members, chart_price_range)
+
+    async def _ind_resistance_kmeans(self):
+        source = '_pat_' + self.analysis_config['indicators']['resistance_kmeans'].get('source','bearish_fractal_3')
+        min_cluster_members = self.analysis_config['indicators']['resistance_kmeans'].get('min_cluster_members', 3)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        data_points = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+
+        km = KMeans(
+            n_clusters=5, init='random',
+            n_init=13, max_iter=300, 
+            tol=1e-04, random_state=0
+        )
+
+        return await Analyzer.eval_sup_res_clusters(km, data_points, min_cluster_members, chart_price_range)
 
     def is_resistance(serie):
         if len(serie) == 3 and serie.iloc[0] < serie.iloc[1] > serie.iloc[2]:
