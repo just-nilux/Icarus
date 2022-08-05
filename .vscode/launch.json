@@ -39,10 +39,10 @@
             ]
         },
         {
-            "name": "performance",
+            "name": "trade_statistics",
             "type": "python",
             "request": "launch",
-            "module": "Ikarus.performance",
+            "module": "Ikarus.trade_statistics",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/src",
             "args": [
@@ -60,10 +60,11 @@
             "name": "visualize_indicators",
             "type": "python",
             "request": "launch",
-            "console": "integratedTerminal",
             "module": "Ikarus.scripts.visualize_indicators",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
             "args": [
-                ".\\configs\\support-resistance\\config.json"
+                "${workspaceFolder}/configs/indicators/support-resistance/config.json"
             ]
         },
         {
@@ -74,7 +75,7 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/src",
             "args": [
-                "${workspaceFolder}/configs/object/config.json",
+                "${workspaceFolder}/configs/test/LimitOCO/config.json",
                 "${workspaceFolder}/test_credentials.json"
             ]
         },
@@ -95,7 +96,7 @@
             "program": "src/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\test\\LimitLimit\\config.json"
+                ".\\configs\\sample\\RSI\\config.json"
             ]
         },
         {

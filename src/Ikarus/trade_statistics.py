@@ -98,6 +98,24 @@ async def eval_primary_strategy_stats(stats, config, mongo_client):
         else: 
             strategy_stat['Closed Profit'] = 0
 
+        # Best win
+        pipe = [
+            {"$sort": {"result.profit": -1} },
+            {"$limit" : 1}
+        ]
+        best_trade = await mongo_utils.do_aggregate_trades(mongo_client, "hist-trades", pipe)
+        if best_trade:
+            strategy_stat['Best Profit'] = best_trade[0].result.profit
+
+        # Worst lose
+        pipe = [
+            {"$sort": {"result.profit": 1} },
+            {"$limit" : 1}
+        ]
+        worst_trade = await mongo_utils.do_aggregate_trades(mongo_client, "hist-trades", pipe)
+        if worst_trade:
+            strategy_stat['Worst Profit'] = worst_trade[0].result.profit
+
         # Number of Win and Losses
         closed_trades_pipe = [
             {"$match":{"strategy":{"$eq":strategy}, "result.cause":{"$in": [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]}}}
