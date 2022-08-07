@@ -111,8 +111,8 @@ def kmeans(x, y, axes):
 
 def support_dbscan(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_dbscan(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
-def support_mshift(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_mshift(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+def support_meanshift(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
+def resistance_meanshift(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
 def support_kmeans(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_kmeans(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
 

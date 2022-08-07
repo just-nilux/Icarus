@@ -222,42 +222,40 @@ class Analyzer():
         weights = list(range(1,len(indices[0])))
         return np.round(np.average(np.diff(indices)[0] / num_of_candle, weights=weights),4)
 
+
     async def eval_sup_res_cluster_vertical_score(centroids, chart_price_range):
         cluster_price_range = max(centroids) - min(centroids)
         cluster_price_range_perc = cluster_price_range / chart_price_range
         return np.round(cluster_price_range_perc/len(centroids), 4)
 
-    async def _ind_support_mshift(self):
-        bullish_frac = np.array(await self._pat_bullish_fractal_3())
-        bullish_frac = bullish_frac[~np.isnan(bullish_frac)].reshape(-1,1)
+    async def _ind_support_meanshift(self):
+        source = '_pat_' + self.analysis_config['indicators']['support_meanshift'].get('source','bullish_fractal_3')
+        min_cluster_members = self.analysis_config['indicators']['support_meanshift'].get('min_cluster_members', 3)
 
-        # Perform unidimentional clustering     
-        ms = MeanShift()
-        ms_bull = ms.fit_predict(bullish_frac)
-        #aa = ms.cluster_centers_
-        cls_tokens = np.unique(ms_bull)
-        bullish_centroids = []
-        for token in cls_tokens:
-            if token != -1:
-                bullish_centroids.append(bullish_frac[np.where(ms_bull == token)].reshape(1,-1)[0].tolist())
+        bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        bandwidth = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
+        #min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        meanshift = MeanShift(bandwidth=bandwidth) 
+        
+        # TODO: Specifying bandwith halps a bit. I dont know why the estimation did not worked or how it is calculated
+        #       Things to improve:
+        #       - Min number of members can be added as post filter (seems like does not working well)
+        #       - 
+        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_cluster_members, chart_price_range)
 
-        return bullish_centroids
 
-    async def _ind_resistance_mshift(self):
-        bearish_frac = np.array(await self._pat_bearish_fractal_3())
-        bearish_frac = bearish_frac[~np.isnan(bearish_frac)].reshape(-1,1)
+    async def _ind_resistance_meanshift(self):
+        source = '_pat_' + self.analysis_config['indicators']['resistance_meanshift'].get('source','bearish_fractal_3')
+        min_cluster_members = self.analysis_config['indicators']['resistance_meanshift'].get('min_cluster_members', 3)
 
-        # Perform unidimentional clustering     
-        ms = MeanShift()
-        ms_bear = ms.fit_predict(bearish_frac)
-        #aa = ms.cluster_centers_
-        cls_tokens = np.unique(ms_bear)
-        bearish_centroids = []
-        for token in cls_tokens:
-            if token != -1:
-                bearish_centroids.append(bearish_frac[np.where(ms_bear == token)].reshape(1,-1)[0].tolist())
+        bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        bandwidth = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
+        #min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        meanshift = MeanShift(bandwidth=bandwidth) # TODO use bandwidth
+        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_cluster_members, chart_price_range)
 
-        return bearish_centroids
 
     async def _ind_support_kmeans(self):
 
