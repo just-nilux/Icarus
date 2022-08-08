@@ -210,6 +210,7 @@ class Analyzer():
                 continue
 
             sr_level['validation_point'] = indices[0][min_cluster_members]
+            sr_level['min_cluster_members'] = min_cluster_members
             sr_level['horizontal_distribution_score'] = await Analyzer.eval_sup_res_cluster_horizontal_score(indices, len(cluster_predictions))
             sr_level['vertical_distribution_score'] = await Analyzer.eval_sup_res_cluster_vertical_score(sr_level['centroids'], chart_price_range)
 
@@ -234,15 +235,15 @@ class Analyzer():
 
         bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
         chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
-        bandwidth = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
-        #min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        bandwidth = float(chart_price_range * 0.01) # TODO: Optimize this epsilon value based on volatility or sth else
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
         meanshift = MeanShift(bandwidth=bandwidth) 
         
         # TODO: Specifying bandwith halps a bit. I dont know why the estimation did not worked or how it is calculated
         #       Things to improve:
         #       - Min number of members can be added as post filter (seems like does not working well)
         #       - 
-        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_cluster_members, chart_price_range)
+        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_samples-1, chart_price_range)
 
 
     async def _ind_resistance_meanshift(self):
@@ -252,9 +253,9 @@ class Analyzer():
         bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
         chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
         bandwidth = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
-        #min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
         meanshift = MeanShift(bandwidth=bandwidth) # TODO use bandwidth
-        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_cluster_members, chart_price_range)
+        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_samples-1, chart_price_range)
 
 
     async def _ind_support_kmeans(self):

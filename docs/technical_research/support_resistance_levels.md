@@ -9,12 +9,34 @@ Support resistance levels are the key point to place an Limit order. It helps to
 1. Validation: Measuring the performance or accuracy of the support resistance levels
 
 ## Notes:
-- KMeans clustering requires to know the number of clusters (or needs to optimize). However the number of cluster(sup/res levels) are also a result of our evaluation. So it makes no sense to use KMeans for this case. Another downside is the outliers. Since outliers affects the center of the cluster, their existence is devient.
-- DBScan fits better for the clustering in that case. It connects the close points(based on the parameter epsilon) which is good to eliminate outliers since they are lonely.
-- https://therobusttrader.com/support-and-resistance/
+- 
+- 
+- 
 
 - You would want number of members to be high and the horizontal cumulation spread to be narrow
 density_score = (cluster_price_range/frame_price_range) / number of members
+
+### KMeans
+Parameters:
+- Number of cluster
+
+KMeans clustering requires to know the number of clusters (or needs to optimize). However the number of cluster(sup/res levels) are also a result of our evaluation. So it makes no sense to use KMeans for this case. Another downside is the outliers. Since outliers affects the center of the cluster, their existence is devient.
+
+### DBScan
+Parameters:
+- Epsilon
+- Min cluster
+
+DBScan fits better for the clustering in that case. It connects the close points(based on the parameter epsilon) which is good to eliminate outliers since they are lonely.
+https://therobusttrader.com/support-and-resistance/
+
+### Mean Shift
+Parameters:
+- bandwidth
+
+It chooses a point, draws a circle(bw is the radius) and get the mean of all points in the centre. Actually it looks like a perfect fit with the description. However in the case of DBScan, epsilon enable the vertical axis of cluster to expand. In here the bandwidth is limited. In other words, MeanShift can be seen as a subset of DBScan which eliminates clusters with large vertical distribution.
+
+One difference is MeanShift has no min element by its nature. However since the SR levels requires it due to its nature, we can limit it as a post process step
 
 ## Measuring Reliability of the Calculated Levels
 Things to consider:
