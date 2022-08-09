@@ -213,6 +213,7 @@ async def visualize_dashboard(bwrapper, config):
     analysis_dict = await analyzer.visual_analysis(data_dict)
 
     indicators = list(config['visualization']['indicators'].keys()) + config['visualization']['patterns']
+    indicators.sort()
     analysis_dashboard(pair_pool, time_scale_pool, indicators, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
 
 

@@ -3,7 +3,7 @@ import copy
 import logging
 import talib as ta
 from .exceptions import NotImplementedException
-from sklearn.cluster import KMeans, DBSCAN, MeanShift
+from sklearn.cluster import KMeans, DBSCAN, MeanShift, OPTICS, Birch
 import pandas as pd
 import numpy as np
 from itertools import groupby
@@ -169,28 +169,6 @@ class Analyzer():
         bullish_frac = list(pd.Series(await self._pat_bullish_fractal_3()).bfill())
         return {'bearish':bearish_frac, 'bullish':bullish_frac}
 
-    async def _ind_support_dbscan(self):
-        source = '_pat_' + self.analysis_config['indicators']['support_dbscan']['source']
-        bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
-        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
-        eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
-        min_samples = max(round(self.current_time_df.shape[0]/100),3)
-        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        return await Analyzer.eval_sup_res_clusters(dbscan, bullish_frac, dbscan.min_samples-1, chart_price_range)
-
-
-    async def _ind_resistance_dbscan(self):
-        source = '_pat_' + self.analysis_config['indicators']['resistance_dbscan']['source']
-        # NOTE: In order to yield validation points, nan values are assigned to 0. 
-        #       They are visualized but not in the appeared window        
-
-        bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
-        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
-        eps = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
-        min_samples = max(round(self.current_time_df.shape[0]/100),3)
-        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        return await Analyzer.eval_sup_res_clusters(dbscan, bearish_frac, dbscan.min_samples-1, chart_price_range)
-
 
     async def eval_sup_res_clusters(algorithm, data_points, min_cluster_members, chart_price_range):
         cluster_predictions = algorithm.fit_predict(data_points)
@@ -229,6 +207,76 @@ class Analyzer():
         cluster_price_range_perc = cluster_price_range / chart_price_range
         return np.round(cluster_price_range_perc/len(centroids), 4)
 
+
+    async def _ind_support_birch(self):
+        source = '_pat_' + self.analysis_config['indicators']['support_optics'].get('source','bullish_fractal_3')
+
+        bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        birch = Birch(branching_factor=50, n_clusters = None, threshold=eps)
+        return await Analyzer.eval_sup_res_clusters(birch, bullish_frac, 3, chart_price_range)
+
+
+    async def _ind_resistance_birch(self):
+        source = '_pat_' + self.analysis_config['indicators']['resistance_optics'].get('source','bearish_fractal_3')
+
+        bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        birch = Birch(branching_factor=50, n_clusters = None, threshold=eps)
+        return await Analyzer.eval_sup_res_clusters(birch, bullish_frac, 3, chart_price_range)
+
+
+    async def _ind_support_optics(self):
+        source = '_pat_' + self.analysis_config['indicators']['support_optics'].get('source','bullish_fractal_3')
+        cluster_method = self.analysis_config['indicators']['support_optics'].get('cluster_method','xi')   
+
+        bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        optics = OPTICS(eps=eps, min_samples=min_samples, cluster_method=cluster_method)
+        return await Analyzer.eval_sup_res_clusters(optics, bullish_frac, optics.min_samples, chart_price_range)
+
+
+    async def _ind_resistance_optics(self):
+        source = '_pat_' + self.analysis_config['indicators']['resistance_optics'].get('source','bearish_fractal_3')
+        cluster_method = self.analysis_config['indicators']['resistance_optics'].get('cluster_method','xi')   
+
+        bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        optics = OPTICS(eps=eps, min_samples=min_samples, cluster_method=cluster_method)
+        return await Analyzer.eval_sup_res_clusters(optics, bearish_frac, optics.min_samples, chart_price_range)
+
+
+    async def _ind_support_dbscan(self):
+        source = '_pat_' + self.analysis_config['indicators']['support_dbscan']['source']
+        bullish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+        return await Analyzer.eval_sup_res_clusters(dbscan, bullish_frac, dbscan.min_samples, chart_price_range)
+
+
+    async def _ind_resistance_dbscan(self):
+        source = '_pat_' + self.analysis_config['indicators']['resistance_dbscan']['source']
+        # NOTE: In order to yield validation points, nan values are assigned to 0. 
+        #       They are visualized but not in the appeared window        
+
+        bearish_frac = np.nan_to_num(await getattr(self, source)()).reshape(-1,1)
+        chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
+        eps = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
+        min_samples = max(round(self.current_time_df.shape[0]/100),3)
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+        return await Analyzer.eval_sup_res_clusters(dbscan, bearish_frac, dbscan.min_samples, chart_price_range)
+
+
     async def _ind_support_meanshift(self):
         source = '_pat_' + self.analysis_config['indicators']['support_meanshift'].get('source','bullish_fractal_3')
         min_cluster_members = self.analysis_config['indicators']['support_meanshift'].get('min_cluster_members', 3)
@@ -243,7 +291,7 @@ class Analyzer():
         #       Things to improve:
         #       - Min number of members can be added as post filter (seems like does not working well)
         #       - 
-        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_samples-1, chart_price_range)
+        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_samples, chart_price_range)
 
 
     async def _ind_resistance_meanshift(self):
@@ -255,7 +303,7 @@ class Analyzer():
         bandwidth = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
         min_samples = max(round(self.current_time_df.shape[0]/100),3)
         meanshift = MeanShift(bandwidth=bandwidth) # TODO use bandwidth
-        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_samples-1, chart_price_range)
+        return await Analyzer.eval_sup_res_clusters(meanshift, bearish_frac, min_samples, chart_price_range)
 
 
     async def _ind_support_kmeans(self):

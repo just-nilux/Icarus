@@ -5,7 +5,10 @@ from statistics import mean
 
 def support_handler(x, y, axes):
 
-    min_cluster_members = str(y[0].get('min_cluster_members',0))
+    if y:
+        min_cluster_members = str(y[0].get('min_cluster_members',0))
+    else:
+        return
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
     hover_label.setText(f"Support<br/>Min Member:{min_cluster_members}", color='#0000FF', bold=True)
 
@@ -30,7 +33,10 @@ def support_handler(x, y, axes):
 
 def resistance_handler(x, y, axes):
 
-    min_cluster_members = str(y[0].get('min_cluster_members',0))
+    if y:
+        min_cluster_members = str(y[0].get('min_cluster_members',0))
+    else:
+        return
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
     hover_label.setText(f"Resistance<br/>Min Member:{min_cluster_members}", color='#0000FF', bold=True)
 
@@ -124,10 +130,15 @@ def kmeans(x, y, axes):
         fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
         fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
 
-def support_dbscan(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_dbscan(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+
+def support_birch(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
+def resistance_birch(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+def support_optics(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
+def resistance_optics(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
 def support_meanshift(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_meanshift(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+def support_dbscan(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
+def resistance_dbscan(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
 def support_kmeans(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_kmeans(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
 
