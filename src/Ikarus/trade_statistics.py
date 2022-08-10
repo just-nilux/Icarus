@@ -49,6 +49,13 @@ async def eval_balance_stats(stats, config, mongo_client):
     balance_stat['Absolute Profit'] = safe_substract(balance_stat['End Balance'], balance_stat['Start Balance'], quant='0.01')
     balance_stat['Percentage Profit'] = safe_divide(balance_stat['Absolute Profit']*100, balance_stat['Start Balance'], quant='0.01')
 
+    # Max Drawdown:
+    df_observers = pd.DataFrame(list(await mongo_client.do_find('observer',{'type':'quote_asset'})))
+    df_observers.set_index(['timestamp'], inplace=True)
+    mdd_percentage = (df_observers['total'].max() - df_observers['total'].min() ) / df_observers['total'].max() * 100
+    balance_stat['Max Drawdown'] = round(mdd_percentage,2)
+
+    # Paid Fees
     trade_fee_pipe = [
         {"$match":{"result.cause":{"$in": [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]}}},
         {"$project": {"trade_fee": {"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]}}},
