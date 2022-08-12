@@ -215,8 +215,8 @@ class Analyzer():
         chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
         eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
         min_samples = max(round(self.current_time_df.shape[0]/100),3)
-        birch = Birch(branching_factor=50, n_clusters = None, threshold=eps)
-        return await Analyzer.eval_sup_res_clusters(birch, bullish_frac, 3, chart_price_range)
+        birch = Birch(branching_factor=15, n_clusters = None, threshold=eps)
+        return await Analyzer.eval_sup_res_clusters(birch, bullish_frac, min_samples, chart_price_range)
 
 
     async def _ind_resistance_birch(self):
@@ -226,8 +226,8 @@ class Analyzer():
         chart_price_range = self.current_time_df['high'].max() - self.current_time_df['low'].min()
         eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
         min_samples = max(round(self.current_time_df.shape[0]/100),3)
-        birch = Birch(branching_factor=50, n_clusters = None, threshold=eps)
-        return await Analyzer.eval_sup_res_clusters(birch, bullish_frac, 3, chart_price_range)
+        birch = Birch(branching_factor=15, n_clusters = None, threshold=eps)
+        return await Analyzer.eval_sup_res_clusters(birch, bullish_frac, min_samples, chart_price_range)
 
 
     async def _ind_support_optics(self):

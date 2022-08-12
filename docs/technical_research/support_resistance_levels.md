@@ -36,13 +36,19 @@ It chooses a point, draws a circle(bandwidth is the radius) and get the mean of 
 One difference is MeanShift has no min element by its nature. However since the SR levels requires it due to its nature, we can limit it as a post process step
 
 ### OPTICS
+Parameters:
+- Branching coeff: Max number of subcluster that a cluster can have
+- Threshold value: The definition of epsilon fits
+- Number of cluster (Optional)
+
 See: https://scikit-learn.org/stable/auto_examples/cluster/plot_optics.html#sphx-glr-auto-examples-cluster-plot-optics-py
 
 It has concepts lıke core-distance, reachability-distance
 As a concept OPTICS algorithm is actullay creates a reachibility graph. where the euclydian distance betwween the core and the other points.On top of the the clustring itself is an sepearte interpretations
 
 ### BIRCH
-Birch
+See the followıng video for the logıc:
+https://www.youtube.com/watch?v=l1pwUwMgKD0&t=112s
 
 ## Measuring Reliability of the Calculated Levels
 Things to consider:
@@ -61,7 +67,21 @@ score = horizontal_distribution_score / vertical_distribution_score
     - Check **Analyzer.eval_sup_res_cluster_score()** function
 
 # Validation
-horizontal_score
-validation_score
-Note: score can be multiplied with the number of members. Then the final score can be checked if it is greater than 100. 100 is just an observation
+How to know which support resıstance level or cluster is more reliable? In order to answer this question following score functıons can be caluclated.
+## Horizontal Score
+Psuedo Code:
+1. Get the adjacent distance between each data point.
+1. Divide the distance to the whole length of the chart to have normalized values between 0 and 1.
+1. Get the weighted average of this distance array where the weights are simply an array of integers starting from 1, until the lenght of the distance array. The logic behing this function is: "As the distance increases between datapoints, the cluster becomes more reliable since it is tested multiple different times. So we need to reward the clusters for having large distance values."
+## Vertical Score
+Psuedo Code:
+1. Get the vertical length of the cluster.
+1. Divide the vertical length to the length of the chart to have a normalized value between 0 and 1
+
+## Final Score
+[Horizontal Score] / [Vertical Score]
+## Alternative Ideas:
+* Score can be multiplied with the number of members.Then the final score can be checked if it is greater than 100. 100 is just an observation
+* The calculation of vertical score can be made with RMS
+* Total score can be evaluated as score*number_of_members. Then we expect it to be greater then 100. This number would be a function of horizontal dist, vertical dist and the num of members which makes sense.
 
