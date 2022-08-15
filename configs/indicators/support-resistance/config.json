@@ -86,7 +86,7 @@
             }
         },
         "indicators":{
-            "market_classifier": "fractal_aroon",
+            "market_classifier": {"source":"fractal_aroon"},
             "support_dbscan": {"source":"bullish_fractal_3"},
             "resistance_dbscan": {"source":"bearish_fractal_3"},
             "support_meanshift": {"source":"bullish_fractal_3"},

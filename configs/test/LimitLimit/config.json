@@ -1,7 +1,7 @@
 {
     "tag": "test-bot",
     "log":{
-        "level": "DEBUG",
+        "level": "INFO",
         "file": "log/test-ikarus-app.log",
         "clear": true
     },
@@ -34,9 +34,19 @@
     },
     "analysis": {
         "indicators": {
-            "low":"",
-            "high":"",
-            "close":""
+            "low": {},
+            "high": {},
+            "close": {},
+            "rsi": {"timeperiod":14},
+            "macd": {"fastperiod":12, "slowperiod":26, "signalperiod":9},
+            "trange": {},
+            "ma": {"timeperiod":50},
+            "support_dbscan": {"source":"bullish_fractal_3"},
+            "resistance_dbscan": {"source":"bearish_fractal_3"},
+            "support_meanshift": {"source":"bullish_fractal_3"},
+            "resistance_meanshift": {"source":"bearish_fractal_3"},
+            "support_optics": {},
+            "resistance_optics": {}
         }
     },
     "time_scales": {
@@ -62,12 +72,19 @@
             "quote_asset":["free", "total", "in_trade"],
             "quote_asset_leak":["binary"]
         },
-        "indicators": {
-            "rsi":"",
-            "macd":"",
-            "trange":"",
-            "ma": [50,200]
+        "indicators":{
+            "market_classifier": {"source":"fractal_aroon"},
+            "support_dbscan": {"source":"bullish_fractal_3"},
+            "resistance_dbscan": {"source":"bearish_fractal_3"},
+            "support_meanshift": {"source":"bullish_fractal_3"},
+            "resistance_meanshift": {"source":"bearish_fractal_3"},
+            "support_optics": {},
+            "resistance_optics": {},
+            "support_birch": {},
+            "resistance_birch": {},
+            "support_kmeans": {},
+            "resistance_kmeans": {}
         },
-        "patterns":[]
+        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bearish_fractal_5", "bullish_fractal_5"]
     }
 }
