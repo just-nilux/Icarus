@@ -6,24 +6,24 @@ from ..utils import time_scale_to_milisecond
 
 class MarketRegimeClassification():
 
-    async def _ind_market_classifier(self, candlesticks, **kwargs):
+    async def _market_classifier(self, candlesticks, **kwargs):
         # TODO: Market status receives the name of some other indicators and runs
         #       a secondary analysis.
         #       Maybe the secondary analysis such as  S/R levels should be put under
         #       another category
 
-        analyzer = "_ind_" + kwargs.get('source','fractal_aroon')
+        analyzer = "_" + kwargs.get('source','fractal_aroon')
 
         if hasattr(self, analyzer):
             analysis_output = await getattr(self, analyzer)(candlesticks)
         
         classification = {}
-        if analyzer == '_ind_aroonosc':
+        if analyzer == '_aroonosc':
             uptrend_filter = np.where(np.array(analysis_output) > 0)[0]
             downtrend_filter = np.where(np.array(analysis_output) < 0)[0]
             classification = {'downtrend':downtrend_filter, 'uptrend':uptrend_filter}
 
-        elif analyzer == '_ind_fractal_aroon':
+        elif analyzer == '_fractal_aroon':
             uptrend_filter = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
             downtrend_filter = np.where(np.nan_to_num(analysis_output['aroondown']) > 80)[0]
             classification = {'downtrend':downtrend_filter, 'uptrend':uptrend_filter}

@@ -41,8 +41,8 @@ class SupportResistance():
         return np.round(cluster_price_range_perc/len(centroids), 4)
 
 
-    async def _ind_support_birch(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bullish_fractal_3')
+    async def _support_birch(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bullish_fractal_3')
 
         bullish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
@@ -52,8 +52,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(birch, bullish_frac, min_samples, chart_price_range)
 
 
-    async def _ind_resistance_birch(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bearish_fractal_3')
+    async def _resistance_birch(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bearish_fractal_3')
 
         bullish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
@@ -63,8 +63,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(birch, bullish_frac, min_samples, chart_price_range)
 
 
-    async def _ind_support_optics(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bullish_fractal_3')
+    async def _support_optics(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bullish_fractal_3')
         cluster_method = kwargs.get('cluster_method','xi')   
 
         bullish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
@@ -75,8 +75,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(optics, bullish_frac, optics.min_samples, chart_price_range)
 
 
-    async def _ind_resistance_optics(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bearish_fractal_3')
+    async def _resistance_optics(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bearish_fractal_3')
         cluster_method = kwargs.get('cluster_method','xi')   
 
         bearish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
@@ -87,8 +87,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(optics, bearish_frac, optics.min_samples, chart_price_range)
 
 
-    async def _ind_support_dbscan(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bullish_fractal_3')
+    async def _support_dbscan(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bullish_fractal_3')
         bullish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
         eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
@@ -97,8 +97,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(dbscan, bullish_frac, dbscan.min_samples, chart_price_range)
 
 
-    async def _ind_resistance_dbscan(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bearish_fractal_3')
+    async def _resistance_dbscan(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bearish_fractal_3')
         # NOTE: In order to yield validation points, nan values are assigned to 0. 
         #       They are visualized but not in the appeared window        
 
@@ -110,8 +110,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(dbscan, bearish_frac, dbscan.min_samples, chart_price_range)
 
 
-    async def _ind_support_meanshift(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bullish_fractal_3')
+    async def _support_meanshift(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bullish_fractal_3')
         min_cluster_members = kwargs.get('min_cluster_members', 3)
 
         bearish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
@@ -127,8 +127,8 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(meanshift, bearish_frac, min_samples, chart_price_range)
 
 
-    async def _ind_resistance_meanshift(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bearish_fractal_3')
+    async def _resistance_meanshift(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bearish_fractal_3')
         min_cluster_members = kwargs.get('min_cluster_members', 3)
 
         bearish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
@@ -139,9 +139,9 @@ class SupportResistance():
         return await SupportResistance.eval_sup_res_clusters(meanshift, bearish_frac, min_samples, chart_price_range)
 
 
-    async def _ind_support_kmeans(self, candlesticks, **kwargs):
+    async def _support_kmeans(self, candlesticks, **kwargs):
 
-        source = '_pat_' + kwargs.get('source','bullish_fractal_3')
+        source = '_' + kwargs.get('source','bullish_fractal_3')
         min_cluster_members = kwargs.get('min_cluster_members', 3)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
         data_points = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
@@ -154,8 +154,8 @@ class SupportResistance():
 
         return await SupportResistance.eval_sup_res_clusters(km, data_points, min_cluster_members, chart_price_range)
 
-    async def _ind_resistance_kmeans(self, candlesticks, **kwargs):
-        source = '_pat_' + kwargs.get('source','bearish_fractal_3')
+    async def _resistance_kmeans(self, candlesticks, **kwargs):
+        source = '_' + kwargs.get('source','bearish_fractal_3')
         min_cluster_members = kwargs.get('min_cluster_members', 3)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
         data_points = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)

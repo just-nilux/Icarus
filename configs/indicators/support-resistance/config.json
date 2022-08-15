@@ -54,9 +54,28 @@
         }
     },
     "analysis": {
-        "indicators":{
-            "kmeans": ""
-        }
+        "low": {},
+        "high": {},
+        "close": {},
+        "rsi": {"timeperiod":14},
+        "macd": {"fastperiod":12, "slowperiod":26, "signalperiod":9},
+        "trange": {},
+        "ma": {"timeperiod":50},
+        "market_classifier": {"source":"fractal_aroon"},
+        "support_dbscan": {"source":"bullish_fractal_3"},
+        "resistance_dbscan": {"source":"bearish_fractal_3"},
+        "support_meanshift": {"source":"bullish_fractal_3"},
+        "resistance_meanshift": {"source":"bearish_fractal_3"},
+        "support_optics": {},
+        "resistance_optics": {},
+        "support_birch": {},
+        "resistance_birch": {},
+        "support_kmeans": {},
+        "resistance_kmeans": {},
+        "bearish_fractal_3": {},
+        "bullish_fractal_3": {},
+        "bearish_fractal_5": {},
+        "bullish_fractal_5": {}
     },
     "time_scales": {
         "1m": ["12 hours", 720],
@@ -84,20 +103,6 @@
                 "1562371200000":"decision_time",
                 "1562803200000":"result.enter.time"
             }
-        },
-        "indicators":{
-            "market_classifier": {"source":"fractal_aroon"},
-            "support_dbscan": {"source":"bullish_fractal_3"},
-            "resistance_dbscan": {"source":"bearish_fractal_3"},
-            "support_meanshift": {"source":"bullish_fractal_3"},
-            "resistance_meanshift": {"source":"bearish_fractal_3"},
-            "support_optics": {},
-            "resistance_optics": {},
-            "support_birch": {},
-            "resistance_birch": {},
-            "support_kmeans": {},
-            "resistance_kmeans": {}
-        },
-        "patterns": ["bearish_fractal_3", "bullish_fractal_3", "bearish_fractal_5", "bullish_fractal_5"]
+        }
     }
 }

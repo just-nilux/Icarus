@@ -18,17 +18,17 @@ class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketR
         for pair,data_obj in data_dict.items():
             analysis_obj = dict()
 
-            for time_scale, time_df in data_obj.items():
+            for time_scale, candlesticks in data_obj.items():
 
                 # Generate coroutines
                 indicator_coroutines = []
-                header = '_ind_'
-                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config['indicators'].keys()))
-                indicator_names = list(self.analysis_config['indicators'].keys())
+                header = '_'
+                indicator_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config.keys()))
+                indicator_names = list(self.analysis_config.keys())
 
                 for ind_method, ind_name in zip(indicator_method_names,indicator_names):
-                    if hasattr(self, ind_method): indicator_coroutines.append(getattr(self, ind_method)(time_df, **self.analysis_config['indicators'].get(ind_name,{})))
-                    else: raise RuntimeError(f'Unknown indicator: "{ind_method}"')
+                    if hasattr(self, ind_method): indicator_coroutines.append(getattr(self, ind_method)(candlesticks, **self.analysis_config.get(ind_name,{})))
+                    else: raise RuntimeError(f'Unknown Analyzer: "{ind_method}"')
 
                 analysis_output = list(await asyncio.gather(*indicator_coroutines))
 
@@ -38,7 +38,7 @@ class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketR
                 # NOTE: Since coroutines are not reuseable, they require to be created in each cycle
                 # NOTE: pd.Series needs to be casted to list
                 stats = dict()
-                for key, value in zip(self.analysis_config['indicators'].keys(), analysis_output):
+                for key, value in zip(self.analysis_config.keys(), analysis_output):
                     stats[key] = value
                 # Assign "stats" to each "time_scale"
                 analysis_obj[time_scale] = stats
@@ -57,7 +57,7 @@ class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketR
 
                 # Generate coroutines
                 indicator_coroutines = []
-                header = '_ind_'
+                header = '_'
                 indicator_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config['indicators'].keys()))
                 indicator_names = list(self.analysis_config['indicators'].keys())
 
@@ -65,7 +65,7 @@ class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketR
                     if hasattr(self, ind_method): indicator_coroutines.append(getattr(self, ind_method)(time_df, **self.analysis_config['indicators'].get(ind_name,{})))
                     else: raise RuntimeError(f'Unknown indicator: "{ind_method}"')
 
-                header = '_pat_'
+                header = '_'
                 pattern_method_names = list(map(lambda orig_string: header + orig_string, self.analysis_config['patterns'])) # Patterns do not take arg
                 for pat in pattern_method_names:
                     if hasattr(self, pat): indicator_coroutines.append(getattr(self, pat)(time_df))
