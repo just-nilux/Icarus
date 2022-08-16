@@ -210,7 +210,7 @@ async def visualize_dashboard(bwrapper, config):
     global data_dict, analysis_dict
     data_dict = await bwrapper.download_all_data(meta_data_pool, start_timestamp, end_timestamp)
     analyzer = Analyzer(config['analysis'])
-    analysis_dict = await analyzer.sample_analyzer(data_dict)
+    analysis_dict = await analyzer.analyze(data_dict)
 
     indicators = [key for key in config['analysis'].keys() if hasattr(indicator_plot, key)]
     indicators.sort()
