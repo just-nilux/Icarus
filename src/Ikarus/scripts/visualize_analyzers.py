@@ -209,10 +209,10 @@ async def visualize_dashboard(bwrapper, config):
 
     global data_dict, analysis_dict
     data_dict = await bwrapper.download_all_data(meta_data_pool, start_timestamp, end_timestamp)
-    analyzer = Analyzer(config['visualization'])
-    analysis_dict = await analyzer.visual_analysis(data_dict)
+    analyzer = Analyzer(config['analysis'])
+    analysis_dict = await analyzer.analyze(data_dict)
 
-    indicators = list(config['visualization']['indicators'].keys()) + config['visualization']['patterns']
+    indicators = [key for key in config['analysis'].keys() if hasattr(indicator_plot, key)]
     indicators.sort()
     analysis_dashboard(pair_pool, time_scale_pool, indicators, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
 

@@ -72,7 +72,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     await sync_trades_of_backtest(live_trade_list, data_dict, strategy_period_mapping, df_balance, config['broker']['quote_currency'])
 
     # 2.1: Analyzer only provide the simplified informations, it does not make any decision
-    analysis_dict = await analyzer.sample_analyzer(data_dict)
+    analysis_dict = await analyzer.analyze(data_dict)
 
     #################### Phase 2: Perform calculation tasks ####################
 

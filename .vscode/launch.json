@@ -57,10 +57,10 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "visualize_indicators",
+            "name": "visualize_analyzers",
             "type": "python",
             "request": "launch",
-            "module": "Ikarus.scripts.visualize_indicators",
+            "module": "Ikarus.scripts.visualize_analyzers",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/src",
             "args": [
@@ -96,7 +96,7 @@
             "program": "src/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\sample\\RSI\\config.json"
+                ".\\configs\\test\\LimitLimit\\config.json"
             ]
         },
         {
