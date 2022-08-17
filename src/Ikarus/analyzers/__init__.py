@@ -1,12 +1,12 @@
 import asyncio
 from .talib_indicators import TALibIndicators
 from .indicators import Indicators
-from .market_regime_classification import MarketRegimeClassification
+from .market_classification import MarketClassification
 from .patterns import Patterns
 from .support_resistance import SupportResistance
 
 
-class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketRegimeClassification):
+class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketClassification):
 
     def __init__(self, analysis_config):
         self.analysis_config = analysis_config

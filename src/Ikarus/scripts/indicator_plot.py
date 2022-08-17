@@ -89,12 +89,7 @@ def enable_ax_bot(axes, **kwargs):
     if band := kwargs.get('band', None): fplt.add_band(band[0], band[1], color='#6335', ax=axes['ax_bot'])
 
 
-def disable_ax_bot(axes):
-    axes['ax'].set_visible(xaxis=True)
-    axes['ax_bot'].hide()
-
-#####################################  Custom Analyzer Visualization #####################################
-def market_classifier(x, y, axes): 
+def market_class_handler(x, y, axes): 
     color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF' '#FFFF80'] # 6 Class is currently enough to model
 
     enable_ax_bot(axes, y_range=(0,len(y.keys())))
@@ -108,28 +103,18 @@ def market_classifier(x, y, axes):
         fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
 
+def disable_ax_bot(axes):
+    axes['ax'].set_visible(xaxis=True)
+    axes['ax_bot'].hide()
+
+#####################################  Custom Analyzer Visualization #####################################
+
+def market_class_aroonosc(x, y, axes): market_class_handler(x, y, axes)
+def market_class_fractal_aroon(x, y, axes): market_class_handler(x, y, axes)
+
 def fractal_line_3(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
 def fractal_aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
-
-def kmeans(x, y, axes): 
-    disable_ax_bot(axes)
-    # Visualize Support Lines
-    #for sr_level in y['low_cls']:
-    #    fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#0000FF', width=2, interactive=False)
-
-    # Visualize Resistance Lines
-    #for sr_level in y['high_cls']:
-    #    fplt.add_line((x[0], sr_level), (x[-1], sr_level), style='.', color='#FF0000', width=2, interactive=False)
-    for sr_level in y['low_cls']:
-        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#0000FF', width=2, interactive=False)
-        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
-
-    # Visualize Resistance Lines
-    for sr_level in y['high_cls']:
-        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
-        fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
-
 
 def support_birch(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
 def resistance_birch(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
