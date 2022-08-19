@@ -90,7 +90,8 @@ def enable_ax_bot(axes, **kwargs):
 
 
 def market_class_handler(x, y, axes): 
-    color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF' '#FFFF80'] # 6 Class is currently enough to model
+    # Visualization on ax_bot as class rows
+    color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF', '#FFFF80'] # 6 Color is enough to distinguish classes
 
     enable_ax_bot(axes, y_range=(0,len(y.keys())))
     fplt.plot(x, y=[len(y.keys())]*len(x), ax=axes['ax_bot'])
@@ -101,6 +102,11 @@ def market_class_handler(x, y, axes):
             if 'validation_point' in class_item:
                 fplt.add_line((class_item['validation_point'], class_idx+1), (class_item['validation_point'], class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
         fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
+
+    # Visualization on ax as class rows
+    for class_idx, (class_name, class_item_list) in enumerate(y.items()):
+        for class_item in class_item_list:
+            fplt.add_rect((class_item['start'], class_item['vertical_level1']), (class_item['end'], class_item['vertical_level2']), color=color_set[class_idx%6], interactive=False, ax=axes['ax'])
 
 
 def disable_ax_bot(axes):

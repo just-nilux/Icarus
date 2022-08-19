@@ -10,6 +10,11 @@
 * **Undefined Regimes:** ML defined "patterns". That may or may not be meaningful for humans.
 
 # What are the methods to detect market regimes?
+There are 2 approaches on market regime detection:
+* **Offline analysis:**  It does not try to predict the class as early as possible. It looks at the big picture and try to dedect, analyze and give meaning to the market regimes as accurate as possible. As a result a dataset is created. It can be perceived as feature extraction.
+
+* **Online analysis:** It aims to predict the current/next market regime as early and as accurate as possible
+
 * Object detection approach (Supervised learning and drawing rectangles)
 * Combination of conventionla tech indicators
     * SQN and ATR

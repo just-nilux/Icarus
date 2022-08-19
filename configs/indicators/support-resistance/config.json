@@ -54,12 +54,12 @@
         }
     },
     "analysis": {
-        "market_classifier": {"source":"fractal_aroon"},
         "support_dbscan": {"source":"bullish_fractal_3"},
         "resistance_dbscan": {"source":"bearish_fractal_3"},
-        "market_class_fractal_aroon": {},
-        "market_class_aroonosc": {}
-
+        "market_class_fractal_aroon": {"validation_point": 0},
+        "market_class_aroonosc": {"validation_point": 3},
+        "fractal_aroon":{},
+        "aroonosc":{}
     },
     "time_scales": {
         "1m": ["12 hours", 720],
