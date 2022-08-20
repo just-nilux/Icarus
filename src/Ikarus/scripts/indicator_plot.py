@@ -1,12 +1,11 @@
 import finplot as fplt
 from statistics import mean
-
 #####################################  Fundamental Handler Fuctions ######################################
 
 def support_handler(x, y, axes):
 
     if y:
-        min_cluster_members = str(y[0].get('min_cluster_members',0))
+        min_cluster_members = str(y[0].min_cluster_members)
     else:
         return
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
@@ -16,25 +15,27 @@ def support_handler(x, y, axes):
 
     # TODO: Find a way to add proper legend
     # Visualize Support Lines
-    for sr_level_obj in y:
-        sr_level = sr_level_obj['centroids']
-        hds = sr_level_obj.get('horizontal_distribution_score','')
-        vds = sr_level_obj.get('vertical_distribution_score','')
-        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(hds, vds, round(hds/vds,2))
-        text_top = "#Members:{}".format(len(sr_level))
+    for sr_cluster in y:
 
-        fplt.add_text((x[0], mean(sr_level)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-        fplt.add_text((x[0], mean(sr_level)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
+        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
+            sr_cluster.horizontal_distribution_score, 
+            sr_cluster.vertical_distribution_score, 
+            round(sr_cluster.horizontal_distribution_score/sr_cluster.vertical_distribution_score,2))
 
-        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#0000FF', width=2, interactive=False)
+        text_top = "#Members:{}".format(len(sr_cluster.centroids))
+
+        fplt.add_text((x[0], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
+        fplt.add_text((x[0], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
+
+        fplt.add_line((x[0], mean(sr_cluster.centroids)), (x[-1], mean(sr_cluster.centroids)), style='.', color='#0000FF', width=2, interactive=False)
         #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
-        fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#CCCCFF')
+        fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), (x[-1], min(sr_cluster.centroids)), ax=axes['ax'], color='#CCCCFF')
 
 
 def resistance_handler(x, y, axes):
 
     if y:
-        min_cluster_members = str(y[0].get('min_cluster_members',0))
+        min_cluster_members = str(y[0].min_cluster_members)
     else:
         return
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
@@ -42,20 +43,20 @@ def resistance_handler(x, y, axes):
 
 
     # Visualize Resistance Lines
-    for sr_level_obj in y:
-        sr_level = sr_level_obj['centroids']
-        hds = sr_level_obj.get('horizontal_distribution_score','')
-        vds = sr_level_obj.get('vertical_distribution_score','')
-        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(hds, vds, round(hds/vds,2))
-        text_top = "#Members:{}".format(len(sr_level))
+    for sr_cluster in y:
+        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
+            sr_cluster.horizontal_distribution_score, 
+            sr_cluster.vertical_distribution_score, 
+            round(sr_cluster.horizontal_distribution_score/sr_cluster.vertical_distribution_score,2))
 
-        fplt.add_text((x[0], mean(sr_level)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-        fplt.add_text((x[0], mean(sr_level)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
+        text_top = "#Members:{}".format(len(sr_cluster.centroids))
 
-        fplt.add_line((x[0], mean(sr_level)), (x[-1], mean(sr_level)), style='.', color='#FF0000', width=2, interactive=False)
+        fplt.add_text((x[0], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
+        fplt.add_text((x[0], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
+
+        fplt.add_line((x[0], mean(sr_cluster.centroids)), (x[-1], mean(sr_cluster.centroids)), style='.', color='#FF0000', width=2, interactive=False)
         #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#FFCCCC')
-        fplt.add_rect((x[sr_level_obj['validation_point']], max(sr_level)), (x[-1], min(sr_level)), ax=axes['ax'], color='#FFCCCC')
-        print(sr_level)
+        fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), (x[-1], min(sr_cluster.centroids)), ax=axes['ax'], color='#FFCCCC')
 
 
 def line_handler(x, y, axis):

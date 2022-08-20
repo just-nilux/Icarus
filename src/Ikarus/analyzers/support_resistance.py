@@ -1,33 +1,17 @@
+from dataclasses import asdict, dataclass, field
+import string
 from sklearn.cluster import KMeans, DBSCAN, MeanShift, OPTICS, Birch
 import numpy as np
 
+@dataclass
+class SRCluster():
+    centroids: list = field(default_factory=list)
+    validation_index: int = 0,
+    min_cluster_members: int = 0,
+    horizontal_distribution_score: float = 0.0
+    vertical_distribution_score: float = 0.0
+
 class SupportResistance():
-
-    async def eval_sup_res_clusters(algorithm, data_points, min_cluster_members, chart_price_range):
-        cluster_predictions = algorithm.fit_predict(data_points)
-        cls_tokens = np.unique(cluster_predictions)
-        sr_levels = []
-        for token in cls_tokens:
-            # NOTE: Ignore outliers
-            if token == -1:
-                continue
-
-            indices = np.where(cluster_predictions == token)
-            sr_level = {}
-            sr_level['centroids'] = data_points[indices].reshape(1,-1)[0].tolist()
-
-            # NOTE: Ignore the cluster if all of the members are 0, or the not enough cluster members
-            if not any(sr_level['centroids']) or len(indices[0])<=min_cluster_members:
-                continue
-
-            sr_level['validation_point'] = indices[0][min_cluster_members]
-            sr_level['min_cluster_members'] = min_cluster_members
-            sr_level['horizontal_distribution_score'] = await SupportResistance.eval_sup_res_cluster_horizontal_score(indices, len(cluster_predictions))
-            sr_level['vertical_distribution_score'] = await SupportResistance.eval_sup_res_cluster_vertical_score(sr_level['centroids'], chart_price_range)
-
-            sr_levels.append(sr_level)
-        return sr_levels
-
 
     async def eval_sup_res_cluster_horizontal_score(indices, num_of_candle):
         # NOTE: By dividing the indice diferences to len(dbscan_bear), we manage to represent the distance without the dependecy of number of candles:
@@ -39,6 +23,44 @@ class SupportResistance():
         cluster_price_range = max(centroids) - min(centroids)
         cluster_price_range_perc = cluster_price_range / chart_price_range
         return np.round(cluster_price_range_perc/len(centroids), 4)
+
+
+    async def _eval_sup_res_clusters(algorithm, data_points, min_cluster_members, chart_price_range, discrete_mode):
+        cluster_predictions = algorithm.fit_predict(data_points)
+        cls_tokens = np.unique(cluster_predictions)
+        sr_levels = []
+        for token in cls_tokens:
+            # NOTE: Ignore outliers
+            if token == -1:
+                continue
+
+            indices = np.where(cluster_predictions == token)
+            centroids = data_points[indices].reshape(1,-1)[0].tolist()
+
+            # NOTE: Ignore the cluster if all of the members are 0, or the not enough cluster members
+            if not any(centroids) or len(indices[0])<=min_cluster_members:
+                continue
+
+            srcluster = SRCluster(
+                centroids,
+                indices[0][min_cluster_members],
+                min_cluster_members,
+                await SupportResistance.eval_sup_res_cluster_horizontal_score(indices, len(cluster_predictions)),
+                await SupportResistance.eval_sup_res_cluster_vertical_score(centroids, chart_price_range)
+            )
+
+            sr_levels.append(srcluster)
+        return sr_levels
+
+    async def eval_sup_res_clusters(algorithm, data_points, min_cluster_members, chart_price_range, discrete_mode):
+        if discrete_mode:
+            sr_clusters = [] #TBD
+        else:
+            sr_clusters = await SupportResistance._eval_sup_res_clusters(algorithm, data_points, min_cluster_members, chart_price_range)
+
+        return sr_clusters
+
+
 
 
     async def _support_birch(self, candlesticks, **kwargs):
@@ -107,7 +129,11 @@ class SupportResistance():
         eps = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
         min_samples = max(round(candlesticks.shape[0]/100),3)
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        return await SupportResistance.eval_sup_res_clusters(dbscan, bearish_frac, dbscan.min_samples, chart_price_range)
+        if kwargs.get('discrete_mode',False):
+            asdict
+        else:
+            sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, bearish_frac, dbscan.min_samples, chart_price_range)
+        return sr_clusters
 
 
     async def _support_meanshift(self, candlesticks, **kwargs):

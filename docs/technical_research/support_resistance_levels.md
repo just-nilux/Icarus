@@ -73,6 +73,29 @@ Psuedo Code:
 1. In order to call a region as support resistance,it needs to be tested multiple times and it is better to have more remote located test points. Considering this fact, we can write a score function for the clusters as a measure of reliability of the support resistance levels:
     - Check **Analyzer.eval_sup_res_cluster_score()** function
 
+## Problems:
+If a long timespan is chosen as start and end date of simulation, and the timeframe is small like '1h' then the x axis will be too long and there will be alot of data points. As a result:
+* Min Member threshold for clusters will be high
+* The relevance of members decrease after a distance which is a vague parameter.
+The problems with number of candlesticks:
+
+If we consider 1 year timeframe:
+* '1d' timeframe: 365*2 = 730 candlesticks
+* '1h' timeframe: 336 + 24*265=6.696  candlesticks.
+
+Even if the price just go up and down, arbitarily, a lot of cluster will be created. As the time span increases relevence between the members should decrease. You cannot claim that "In 2019 there was a support level in 1h frame at the price x, and now that is why there is a freactal point at the price x". This should be irrelevant.
+	
+This approach brings another problem:
+	initially we said that as the timespan between the fractals increases the reliability of the sr level increases. This suggests a linear relationship (relevance) between the distance and the reliability
+now we said that if the distance is too much: than it there cannot be a relevance. As it is articulated in the example above.
+
+To solve the issue: we can divide the total timespan to number of candlesticks that a timeframe normally have.
+
+## Notes:
+Support-Resistance Level Parameters:
+* **source:** The data source for clustering
+* **discrete_mode:** 
+
 
 # Cross Support-Resistance Lines
 ## Calculation Approaches:
