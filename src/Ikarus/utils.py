@@ -8,15 +8,35 @@ import time
 from .safe_operators import *
 
 
+def minute_to_time_scale(minute: int):
+    units = ["M", "w", "d", "h", "m"]
+    min_per_units = [
+        302400, 
+        10080, 
+        1440,
+        60, 
+        1
+    ]
+
+    for idx in range(len(units)):
+        if min_per_units[idx] <= minute:
+            scaler = minute / min_per_units[idx]
+            if scaler % 1 != 0:
+                break
+            time_scale = f'{int(scaler)}{units[idx]}'
+            return time_scale
+    
+    return None
+
 def time_scale_to_minute(interval: str):
-    seconds_per_unit = {
+    minute_per_unit = {
         "m": 1,
         "h": 60,
         "d": 24 * 60,
         "w": 7 * 24 * 60,
     }
     try:
-        return int(interval[:-1]) * seconds_per_unit[interval[-1]]
+        return int(interval[:-1]) * minute_per_unit[interval[-1]]
     except (ValueError, KeyError):
         return None
 

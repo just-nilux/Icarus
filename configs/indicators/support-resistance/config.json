@@ -54,8 +54,14 @@
         }
     },
     "analysis": {
+        "support_optics": {"source":"bullish_fractal_3", "discrete_mode":true},
+        "resistance_optics": {"source":"bearish_fractal_3", "discrete_mode":true},
         "support_dbscan": {"source":"bullish_fractal_3", "discrete_mode":true},
-        "resistance_dbscan": {"source":"bearish_fractal_3"},
+        "resistance_dbscan": {"source":"bearish_fractal_3", "discrete_mode":true},
+        "support_kmeans": {"source":"bullish_fractal_3", "discrete_mode":true},
+        "resistance_kmeans": {"source":"bearish_fractal_3", "discrete_mode":true},
+        "support_meanshift": {"source":"bullish_fractal_3", "discrete_mode":true},
+        "resistance_meanshift": {"source":"bearish_fractal_3", "discrete_mode":true},
         "market_class_fractal_aroon": {"validation_point": 0},
         "market_class_aroonosc": {"validation_point": 3},
         "fractal_aroon":{},
@@ -74,9 +80,22 @@
         "1w": ["1 year", 52],
         "1M": ["1 year", 12]
     },
+    "time_scales_dummy": {
+        "1m": 720,
+        "5m": 480,
+        "15m": 96,
+        "30m": 336,
+        "1h": 336,
+        "2h": 84,
+        "4h": 540,
+        "12h": 60,
+        "1d": 365,
+        "1w": 52,
+        "1M": 12
+    },
     "backtest":{
         "start_time": "2020-01-11 13:00:00",
-        "end_time": "2020-01-11 13:00:00",
+        "end_time": "2020-01-18 13:00:00",
         "online": true
     },
     "visualization":{

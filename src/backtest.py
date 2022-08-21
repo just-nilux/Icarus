@@ -224,7 +224,7 @@ if __name__ == '__main__':
 
     # Setup initial objects
     observer = observers.Observer(config)
-    analyzer = analyzers.Analyzer(config['analysis'])
+    analyzer = analyzers.Analyzer(config)
 
     logger.info("---------------------------------------------------------")
     logger.info("------------------- Engine Restarted --------------------")

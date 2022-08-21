@@ -60,9 +60,8 @@
             "name": "visualize_analyzers",
             "type": "python",
             "request": "launch",
-            "module": "Ikarus.scripts.visualize_analyzers",
+            "module": "src.Ikarus.scripts.visualize_analyzers",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/src",
             "args": [
                 "${workspaceFolder}/configs/indicators/support-resistance/config.json"
             ]
@@ -88,6 +87,13 @@
             "args": [
                 ".\\configs\\live\\config.json"
             ]
+        },
+        {
+            "name": "utils",
+            "type": "python",
+            "request": "launch",
+            "module": "src.Ikarus.utils",
+            "console": "integratedTerminal",
         },
         {
             "name": "backtest",

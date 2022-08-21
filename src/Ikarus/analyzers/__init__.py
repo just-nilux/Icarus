@@ -8,8 +8,10 @@ from .support_resistance import SupportResistance
 
 class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketClassification):
 
-    def __init__(self, analysis_config):
-        self.analysis_config = analysis_config
+    def __init__(self, config):
+        self.analysis_config = config.get('analysis')
+        self.time_scales_config = config.get('time_scales')
+
         return
 
 
