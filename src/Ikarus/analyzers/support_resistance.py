@@ -17,6 +17,40 @@ class SRCluster():
     chunk_end_index: int = 0
 
 
+@dataclass
+class FibonacciSRCluster(SRCluster):
+    level: float = .0 
+    price_level: float = .0
+    band: float = .0
+
+
+class FibonacciClustering():
+    coeffs = np.array([0, 0.236, 0.382, 0.5, 0.618, 1])
+    def __init__(self, max_price, min_price, eps) -> None:
+        price_diff = max_price - min_price
+        self.price_levels = max_price - (price_diff * FibonacciClustering.coeffs)
+        self.eps = eps
+        pass
+
+    def reinit(self, max_price, min_price) -> None:
+        price_diff = max_price - min_price
+        self.levels = max_price - (price_diff * FibonacciClustering.coeffs)
+
+    def fit_predict(self, chunk):
+
+        tokenized_chunks = []
+        for idx, price_level in enumerate(self.price_levels):
+            cluster_upper_limit = price_level * (1+self.eps)
+            cluster_lower_limit = price_level * (1-self.eps)
+            filter = np.logical_and(cluster_lower_limit < chunk, chunk < cluster_upper_limit)
+            token = filter.astype(int)
+            token *= (idx+1)
+            tokenized_chunks.append(token)
+
+        return np.array(tokenized_chunks).sum(axis=0) - 1
+
+
+
 class SupportResistance():
 
     async def eval_sup_res_cluster_horizontal_score(indices, num_of_candle):
@@ -87,6 +121,32 @@ class SupportResistance():
             return candle_chunks
         else:
             return [data_points]
+
+
+    async def _fibonacci(self, candlesticks, **kwargs):
+        chart_price_range = candlesticks['high'].max(), candlesticks['low'].min()
+        fibonacci = FibonacciClustering(candlesticks['high'].max(), candlesticks['low'].min(), 0.005)
+        chunk = np.array(candlesticks['close'])
+        cluster_predictions = fibonacci.fit_predict(chunk)
+        cls_tokens = np.unique(cluster_predictions)
+        sr_levels = []
+        for token in range(-1, len(fibonacci.coeffs)):
+            # NOTE: Ignore outliers
+            if token == -1:
+                continue
+
+            #indices = np.where(cluster_predictions == token)[0]
+            #centroids = chunk[indices].reshape(1,-1)[0].tolist()
+
+            # NOTE: Ignore the cluster if all of the members are 0, or the not enough cluster members
+            srcluster = FibonacciSRCluster(
+                level=FibonacciClustering.coeffs[token],
+                price_level=fibonacci.price_levels[token],
+                band=fibonacci.eps
+            )
+            sr_levels.append(srcluster)
+        #sr_clusters = await SupportResistance.eval_sup_res_clusters(fibonacci, chunk, chart_price_range = candlesticks['high'].max() - candlesticks['low'].min())
+        return sr_levels
 
 
     async def _support_birch(self, candlesticks, **kwargs):
