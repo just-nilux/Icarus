@@ -10,19 +10,23 @@ def fibonacci_handler(x, y, axes):
 
     # Visualize Support Lines
     for fibo_cluster in y:
+        if fibo_cluster.vertical_distribution_score == 0:
+            overall_score = 0
+        else:
+            overall_score = round(fibo_cluster.horizontal_distribution_score/fibo_cluster.vertical_distribution_score,2)
 
-        #text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
-        #    sr_cluster.horizontal_distribution_score, 
-        #    sr_cluster.vertical_distribution_score, 
-        #    round(sr_cluster.horizontal_distribution_score/sr_cluster.vertical_distribution_score,2))
+        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
+            fibo_cluster.horizontal_distribution_score, 
+            fibo_cluster.vertical_distribution_score, 
+            overall_score)
 
-        #text_top = "Fibonacci #MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
-        text_top = "Fibonacci Level: {}".format(fibo_cluster.level)
+        text_top = "Fibonacci Level: {}, #Members:{}".format(fibo_cluster.level, len(fibo_cluster.centroids))
 
+        fplt.add_text((x[0], fibo_cluster.price_level), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
         fplt.add_text((x[0], fibo_cluster.price_level), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
         fplt.add_line((x[0], fibo_cluster.price_level), (x[-1], fibo_cluster.price_level), style='.', color='#0000FF', width=2, interactive=False)
-        #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
-        #fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), (x[-1], min(sr_cluster.centroids)), ax=axes['ax'], color='#CCCCFF')
+        if len(fibo_cluster.centroids):
+            fplt.add_rect((x[fibo_cluster.validation_index], max(fibo_cluster.centroids)), (x[-1], min(fibo_cluster.centroids)), ax=axes['ax'], color='#CCCCFF')
 
 
 def support_handler(x, y, axes):
