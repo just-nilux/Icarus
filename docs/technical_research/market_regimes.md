@@ -33,3 +33,12 @@ There are 2 approaches on market regime detection:
 * Prediction of next market state
 * Prediction of the current market regime end time and price ranges.
 # Can the market regimes overlap?
+
+# Implementation/Design Decisions:
+The target is to state such hypothesis like:
+    
+    * The UpTrending market regime generally last x candle in this timeframe
+    * The market regime x generally results in a price change: y%
+    * The market regimes x and y generally occur sequentially with the probabılıty of z%
+
+To make such statement we treat each occurence of certain type of market regime as an atomic unit with various features. To keep the data organized, use of dataclass quite beneficial. This dataclasses will be the ommon language the bot talk when visualizing the market regimes or creating higher level statistics

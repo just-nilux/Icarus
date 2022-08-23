@@ -1,6 +1,32 @@
+from dataclasses import dataclass
 import numpy as np
 from itertools import groupby
 from operator import itemgetter
+
+@dataclass
+class MarketRegime():
+    label: str
+    start_ts: int
+    end_ts: int
+    start_price: float
+    end_price: float
+    lifetime_candle: int
+    validation_point: int = None
+    time_scale: str = ''
+
+    def __post_init__(self):
+        self.price_change = self.end_price - self.start_price
+
+    def set_attribute(self, name, value):
+        self.__setattr__(name, value)
+
+@dataclass
+class PredefinedMarketRegime(MarketRegime):
+    pass
+
+@dataclass
+class UndefinedMarketRegime(MarketRegime):
+    pass
 
 
 class MarketClassification():
@@ -57,25 +83,27 @@ class MarketClassification():
             for k, g in groupby(enumerate(filter_idx), lambda ix: ix[0] - ix[1]):
                 seq_idx = list(map(itemgetter(1), g))
                 # NOTE: If the sq. length is 1 than it will not be displayed. Apply "seq_idx[-1]+1" if you need to
-                class_instance = {'start':ts_index[seq_idx[0]], 'end':ts_index[seq_idx[-1]]}
+
+                pmr = PredefinedMarketRegime(
+                    label=class_name,
+                    start_ts=ts_index[seq_idx[0]],
+                    end_ts=ts_index[seq_idx[-1]],
+                    lifetime_candle=len(seq_idx),
+                    start_price=candlesticks['close'][ts_index[seq_idx[0]]],
+                    end_price=candlesticks['close'][ts_index[seq_idx[-1]]],
+                )
 
                 # Check if the validation will be performed
                 if validation_counter > 0:
                     if len(seq_idx) >= validation_counter:
-                        class_instance['validation_point'] = ts_index[seq_idx[0]+validation_counter -1]
+                        pmr.set_attribute('validation_point', ts_index[seq_idx[0]+validation_counter -1])
                     else:
                         continue # Continue if the validation is performed and the class instance is not valid
 
-                class_instance['vertical_level1'] = candlesticks['close'][ts_index[seq_idx[0]]]
-                class_instance['vertical_level2'] = candlesticks['close'][ts_index[seq_idx[-1]]]
-                
-                # What are the features of market regimes?
-                stats = {}
-                stats['lifetime'] = len(seq_idx) # Lifetime in number of candlesticks
-                stats['price_change'] = candlesticks['close'][ts_index[seq_idx[-1]]] - candlesticks['close'][ts_index[seq_idx[0]]]
 
-                class_item_list.append(class_instance)
+                class_item_list.append(pmr)
             result[class_name] = class_item_list
+            # TODO: No need to have a seperation between the calss instances since they are all labeled and self sufficient to be alice in visu.
         return result
 
 
