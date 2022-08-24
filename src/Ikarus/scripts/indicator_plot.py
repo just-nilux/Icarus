@@ -125,10 +125,17 @@ def market_class_handler(x, y, axes):
     enable_ax_bot(axes, y_range=(0,len(y.keys())))
     fplt.plot(x, y=[len(y.keys())]*len(x), ax=axes['ax_bot'])
 
-    # TODO: NEXT: No need for double for nested for loops. Use the label parameter!
+    # NOTE: No difference in the evaluation of the y even if it is a dictionary or a list. Since it helps in visualizaiton. The dict format is left as it is.
     for class_idx, (class_name, class_item_list) in enumerate(y.items()):
         for market_regime in class_item_list:
             fplt.add_rect((market_regime.start_ts, class_idx+1), (market_regime.end_ts, class_idx), color=color_set[class_idx%6], interactive=False, ax=axes['ax_bot'])
+            
+            price_change_perc = f'%{str(market_regime.price_change_perc)}'
+            fplt.add_text((market_regime.start_ts, class_idx+1), price_change_perc, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
+
+            num_of_candle = f'#Candle: {str(market_regime.lifetime_in_candle)}'
+            fplt.add_text((market_regime.start_ts, class_idx+0.9), num_of_candle, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
+
             if market_regime.validation_point != None:
                 fplt.add_line((market_regime.validation_point, class_idx+1), (market_regime.validation_point, class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
         fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])

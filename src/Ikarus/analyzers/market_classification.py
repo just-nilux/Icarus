@@ -10,12 +10,12 @@ class MarketRegime():
     end_ts: int
     start_price: float
     end_price: float
-    lifetime_candle: int
+    lifetime_in_candle: int
     validation_point: int = None
     time_scale: str = ''
 
     def __post_init__(self):
-        self.price_change = self.end_price - self.start_price
+        self.price_change_perc = round(100 * (self.end_price - self.start_price) / self.start_price, 2)
 
     def set_attribute(self, name, value):
         self.__setattr__(name, value)
@@ -88,7 +88,7 @@ class MarketClassification():
                     label=class_name,
                     start_ts=ts_index[seq_idx[0]],
                     end_ts=ts_index[seq_idx[-1]],
-                    lifetime_candle=len(seq_idx),
+                    lifetime_in_candle=len(seq_idx),
                     start_price=candlesticks['close'][ts_index[seq_idx[0]]],
                     end_price=candlesticks['close'][ts_index[seq_idx[-1]]],
                 )
