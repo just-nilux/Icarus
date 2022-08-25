@@ -2,6 +2,8 @@ from dataclasses import dataclass
 import numpy as np
 from itertools import groupby
 from operator import itemgetter
+from hmmlearn.hmm import GaussianHMM
+
 
 @dataclass
 class MarketRegime():
@@ -30,6 +32,32 @@ class UndefinedMarketRegime(MarketRegime):
 
 
 class MarketClassification():
+
+    async def _hmm(self, candlesticks, **kwargs):
+        # TODO: It works fıne but what does it tell???
+        close = np.array(candlesticks['close']).reshape(-1,1)
+        daily_return = (1 - candlesticks['close'].div(candlesticks['close'].shift())).fillna(0)
+        volatility_indicator = await self._atr(candlesticks)
+
+
+        data_source = np.array(daily_return).reshape(-1,1)
+
+        hmm_model = GaussianHMM(
+            n_components=3, covariance_type="full", n_iter=1000
+        ).fit(data_source)
+        print("Model Score:", hmm_model.score(data_source))
+        hidden_states = hmm_model.predict(data_source)
+        #print(hmm_model.n_components)
+
+        unique_states = np.unique(hidden_states)
+        class_indexes = {}
+
+        for state in unique_states:
+            state_name = f'state_{state}'
+            class_indexes[state_name] = np.where(hidden_states == state)[0]
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
+
+        return detected_market_regimes
 
     async def _market_class_aroonosc(self, candlesticks, **kwargs):
         analyzer = '_aroonosc'

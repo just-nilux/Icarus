@@ -151,7 +151,7 @@ def disable_ax_bot(axes):
     axes['ax_bot'].hide()
 
 #####################################  Custom Analyzer Visualization #####################################
-
+def hmm(x, y, axes): market_class_handler(x, y, axes)
 def market_class_aroonosc(x, y, axes): market_class_handler(x, y, axes)
 def market_class_fractal_aroon(x, y, axes): market_class_handler(x, y, axes)
 

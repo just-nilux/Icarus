@@ -54,6 +54,7 @@
         }
     },
     "analysis": {
+        "hmm": {},
         "fibonacci": {"source":"high", "radius": 0.005 },
         "market_class_fractal_aroon": {"validation_point": 0},
         "market_class_aroonosc": {"validation_point": 3},
