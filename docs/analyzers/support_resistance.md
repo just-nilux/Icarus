@@ -48,7 +48,7 @@ See the followıng video for the logıc:
 https://www.youtube.com/watch?v=l1pwUwMgKD0&t=112s
 
 ## Validation
-How to know which support resıstance level or cluster is more reliable? In order to answer this question following score functıons can be caluclated.
+How to know which support resıstance level or cluster is more reliable? In order to answer this question following score functions can be calculated.
 ### Horizontal Score
 Psuedo Code:
 1. Get the adjacent distance between each data point.
