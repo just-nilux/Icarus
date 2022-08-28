@@ -47,6 +47,17 @@ As a concept OPTICS algorithm is actullay creates a reachibility graph. where th
 See the followıng video for the logıc:
 https://www.youtube.com/watch?v=l1pwUwMgKD0&t=112s
 
+### Fibonacci Levels
+Parameters:
+- Low line
+- High line
+
+Fibonacci levels which are [0, 0.236, 0.382, 0.5, 0.618, 1]. Heavily depends on the selected low-high values. Considering the fact that they have 3-4 line in the middle of the chart, suggesting that "they works as suport/resistance levels" is the same as believing the horoscopes.
+
+My observation is: If you adjust low and high levels with just a small bit of care, it is a high possibility that one of those levels corresponds to a SR level. Not a systematical approach.
+
+**Question:** If I were to choose a random timeframe(not so small) and a random pair. Then draw the fibonacci levels. What is the average score of these fibonacci levels?
+
 ## Validation
 How to know which support resıstance level or cluster is more reliable? In order to answer this question following score functions can be calculated.
 ### Horizontal Score
