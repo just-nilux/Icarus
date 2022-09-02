@@ -39,3 +39,21 @@ The target is to state such hypothesis like:
     * The market regimes x and y generally occur sequentially with the probabılıty of z%
 
 To make such statement we treat each occurence of certain type of market regime as an atomic unit with various features. To keep the data organized, use of dataclass quite beneficial. This dataclasses will be the ommon language the bot talk when visualizing the market regimes or creating higher level statistics
+
+# The use of indicators on market classification:
+
+## Aroon
+Aroon is composed of 2 lines (aroonup and aroondown) that oscillates between 0 and 100, that measures:
+> How long it has been since the last highest high or lowest low
+
+    1. If the aroonup is greater then threshold-1 then it is "uptrend"
+    2. If the aroondown is greater then threshold-2 then it is "downtrend"
+    3. If thresholds 1 and 2 is not the same then the 3rd class can be "ranging" if aroonup and down is below the thresholds
+
+## Aroonosc
+Aroonosc is the difference between aroonup and aroondown values. The sample is:
+
+    1. If the value is above 0, then it is "uptrend"
+    2. If the value is below 0, then it is "downtrend"
+
+The values above and below zero simply denotes the crossovers.

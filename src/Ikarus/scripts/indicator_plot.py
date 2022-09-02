@@ -194,6 +194,8 @@ def parallel_ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax']
 
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def rsi(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(30,70)); line_handler(x, {'RSI':y}, axes['ax_bot'])
+def stoch(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, y, axes['ax_bot'])
+def stochf(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, y, axes['ax_bot'])
 def bband(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def macd(x, y, axes): 
     # BUG: Choosing rsi first and choosing macd second causes trouble due to fplt.set_y_range

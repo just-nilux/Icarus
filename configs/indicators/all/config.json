@@ -1,0 +1,107 @@
+{
+    "tag": "test-bot",
+    "log-level": "DEBUG",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "balances": [
+        {
+            "asset": "USDT", 
+            "free": 10000, 
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+         "fee_rate": 0.001
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.99
+    },
+    "strategy": {
+        "MACDStrategy": {
+            "pairs": ["BTCUSDT","ETHUSDT", "XRPUSDT"],
+            "time_scales": ["1d", "4h", "1h"],
+            "enter": {
+                "type": "market"
+            },
+            "exit": {
+                "type": "market"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "market_exit"
+            },
+            "max_lto": 3
+        },
+        "RSIStrategy": {
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1d"],
+            "enter": {
+                "type": "market"
+            },
+            "exit": {
+                "type": "market"
+            },
+            "action_mapping": {
+                "enter_expire": "cancel",
+                "exit_expire": "market_exit"
+            },
+            "max_lto": 3
+        }
+    },
+    "analysis": {
+        "hmm": {},
+        "fibonacci": {"source":"high", "radius": 0.005 },
+        "market_class_fractal_aroon": {"validation_point": 0},
+        "market_class_aroonosc": {"validation_point": 3},
+        "fractal_aroon":{},
+        "aroonosc":{},
+        "stoch":{"fastk_period":5, "slowk_period":5, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
+        "stochf":{"fastk_period":5, "fastd_period":3, "fastd_matype":0}
+    },
+    "time_scales": {
+        "1m": ["12 hours", 720],
+        "5m": ["1 day", 480],
+        "15m": ["1 day", 96],
+        "30m": ["1 week", 336],
+        "1h": ["2 weeks", 336],
+        "2h": ["1 week", 84],
+        "4h": ["3 months", 540],
+        "12h": ["1 month", 60],
+        "1d": ["1 year", 365],
+        "1w": ["1 year", 52],
+        "1M": ["1 year", 12]
+    },
+    "time_scales_dummy": {
+        "1m": 720,
+        "5m": 480,
+        "15m": 96,
+        "30m": 336,
+        "1h": 336,
+        "2h": 84,
+        "4h": 540,
+        "12h": 60,
+        "1d": 365,
+        "1w": 52,
+        "1M": 12
+    },
+    "backtest":{
+        "start_time": "2020-01-11 13:00:00",
+        "end_time": "2020-01-18 13:00:00",
+        "online": true
+    },
+    "visualization":{
+        "observers":{
+            "qc":["free", "total", "in_trade"],
+            "qc_leak":["binary"],
+            "breakpoints": {
+                "1562371200000":"decision_time",
+                "1562803200000":"result.enter.time"
+            }
+        }
+    }
+}

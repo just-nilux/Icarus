@@ -55,8 +55,12 @@ class TALibIndicators():
     async def _rocr100(self, candlesticks, **kwargs): return list(ta.ROCR100(candlesticks['close'], **kwargs))
     async def _rsi(self, candlesticks, **kwargs): 
         return list(ta.RSI(candlesticks['close'], **kwargs))
-    async def _stoch(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
-    async def _stochhf(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
+    async def _stoch(self, candlesticks, **kwargs):
+        slowk, slowd = ta.STOCH(candlesticks['high'], candlesticks['low'], candlesticks['close'], **kwargs)
+        return {'slowk':list(slowk), 'slowd': list(slowd)}
+    async def _stochf(self, candlesticks, **kwargs):
+        fastk, fastd = ta.STOCHF(candlesticks['high'], candlesticks['low'], candlesticks['close'], **kwargs)
+        return {'fastk':list(fastk), 'fastd': list(fastd)}
     async def _stochrsi(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
     async def _trix(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
     async def _ultosc(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
