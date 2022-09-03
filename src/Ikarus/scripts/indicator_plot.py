@@ -1,5 +1,6 @@
 import finplot as fplt
 from statistics import mean
+import pandas as pd
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -105,9 +106,28 @@ def line_handler(x, y, axis):
             fplt.plot(x, y, width=3, ax=axis)
 
 
+def bar_handler(x, y, axis):
+    fplt.bar(x, y, axis)
+
+
 def scatter_handler(x, y, axis):
     fplt.plot(x=x, y=y, kind='scatter', color='#0000ff', width=1, ax=axis, zoomscale=False, style='d')
 
+def add_time_separator(x, period_in_ms, **kwargs):
+    diff_in_ms = int((x[1]-x[0]))
+    ms_half_tick = int(diff_in_ms/2)
+
+    if period_in_ms <= diff_in_ms:
+        return []
+    
+    start_ts = 0
+    for ts in x:
+        if ts % period_in_ms == 0: 
+            start_ts = ts
+            break
+
+    for ts in range(start_ts,x[-1],period_in_ms):
+        fplt.add_line((ts-ms_half_tick, kwargs.get('y_bot',0)), (ts-ms_half_tick, kwargs.get('y_top',300000)), color='#bbb', style='--')
 
 def enable_ax_bot(axes, **kwargs):
     axes['ax'].set_visible(xaxis=False)
@@ -188,6 +208,33 @@ def bearish_fractal_3(x, y, axes):
     fplt.plot(x=x, y=y, kind='scatter', color='#ff00ff', width=2, ax=axes['ax'], zoomscale=False, style='d')
 
 def parallel_ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
+
+def rvol_colorfilter(item, datasrc, df):
+    is_red = df['rvol']<0.8
+    is_green = df['rvol']>1.25
+    is_yellow = ~is_green & ~is_red
+    yield ['#00DA00', '#00DA00', '#00DA00'] + [df.loc[is_green]]
+    yield ['#DADA00', '#DADA00', '#DADA00'] + [df.loc[is_yellow]]
+    yield ['#DA0000', '#DA0000', '#DA0000'] + [df.loc[is_red]]
+
+def rvol(x, y, axes):
+
+    # Do not visualize rvol for bigger timeframes starting from 1d
+    diff_in_ms = int((x[1]-x[0]))
+    ms_in_day = 86400000
+
+    if ms_in_day <= diff_in_ms:
+        return 
+
+    enable_ax_bot(axes)
+    df_rvol = pd.DataFrame(index=x)
+    df_rvol['rvol'] = y
+
+    fplt.bar(df_rvol, ax=axes['ax_bot'],colorfunc=rvol_colorfilter)
+
+    # Make ax visible for the seperators
+    axes['ax'].set_visible(xaxis=True)
+    add_time_separator(x, 86400000)
 
 
 ####################################  TA-LIB Indicators Visualization ####################################

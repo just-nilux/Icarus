@@ -68,7 +68,7 @@ class TALibIndicators():
 
 
     # Volume indicators
-    async def _ad(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
+    async def _ad(self, candlesticks, **kwargs): return list(ta.AD(candlesticks['high'], candlesticks['low'], candlesticks['close'], candlesticks['volume']))
     async def _adosc(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
     async def _obv(self, candlesticks, **kwargs): return list(ta.OBV(candlesticks['close'], candlesticks['volume']))
 

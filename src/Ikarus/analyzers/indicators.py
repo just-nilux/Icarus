@@ -28,3 +28,32 @@ class Indicators():
         for kwarg in kwargs:
             parallel_ma[kwarg['timeperiod']] = list(ta.MA(candlesticks['close'], **kwarg))
         return parallel_ma
+
+    async def _rvol(self, candlesticks, **kwargs):
+        '''
+        The logic:
+        - Compare the volume of 13:00 on 1h timeframe by using the average of last x day
+        - Compare the volume of 13:15 on 15m timeframe by using the average of last x day
+        
+        The reason why the period is taken as a day is because of the human perception for dividing time is based on days.
+        Ofcourse in the timeframes like 1d we can check the Monthly or weekly patterns if exists
+           
+        For 1h timeframe the ts diff is 3600sec
+        There are 86400 secondds in a day
+
+        Lets say that this indicator is only valid for timeframes less than a day
+        '''
+        # Get current timeframe:
+        diff_in_ms = int((candlesticks.index[1]-candlesticks.index[0]))
+        ms_in_day = 86400000
+
+        if ms_in_day <= diff_in_ms:
+            return []
+        
+        rvol_df = pd.DataFrame(index=candlesticks.index, columns=['rvol'])
+        for ms_delta in range(0,ms_in_day,diff_in_ms):
+            test = candlesticks['volume'].iloc[(candlesticks.index % ms_in_day) - ms_delta == 0] # For 1h
+            ma_volume_test = test.rolling(kwargs.get('period',10)).mean()
+            rvol_df['rvol'].loc[test.index] = (test/ma_volume_test).round(2)
+
+        return list(rvol_df['rvol'])

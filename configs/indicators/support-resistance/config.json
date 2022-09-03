@@ -55,11 +55,10 @@
     },
     "analysis": {
         "hmm": {},
-        "fibonacci": {"source":"high", "radius": 0.005 },
-        "market_class_fractal_aroon": {"validation_point": 0},
-        "market_class_aroonosc": {"validation_point": 3},
-        "fractal_aroon":{},
-        "aroonosc":{}
+        "stoch":{"fastk_period":14, "slowk_period":3, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
+        "stochf":{"fastk_period":14, "fastd_period":3, "fastd_matype":0},
+        "rvol":{"period":10},
+        "macd":{}
     },
     "time_scales": {
         "1m": ["12 hours", 720],
