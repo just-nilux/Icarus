@@ -863,7 +863,7 @@ class TestBinanceWrapper(BrokerWrapper):
         for meta_data in meta_data_pool:
             if type(session_start_time) == int:
                 # NOTE: -1 added due to fix the difference between the gathering methods between BinanceWrapper and the TestBinanceWrapper. 
-                hist_data_start_time = session_start_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000
+                hist_data_start_time = session_start_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]]) * 1000 + 1 # ms = start_time + x sec * y times * 1000
             else:
                 raise NotImplementedException('start_time is not integer')
 
@@ -890,7 +890,7 @@ class TestBinanceWrapper(BrokerWrapper):
                 # NOTE: If you need exactly 720 candles not 719 (unclosed (last) candle removed) then push hist_data_start_time back 1 step
                 # NOTE: The cause of +1 comes from the desire to not the make hist_data_start_time an exact minute, Because when it is an exact 1m or 15m, 1 extra hist_kline is retrived addi
                 hist_data_end_time = ikarus_time - time_scale_to_second(meta_data[0]) * 1000
-                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]][1]) * 1000 + 1 # ms = start_time + x sec * y times * 1000 + 1
+                hist_data_start_time = ikarus_time - time_scale_to_second(meta_data[0]) * (self.config['time_scales'][meta_data[0]]) * 1000 + 1 # ms = start_time + x sec * y times * 1000 + 1
                 if not meta_data[1] in data_dict.keys():
                     data_dict[meta_data[1]] = dict()
 

@@ -64,30 +64,17 @@
         "stochf":{"fastk_period":5, "fastd_period":3, "fastd_matype":0}
     },
     "time_scales": {
-        "1m": ["12 hours", 720],
-        "5m": ["1 day", 480],
-        "15m": ["1 day", 96],
-        "30m": ["1 week", 336],
-        "1h": ["2 weeks", 336],
-        "2h": ["1 week", 84],
-        "4h": ["3 months", 540],
-        "12h": ["1 month", 60],
-        "1d": ["1 year", 365],
-        "1w": ["1 year", 52],
-        "1M": ["1 year", 12]
-    },
-    "time_scales_dummy": {
-        "1m": 720,
-        "5m": 480,
-        "15m": 96,
-        "30m": 336,
-        "1h": 336,
-        "2h": 84,
-        "4h": 540,
-        "12h": 60,
-        "1d": 365,
-        "1w": 52,
-        "1M": 12
+        "1m": 720,  // 12 hours
+        "5m": 480,  // 1 day
+        "15m": 96,  // 1 day
+        "30m": 336, // 1 week
+        "1h": 336,  // 2 weeks
+        "2h": 84,   // 1 week
+        "4h": 540,  // 3 months
+        "12h": 60,  // 1 month
+        "1d": 365,  // 1 year
+        "1w": 52,   // 1 year
+        "1M": 12    // 1 year
     },
     "backtest":{
         "start_time": "2020-01-11 13:00:00",
