@@ -58,22 +58,12 @@
         "stoch":{"fastk_period":14, "slowk_period":3, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
         "stochf":{"fastk_period":14, "fastd_period":3, "fastd_matype":0},
         "rvol":{"period":10},
-        "macd":{}
+        "rsi":{},
+        "mfi":{"timeperiod":14},
+        "ad":{},
+        "obv":{}
     },
     "time_scales": {
-        "1m": 720,
-        "5m": 480,
-        "15m": 96,
-        "30m": 336,
-        "1h": 336,
-        "2h": 84,
-        "4h": 540,
-        "12h": 60,
-        "1d": 365,
-        "1w": 52,
-        "1M": 12
-    },
-    "time_scales_dummy": {
         "1m": 720,
         "5m": 480,
         "15m": 96,

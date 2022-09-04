@@ -240,7 +240,7 @@ def rvol(x, y, axes):
 ####################################  TA-LIB Indicators Visualization ####################################
 
 def ma(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
-def rsi(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(30,70)); line_handler(x, {'RSI':y}, axes['ax_bot'])
+def rsi(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, {'RSI':y}, axes['ax_bot'])
 def stoch(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, y, axes['ax_bot'])
 def stochf(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, y, axes['ax_bot'])
 def bband(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
@@ -258,10 +258,15 @@ def adx(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(25,50)); line_ha
 def adxr(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(25,50)); line_handler(x, y, axes['ax_bot'])
 def aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
 def aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
+def mfi(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, y, axes['ax_bot'])
 def roc(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def rocp(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def rocr(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def rocr100(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
+
+# Volume indicators
+def obv(x, y, axes): enable_ax_bot(axes, y_range=(min(y),max(y))); line_handler(x, y, axes['ax_bot'])
+def ad(x, y, axes): enable_ax_bot(axes, y_range=(min(y),max(y))); line_handler(x, y, axes['ax_bot'])
 
 # Volatility Indicators
 def atr(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])

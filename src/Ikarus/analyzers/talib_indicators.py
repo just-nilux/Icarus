@@ -42,7 +42,7 @@ class TALibIndicators():
         return {'macd':list(macd), 'macdsignal': list(macdsignal), 'macdhist':list(macdhist)}
     async def _macdext(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
     async def _macdfix(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
-    async def _mfi(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
+    async def _mfi(self, candlesticks, **kwargs): return list(ta.MFI(candlesticks['high'], candlesticks['low'], candlesticks['close'], candlesticks['volume'], **kwargs))
     async def _minus_di(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
     async def _minus_dm(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
     async def _mom(self, candlesticks, **kwargs): raise NotImplementedException('indicator')
