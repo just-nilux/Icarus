@@ -54,7 +54,7 @@
         }
     },
     "analysis": {
-        "hmm": {},
+        "mkfi": {},
         "stoch":{"fastk_period":14, "slowk_period":3, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
         "stochf":{"fastk_period":14, "fastd_period":3, "fastd_matype":0},
         "rvol":{"period":10},

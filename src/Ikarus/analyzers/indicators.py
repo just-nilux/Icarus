@@ -57,3 +57,36 @@ class Indicators():
             rvol_df['rvol'].loc[test.index] = (test/ma_volume_test).round(2)
 
         return list(rvol_df['rvol'])
+
+    def mkfi_categorizer(mkfi_diff_sign, volume_diff_sign): # Market Facilitation Index
+        '''
+            1: green
+            2: fade_brown
+            3: fake_blue
+            4: squat_pink
+        '''
+        if mkfi_diff_sign:
+            if volume_diff_sign:
+                return 1
+            else:
+                return 3
+        else:
+            if volume_diff_sign:
+                return 4
+            else:
+                return 2
+
+    async def _mkfi(self, candlesticks, **kwargs): # Market Facilitation Index
+        mkfi = pd.DataFrame(index=candlesticks.index)
+        mkfi['mkfi'] = (candlesticks['high'] - candlesticks['low']) / candlesticks['volume']
+        mkfi['mkfi_diff_sign'] = mkfi.diff() > 0
+        mkfi['volume_diff_sign'] = candlesticks['volume'].diff() > 0
+
+        #mkfi['is_green'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
+        #mkfi['is_fade_brown'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
+        #mkfi['is_fake_blue'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
+        #mkfi['is_squat_pink'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
+
+        mkfi['tokens'] = mkfi.apply(lambda row: Indicators.mkfi_categorizer(row['mkfi_diff_sign'],row['volume_diff_sign']),axis=1)
+
+        return {'mkfi': mkfi['mkfi'], 'tokens': mkfi['tokens']}

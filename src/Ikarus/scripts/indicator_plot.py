@@ -175,6 +175,29 @@ def hmm(x, y, axes): market_class_handler(x, y, axes)
 def market_class_aroonosc(x, y, axes): market_class_handler(x, y, axes)
 def market_class_fractal_aroon(x, y, axes): market_class_handler(x, y, axes)
 
+def mkfi_colorfilter(item, datasrc, df):
+    tokens = df['tokens'].copy()
+
+    # NOTE: Shitty Code to work around
+    new_df = pd.DataFrame(index=df.index)
+    new_df['open_time'] = df['open_time']
+    new_df['_base_'] = 0
+    new_df['mkfi'] = df['mkfi']
+    new_df['_open_'] = 0
+    new_df['_close_'] = 0
+
+    # TODO: Color update
+    yield ['#00DA00', '#00DA00', '#00DA00'] + [new_df.loc[tokens == 1]]
+    yield ['#C5A749', '#C5A749', '#C5A749'] + [new_df.loc[tokens == 2]]
+    yield ['#0036FF', '#0036FF', '#0036FF'] + [new_df.loc[tokens == 3]]
+    yield ['#FF68F1', '#FF68F1', '#FF68F1'] + [new_df.loc[tokens == 4]]
+
+def mkfi(x, y, axes):
+    df = pd.DataFrame.from_dict(y)
+    df.set_index(x, inplace=True)
+    enable_ax_bot(axes, y_range=(min(y['mkfi']),max(y['mkfi'])))
+    fplt.bar(df, ax=axes['ax_bot'],colorfunc=mkfi_colorfilter)
+
 def fractal_line_3(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
 def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
 def fractal_aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
