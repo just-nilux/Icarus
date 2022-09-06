@@ -82,11 +82,6 @@ class Indicators():
         mkfi['mkfi_diff_sign'] = mkfi.diff() > 0
         mkfi['volume_diff_sign'] = candlesticks['volume'].diff() > 0
 
-        #mkfi['is_green'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
-        #mkfi['is_fade_brown'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
-        #mkfi['is_fake_blue'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
-        #mkfi['is_squat_pink'] = mkfi['mkfi_diff_sign'] == True and mkfi['volume_diff_sign'] == True
-
         mkfi['tokens'] = mkfi.apply(lambda row: Indicators.mkfi_categorizer(row['mkfi_diff_sign'],row['volume_diff_sign']),axis=1)
 
         return {'mkfi': mkfi['mkfi'], 'tokens': mkfi['tokens']}

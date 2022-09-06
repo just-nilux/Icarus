@@ -188,7 +188,7 @@ def mkfi_colorfilter(item, datasrc, df):
 
     # TODO: Color update
     yield ['#00DA00', '#00DA00', '#00DA00'] + [new_df.loc[tokens == 1]]
-    yield ['#C5A749', '#C5A749', '#C5A749'] + [new_df.loc[tokens == 2]]
+    yield ['#DBE94B', '#DBE94B', '#DBE94B'] + [new_df.loc[tokens == 2]]
     yield ['#0036FF', '#0036FF', '#0036FF'] + [new_df.loc[tokens == 3]]
     yield ['#FF68F1', '#FF68F1', '#FF68F1'] + [new_df.loc[tokens == 4]]
 
