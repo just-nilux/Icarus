@@ -85,3 +85,21 @@ class Indicators():
         mkfi['tokens'] = mkfi.apply(lambda row: Indicators.mkfi_categorizer(row['mkfi_diff_sign'],row['volume_diff_sign']),axis=1)
 
         return {'mkfi': mkfi['mkfi'], 'tokens': mkfi['tokens']}
+
+
+    # Noise Measuring Indicators
+    async def _kaufman_efficiency_ratio(self, candlesticks, **kwargs):
+        direction = candlesticks['close'].diff(kwargs.get('timeperiod',20)).abs()
+        #volatility = pd.rolling_sum(candlesticks['close'].diff().abs(), kwargs.get('timeperiod',20))
+        volatility = candlesticks['close'].diff().abs().rolling(kwargs.get('timeperiod',20)).sum()
+        return list(direction/volatility)
+
+
+    async def _price_density(self, candlesticks, **kwargs):
+        timeperiod = kwargs.get('timeperiod',20)
+        candle_volatility = candlesticks['high'] - candlesticks['low']
+        highest_highs = candlesticks['high'].rolling(timeperiod).max()
+        lowest_lows = candlesticks['low'].rolling(timeperiod).min()
+
+        price_density = candle_volatility.rolling(timeperiod).sum() / (highest_highs - lowest_lows)
+        return list(price_density)

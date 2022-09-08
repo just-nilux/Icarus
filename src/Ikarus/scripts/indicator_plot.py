@@ -1,6 +1,7 @@
 import finplot as fplt
 from statistics import mean
 import pandas as pd
+import numpy as np
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -130,6 +131,8 @@ def add_time_separator(x, period_in_ms, **kwargs):
         fplt.add_line((ts-ms_half_tick, kwargs.get('y_bot',0)), (ts-ms_half_tick, kwargs.get('y_top',300000)), color='#bbb', style='--')
 
 def enable_ax_bot(axes, **kwargs):
+    fplt._ax_reset(axes['ax_bot'])
+
     axes['ax'].set_visible(xaxis=False)
     axes['ax_bot'].show()
 
@@ -259,6 +262,8 @@ def rvol(x, y, axes):
     axes['ax'].set_visible(xaxis=True)
     add_time_separator(x, 86400000)
 
+def kaufman_efficiency_ratio(x, y, axes): enable_ax_bot(axes, y_range=(np.nanmin(y),np.nanmax(y))); line_handler(x, y, axes['ax_bot'])
+def price_density(x, y, axes): enable_ax_bot(axes, y_range=(np.nanmin(y),np.nanmax(y))); line_handler(x, y, axes['ax_bot'])
 
 ####################################  TA-LIB Indicators Visualization ####################################
 

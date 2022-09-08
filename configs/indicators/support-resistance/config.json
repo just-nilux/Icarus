@@ -61,7 +61,9 @@
         "rsi":{},
         "mfi":{"timeperiod":14},
         "ad":{},
-        "obv":{}
+        "obv":{},
+        "kaufman_efficiency_ratio": {"timeperiod":20},
+        "price_density": {"timeperiod":20}
     },
     "time_scales": {
         "1m": 720,
