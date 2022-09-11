@@ -1,14 +1,18 @@
 # Strategy Development Protocol
 
-## 0. Suggest an Hypothesis
-A hypothesis is a simple claim that can be proven or disputed statistically.
+## 0. Hypothesis Statement
+* Make an hypothesis statement that can be proven or disputed statistically and also describe how it might be useful as a trading strategy component. Which problem it solves?
 
-## 1. Define Hypothesis
-* Define the hypothesis to be clearly formulized like:
+## 1. Hypothesis Definition
+1. Formulize the hypothesis clearly:
     * When x happens, y happens
     * Event of x is correlated with y
+    * X is correct
+2. Define each element of the hypothesis and its features mathematically
+3. Define the metrics to measure success/accuracy
 
-## 2. Collect Data for Hypothesis
+## 2. Hypothesis Testing
+This step is different than backtesting since it runs the logic then as an outcome it only checks the actual result, but not the reflection of it on the equity curve or strategy stats which blends the effect of entry/exit rules, position sizing and risk management. The latter is the case for the backtest.
 1. Analyze market samples to investigate the hypothesis from statistical point of view:
     * Is it ever true?
     * What is the possibility for each occurence to be true? (Accuracy)
@@ -16,7 +20,10 @@ A hypothesis is a simple claim that can be proven or disputed statistically.
 2. Review statistical results in terms of profitability.
 3. Improve the hypothesis with details
 
+The output of hypothesis testing is the final step for a hypothesis. Afterwards, if applicable, it can be converted to a trading strategy.
+
 ## 3. Backtest
+An hypothesis does not have to be directly linked to a strategy. It can just be helping element that does not generate an enter/exit rule. If it can generate secondary information to create a strategy, following items might be applied.
 1. Determine the metrics that measures the impact of the hypothesis best.
 2. Try to create a purely hypothesis dependent backtest strategy as much as possible.
 3. Review the performance and optimize the strategy
