@@ -15,7 +15,7 @@ class MarketRegime():
     lifetime_in_candle: int
     validation_point: int = None
     time_scale: str = ''
-
+    symbol: str = ''
     def __post_init__(self):
         self.price_change_perc = round(100 * (self.end_price - self.start_price) / self.start_price, 2)
 
@@ -83,10 +83,10 @@ class MarketClassification():
         # The class detection logic depends on the data source strictly.
         class_indexes = {}
         class_indexes['downtrend'] = np.where(np.nan_to_num(analysis_output['aroondown']) > 80)[0]
-        class_indexes['uptrend'] = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
         class_indexes['ranging'] = np.where(np.logical_and(
             np.nan_to_num(analysis_output['aroonup']) < 80, 
             np.nan_to_num(analysis_output['aroondown']) < 80))[0]
+        class_indexes['uptrend'] = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
 
         # Class occurence indexes
         detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))

@@ -2,6 +2,8 @@ import finplot as fplt
 from statistics import mean
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
+from ..utils import minute_to_time_scale
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -140,6 +142,30 @@ def enable_ax_bot(axes, **kwargs):
     if y_range := kwargs.get('y_range', None): fplt.set_y_range(y_range[0], y_range[1], ax=axes['ax_bot'])
     if band := kwargs.get('band', None): fplt.add_band(band[0], band[1], color='#6335', ax=axes['ax_bot'])
 
+def market_class_dist_handler(x, y, axes, **kwargs):
+
+    distribution_dict = {}
+    for regime_name, regime_list in y.items():
+        distribution_dict[regime_name] = [regime.price_change_perc for regime in regime_list]
+
+    fig, ax = plt.subplots()
+
+    kwargs.get('title', '')
+    diff_in_minute = int((x[1]-x[0])/60000)
+    title = kwargs.get('title', '') + '_' + minute_to_time_scale(diff_in_minute)
+    ax.set_title(title)
+
+    bplot = ax.boxplot(distribution_dict.values(), patch_artist=True)
+    plt.grid(True)
+    ax.set_xticklabels(distribution_dict.keys())
+
+    colors = ['pink', 'lightblue', 'lightgreen']
+
+    for patch, color in zip(bplot['boxes'], colors):
+        patch.set_facecolor(color)
+    plt.show()
+    
+
 
 def market_class_handler(x, y, axes): 
     # Visualization on ax_bot as class rows
@@ -168,7 +194,6 @@ def market_class_handler(x, y, axes):
         for market_regime in class_item_list:
             fplt.add_rect((market_regime.start_ts, market_regime.start_price), (market_regime.end_ts, market_regime.end_price), color=color_set[class_idx%6], interactive=False, ax=axes['ax'])
 
-
 def disable_ax_bot(axes):
     axes['ax'].set_visible(xaxis=True)
     axes['ax_bot'].hide()
@@ -176,7 +201,9 @@ def disable_ax_bot(axes):
 #####################################  Custom Analyzer Visualization #####################################
 def hmm(x, y, axes): market_class_handler(x, y, axes)
 def market_class_aroonosc(x, y, axes): market_class_handler(x, y, axes)
+def market_class_aroonosc_distribution(x, y, axes): market_class_dist_handler(x, y, axes, title='market_class_aroonosc_distribution')
 def market_class_fractal_aroon(x, y, axes): market_class_handler(x, y, axes)
+def market_class_fractal_aroon_distribution(x, y, axes): market_class_dist_handler(x, y, axes, title='market_class_fractal_aroon_distribution')
 
 def mkfi_colorfilter(item, datasrc, df):
     tokens = df['tokens'].copy()

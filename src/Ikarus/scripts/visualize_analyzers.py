@@ -39,6 +39,9 @@ def change_asset(*args, **kwargs):
     if indicator != 'clean':
         if hasattr(indicator_plot, indicator):
             handler = getattr(indicator_plot, indicator)
+
+            if indicator not in analysis_dict[symbol][interval]:
+                indicator = indicator.rsplit('_', 1)[0]
             handler(data_dict[symbol][interval].index, analysis_dict[symbol][interval][indicator], 
                 {'ax':ax, 'axo':axo, 'ax_bot':ax_bot, 'axo_bot':axo_bot})
 
@@ -212,9 +215,17 @@ async def visualize_dashboard(bwrapper, config):
     analyzer = Analyzer(config)
     analysis_dict = await analyzer.analyze(data_dict)
 
+    analyzer_names = []
+    for key in config['analysis'].keys():
+        if 'plot' in config['analysis'][key].keys():
+            analyzer_names = analyzer_names + [key+'_'+name for name in config['analysis'][key]['plot']]
+        if hasattr(indicator_plot, key):
+            analyzer_names.append(key)
+    analyzer_names.sort()
+
     indicators = [key for key in config['analysis'].keys() if hasattr(indicator_plot, key)]
     indicators.sort()
-    analysis_dashboard(pair_pool, time_scale_pool, indicators, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
+    analysis_dashboard(pair_pool, time_scale_pool, analyzer_names, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
 
 
 async def main():
