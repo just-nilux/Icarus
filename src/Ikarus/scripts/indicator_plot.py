@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from ..utils import minute_to_time_scale
+from ..analyzers.market_classification import calculate_tabulated_statistics
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -164,12 +165,29 @@ def market_class_dist_handler(x, y, axes, **kwargs):
     for patch, color in zip(bplot['boxes'], colors):
         patch.set_facecolor(color)
     plt.show()
-    
 
+    df = pd.DataFrame(calculate_tabulated_statistics(x,y))
+    # print(df.to_markdown()) # TODO: How to automate dumping this table
+    rcolors = plt.cm.BuPu(np.full(len(df.index), 0.1))
+    ccolors = plt.cm.BuPu(np.full(len(df.columns), 0.1))
+ 
+    fig, ax = plt.subplots() 
+    ax.set_axis_off() 
+    table = ax.table( 
+        cellText = df.values,  
+        rowLabels = df.index,  
+        colLabels = df.columns, 
+        rowColours =rcolors,  
+        colColours =ccolors, 
+        cellLoc ='center',  
+        loc ='upper left')
+    ax.set_title('matplotlib.axes.Axes.table() function Example', 
+                fontweight ="bold")  
+    plt.show()
 
 def market_class_handler(x, y, axes): 
     # Visualization on ax_bot as class rows
-    color_set = ['#FF8080', '#80FF80', '#8080FF', '#80FFFF', '#FF80FF', '#FFFF80'] # 6 Color is enough to distinguish classes
+    color_set = ['#FF8080', '#8080FF', '#80FF80', '#80FFFF', '#FF80FF', '#FFFF80'] # 6 Color is enough to distinguish classes
 
     enable_ax_bot(axes, y_range=(0,len(y.keys())))
     fplt.plot(x, y=[len(y.keys())]*len(x), ax=axes['ax_bot'])
@@ -182,7 +200,7 @@ def market_class_handler(x, y, axes):
             price_change_perc = f'%{str(market_regime.price_change_perc)}'
             fplt.add_text((market_regime.start_ts, class_idx+1), price_change_perc, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
-            num_of_candle = f'#Candle: {str(market_regime.lifetime_in_candle)}'
+            num_of_candle = f'#Candle: {str(market_regime.duration_in_candle)}'
             fplt.add_text((market_regime.start_ts, class_idx+0.9), num_of_candle, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
             if market_regime.validation_point != None:

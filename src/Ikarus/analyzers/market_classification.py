@@ -3,7 +3,7 @@ import numpy as np
 from itertools import groupby
 from operator import itemgetter
 from hmmlearn.hmm import GaussianHMM
-
+from statistics import mean
 
 @dataclass
 class MarketRegime():
@@ -12,7 +12,7 @@ class MarketRegime():
     end_ts: int
     start_price: float
     end_price: float
-    lifetime_in_candle: int
+    duration_in_candle: int
     validation_point: int = None
     time_scale: str = ''
     symbol: str = ''
@@ -116,7 +116,7 @@ class MarketClassification():
                     label=class_name,
                     start_ts=ts_index[seq_idx[0]],
                     end_ts=ts_index[seq_idx[-1]],
-                    lifetime_in_candle=len(seq_idx),
+                    duration_in_candle=len(seq_idx),
                     start_price=candlesticks['close'][ts_index[seq_idx[0]]],
                     end_price=candlesticks['close'][ts_index[seq_idx[-1]]],
                 )
@@ -144,3 +144,24 @@ class MarketClassification():
             regime_stats['price_change_cluster'] = [instance['price_change'] for instance in regime_instances]
 
         return
+
+def calculate_tabulated_statistics(index, detected_market_regimes):
+
+    tabular_dict = {}
+    for regime_name, regime_instances in detected_market_regimes.items():
+
+        price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
+        duration_in_candle_list = [instance.duration_in_candle for instance in regime_instances]
+        regime_stats = {}
+        regime_stats['Occurence'] = int(len(regime_instances))
+        regime_stats['Average PPC'] = round(mean(price_change_perc_list),2)
+        regime_stats['Average duration'] = int(mean(duration_in_candle_list))
+        regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
+        regime_stats['PPC Accuracy'] = round((np.array(price_change_perc_list) < 0 ).sum() / len(regime_instances) * 100,2)
+        tabular_dict[regime_name] = regime_stats
+    
+    # TODO: NEXT: Add the rule functions to match the function and the class
+    ppc_accuracy_rules = {}
+    ppc_accuracy_rules['downtrend'] = lambda a,b : round((np.array(a) < 0 ).sum() / len(b) * 100,2)
+    ppc_accuracy_rules['downtrend'](price_change_perc_list, regime_instances)
+    return tabular_dict

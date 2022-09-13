@@ -1,0 +1,69 @@
+{
+    "tag": "test-bot",
+    "log-level": "DEBUG",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb":{
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "balances": [
+        {
+            "asset": "USDT", 
+            "free": 10000, 
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+         "fee_rate": 0.001
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.99
+    },
+    "strategy": {
+        "MACDStrategy": {
+            "pairs": ["BTCUSDT","ETHUSDT"],
+            "time_scales": ["1d", "4h"]
+        }
+    },
+    "analysis": {
+        "mkfi": {},
+        "stoch":{"fastk_period":14, "slowk_period":3, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
+        "stochf":{"fastk_period":14, "fastd_period":3, "fastd_matype":0},
+        "rvol":{"period":10},
+        "market_class_fractal_aroon": {"validation_point": 0, "plot":["distribution"]},
+        "market_class_aroonosc": {"validation_point": 3, "plot":["distribution"]},
+        "mfi":{"timeperiod":14},
+        "kaufman_efficiency_ratio": {"timeperiod":20},
+        "price_density": {"timeperiod":20}
+    },
+    "time_scales": {
+        "1m": 720,
+        "5m": 480,
+        "15m": 96,
+        "30m": 336,
+        "1h": 336,
+        "2h": 84,
+        "4h": 540,
+        "12h": 60,
+        "1d": 365,
+        "1w": 52,
+        "1M": 12
+    },
+    "backtest":{
+        "start_time": "2020-01-11 13:00:00",
+        "end_time": "2021-01-18 13:00:00",
+        "online": true
+    },
+    "visualization":{
+        "observers":{
+            "qc":["free", "total", "in_trade"],
+            "qc_leak":["binary"],
+            "breakpoints": {
+                "1562371200000":"decision_time",
+                "1562803200000":"result.enter.time"
+            }
+        }
+    }
+}

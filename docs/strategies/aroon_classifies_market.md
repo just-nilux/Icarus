@@ -1,8 +1,21 @@
+# Table of Contents
+0. [Hypothesis Statement](#hypothesis-statement)
+1. [Hypothesis Definition](#hypothesis-definition)
+    * [UpTrend](#uptrend)
+    * [DownTrend](#downtrend)
+    * [Range](#range)
+    * [Metrics](#metrics)
+2. [Hypothesis Testing](#hypothesis-testing)
+    * [DistributionPlot]()
+    * [Tabular statistics]()
+    * [Observations]()
+3. [Backtest](#backtest)
+4. [Live Trade](#live-trade)
 
-# 0. Hypothesis Statement
+# Hypothesis Statement
 Aroon indicator classifies market regimes: UpTrend, DownTrend and Range
 
-# 1. Hypothesis Definition
+# Hypothesis Definition
 ## UpTrend:
 Higher highes and higher lows are observed. Significantly** positive price change occurs when the start and the end prices are compared.
 
@@ -40,13 +53,19 @@ No significant** price change occurs. Price moves within a certain band until it
 * The duration should be long enough to distinguish indecisive short term moves from the purposeful moves with longer duration. In other words, the market states with small duration should be ignored
 
 
-# 2. Hypothesis Testing
+# Hypothesis Testing
+|                  |   downtrend |   ranging |   uptrend |
+|:-----------------|------------:|----------:|----------:|
+| Occurence        |        7    |     17    |     11    |
+| Average PPC      |       -1.08 |     -0.44 |     13.29 |
+| Average duration |        9    |      9    |     11    |
+| Coverage         |       18.06 |     44.47 |     34.77 |
+| PPC Accuracy     |       42.86 |     41.18 |     18.18 |
+
+# Backtest
 
 
-# 3. Backtest
-
-
-# 4. Live Trade
+# Live Trade
 
 
 # Personal Notes
