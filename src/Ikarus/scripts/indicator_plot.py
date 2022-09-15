@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from ..utils import minute_to_time_scale
-from ..analyzers.market_classification import calculate_tabulated_statistics
+from ..analyzers.market_classification import MarketClassStatistics
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -166,7 +166,7 @@ def market_class_dist_handler(x, y, axes, **kwargs):
         patch.set_facecolor(color)
     plt.show()
 
-    df = pd.DataFrame(calculate_tabulated_statistics(x,y))
+    df = pd.DataFrame(MarketClassStatistics.calculate_tabulated_statistics(x,y))
     # print(df.to_markdown()) # TODO: How to automate dumping this table
     rcolors = plt.cm.BuPu(np.full(len(df.index), 0.1))
     ccolors = plt.cm.BuPu(np.full(len(df.columns), 0.1))
@@ -181,8 +181,7 @@ def market_class_dist_handler(x, y, axes, **kwargs):
         colColours =ccolors, 
         cellLoc ='center',  
         loc ='upper left')
-    ax.set_title('matplotlib.axes.Axes.table() function Example', 
-                fontweight ="bold")  
+    ax.set_title(title, fontweight ="bold")  
     plt.show()
 
 def market_class_handler(x, y, axes): 
@@ -218,6 +217,8 @@ def disable_ax_bot(axes):
 
 #####################################  Custom Analyzer Visualization #####################################
 def hmm(x, y, axes): market_class_handler(x, y, axes)
+def market_class_aroon(x, y, axes): market_class_handler(x, y, axes)
+def market_class_aroon_distribution(x, y, axes): market_class_dist_handler(x, y, axes, title='market_class_aroon_distribution')
 def market_class_aroonosc(x, y, axes): market_class_handler(x, y, axes)
 def market_class_aroonosc_distribution(x, y, axes): market_class_dist_handler(x, y, axes, title='market_class_aroonosc_distribution')
 def market_class_fractal_aroon(x, y, axes): market_class_handler(x, y, axes)
@@ -247,7 +248,7 @@ def mkfi(x, y, axes):
     fplt.bar(df, ax=axes['ax_bot'],colorfunc=mkfi_colorfilter)
 
 def fractal_line_3(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
-def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
+def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100), ); line_handler(x, y, axes['ax_bot'])
 def fractal_aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
 
 def support_birch(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
@@ -329,8 +330,8 @@ def macd(x, y, axes):
 # Momentum Indicators
 def adx(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(25,50)); line_handler(x, y, axes['ax_bot'])
 def adxr(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(25,50)); line_handler(x, y, axes['ax_bot'])
-def aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100)); line_handler(x, y, axes['ax_bot'])
-def aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
+def aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100),band=(20,80)); line_handler(x, y, axes['ax_bot'])
+def aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100), band=(-50,50)); line_handler(x, y, axes['ax_bot'])
 def mfi(x, y, axes): enable_ax_bot(axes, y_range=(0,100), band=(20,80)); line_handler(x, y, axes['ax_bot'])
 def roc(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])
 def rocp(x, y, axes): enable_ax_bot(axes); line_handler(x, y, axes['ax_bot'])

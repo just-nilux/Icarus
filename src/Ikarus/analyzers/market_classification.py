@@ -72,10 +72,35 @@ class MarketClassification():
         class_stats = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
         return class_stats
 
-
     async def _market_class_fractal_aroon(self, candlesticks, **kwargs):
         # TODO: Fix the shit code
         analyzer = '_fractal_aroon'
+
+        if hasattr(self, analyzer):
+            analysis_output = await getattr(self, analyzer)(candlesticks)
+
+        # The class detection logic depends on the data source strictly.
+        class_indexes = {}
+        class_indexes['downtrend'] = np.where(np.nan_to_num(analysis_output['aroondown']) > 80)[0]
+        class_indexes['ranging'] = np.where(np.logical_and(
+            np.nan_to_num(analysis_output['aroonup']) < 80, 
+            np.nan_to_num(analysis_output['aroondown']) < 80))[0]
+        class_indexes['uptrend'] = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
+
+        # Class occurence indexes
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
+
+        # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
+        # so the day_diff will be 1
+        #result['is_daydiff']=int((candlesticks.index[-1] - result['uptrend'][-1]['end'])/time_scale_to_milisecond('1d'))
+        #result['is_lastidx']=int(analysis_output['aroonup'][-1] > 80)
+        #await MarketClassification.calculate_class_stats(detected_market_regimes)
+        return detected_market_regimes
+
+
+    async def _market_class_aroon(self, candlesticks, **kwargs):
+        # TODO: Fix the shit code
+        analyzer = '_aroon'
 
         if hasattr(self, analyzer):
             analysis_output = await getattr(self, analyzer)(candlesticks)
@@ -145,23 +170,31 @@ class MarketClassification():
 
         return
 
-def calculate_tabulated_statistics(index, detected_market_regimes):
 
-    tabular_dict = {}
-    for regime_name, regime_instances in detected_market_regimes.items():
+class MarketClassStatistics():
 
-        price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
-        duration_in_candle_list = [instance.duration_in_candle for instance in regime_instances]
-        regime_stats = {}
-        regime_stats['Occurence'] = int(len(regime_instances))
-        regime_stats['Average PPC'] = round(mean(price_change_perc_list),2)
-        regime_stats['Average duration'] = int(mean(duration_in_candle_list))
-        regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
-        regime_stats['PPC Accuracy'] = round((np.array(price_change_perc_list) < 0 ).sum() / len(regime_instances) * 100,2)
-        tabular_dict[regime_name] = regime_stats
-    
-    # TODO: NEXT: Add the rule functions to match the function and the class
-    ppc_accuracy_rules = {}
-    ppc_accuracy_rules['downtrend'] = lambda a,b : round((np.array(a) < 0 ).sum() / len(b) * 100,2)
-    ppc_accuracy_rules['downtrend'](price_change_perc_list, regime_instances)
-    return tabular_dict
+    accuracy_conditions_for_ppc = {
+        'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
+        'uptrend': lambda a,count : (np.array(a) > 1 ).sum() / count * 100,
+        'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
+    }
+
+    @staticmethod
+    def calculate_tabulated_statistics(index, detected_market_regimes):
+
+        tabular_dict = {}
+        for regime_name, regime_instances in detected_market_regimes.items():
+
+            price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
+            duration_in_candle_list = [instance.duration_in_candle for instance in regime_instances]
+            regime_stats = {}
+            regime_stats['Occurence'] = int(len(regime_instances))
+            regime_stats['Average PPC'] = round(mean(price_change_perc_list),2)
+            regime_stats['Average duration'] = int(mean(duration_in_candle_list))
+            regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
+            regime_stats['PPC Accuracy'] = round(
+                MarketClassStatistics.accuracy_conditions_for_ppc[regime_name](price_change_perc_list, len(regime_instances)),2)
+
+            tabular_dict[regime_name] = regime_stats
+        
+        return tabular_dict
