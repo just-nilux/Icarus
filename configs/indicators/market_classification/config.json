@@ -24,19 +24,19 @@
     "strategy": {
         "MACDStrategy": {
             "pairs": ["BTCUSDT","ETHUSDT"],
-            "time_scales": ["1d", "4h"]
+            "time_scales": ["1d"]
         }
     },
     "analysis": {
-        "mkfi": {},
-        "stoch":{"fastk_period":14, "slowk_period":3, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
-        "stochf":{"fastk_period":14, "fastd_period":3, "fastd_matype":0},
-        "rvol":{"period":10},
-        "market_class_fractal_aroon": {"validation_point": 0, "plot":["distribution"]},
+        "aroon": {"timeperiod":25},
+        "aroonosc": {"timeperiod":25},
+        "fractal_aroon": {"timeperiod":25},
+        "market_class_fractal_aroon": {"validation_point": 10, "plot":["distribution"]},
         "market_class_aroonosc": {"validation_point": 3, "plot":["distribution"]},
-        "mfi":{"timeperiod":14},
-        "kaufman_efficiency_ratio": {"timeperiod":20},
-        "price_density": {"timeperiod":20}
+        "market_class_aroon": {"validation_point": 6, "plot":["distribution"]}
+    },
+    "report": {
+        "market_class_statistics": ["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon" ]
     },
     "time_scales": {
         "1m": 720,
@@ -52,7 +52,7 @@
         "1M": 12
     },
     "backtest":{
-        "start_time": "2020-01-11 13:00:00",
+        "start_time": "2018-01-11 13:00:00",
         "end_time": "2021-01-18 13:00:00",
         "online": true
     },
