@@ -35,6 +35,16 @@
         "market_class_aroonosc": {"validation_point": 3, "plot":["distribution"]},
         "market_class_aroon": {"validation_point": 6, "plot":["distribution"]}
     },
+    "report": {
+        "market_class_distribution": {
+            "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 
+            "writers":["image", "markdown", "database"]
+        },
+        "dummy": {
+            "analyzers" :["market_class_fractal_aroon"], 
+            "writers":["image", "markdown", "database"]
+        }
+    },
     "time_scales": {
         "1m": 720,
         "5m": 480,

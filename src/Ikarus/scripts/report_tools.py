@@ -8,7 +8,7 @@ accuracy_conditions_for_ppc = {
     'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
 }
 
-def market_class_statistics(index, detected_market_regimes):
+async def market_class_distribution(index, detected_market_regimes):
 
     tabular_dict = {}
     for regime_name, regime_instances in detected_market_regimes.items():
