@@ -36,13 +36,13 @@
         "market_class_aroon": {"validation_point": 6, "plot":["distribution"]}
     },
     "report": {
-        "market_class_distribution": {
+        "market_class_table_stats": {
             "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 
-            "writers":["image", "markdown", "database"]
+            "writers":["table_plot", "markdown_table"]
         },
-        "dummy": {
-            "analyzers" :["market_class_fractal_aroon"], 
-            "writers":["image", "markdown", "database"]
+        "market_class_ppc": {
+            "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 
+            "writers":["box_plot"]
         }
     },
     "time_scales": {

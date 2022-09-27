@@ -8,7 +8,15 @@ accuracy_conditions_for_ppc = {
     'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
 }
 
-async def market_class_distribution(index, detected_market_regimes):
+# *ppc: price percentage change
+async def market_class_ppc(index, detected_market_regimes):
+    tabular_dict = {}
+    for regime_name, regime_instances in detected_market_regimes.items():
+        price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
+        tabular_dict[regime_name] = price_change_perc_list
+    return tabular_dict
+
+async def market_class_table_stats(index, detected_market_regimes):
 
     tabular_dict = {}
     for regime_name, regime_instances in detected_market_regimes.items():

@@ -133,3 +133,4 @@ test_credentials.json
 log/
 *stats.*
 *stat.*
+reports/

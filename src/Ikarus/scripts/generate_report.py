@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 import asyncio
 from binance import AsyncClient
 from .. import broker
@@ -8,7 +9,7 @@ from itertools import chain
 import itertools
 from ..analyzers import Analyzer
 from . import report_tools
-from .report_writer import ImageWriter, DatabaseWriter, MarkdownWriter
+from .report_writer import ReportWriter
 
 
 async def main():
@@ -37,17 +38,16 @@ async def main():
     analyzer = Analyzer(config)
     analysis_dict = await analyzer.analyze(data_dict)
 
-
-
-    # meta_data_pool x report_tools
+    # Indice format: ()
     report_tool_coroutines = []
+    indices = []
     for report_tool, report_config in config['report'].items():
         if not hasattr(report_tools, report_tool):
             continue
 
-        indices = list(itertools.product(*[time_scale_pool, pair_pool, report_config['analyzers']]))
-        indices = [[report_tool]+list(indice) for indice in indices]
-        for _, timeframe, symbol, analyzer in indices:
+        primal_indices = list(itertools.product(*[time_scale_pool, pair_pool, report_config['analyzers']]))
+        indices.extend([[report_tool]+list(indice) for indice in primal_indices])
+        for timeframe, symbol, analyzer in primal_indices:
             if analyzer in analysis_dict[symbol][timeframe].keys():
                 handler = getattr(report_tools, report_tool)
                 report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
@@ -56,19 +56,14 @@ async def main():
     report_tool_results = list(await asyncio.gather(*report_tool_coroutines))
 
     # Write the statistics
-    report_image_writer = ImageWriter('path')
-    report_database_writer = DatabaseWriter()
-    report_markdown_writer = MarkdownWriter()
+    report_writer = ReportWriter(os.path.dirname(str(sys.argv[1])))
     for indice, report_dict in zip(indices, report_tool_results):
         reporter, timeframe, symbol, analyzer = indice
 
         for writer_type in config['report'][reporter]['writers']:
-            if writer_type == 'image':
-                report_image_writer.write(indice,report_dict)
-            elif writer_type == 'markdown':
-                report_markdown_writer.write(indice,report_dict)
-            elif writer_type == 'database':
-                report_database_writer.write(indice,report_dict)
+            if hasattr(report_writer, writer_type):
+                getattr(report_writer, writer_type)(indice,report_dict)
+    report_writer.md_file.create_md_file()
     pass
 
 if __name__ == '__main__':
