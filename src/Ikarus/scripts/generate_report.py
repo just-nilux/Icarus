@@ -63,6 +63,9 @@ async def main():
         for writer_type in config['report'][reporter]['writers']:
             if hasattr(report_writer, writer_type):
                 getattr(report_writer, writer_type)(indice,report_dict)
+
+    report_writer.add_images()
+
     report_writer.md_file.create_md_file()
     pass
 

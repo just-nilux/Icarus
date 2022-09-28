@@ -1,6 +1,7 @@
 from fileinput import filename
 from matplotlib import pyplot as plt
 import os
+import glob
 import pandas as pd
 import numpy as np
 
@@ -29,7 +30,7 @@ class ImageWriter():
     def write(self, indice, report_dict):
         reporter, timeframe, symbol, analyzer = indice
 
-        target_path = '{}/{}_{}_{}_{}'.format(
+        target_path = '{}/{}-{}-{}-{}'.format(
             self.report_folder,reporter,timeframe,symbol,analyzer)
         print('Writing to image to:', target_path)
         print('Indice:', str(indice))
@@ -57,7 +58,7 @@ class ImageWriter():
 
     def table_plot(self, indice, report_dict):
         reporter, timeframe, symbol, analyzer = indice
-        filename = '{}_{}_{}_{}'.format(reporter,timeframe,symbol,analyzer)
+        filename = '{}-{}-{}-{}'.format(reporter,timeframe,symbol,analyzer)
         report_path = '{}/{}'.format(self.report_folder,filename)
 
         df = pd.DataFrame(data=report_dict)
@@ -85,6 +86,15 @@ class MarkdownWriter():
         self.md_file = MdUtils(file_name=f'{self.report_folder}/report.md', title='Report')
         pass
 
+    def add_images(self):
+        png_file_names = [os.path.basename(png_file) for png_file in glob.glob(f'{self.report_folder}/*.png')]
+        self.md_file.new_header(1, "Plots")
+        for png_file_name in png_file_names:
+            self.md_file.write(png_file_name, color='yellow', bold_italics_code='b')
+            self.md_file.new_paragraph(Html.image(path=png_file_name))
+            self.md_file.write(" \n\n")
+
+
     def markdown_table(self, indice, report_dict):
         reporter, timeframe, symbol, analyzer = indice
         title = '{}_{}_{}_{}'.format(reporter,timeframe,symbol,analyzer)
@@ -94,6 +104,10 @@ class MarkdownWriter():
         pass
 
 class DatabaseWriter():
+
+    def create_report_folder(self):
+        if not os.path.exists(self.report_folder):
+            os.makedirs(self.report_folder)
     pass
 
 class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter):
