@@ -6,12 +6,12 @@ class Indicators():
 
     async def _fractal_aroon(self, candlesticks, **kwargs):
         fractal_line = await self._fractal_line_3(candlesticks)
-        aroondown, aroonup = ta.AROON(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), timeperiod=25)
+        aroondown, aroonup = ta.AROON(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), **kwargs)
         return {'aroonup':list(aroonup), 'aroondown': list(aroondown)}
 
     async def _fractal_aroonosc(self, candlesticks, **kwargs):
         fractal_line = await self._fractal_line_3(candlesticks) 
-        return list(ta.AROONOSC(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), timeperiod=25))
+        return list(ta.AROONOSC(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), **kwargs))
 
     async def _fractal_line_3(self, candlesticks, **kwargs):
         bearish_frac = list(pd.Series(await self._bearish_fractal_3(candlesticks)).bfill())
