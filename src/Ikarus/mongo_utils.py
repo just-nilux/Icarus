@@ -181,3 +181,7 @@ async def do_find_trades(mongo_client, col, query={}):
 async def do_aggregate_trades(mongo_client, col, query={}):
     trade_list = await mongo_client.do_aggregate(col,query)
     return [trade_from_dict(hto) for hto in trade_list]
+
+async def do_find_report(mongo_client, col, query={}):
+    reports = await mongo_client.do_find(col,query)
+    return reports[0]['data']

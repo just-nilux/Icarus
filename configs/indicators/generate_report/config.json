@@ -5,7 +5,7 @@
     "mongodb":{
         "host": "localhost",
         "port": 27017,
-        "clean": true
+        "clean": false
     },
     "balances": [
         {
@@ -37,8 +37,9 @@
     },
     "report": {
         "market_class_table_stats": {
+            "source": "database",
             "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 
-            "writers":["table_plot", "markdown_table"]
+            "writers":["table_plot", "markdown_table", "database"]
         },
         "market_class_ppc": {
             "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 

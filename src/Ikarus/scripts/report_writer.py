@@ -1,9 +1,11 @@
 from fileinput import filename
+import symbol
 from matplotlib import pyplot as plt
 import os
 import glob
 import pandas as pd
 import numpy as np
+from .. import mongo_utils
 
 from mdutils.mdutils import MdUtils
 from mdutils import Html
@@ -104,17 +106,33 @@ class MarkdownWriter():
         pass
 
 class DatabaseWriter():
+    # TODO: Find a way to overright existing content or check if this mechanism needed
+    def __init__(self, mongo_client) -> None:
+        self.mongo_client = mongo_client
+        pass
 
     def create_report_folder(self):
         if not os.path.exists(self.report_folder):
             os.makedirs(self.report_folder)
-    pass
+
+    async def database(self, indice, report_dict):
+        document = {
+            'timeframe': indice[1],
+            'pair': indice[2],
+            'analyzer': indice[3],
+            'data': report_dict
+        }
+        await self.mongo_client.do_insert_one(indice[0],document)
+        #await mongocli.do_insert_one("observer", initial_observation_item)
+
 
 class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter):
-    def __init__(self, config_folder) -> None:
+    def __init__(self, config_folder, mongo_client) -> None:
         self.report_folder = config_folder + '/reports'
         self.create_report_folder()
         self.md_file = MdUtils(file_name=f'{self.report_folder}/report.md', title='Markdown File Example')
+        
+        self.mongo_client = mongo_client
         pass
 
 
