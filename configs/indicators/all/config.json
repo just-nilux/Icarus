@@ -59,8 +59,8 @@
         "resistance_dbscan":{"source":"bearish_fractal_3"},
 
         // Market Classification
-        "market_class_fractal_aroon": {"validation_point": 10, "plot":["distribution"]},
-        "market_class_aroonosc": {"validation_point": 3, "plot":["distribution"]},
+        "market_class_fractal_aroon": {"validation_threshold": 10, "plot":["distribution"]},
+        "market_class_aroonosc": {"validation_threshold": 3, "plot":["distribution"]},
         
         "kaufman_efficiency_ratio": {"timeperiod":20},
         "price_density": {"timeperiod":20},

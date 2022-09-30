@@ -29,7 +29,11 @@
     },
     "analysis": {
         "aroon": {"timeperiod":14},
-        "market_class_aroon": {"validation_point": 1, "timeperiod":14}
+        "fractal_aroon": {"timeperiod":14},
+        "bearish_fractal_3": {},
+        "bullish_fractal_3": {},
+        "market_class_aroon": {"validation_threshold": 1, "timeperiod":14},
+        "market_class_fractal_aroon": {"validation_threshold": 1, "timeperiod":14}
     },
     "report": {
         "market_class_table_stats": {

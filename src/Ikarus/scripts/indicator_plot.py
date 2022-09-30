@@ -156,17 +156,17 @@ def market_class_handler(x, y, axes):
         for market_regime in class_item_list:
             fplt.add_rect((market_regime.start_ts, class_idx+1), (market_regime.end_ts, class_idx), color=color_set[class_idx%6], interactive=False, ax=axes['ax_bot'])
             
-            perc_price_change = f'%{str(market_regime.perc_price_change)}'
+            perc_price_change = f'PPC: %{str(market_regime.perc_price_change)}'
             fplt.add_text((market_regime.start_ts, class_idx+1), perc_price_change, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
-            perc_val_price_change = f'%{str(market_regime.perc_val_price_change)}'
+            perc_val_price_change = f'PVPC: %{str(market_regime.perc_val_price_change)}'
             fplt.add_text((market_regime.start_ts, class_idx+0.8), perc_val_price_change, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
             num_of_candle = f'#Candle: {str(market_regime.duration_in_candle)}'
             fplt.add_text((market_regime.start_ts, class_idx+0.6), num_of_candle, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 
-            fplt.add_line((market_regime.validation_point, class_idx+1), (market_regime.validation_point, class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
-            #fplt.add_line((market_regime.validation_point, class_idx+1), (market_regime.validation_point, class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
+            fplt.add_line((market_regime.validation_ts, class_idx+1), (market_regime.validation_ts, class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
+            #fplt.add_line((market_regime.validation_ts, class_idx+1), (market_regime.validation_ts, class_idx), style='.', color='#000000', width=2, interactive=False, ax=axes['ax_bot'])
 
         fplt.add_text((x[0], class_idx+0.5), class_name, color='#000000',anchor=(0,0), ax=axes['ax_bot'])
 

@@ -31,9 +31,9 @@
         "aroon": {"timeperiod":25},
         "aroonosc": {"timeperiod":25},
         "fractal_aroon": {"timeperiod":25},
-        "market_class_fractal_aroon": {"validation_point": 10, "plot":["distribution"]},
-        "market_class_aroonosc": {"validation_point": 3, "plot":["distribution"]},
-        "market_class_aroon": {"validation_point": 6, "plot":["distribution"]}
+        "market_class_fractal_aroon": {"validation_threshold": 10, "plot":["distribution"]},
+        "market_class_aroonosc": {"validation_threshold": 3, "plot":["distribution"]},
+        "market_class_aroon": {"validation_threshold": 6, "plot":["distribution"]}
     },
     "time_scales": {
         "1m": 720,

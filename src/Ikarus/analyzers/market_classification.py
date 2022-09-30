@@ -14,15 +14,15 @@ class MarketRegime():
     end_price: float
     duration_in_candle: int
     validation_price: float
-    validation_point: int
+    validation_ts: int
     time_scale: str = ''
     symbol: str = ''
     def __post_init__(self):
         self.perc_price_change = round(100 * (self.end_price - self.start_price) / self.start_price, 2)
 
         # TODO: Investıgate thıs logic
-        if self.duration_in_candle == 1:
-            self.perc_val_price_change = round(100 * (self.end_price - self.validation_price) / self.validation_price, 2)
+        if self.end_ts < self.validation_ts:
+            self.perc_val_price_change = None
         else:
             self.perc_val_price_change = round(100 * (self.end_price - self.validation_price) / self.validation_price, 2)
         # NOTE: If the market_regime has 1 candle then perc_val_price_change value is
@@ -63,7 +63,7 @@ class MarketClassification():
         for state in unique_states:
             state_name = f'state_{state}'
             class_indexes[state_name] = np.where(hidden_states == state)[0]
-        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_threshold', 0))
 
         return detected_market_regimes
 
@@ -78,7 +78,7 @@ class MarketClassification():
         class_indexes['uptrend'] = np.where(np.array(analysis_output) > 0)[0]
         nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
 
-        class_stats = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0), nan_value_offset)
+        class_stats = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_threshold', 0), nan_value_offset)
         return class_stats
 
     async def _market_class_fractal_aroon(self, candlesticks, **kwargs):
@@ -98,7 +98,7 @@ class MarketClassification():
         nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
 
         # Class occurence indexes
-        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0), nan_value_offset)
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_threshold', 0), nan_value_offset)
 
         # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
         # so the day_diff will be 1
@@ -125,7 +125,7 @@ class MarketClassification():
         nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
 
         # Class occurence indexes
-        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0), nan_value_offset)
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_threshold', 0), nan_value_offset)
 
         # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
         # so the day_diff will be 1
@@ -135,7 +135,7 @@ class MarketClassification():
         return detected_market_regimes
 
 
-    async def detect_regime_instances(candlesticks, class_indexes, validation_counter, nan_value_offset=None):
+    async def detect_regime_instances(candlesticks, class_indexes, validation_threshold, nan_value_offset=None):
         '''
         The essential features of classes is start and end timestamps. The rest is evaluated using these initial points
         '''
@@ -155,7 +155,7 @@ class MarketClassification():
                 seq_idx = list(map(itemgetter(1), g))
                 # NOTE: If the sq. length is 1 than it will not be displayed. Apply "seq_idx[-1]+1" if you need to
 
-                if len(seq_idx) == 0 and len(seq_idx) < validation_counter:
+                if len(seq_idx) == 0 or len(seq_idx) < validation_threshold:
                     continue # Continue if the validation is performed and the class instance is not valid
 
                 pmr = PredefinedMarketRegime(
@@ -163,10 +163,10 @@ class MarketClassification():
                     start_ts=ts_index[seq_idx[0]],
                     end_ts=ts_index[seq_idx[-1]],
                     duration_in_candle=len(seq_idx),
-                    start_price=candlesticks['close'][ts_index[seq_idx[0]]],
+                    start_price=candlesticks['open'][ts_index[seq_idx[0]]],
                     end_price=candlesticks['close'][ts_index[seq_idx[-1]]],
-                    validation_point=ts_index[seq_idx[0]+validation_counter],
-                    validation_price=candlesticks['close'][ts_index[seq_idx[0]+validation_counter]],
+                    validation_ts=ts_index[seq_idx[0]+validation_threshold],
+                    validation_price=candlesticks['open'][ts_index[seq_idx[0]+validation_threshold]],
                 )
                 class_item_list.append(pmr)
             result[class_name] = class_item_list
