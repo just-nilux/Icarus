@@ -5,7 +5,7 @@ import pandas as pd
 class Indicators():
 
     async def _fractal_aroon(self, candlesticks, **kwargs):
-        fractal_line = await self._fractal_line_3(candlesticks)
+        fractal_line = await self._fractal_line_3(candlesticks) # TODO: Add the arguments
         aroondown, aroonup = ta.AROON(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), **kwargs)
         return {'aroonup':list(aroonup), 'aroondown': list(aroondown)}
 

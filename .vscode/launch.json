@@ -54,10 +54,10 @@
             "name": "generate_report",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.scripts.generate_report",
+            "module": "src.Ikarus.report.generate_report",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/indicators/generate_report/config.json"
+                "${workspaceFolder}/configs/research/aroon_classifies_market/config.json"
             ]
         },
         {
@@ -74,7 +74,7 @@
             "module": "src.Ikarus.scripts.visualize_analyzers",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/indicators/support-resistance/config.json"
+                "${workspaceFolder}/configs/research/aroon_classifies_market/config.json"
             ]
         },
         {

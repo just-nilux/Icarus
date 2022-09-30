@@ -12,8 +12,8 @@ accuracy_conditions_for_ppc = {
 async def market_class_ppc(index, detected_market_regimes):
     tabular_dict = {}
     for regime_name, regime_instances in detected_market_regimes.items():
-        price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
-        tabular_dict[regime_name] = price_change_perc_list
+        perc_price_change_list = [instance.perc_price_change for instance in regime_instances]
+        tabular_dict[regime_name] = perc_price_change_list
     return tabular_dict
 
 async def market_class_table_stats(index, detected_market_regimes):
@@ -21,15 +21,15 @@ async def market_class_table_stats(index, detected_market_regimes):
     tabular_dict = {}
     for regime_name, regime_instances in detected_market_regimes.items():
 
-        price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
+        perc_price_change_list = [instance.perc_price_change for instance in regime_instances]
         duration_in_candle_list = [instance.duration_in_candle for instance in regime_instances]
         regime_stats = {}
         regime_stats['Occurence'] = int(len(regime_instances))
-        regime_stats['Average PPC'] = round(mean(price_change_perc_list),2)
+        regime_stats['Average PPC'] = round(mean(perc_price_change_list),2)
         regime_stats['Average duration'] = int(mean(duration_in_candle_list))
         regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
         regime_stats['PPC Accuracy'] = round(
-            accuracy_conditions_for_ppc[regime_name](price_change_perc_list, len(regime_instances)),2)
+            accuracy_conditions_for_ppc[regime_name](perc_price_change_list, len(regime_instances)),2)
 
         tabular_dict[regime_name] = regime_stats
     

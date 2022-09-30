@@ -13,11 +13,19 @@ class MarketRegime():
     start_price: float
     end_price: float
     duration_in_candle: int
-    validation_point: int = None
+    validation_price: float
+    validation_point: int
     time_scale: str = ''
     symbol: str = ''
     def __post_init__(self):
-        self.price_change_perc = round(100 * (self.end_price - self.start_price) / self.start_price, 2)
+        self.perc_price_change = round(100 * (self.end_price - self.start_price) / self.start_price, 2)
+
+        # TODO: Investıgate thıs logic
+        if self.duration_in_candle == 1:
+            self.perc_val_price_change = round(100 * (self.end_price - self.validation_price) / self.validation_price, 2)
+        else:
+            self.perc_val_price_change = round(100 * (self.end_price - self.validation_price) / self.validation_price, 2)
+        # NOTE: If the market_regime has 1 candle then perc_val_price_change value is
 
     def set_attribute(self, name, value):
         self.__setattr__(name, value)
@@ -63,13 +71,14 @@ class MarketClassification():
         analyzer = '_aroonosc'
 
         if hasattr(self, analyzer):
-            analysis_output = await getattr(self, analyzer)(candlesticks)
+            analysis_output = await getattr(self, analyzer)(candlesticks, timeperiod=kwargs.get('timeperiod',14))
 
         class_indexes = {}
         class_indexes['downtrend'] = np.where(np.array(analysis_output) < 0)[0]
         class_indexes['uptrend'] = np.where(np.array(analysis_output) > 0)[0]
+        nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
 
-        class_stats = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
+        class_stats = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0), nan_value_offset)
         return class_stats
 
     async def _market_class_fractal_aroon(self, candlesticks, **kwargs):
@@ -77,7 +86,7 @@ class MarketClassification():
         analyzer = '_fractal_aroon'
 
         if hasattr(self, analyzer):
-            analysis_output = await getattr(self, analyzer)(candlesticks)
+            analysis_output = await getattr(self, analyzer)(candlesticks, timeperiod=kwargs.get('timeperiod',14))
 
         # The class detection logic depends on the data source strictly.
         class_indexes = {}
@@ -86,9 +95,10 @@ class MarketClassification():
             np.nan_to_num(analysis_output['aroonup']) < 80, 
             np.nan_to_num(analysis_output['aroondown']) < 80))[0]
         class_indexes['uptrend'] = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
+        nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
 
         # Class occurence indexes
-        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0), nan_value_offset)
 
         # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
         # so the day_diff will be 1
@@ -103,7 +113,7 @@ class MarketClassification():
         analyzer = '_aroon'
 
         if hasattr(self, analyzer):
-            analysis_output = await getattr(self, analyzer)(candlesticks)
+            analysis_output = await getattr(self, analyzer)(candlesticks, timeperiod=kwargs.get('timeperiod',14))
 
         # The class detection logic depends on the data source strictly.
         class_indexes = {}
@@ -112,9 +122,10 @@ class MarketClassification():
             np.nan_to_num(analysis_output['aroonup']) < 80, 
             np.nan_to_num(analysis_output['aroondown']) < 80))[0]
         class_indexes['uptrend'] = np.where(np.nan_to_num(analysis_output['aroonup']) > 80)[0]
+        nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
 
         # Class occurence indexes
-        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0))
+        detected_market_regimes = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_point', 0), nan_value_offset)
 
         # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
         # so the day_diff will be 1
@@ -124,10 +135,17 @@ class MarketClassification():
         return detected_market_regimes
 
 
-    async def detect_regime_instances(candlesticks, class_indexes, validation_counter):
+    async def detect_regime_instances(candlesticks, class_indexes, validation_counter, nan_value_offset=None):
         '''
         The essential features of classes is start and end timestamps. The rest is evaluated using these initial points
         '''
+        # NOTE: Since some indicators are lagging ones with a timeperiod, no market class should be detected until this timeperiod completed
+        # for the first time.
+        if nan_value_offset != None:
+            class_indexes['downtrend'] = class_indexes['downtrend'][class_indexes['downtrend'] >= nan_value_offset]
+            class_indexes['uptrend'] = class_indexes['uptrend'][class_indexes['uptrend'] >= nan_value_offset]
+            class_indexes['ranging'] = class_indexes['ranging'][class_indexes['ranging'] >= nan_value_offset]
+
         ts_index = candlesticks.index
         result = {}
 
@@ -137,6 +155,9 @@ class MarketClassification():
                 seq_idx = list(map(itemgetter(1), g))
                 # NOTE: If the sq. length is 1 than it will not be displayed. Apply "seq_idx[-1]+1" if you need to
 
+                if len(seq_idx) == 0 and len(seq_idx) < validation_counter:
+                    continue # Continue if the validation is performed and the class instance is not valid
+
                 pmr = PredefinedMarketRegime(
                     label=class_name,
                     start_ts=ts_index[seq_idx[0]],
@@ -144,16 +165,9 @@ class MarketClassification():
                     duration_in_candle=len(seq_idx),
                     start_price=candlesticks['close'][ts_index[seq_idx[0]]],
                     end_price=candlesticks['close'][ts_index[seq_idx[-1]]],
+                    validation_point=ts_index[seq_idx[0]+validation_counter],
+                    validation_price=candlesticks['close'][ts_index[seq_idx[0]+validation_counter]],
                 )
-
-                # Check if the validation will be performed
-                if validation_counter > 0:
-                    if len(seq_idx) >= validation_counter:
-                        pmr.set_attribute('validation_point', ts_index[seq_idx[0]+validation_counter -1])
-                    else:
-                        continue # Continue if the validation is performed and the class instance is not valid
-
-
                 class_item_list.append(pmr)
             result[class_name] = class_item_list
             # TODO: No need to have a seperation between the calss instances since they are all labeled and self sufficient to be alice in visu.
@@ -185,15 +199,15 @@ class MarketClassStatistics():
         tabular_dict = {}
         for regime_name, regime_instances in detected_market_regimes.items():
 
-            price_change_perc_list = [instance.price_change_perc for instance in regime_instances]
+            perc_price_change_list = [instance.perc_price_change for instance in regime_instances]
             duration_in_candle_list = [instance.duration_in_candle for instance in regime_instances]
             regime_stats = {}
             regime_stats['Occurence'] = int(len(regime_instances))
-            regime_stats['Average PPC'] = round(mean(price_change_perc_list),2)
+            regime_stats['Average PPC'] = round(mean(perc_price_change_list),2)
             regime_stats['Average duration'] = int(mean(duration_in_candle_list))
             regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
             regime_stats['PPC Accuracy'] = round(
-                MarketClassStatistics.accuracy_conditions_for_ppc[regime_name](price_change_perc_list, len(regime_instances)),2)
+                MarketClassStatistics.accuracy_conditions_for_ppc[regime_name](perc_price_change_list, len(regime_instances)),2)
 
             tabular_dict[regime_name] = regime_stats
         

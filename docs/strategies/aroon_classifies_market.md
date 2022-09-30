@@ -48,9 +48,17 @@ No significant** price change occurs. Price moves within a certain band until it
 ** The term "statistical significance" needs to be investigated.
 
 ## Metrics
-* The slope of trendlines should be greater/less than X for Up/DownTrend and it should be less then Y to be a Range where Y~=0
-* The percentage price change should be greater/less than X for Up/DownTrend and it should be less then Y to be a Range where Y~=0
-* The duration should be long enough to distinguish indecisive short term moves from the purposeful moves with longer duration. In other words, the market states with small duration should be ignored
+### Percentage Price Change (PPC):
+The change between the close prices of first and last candles in a detected section of the chart.
+### PPC Accuracy:
+For a a type of market regime: "How much of the detected regimes fits to a threshold rule":
+* UpTrend: PPC > 1
+* Range: -1 < PPC < 1
+* DownTrend: PPC < -1
+
+## Parameters to Optimize:
+* Minimum Duration: Minimum number of candle that is required for a market regime to exist
+* PPC Accuracy Thresholds: What is the best performing set of thresholds
 
 
 # Hypothesis Testing

@@ -217,8 +217,9 @@ async def visualize_dashboard(bwrapper, config):
 
     analyzer_names = []
     for key in config['analysis'].keys():
-        if 'plot' in config['analysis'][key].keys():
-            analyzer_names = analyzer_names + [key+'_'+name for name in config['analysis'][key]['plot']]
+        # NOTE: Following 2 lines are about the feature of generate_report tool
+        #if 'plot' in config['analysis'][key].keys():
+        #    analyzer_names = analyzer_names + [key+'_'+name for name in config['analysis'][key]['plot']]
         if hasattr(indicator_plot, key):
             analyzer_names.append(key)
     analyzer_names.sort()
