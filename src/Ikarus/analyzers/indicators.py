@@ -14,8 +14,9 @@ class Indicators():
         return list(ta.AROONOSC(pd.Series(fractal_line['bearish']), pd.Series(fractal_line['bullish']), **kwargs))
 
     async def _fractal_line_3(self, candlesticks, **kwargs):
-        bearish_frac = list(pd.Series(await self._bearish_fractal_3(candlesticks)).ffill())
-        bullish_frac = list(pd.Series(await self._bullish_fractal_3(candlesticks)).ffill())
+        # TODO: Decide what to use: bfill or ffill
+        bearish_frac = list(pd.Series(await self._bearish_fractal_3(candlesticks)).bfill().ffill())
+        bullish_frac = list(pd.Series(await self._bullish_fractal_3(candlesticks)).bfill().ffill())
         return {'bearish':bearish_frac, 'bullish':bullish_frac}
 
     async def _low(self, candlesticks, **kwargs): return list(candlesticks['low'])

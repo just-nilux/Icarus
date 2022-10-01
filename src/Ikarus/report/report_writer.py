@@ -1,43 +1,18 @@
 from fileinput import filename
-import symbol
 from matplotlib import pyplot as plt
 import os
 import glob
 import pandas as pd
 import numpy as np
-from .. import mongo_utils
+import shutil
 
 from mdutils.mdutils import MdUtils
 from mdutils import Html
-
-
-def write_to_image(indices, report_dict):
-    print('Writing to image')
-    print('Indice:', str(indices))
-    print('Data:', str(report_dict))
-    pass
-
-def write_to_markdown(indices, report_dict):
-    pass
-
-def write_to_database(indices, report_dict):
-    pass
-
 
 class ImageWriter():
     def __init__(self, report_folder) -> None:
         super().__init__()
         self.report_folder = report_folder
-
-    def write(self, indice, report_dict):
-        reporter, timeframe, symbol, analyzer = indice
-
-        target_path = '{}/{}-{}-{}-{}'.format(
-            self.report_folder,reporter,timeframe,symbol,analyzer)
-        print('Writing to image to:', target_path)
-        print('Indice:', str(indice))
-        print('Data:', str(report_dict))
-        pass
 
     def box_plot(self, indice, report_dict):
         reporter, timeframe, symbol, analyzer = indice
@@ -129,14 +104,18 @@ class DatabaseWriter():
 class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter):
     def __init__(self, config_folder, mongo_client) -> None:
         self.report_folder = config_folder + '/reports'
+        self.clean_report_folder()
         self.create_report_folder()
         self.md_file = MdUtils(file_name=f'{self.report_folder}/report.md', title='Markdown File Example')
         
         self.mongo_client = mongo_client
-        pass
 
 
     def create_report_folder(self):
         if not os.path.exists(self.report_folder):
             os.makedirs(self.report_folder)
-    pass
+
+
+    def clean_report_folder(self):
+        if os.path.exists(self.report_folder):
+            shutil.rmtree(self.report_folder)

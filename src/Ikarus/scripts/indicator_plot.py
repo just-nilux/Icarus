@@ -208,7 +208,7 @@ def mkfi(x, y, axes):
     enable_ax_bot(axes, y_range=(min(y['mkfi']),max(y['mkfi'])))
     fplt.bar(df, ax=axes['ax_bot'],colorfunc=mkfi_colorfilter)
 
-def fractal_line_3(x, y, axes): disable_ax_bot(axes); line_handler(x, y, axes['ax'])
+def fractal_line_3(x, y, axes): axes['ax'].set_visible(xaxis=True); line_handler(x, y, axes['ax'])
 def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100), ); line_handler(x, y, axes['ax_bot'])
 def fractal_aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
 

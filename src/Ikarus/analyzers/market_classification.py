@@ -76,13 +76,12 @@ class MarketClassification():
         class_indexes = {}
         class_indexes['downtrend'] = np.where(np.array(analysis_output) < 0)[0]
         class_indexes['uptrend'] = np.where(np.array(analysis_output) > 0)[0]
-        nan_value_offset = np.count_nonzero(np.isnan(analysis_output['aroonup']))
+        nan_value_offset = np.count_nonzero(np.isnan(analysis_output))
 
         class_stats = await MarketClassification.detect_regime_instances(candlesticks, class_indexes, kwargs.get('validation_threshold', 0), nan_value_offset)
         return class_stats
 
     async def _market_class_fractal_aroon(self, candlesticks, **kwargs):
-        # TODO: Fix the shit code
         analyzer = '_fractal_aroon'
 
         if hasattr(self, analyzer):
@@ -102,9 +101,6 @@ class MarketClassification():
 
         # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
         # so the day_diff will be 1
-        #result['is_daydiff']=int((candlesticks.index[-1] - result['uptrend'][-1]['end'])/time_scale_to_milisecond('1d'))
-        #result['is_lastidx']=int(analysis_output['aroonup'][-1] > 80)
-        #await MarketClassification.calculate_class_stats(detected_market_regimes)
         return detected_market_regimes
 
 
@@ -129,9 +125,6 @@ class MarketClassification():
 
         # if last closed candle is in uptrend, then then 'end' parameter wikk be equal to its timestamp
         # so the day_diff will be 1
-        #result['is_daydiff']=int((candlesticks.index[-1] - result['uptrend'][-1]['end'])/time_scale_to_milisecond('1d'))
-        #result['is_lastidx']=int(analysis_output['aroonup'][-1] > 80)
-        #await MarketClassification.calculate_class_stats(detected_market_regimes)
         return detected_market_regimes
 
 
@@ -141,10 +134,10 @@ class MarketClassification():
         '''
         # NOTE: Since some indicators are lagging ones with a timeperiod, no market class should be detected until this timeperiod completed
         # for the first time.
+
         if nan_value_offset != None:
-            class_indexes['downtrend'] = class_indexes['downtrend'][class_indexes['downtrend'] >= nan_value_offset]
-            class_indexes['uptrend'] = class_indexes['uptrend'][class_indexes['uptrend'] >= nan_value_offset]
-            class_indexes['ranging'] = class_indexes['ranging'][class_indexes['ranging'] >= nan_value_offset]
+            for class_name in class_indexes.keys():
+                class_indexes[class_name] = class_indexes[class_name][class_indexes[class_name] >= nan_value_offset]
 
         ts_index = candlesticks.index
         result = {}
@@ -158,6 +151,9 @@ class MarketClassification():
                 if len(seq_idx) == 0 or len(seq_idx) < validation_threshold:
                     continue # Continue if the validation is performed and the class instance is not valid
 
+                if seq_idx[0]+validation_threshold >= len(ts_index):
+                    continue # Continue since the market regime is not validated during the current chart
+                
                 pmr = PredefinedMarketRegime(
                     label=class_name,
                     start_ts=ts_index[seq_idx[0]],

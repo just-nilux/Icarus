@@ -48,20 +48,50 @@ No significant** price change occurs. Price moves within a certain band until it
 ** The term "statistical significance" needs to be investigated.
 
 ## Metrics
+### Occurence:
+Number of instances of a market regime.
+### Duration:
+Duration of a regime instances with the unit candlestick.
+### Coverage: 
+Total coverage of a regime instances in percentage on a given chart.
 ### Percentage Price Change (PPC):
-The change between the close prices of first and last candles in a detected section of the chart.
+The change between the **open price** of the first and **close price** of the last candles in a detected section of the chart.
 ### PPC Accuracy:
 For a a type of market regime: "How much of the detected regimes fits to a threshold rule":
 * UpTrend: PPC > 1
 * Range: -1 < PPC < 1
 * DownTrend: PPC < -1
+### PVPC:
+The change between the **open price** of the validation candle and **close price** of the last candle in a detected section of the chart. This metric is not used to evaluate the accuracy/reliability of the detected regime. However it is usefull to make a judgement regarding the question _"What is the price change after the regime is validated?"_ or _"What does the useable part of this market regime looks like?"_.
 
 ## Parameters to Optimize:
-* Minimum Duration: Minimum number of candle that is required for a market regime to exist
+* Validation Threshold: Minimum number of candle that is required for a market regime to exist
 * PPC Accuracy Thresholds: What is the best performing set of thresholds
 
 
 # Hypothesis Testing
+Parameters:
+* Market class analyzers: aroon, aroonosc, fractal_aroon
+* Pairs: BTCUSDT
+* Timeframes: 1d
+* Chart Start Date:
+* Chart End Date:
+
+## Statistic Tables
+- aroon
+- aroonosc
+- fractal_aroon
+
+## PPC Distribution
+- aroon
+- aroonosc
+- fractal_aroon
+
+## PVPC Distribution
+- aroon
+- aroonosc
+- fractal_aroon
+
 |                  |   downtrend |   ranging |   uptrend |
 |:-----------------|------------:|----------:|----------:|
 | Occurence        |        7    |     17    |     11    |

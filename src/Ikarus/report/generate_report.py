@@ -57,7 +57,10 @@ async def main():
                 # aggregate([{"$match":{'pair':'ETHUSDT','timeframe':'1d','analyzer':'market_class_fractal_aroon'}}, {"$project": {"data": "$data"}}])
                 report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
             
-            elif source == 'analyzer' and (analyzer in analysis_dict[symbol][timeframe].keys()):
+            elif source == 'analyzer':
+                if analyzer not in analysis_dict[symbol][timeframe].keys():
+                    raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
+
                 handler = getattr(report_tools, report_tool)
                 report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
 
