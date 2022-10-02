@@ -102,8 +102,8 @@ class DatabaseWriter():
 
 
 class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter):
-    def __init__(self, config_folder, mongo_client) -> None:
-        self.report_folder = config_folder + '/reports'
+    def __init__(self, report_folder, mongo_client) -> None:
+        self.report_folder = report_folder
         self.clean_report_folder()
         self.create_report_folder()
         self.md_file = MdUtils(file_name=f'{self.report_folder}/report.md', title='Markdown File Example')

@@ -2,49 +2,109 @@
     "tag": "test-bot",
     "log-level": "DEBUG",
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
-    "mongodb":{
+    "mongodb": {
         "host": "localhost",
         "port": 27017,
         "clean": true
     },
     "balances": [
         {
-            "asset": "USDT", 
-            "free": 10000, 
+            "asset": "USDT",
+            "free": 10000,
             "locked": 0
         }
     ],
     "broker": {
         "quote_currency": "USDT",
-         "fee_rate": 0.001
+        "fee_rate": 0.001
     },
-    "risk_management":{
+    "risk_management": {
         "max_capital_use_ratio": 0.99
     },
     "strategy": {
         "MACDStrategy": {
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1d"]
+            "pairs": [
+                "BTCUSDT"
+            ],
+            "time_scales": [
+                "1d"
+            ]
         }
     },
     "analysis": {
-        "aroon": {"timeperiod":14},
-        "fractal_aroon": {"timeperiod":14},
+        "aroon": {
+            "timeperiod": 30
+        },
+        "fractal_aroon": {
+            "timeperiod": 30
+        },
         "bearish_fractal_3": {},
         "bullish_fractal_3": {},
-        "market_class_aroon": {"validation_threshold": 7, "timeperiod":14},
-        "market_class_aroonosc": {"validation_threshold": 7, "timeperiod":14},
-        "market_class_fractal_aroon": {"validation_threshold": 7, "timeperiod":14}
+        "market_class_aroon": {
+            "validation_threshold": 0,
+            "timeperiod": 30
+        },
+        "market_class_aroonosc": {
+            "validation_threshold": 0,
+            "timeperiod": 30
+        },
+        "market_class_fractal_aroon": {
+            "validation_threshold": 0,
+            "timeperiod": 30
+        }
     },
+    "report_folder_name": "reports_0_30",
     "report": {
         "market_class_table_stats": {
             "source": "analyzer",
-            "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 
-            "writers":["table_plot", "markdown_table", "database"]
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
         },
         "market_class_ppc": {
-            "analyzers" :["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon"], 
-            "writers":["box_plot"]
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "box_plot"
+            ]
+        },
+        "market_class_pvpc": {
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "box_plot"
+            ]
+        }
+    },
+    "grid_search": {
+        "analyzers": [
+            "market_class_aroon",
+            "market_class_aroonosc",
+            "market_class_fractal_aroon"
+        ],
+        "grid": {
+            "validation_threshold": [
+                0,
+                3,
+                7,
+                14
+            ],
+            "timeperiod": [
+                14,
+                30
+            ]
         }
     },
     "time_scales": {
@@ -60,18 +120,24 @@
         "1w": 52,
         "1M": 12
     },
-    "backtest":{
-        "start_time": "2018-01-11 13:00:00",
-        "end_time": "2021-01-18 13:00:00",
+    "backtest": {
+        "start_time": "2017-01-11 13:00:00",
+        "end_time": "2022-01-18 13:00:00",
         "online": true
     },
-    "visualization":{
-        "observers":{
-            "qc":["free", "total", "in_trade"],
-            "qc_leak":["binary"],
+    "visualization": {
+        "observers": {
+            "qc": [
+                "free",
+                "total",
+                "in_trade"
+            ],
+            "qc_leak": [
+                "binary"
+            ],
             "breakpoints": {
-                "1562371200000":"decision_time",
-                "1562803200000":"result.enter.time"
+                "1562371200000": "decision_time",
+                "1562803200000": "result.enter.time"
             }
         }
     }

@@ -2,9 +2,6 @@ import finplot as fplt
 from statistics import mean
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
-from ..utils import minute_to_time_scale
-from ..analyzers.market_classification import MarketClassStatistics
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):

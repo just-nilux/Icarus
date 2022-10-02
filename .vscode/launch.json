@@ -61,6 +61,16 @@
             ]
         },
         {
+            "name": "grid_search",
+            "type": "python",
+            "request": "launch",
+            "module": "src.Ikarus.report.grid_search",
+            "console": "integratedTerminal",
+            "args": [
+                "${workspaceFolder}/configs/research/aroon_classifies_market/config.json"
+            ]
+        },
+        {
             "name": "mongo_utils",
             "type": "python",
             "request": "launch",

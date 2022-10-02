@@ -3,7 +3,6 @@ import numpy as np
 from itertools import groupby
 from operator import itemgetter
 from hmmlearn.hmm import GaussianHMM
-from statistics import mean
 
 @dataclass
 class MarketRegime():
@@ -169,42 +168,3 @@ class MarketClassification():
             # TODO: No need to have a seperation between the calss instances since they are all labeled and self sufficient to be alice in visu.
         return result
 
-
-    async def calculate_class_stats(detected_market_regimes):
-    
-        for regime_name, regime_instances in detected_market_regimes.items():
-            regime_stats = {}
-            regime_stats['num_of_occurence'] = len(regime_instances)
-            regime_stats['lifetime_cluster'] = [instance['lifetime'] for instance in regime_instances]                  # Useful for distribution statistics
-            regime_stats['price_change_cluster'] = [instance['price_change'] for instance in regime_instances]
-
-        return
-
-
-class MarketClassStatistics():
-
-    accuracy_conditions_for_ppc = {
-        'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
-        'uptrend': lambda a,count : (np.array(a) > 1 ).sum() / count * 100,
-        'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
-    }
-
-    @staticmethod
-    def calculate_tabulated_statistics(index, detected_market_regimes):
-
-        tabular_dict = {}
-        for regime_name, regime_instances in detected_market_regimes.items():
-
-            perc_price_change_list = [instance.perc_price_change for instance in regime_instances]
-            duration_in_candle_list = [instance.duration_in_candle for instance in regime_instances]
-            regime_stats = {}
-            regime_stats['Occurence'] = int(len(regime_instances))
-            regime_stats['Average PPC'] = round(mean(perc_price_change_list),2)
-            regime_stats['Average duration'] = int(mean(duration_in_candle_list))
-            regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
-            regime_stats['PPC Accuracy'] = round(
-                MarketClassStatistics.accuracy_conditions_for_ppc[regime_name](perc_price_change_list, len(regime_instances)),2)
-
-            tabular_dict[regime_name] = regime_stats
-        
-        return tabular_dict

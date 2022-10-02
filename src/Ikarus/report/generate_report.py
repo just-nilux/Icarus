@@ -68,7 +68,9 @@ async def main():
     report_tool_results = list(await asyncio.gather(*report_tool_coroutines))
 
     # Write the statistics
-    report_writer = ReportWriter(os.path.dirname(str(sys.argv[1])), mongo_client)
+    
+    report_folder = os.path.dirname(str(sys.argv[1])) + '/' + config.get('report_folder_name', 'reports')
+    report_writer = ReportWriter(report_folder, mongo_client)
     async_writers = []
     for indice, report_dict in zip(indices, report_tool_results):
         reporter, timeframe, symbol, analyzer = indice
