@@ -82,8 +82,9 @@ class MarkdownWriter():
 
 class DatabaseWriter():
     # TODO: Find a way to overright existing content or check if this mechanism needed
-    def __init__(self, mongo_client) -> None:
+    def __init__(self, mongo_client, report_folder='reports') -> None:
         self.mongo_client = mongo_client
+        self.report_folder = report_folder
         pass
 
     def create_report_folder(self):
@@ -92,6 +93,7 @@ class DatabaseWriter():
 
     async def database(self, indice, report_dict):
         document = {
+            'folder_name': os.path.basename(str(self.report_folder)),
             'timeframe': indice[1],
             'pair': indice[2],
             'analyzer': indice[3],

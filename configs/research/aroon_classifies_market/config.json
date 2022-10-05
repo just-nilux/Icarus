@@ -5,7 +5,7 @@
     "mongodb": {
         "host": "localhost",
         "port": 27017,
-        "clean": true
+        "clean": false
     },
     "balances": [
         {
@@ -17,9 +17,6 @@
     "broker": {
         "quote_currency": "USDT",
         "fee_rate": 0.001
-    },
-    "risk_management": {
-        "max_capital_use_ratio": 0.99
     },
     "strategy": {
         "MACDStrategy": {
@@ -41,19 +38,19 @@
         "bearish_fractal_3": {},
         "bullish_fractal_3": {},
         "market_class_aroon": {
-            "validation_threshold": 0,
-            "timeperiod": 30
+            "validation_threshold": 7,
+            "timeperiod": 14
         },
         "market_class_aroonosc": {
-            "validation_threshold": 0,
-            "timeperiod": 30
+            "validation_threshold": 7,
+            "timeperiod": 14
         },
         "market_class_fractal_aroon": {
-            "validation_threshold": 0,
-            "timeperiod": 30
+            "validation_threshold": 7,
+            "timeperiod": 14
         }
     },
-    "report_folder_name": "reports_0_30",
+    "report_folder_name": "reports_7_14",
     "report": {
         "market_class_table_stats": {
             "source": "analyzer",
@@ -105,6 +102,25 @@
                 14,
                 30
             ]
+        },
+        "queries": {
+            "table1": {
+                "collection": [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "ppc": "$data.downtrend.PPC Accuracy (%)",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            }
         }
     },
     "time_scales": {

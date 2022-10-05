@@ -29,6 +29,11 @@ def grid_search():
         folder_suffix = '_'.join([str(gc) for gc in grid_config])
         
         config['report_folder_name'] = f'reports_{folder_suffix}'
+
+        # Do not clean the db between different configs
+        if config_idx != 0:
+            config['mongodb']['clean'] = False
+
         write_to_config_file(config)
         
         print('\033[32m' + f'[{config_idx+1}/{len(grid_configs)}] : {config["report_folder_name"]}\033[90m')
