@@ -14,6 +14,46 @@ from .report_writer import ReportWriter
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import AxesGrid
+
+
+def plot_custom(sub_matrices, x_labels, y_labels, sub_x_labels, sub_y_labels):
+    
+    fig = plt.figure()
+
+    grid = AxesGrid(fig, 111,
+                    nrows_ncols=(len(y_labels), len(x_labels)),
+                    axes_pad=0.05,
+                    share_all=True,
+                    label_mode="L",
+                    cbar_location="right",
+                    cbar_mode="single",
+                    )
+
+    for idx, (matrice, ax) in enumerate(zip(sub_matrices,grid)):
+        if idx < len(x_labels):
+            #ax.set_title("asdas")
+
+            ax2 = ax.secondary_xaxis('top')
+            ax2.tick_params(axis='x')
+            ax2.set_xticks(np.arange(len(sub_x_labels)), sub_x_labels, minor=False)
+            ax2.set_xlabel(x_labels[idx])
+
+        else:
+            ax.set_xticks([])
+
+        if idx % len(y_labels) == 0:
+            ax.set_ylabel(y_labels[idx % len(y_labels)])
+
+        ax.set_yticks(np.arange(len(sub_y_labels)), sub_y_labels)
+        im = ax.imshow(matrice, vmin=0, vmax=100)
+
+    grid.cbar_axes[0].colorbar(im)
+
+    #for cax in grid.cbar_axes:
+    #    cax.toggle_label(False)
+
+    plt.show()
 
 
 def get_coordites(mongo_dict):
@@ -61,6 +101,7 @@ async def main():
 
     big_df = pd.DataFrame(index=analyzers, columns=market_regimes)
 
+    sub_matrices = []
     for analyzer in analyzers:
         for market_regime in market_regimes:
             collection = [
@@ -71,16 +112,11 @@ async def main():
             #report_tool_coroutines.append(mongo_client.do_aggregate("market_class_table_stats", collection))
             x = await mongo_client.do_aggregate("market_class_table_stats", collection)
             tabular_df = query_to_table(x)
-            big_df[market_regime][analyzer] = tabular_df.values
+            #big_df[market_regime][analyzer] = tabular_df.values
+            sub_matrices.append(tabular_df.values)
 
-    vertical_array_stack = [np.concatenate(big_df.values[i], axis=1) for i in range(len(big_df.index))]
-    big_matrix = np.concatenate(vertical_array_stack, axis=0)
-    fig, ax = plt.subplots()
-    heatmap = ax.pcolor(big_matrix, cmap=plt.cm.seismic, 
-                        vmin=np.nanmin(big_matrix), vmax=np.nanmax(big_matrix))
-    ax.patch.set(hatch='x', edgecolor='black')
-    fig.colorbar(heatmap)
-    plt.show() 
+    plot_custom(sub_matrices, market_regimes, analyzers, tabular_df.columns.to_list(), tabular_df.index.to_list())
+    x=1
 
 if __name__ == '__main__':
     print(sys.argv)
