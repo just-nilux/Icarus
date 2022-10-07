@@ -9,6 +9,9 @@ import shutil
 from mdutils.mdutils import MdUtils
 from mdutils import Html
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import AxesGrid
+
 class ImageWriter():
     def __init__(self, report_folder) -> None:
         super().__init__()
@@ -102,9 +105,76 @@ class DatabaseWriter():
         await self.mongo_client.do_insert_one(indice[0],document)
         #await mongocli.do_insert_one("observer", initial_observation_item)
 
+class GridSearchWriter():
+    def __init__(self, report_folder='reports') -> None:
+        self.report_folder = report_folder
+        pass
 
-class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter):
-    def __init__(self, report_folder, mongo_client) -> None:
+    async def heatmap_w_sub_matrices(self, indice, query_results):
+        #(self, sub_matrices, labels, title, footnote):
+
+        sub_matrices = []
+        for query_result in query_results:
+            for mongo_dict in query_result:
+                _,x,y = mongo_dict['folder_name'].split('_')
+                mongo_dict['validation_threshold'] = x
+                mongo_dict['timeperiod'] = y
+            
+            df = pd.DataFrame(query_result)
+            tabular_df = pd.DataFrame(np.nan,index=df['timeperiod'].unique(), columns=df['validation_threshold'].unique())
+
+            for result in query_result:
+                if 'ppc' in result.keys():
+                    tabular_df[result['validation_threshold']][result['timeperiod']] = result['ppc']
+
+            sub_matrices.append(tabular_df.values)
+
+        #########
+        #plot_custom(sub_matrices, market_regimes, analyzers, tabular_df.columns.to_list(), tabular_df.index.to_list())
+        # TODO: NEXT Find a way to get following variables to here:
+        # market_regimes, analyzers
+        x_labels, y_labels, sub_x_labels, sub_y_labels = tabular_df.columns.to_list()
+        fig = plt.figure(figsize=(18,10))
+        fig.suptitle(title, fontsize=24)
+
+        grid = AxesGrid(fig, 111,
+                        nrows_ncols=(len(y_labels), len(x_labels)),
+                        axes_pad=0.05,
+                        share_all=True,
+                        label_mode="L",
+                        cbar_location="right",
+                        cbar_mode="single",
+                        )
+
+        for idx, (matrice, ax) in enumerate(zip(sub_matrices,grid)):
+            if idx < len(x_labels):
+                ax2 = ax.secondary_xaxis('top')
+                ax2.tick_params(axis='x')
+                ax2.set_xticks(np.arange(len(sub_x_labels)), sub_x_labels, minor=False)
+                ax2.set_xlabel(x_labels[idx])
+
+            else:
+                ax.set_xticks([])
+
+            if idx % len(y_labels) == 0:
+                ax.set_ylabel(y_labels[idx % len(y_labels)])
+
+            ax.set_yticks(np.arange(len(sub_y_labels)), sub_y_labels)
+            im = ax.imshow(matrice, vmin=0, vmax=100)
+
+        grid.cbar_axes[0].colorbar(im)
+
+        #for cax in grid.cbar_axes:
+        #    cax.toggle_label(False)
+        #reporter, timeframe, symbol, analyzer = indice
+        #filename = '{}_{}_{}_{}'.format(reporter,timeframe,symbol,analyzer)
+        target_path = '{}/{}.png'.format(self.report_folder,title)
+        plt.figtext(0.1, 0.1, footnote, ha="left", fontsize=12)
+        plt.savefig(target_path, bbox_inches='tight')
+
+
+class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter, GridSearchWriter):
+    def __init__(self, report_folder='', mongo_client=None) -> None:
         self.report_folder = report_folder
         self.clean_report_folder()
         self.create_report_folder()

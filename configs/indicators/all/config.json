@@ -80,6 +80,54 @@
         "ad":{},
         "obv":{}
     },
+    "report": {
+        "market_class_table_stats": {
+            "source": "analyzer",
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        },
+        "market_class_ppc": {
+            "source": "database",
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "box_plot"
+            ]
+        },
+        "market_class_tabulate_query": {
+            "source": "database",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "ppc": "$data.downtrend.PPC Accuracy (%)",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        }
+    },
     "time_scales": {
         "1m": 720,  // 12 hours
         "5m": 480,  // 1 day

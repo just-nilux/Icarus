@@ -3,6 +3,7 @@ import sys
 import json
 import itertools
 import os
+import ast
 
 
 def write_to_config_file(config_dict):
@@ -40,8 +41,38 @@ def grid_search():
         os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
         os.system(f'python -m src.Ikarus.report.generate_report  {str(sys.argv[1])}')
 
-        pass
-        
+    if not config['grid_search'].get('generate_report_item',None):
+        return
+    return
+    # Generate temporary report items
+    config['report'] = {}
+    for reporter_name, reporter_config in config['grid_search']['generate_report_item'].items():
+        reporter = {}
+        reporter['source'] = 'database'
+        reporter['collection']: reporter_config['collection']
+        reporter['queries'] = generate_queries(reporter_config)
+        reporter['writers'] = reporter_config['writers']
+        config['report'][reporter_name] = reporter
+    
+    config['report_folder_name'] = f'reports_grid_search'
+    write_to_config_file(config)
+
+    print('\033[32m' + f'Auto-generated report items : {config["report_folder_name"]}\033[90m')
+    os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
+    os.system(f'python -m src.Ikarus.report.generate_report  {str(sys.argv[1])}')       
+                
+
+def generate_queries(reporter_config):
+    grid_configs = list(itertools.product(*reporter_config['parameters'].values()))
+
+    queries = []
+    for grid_config in grid_configs:
+        query = deepcopy(reporter_config['query_template'])
+        for key_idx, key in enumerate(reporter_config['parameters'].keys()):
+            query = ast.literal_eval(str(query).replace(key, grid_config[key_idx]))
+        queries.append(query)
+    return queries
+
 
 
 if __name__ == '__main__':

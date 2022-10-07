@@ -185,3 +185,11 @@ async def do_aggregate_trades(mongo_client, col, query={}):
 async def do_find_report(mongo_client, col, query={}):
     reports = await mongo_client.do_find(col,query)
     return reports[0]['data']
+
+async def do_aggregate_multi_query(mongo_client, col, queries=[{}]):
+
+    query_coroutines = []
+    for query in queries:
+        query_coroutines.append(mongo_client.do_aggregate(col,query))
+
+    return await asyncio.gather(*query_coroutines)

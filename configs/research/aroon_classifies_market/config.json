@@ -38,19 +38,19 @@
         "bearish_fractal_3": {},
         "bullish_fractal_3": {},
         "market_class_aroon": {
-            "validation_threshold": 7,
+            "validation_threshold": 0,
             "timeperiod": 14
         },
         "market_class_aroonosc": {
-            "validation_threshold": 7,
+            "validation_threshold": 0,
             "timeperiod": 14
         },
         "market_class_fractal_aroon": {
-            "validation_threshold": 7,
+            "validation_threshold": 0,
             "timeperiod": 14
         }
     },
-    "report_folder_name": "reports_7_14",
+    "report_folder_name": "reports_0_14",
     "report": {
         "market_class_table_stats": {
             "source": "analyzer",
@@ -103,22 +103,38 @@
                 30
             ]
         },
-        "queries": {
-            "table1": {
-                "collection": [
+        "generate_report_item": {
+            "market_class_tabulate_query": {
+                "parameters": {
+                    "<analyzer>": [
+                        "market_class_aroon",
+                        "market_class_aroonosc",
+                        "market_class_fractal_aroon"
+                    ],
+                    "<market_regime>": [
+                        "downtrend",
+                        "ranging",
+                        "uptrend"
+                    ]
+                },
+                "query_template": [
                     {
                         "$match": {
                             "analyzer": {
-                                "$eq": "market_class_fractal_aroon"
+                                "$eq": "<analyzer>"
                             }
                         }
                     },
                     {
                         "$project": {
-                            "ppc": "$data.downtrend.PPC Accuracy (%)",
+                            "ppc": "$data.<market_regime>.PPC Accuracy (%)",
                             "folder_name": "$folder_name"
                         }
                     }
+                ],
+                "collection": "market_class_table_stats",
+                "writers": [
+                    "heatmap_w_sub_matrices"
                 ]
             }
         }

@@ -32,8 +32,6 @@ def plot_custom(sub_matrices, x_labels, y_labels, sub_x_labels, sub_y_labels):
 
     for idx, (matrice, ax) in enumerate(zip(sub_matrices,grid)):
         if idx < len(x_labels):
-            #ax.set_title("asdas")
-
             ax2 = ax.secondary_xaxis('top')
             ax2.tick_params(axis='x')
             ax2.set_xticks(np.arange(len(sub_x_labels)), sub_x_labels, minor=False)
@@ -77,12 +75,6 @@ def query_to_table(query_result):
     return tabular_df
 
 
-
-def sample():
-    # https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
-    #df2 = pd.DataFrame(np.random.randn(6, 6), index=index[:6], columns=index[:6])
-    pass
-
 async def main():
     config['mongodb']['clean'] = False
     mongo_client = mongo_utils.MongoClient(db='reports', **config['mongodb'])
@@ -111,6 +103,7 @@ async def main():
             print(analyzer, market_regime)
             #report_tool_coroutines.append(mongo_client.do_aggregate("market_class_table_stats", collection))
             x = await mongo_client.do_aggregate("market_class_table_stats", collection)
+            print(len(x))
             tabular_df = query_to_table(x)
             #big_df[market_regime][analyzer] = tabular_df.values
             sub_matrices.append(tabular_df.values)

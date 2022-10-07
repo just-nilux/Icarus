@@ -18,5 +18,16 @@
 # Configuration
 
     "report": {
-        "market_class_statistics": ["market_class_aroon", "market_class_aroonosc", "market_class_fractal_aroon" ]
-    },
+        "market_class_table_stats": {
+            "source": "analyzer",
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        }
+    }
