@@ -11,8 +11,7 @@ from mdutils import Html
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
-import seaborn as sns
-sns.set()
+
 
 class ImageWriter():
     def __init__(self, report_folder) -> None:
@@ -135,10 +134,15 @@ class GridSearchWriter():
 
             sub_matrices.append(tabular_df.values)
 
+        max_limit, min_limit = 0, 0
+        for matrice in sub_matrices:
+            max_index = np.unravel_index(matrice.argmax(), matrice.shape)
+            min_index = np.unravel_index(matrice.argmin(), matrice.shape)
+            if max_limit < matrice[max_index]: max_limit = matrice[max_index]
+            if min_limit > matrice[min_index]: min_limit = matrice[min_index]
+
         #########
         #plot_custom(sub_matrices, market_regimes, analyzers, tabular_df.columns.to_list(), tabular_df.index.to_list())
-        # TODO: NEXT Find a way to get following variables to here:
-        # market_regimes, analyzers
         x_labels, y_labels, sub_x_labels, sub_y_labels = list(market_regimes), list(analyzers), tabular_df.columns.to_list(), tabular_df.index.to_list()
         fig = plt.figure(figsize=(18,10))
 
@@ -170,8 +174,12 @@ class GridSearchWriter():
 
 
             ax.set_yticks(np.arange(len(sub_y_labels)), sub_y_labels)
-            im = ax.imshow(matrice, vmin=0, vmax=100)
-            #im = sns.heatmap(ax=ax, data=matrice, annot=True, vmin=0, vmax=100)
+            im = ax.imshow(matrice, vmin=min_limit, vmax=max_limit)
+
+            for i in range(matrice.shape[0]):
+                for j in range(matrice.shape[1]):
+                    text = ax.text(j, i, "%.2f" % matrice[i, j],
+                                ha="center", va="center", color="w")
 
         grid.cbar_axes[0].colorbar(im)
 

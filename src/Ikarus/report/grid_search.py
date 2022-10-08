@@ -73,7 +73,8 @@ def generate_queries(reporter_config):
         queries.append(query)
     return queries
 
-
+# TODO: NEXT Implement the --generate-reporter option for the cases that I dont want to
+#       run analyzers etc
 
 if __name__ == '__main__':
     print(sys.argv)
