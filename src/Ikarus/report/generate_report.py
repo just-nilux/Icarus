@@ -10,7 +10,7 @@ import itertools
 from ..analyzers import Analyzer
 from .. import mongo_utils
 from . import report_tools
-from .report_writer import ReportWriter
+from .report_writer import ReportWriter, GridSearchWriter
 
 async def main():
 
@@ -43,8 +43,9 @@ async def main():
     report_tool_coroutines = []
     indices = []
     for report_tool, report_config in config['report'].items():
-        if not hasattr(report_tools, report_tool):
-            continue
+        # NOTE: This section is commented out due to the effect of grid_search.py on reporter generation. 
+        #if not hasattr(report_tools, report_tool):
+        #    continue
 
         indice_data = [time_scale_pool, pair_pool]
         if 'analyzers' in report_config:
@@ -85,9 +86,20 @@ async def main():
     for indice, report_dict in zip(indices, report_tool_results):
         #reporter, timeframe, symbol, analyzer = indice
 
-        for writer_type in config['report'][indice[0]]['writers']:
+        for writer_type in config['report'][indice[0]]['writers']: #shitcode
             if hasattr(report_writer, writer_type):
-                if attr := getattr(report_writer, writer_type)(indice,report_dict):
+                kwargs = {}
+                if hasattr(GridSearchWriter, writer_type): 
+                    #shitcode
+                    # NOTE: Non standart way of providing data
+                    kwargs = {
+                        'start_time': config['backtest']['start_time'],
+                        'end_time': config['backtest']['end_time'],
+                        'pair': indice[2],
+                        'timeframe': indice[1]
+                    }
+
+                if attr := getattr(report_writer, writer_type)(indice,report_dict,**kwargs):
                     async_writers.append(attr)
 
     await asyncio.gather(*async_writers)

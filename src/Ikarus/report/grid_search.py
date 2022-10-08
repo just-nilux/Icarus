@@ -6,8 +6,8 @@ import os
 import ast
 
 
-def write_to_config_file(config_dict):
-    f = open(os.path.dirname(str(sys.argv[1])) + "/config.json",'w')
+def write_to_config_file(config_dict, filename="/config.json"):
+    f = open(os.path.dirname(str(sys.argv[1])) + filename,'w')
     json.dump(config_dict, f,  indent=4)
     f.close()
 
@@ -43,23 +43,23 @@ def grid_search():
 
     if not config['grid_search'].get('generate_report_item',None):
         return
-    return
+
     # Generate temporary report items
     config['report'] = {}
     for reporter_name, reporter_config in config['grid_search']['generate_report_item'].items():
         reporter = {}
         reporter['source'] = 'database'
-        reporter['collection']: reporter_config['collection']
+        reporter['collection'] = reporter_config['collection']
         reporter['queries'] = generate_queries(reporter_config)
         reporter['writers'] = reporter_config['writers']
         config['report'][reporter_name] = reporter
     
     config['report_folder_name'] = f'reports_grid_search'
-    write_to_config_file(config)
+    write_to_config_file(config, '/config_generated.json')
 
-    print('\033[32m' + f'Auto-generated report items : {config["report_folder_name"]}\033[90m')
-    os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
-    os.system(f'python -m src.Ikarus.report.generate_report  {str(sys.argv[1])}')       
+    #print('\033[32m' + f'Auto-generated report items : {config["report_folder_name"]}\033[90m')
+    #os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
+    #os.system(f'python -m src.Ikarus.report.generate_report  {str(sys.argv[1])}')       
                 
 
 def generate_queries(reporter_config):
