@@ -173,6 +173,41 @@
                 "writers": [
                     "heatmap_w_sub_matrices"
                 ]
+            },
+            "Market Regime Occurence": {
+                "parameters": {
+                    "<analyzer>": [
+                        "market_class_aroon",
+                        "market_class_aroonosc",
+                        "market_class_fractal_aroon"
+                    ],
+                    "<market_regime>": [
+                        "downtrend",
+                        "ranging",
+                        "uptrend"
+                    ]
+                },
+                "query_template": [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "<analyzer>"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.<market_regime>.Occurence",
+                            "market_regime": "<market_regime>",
+                            "analyzer": "<analyzer>",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                "collection": "market_class_table_stats",
+                "writers": [
+                    "heatmap_w_sub_matrices"
+                ]
             }
         }
     },

@@ -5,7 +5,7 @@ import glob
 import pandas as pd
 import numpy as np
 import shutil
-
+import math
 from mdutils.mdutils import MdUtils
 from mdutils import Html
 
@@ -174,12 +174,13 @@ class GridSearchWriter():
 
 
             ax.set_yticks(np.arange(len(sub_y_labels)), sub_y_labels)
-            im = ax.imshow(matrice, vmin=min_limit, vmax=max_limit)
+            im = ax.imshow(matrice, cmap='YlGn' ,vmin=min_limit, vmax=max_limit)
 
             for i in range(matrice.shape[0]):
                 for j in range(matrice.shape[1]):
-                    text = ax.text(j, i, "%.2f" % matrice[i, j],
-                                ha="center", va="center", color="w")
+                    if not math.isnan(matrice[0, 0]):
+                        text = ax.text(j, i, "%.2f" % matrice[i, j],
+                                    ha="center", va="center", color="black")
 
         grid.cbar_axes[0].colorbar(im)
 

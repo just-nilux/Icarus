@@ -375,6 +375,168 @@
             "writers": [
                 "heatmap_w_sub_matrices"
             ]
+        },
+        "Market Regime Occurence": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
         }
     },
     "grid_search": {
@@ -455,6 +617,41 @@
                     {
                         "$project": {
                             "value": "$data.<market_regime>.PVPC Accuracy (%)",
+                            "market_regime": "<market_regime>",
+                            "analyzer": "<analyzer>",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                "collection": "market_class_table_stats",
+                "writers": [
+                    "heatmap_w_sub_matrices"
+                ]
+            },
+            "Market Regime Occurence": {
+                "parameters": {
+                    "<analyzer>": [
+                        "market_class_aroon",
+                        "market_class_aroonosc",
+                        "market_class_fractal_aroon"
+                    ],
+                    "<market_regime>": [
+                        "downtrend",
+                        "ranging",
+                        "uptrend"
+                    ]
+                },
+                "query_template": [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "<analyzer>"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.<market_regime>.Occurence",
                             "market_regime": "<market_regime>",
                             "analyzer": "<analyzer>",
                             "folder_name": "$folder_name"
