@@ -78,7 +78,7 @@ def generate_queries(reporter_config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('config_file')
-    parser.add_argument('--generate-reporters', nargs="?", default=False)
+    parser.add_argument('--generate-reporters', action='store_true')
     args = parser.parse_args()
 
     f = open(str(args.config_file),'r')

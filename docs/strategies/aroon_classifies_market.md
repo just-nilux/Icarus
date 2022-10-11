@@ -6,9 +6,9 @@
     * [Range](#range)
     * [Metrics](#metrics)
 2. [Hypothesis Testing](#hypothesis-testing)
-    * [DistributionPlot]()
-    * [Tabular statistics]()
-    * [Observations]()
+    * [PPC Accuracy](#ppc-accuracy)
+    * [PVPC Accuracy](#pvpc-accuracy)
+    * [Market Regime Occurence](#market-regime-occurence)
 3. [Backtest](#backtest)
 4. [Live Trade](#live-trade)
 
@@ -77,20 +77,16 @@ Parameters:
 * Chart Start Date:
 * Chart End Date:
 
-## Statistic Tables
-- aroon
-- aroonosc
-- fractal_aroon
 
-## PPC Distribution
-- aroon
-- aroonosc
-- fractal_aroon
 
-## PVPC Distribution
-- aroon
-- aroonosc
-- fractal_aroon
+## PPC Accuracy
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search/PPC_Accuracy.png" /> 
+
+## PVPC Accuracy
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search/PVPC_Accuracy.png" /> 
+
+## Market Regime Occurence
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search/Market_Regime_Occurence.png" /> 
 
 |                  |   downtrend |   ranging |   uptrend |
 |:-----------------|------------:|----------:|----------:|
@@ -101,7 +97,6 @@ Parameters:
 | PPC Accuracy     |       42.86 |     41.18 |     18.18 |
 
 # Backtest
-
 
 # Live Trade
 

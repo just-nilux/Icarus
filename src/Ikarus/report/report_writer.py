@@ -70,6 +70,8 @@ class MarkdownWriter():
     def add_images(self):
         png_file_names = [os.path.basename(png_file) for png_file in glob.glob(f'{self.report_folder}/*.png')]
         self.md_file.new_header(1, "Plots")
+        #<img src="../../../../configs/research/aroon_classifies_market/reports_grid_search/PPC_Accuracy.png" /> 
+        self.report_folder.split('configs')
         for png_file_name in png_file_names:
             self.md_file.write(png_file_name, color='yellow', bold_italics_code='b')
             self.md_file.new_paragraph(Html.image(path=png_file_name))
@@ -114,15 +116,19 @@ class GridSearchWriter():
     async def heatmap_w_sub_matrices(self, indice, query_results, **kwargs):
         # shitcode
         sub_matrices = []
-        analyzers = set()
-        market_regimes = set()
+        analyzers = list()
+        market_regimes = list()
         for query_result in query_results:
             for mongo_dict in query_result:
                 _,x,y = mongo_dict['folder_name'].split('_')
                 mongo_dict['validation_threshold'] = x
                 mongo_dict['timeperiod'] = y
-                analyzers.add(mongo_dict.get('analyzer'))
-                market_regimes.add(mongo_dict.get('market_regime'))
+
+                if mongo_dict['analyzer'] not in analyzers: analyzers.append(mongo_dict['analyzer'])
+                if mongo_dict['market_regime'] not in market_regimes: market_regimes.append(mongo_dict['market_regime'])
+
+                #analyzers.add(mongo_dict.get('analyzer'))
+                #market_regimes.add(mongo_dict.get('market_regime'))
 
             
             df = pd.DataFrame(query_result)
@@ -146,7 +152,10 @@ class GridSearchWriter():
         x_labels, y_labels, sub_x_labels, sub_y_labels = list(market_regimes), list(analyzers), tabular_df.columns.to_list(), tabular_df.index.to_list()
         fig = plt.figure(figsize=(18,10))
 
-        title = indice[0] # Name of the reporter
+        #title = f"{indice[0]}-{kwargs.get('pair','pair')}-{kwargs.get('timeframe','timeframe')}" # Name of the reporter
+        title = '-'.join([str(idc) for idc in indice])
+
+
         fig.suptitle(title, fontsize=24)
 
         grid = AxesGrid(fig, 111,
@@ -169,7 +178,7 @@ class GridSearchWriter():
                 ax.set_xticks([])
 
             if idx % len(y_labels) == 0:
-                ax.set_ylabel(y_labels[idx % len(y_labels)])
+                ax.set_ylabel(y_labels[int(idx / len(y_labels))])
                 #ax.set(ylabel=y_labels[idx % len(y_labels)])
 
 

@@ -29,14 +29,16 @@ async def market_class_table_stats(index, detected_market_regimes):
 
     tabular_dict = {}
     for regime_name, regime_instances in detected_market_regimes.items():
-
+        # "Exception has occurred: ValueError: not enough values to unpack..." error fixed
+        if not regime_instances:
+            continue
         perc_price_change_list, perc_val_price_change_list, duration_in_candle_list = list(map(np.array, zip(
             *[[instance.perc_price_change, instance.perc_val_price_change, instance.duration_in_candle] for instance in regime_instances])))
         regime_stats = {}
         regime_stats['Occurence'] = int(len(regime_instances))
         regime_stats['Average PPC'] = round(mean(perc_price_change_list),2)
         regime_stats['Average PVPC'] = round(perc_val_price_change_list[perc_val_price_change_list != None].mean(),2)
-        regime_stats['None PVPC (%)'] = round(sum(x is None for x in perc_val_price_change_list)/len(regime_instances),2)
+        regime_stats['None PVPC (%)'] = round(sum(x is None for x in perc_val_price_change_list)/len(regime_instances)*100,2)
         regime_stats['Average duration'] = int(mean(duration_in_candle_list))
         regime_stats['Coverage (%)'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
         regime_stats['PPC Accuracy (%)'] = round(
