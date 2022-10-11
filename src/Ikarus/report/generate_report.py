@@ -47,33 +47,38 @@ async def main():
         #if not hasattr(report_tools, report_tool):
         #    continue
 
-        indice_data = [time_scale_pool, pair_pool]
+        #indice_data = [time_scale_pool, pair_pool]
         if 'analyzers' in report_config:
+            indice_data = [time_scale_pool, pair_pool]
             indice_data.append(report_config['analyzers'])
+            primal_indices = list(itertools.product(*indice_data))
+            indices.extend([[report_tool]+list(indice) for indice in primal_indices])
+        else:
+            indices.append([report_tool])
 
-        primal_indices = list(itertools.product(*indice_data))
-        indices.extend([[report_tool]+list(indice) for indice in primal_indices])
 
-        for primal_indice in primal_indices:
-            #timeframe, symbol, analyzer
-            source = report_config.get('source', 'analyzer')
-            
-            if 'queries' in report_config.keys():
-                report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
-            
-            elif 'analyzers' in report_config.keys(): 
-                timeframe, symbol, analyzer = primal_indice
 
-                if source == 'database':
-                        # aggregate([{"$match":{'pair':'ETHUSDT','timeframe':'1d','analyzer':'market_class_fractal_aroon'}}, {"$project": {"data": "$data"}}])
-                        report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
+    for indice in indices:
+        #timeframe, symbol, analyzer
+        report_config = config['report'].get(indice[0]) # The first indice is always the name of the reporter
+        source = report_config.get('source', 'analyzer')
+        
+        if 'queries' in report_config.keys():
+            report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
+        
+        elif 'analyzers' in report_config.keys(): 
+            report_tool, timeframe, symbol, analyzer = indice
 
-                elif source == 'analyzer':
-                    if analyzer not in analysis_dict[symbol][timeframe].keys():
-                        raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
+            if source == 'database':
+                    # aggregate([{"$match":{'pair':'ETHUSDT','timeframe':'1d','analyzer':'market_class_fractal_aroon'}}, {"$project": {"data": "$data"}}])
+                    report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
 
-                    handler = getattr(report_tools, report_tool)
-                    report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
+            elif source == 'analyzer':
+                if analyzer not in analysis_dict[symbol][timeframe].keys():
+                    raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
+
+                handler = getattr(report_tools, report_tool)
+                report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
 
     # Get the statistics
     report_tool_results = list(await asyncio.gather(*report_tool_coroutines))
@@ -94,9 +99,9 @@ async def main():
                     # NOTE: Non standart way of providing data
                     kwargs = {
                         'start_time': config['backtest']['start_time'],
-                        'end_time': config['backtest']['end_time'],
-                        'pair': indice[2],
-                        'timeframe': indice[1]
+                        'end_time': config['backtest']['end_time']
+                        #'pair': indice[2],
+                        #'timeframe': indice[1]
                     }
 
                 if attr := getattr(report_writer, writer_type)(indice,report_dict,**kwargs):

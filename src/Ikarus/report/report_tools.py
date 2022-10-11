@@ -38,12 +38,12 @@ async def market_class_table_stats(index, detected_market_regimes):
         regime_stats['Occurence'] = int(len(regime_instances))
         regime_stats['Average PPC'] = round(mean(perc_price_change_list),2)
         regime_stats['Average PVPC'] = round(perc_val_price_change_list[perc_val_price_change_list != None].mean(),2)
-        regime_stats['None PVPC (%)'] = round(sum(x is None for x in perc_val_price_change_list)/len(regime_instances)*100,2)
+        regime_stats['None PVPC'] = round(sum(x is None for x in perc_val_price_change_list)/len(regime_instances)*100,2)
         regime_stats['Average duration'] = int(mean(duration_in_candle_list))
-        regime_stats['Coverage (%)'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
-        regime_stats['PPC Accuracy (%)'] = round(
+        regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
+        regime_stats['PPC Accuracy'] = round(
             accuracy_conditions_for_ppc[regime_name](perc_price_change_list, len(regime_instances)),2)
-        regime_stats['PVPC Accuracy (%)'] = round(
+        regime_stats['PVPC Accuracy'] = round(
             accuracy_conditions_for_ppc[regime_name](perc_val_price_change_list[perc_val_price_change_list != None], len(regime_instances)),2)
 
         tabular_dict[regime_name] = regime_stats
