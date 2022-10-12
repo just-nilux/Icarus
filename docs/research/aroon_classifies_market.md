@@ -72,33 +72,25 @@ The change between the **open price** of the validation candle and **close price
 # Hypothesis Testing
 Parameters:
 * Market class analyzers: aroon, aroonosc, fractal_aroon
-* Pairs: BTCUSDT
+* Pairs: BTCUSDT, ETHUSDT
 * Timeframes: 1d
-* Chart Start Date:
-* Chart End Date:
-
+* Chart Start Date: 2017-10-10 13:00:00
+* Chart End Date: 2022-10-10 13:00:00
 
 
 ## PPC Accuracy
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search/PPC_Accuracy.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_BTCUSDT.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_ETHUSDT.png" />
 
 ## PVPC Accuracy
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search/PVPC_Accuracy.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_BTCUSDT.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_ETHUSDT.png" />
 
 ## Market Regime Occurence
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search/Market_Regime_Occurence.png" /> 
-
-|                  |   downtrend |   ranging |   uptrend |
-|:-----------------|------------:|----------:|----------:|
-| Occurence        |        7    |     17    |     11    |
-| Average PPC      |       -1.08 |     -0.44 |     13.29 |
-| Average duration |        9    |      9    |     11    |
-| Coverage         |       18.06 |     44.47 |     34.77 |
-| PPC Accuracy     |       42.86 |     41.18 |     18.18 |
-
-# Backtest
-
-# Live Trade
-
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_BTCUSDT.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_ETHUSDT.png" /> 
 
 # Personal Notes
+TBD
+
+In the fractal_arron calculation, either ffill().bfill() or bfill().ffill() needs to be use. the result of bfill().ffill() (which is the the default one) performs way better on PPC and PPVC metrics. However it cannot be used since the future values are used to fill the missing current values.

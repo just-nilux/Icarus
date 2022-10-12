@@ -8,9 +8,11 @@ import argparse
 
 
 def write_to_config_file(config_dict, filename="/config.json"):
-    f = open(os.path.dirname(str(sys.argv[1])) + filename,'w')
+    config_file_path = os.path.dirname(str(sys.argv[1])) + filename
+    f = open(config_file_path,'w')
     json.dump(config_dict, f,  indent=4)
     f.close()
+    return config_file_path
 
     
 def replace_all(text, dic):
@@ -96,6 +98,10 @@ if __name__ == '__main__':
     config['mongodb']['clean'] = False
     config['report'] = generated_config_report
     config['report_folder_name'] = f'reports_grid_search_reporters'
-    write_to_config_file(config, '/config_grid_search_reporters.json')
+    config_file_path = write_to_config_file(config, '/config_grid_search_reporters.json')
+
+    print('\033[32m' + f'[1/1] : {config["report_folder_name"]}\033[90m')
+    os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
+    os.system(f'python -m src.Ikarus.report.generate_report  {config_file_path}')
 
     

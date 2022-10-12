@@ -37,7 +37,7 @@ async def market_class_table_stats(index, detected_market_regimes):
         regime_stats = {}
         regime_stats['Occurence'] = int(len(regime_instances))
         regime_stats['Average PPC'] = round(mean(perc_price_change_list),2)
-        regime_stats['Average PVPC'] = round(perc_val_price_change_list[perc_val_price_change_list != None].mean(),2)
+        regime_stats['Average PVPC'] = round(perc_val_price_change_list[perc_val_price_change_list != None].mean(),2) # TODO: <string>:1: RuntimeWarning: Mean of empty slice.
         regime_stats['None PVPC'] = round(sum(x is None for x in perc_val_price_change_list)/len(regime_instances)*100,2)
         regime_stats['Average duration'] = int(mean(duration_in_candle_list))
         regime_stats['Coverage'] = round(sum(duration_in_candle_list) / len(index) * 100,2)
