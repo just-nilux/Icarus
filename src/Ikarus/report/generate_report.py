@@ -91,7 +91,7 @@ async def main():
     for indice, report_dict in zip(indices, report_tool_results):
         #reporter, timeframe, symbol, analyzer = indice
 
-        for writer_type in config['report'][indice[0]]['writers']: #shitcode
+        for writer_type in config['report'][indice[0]].get('writers', []): #shitcode
             if hasattr(report_writer, writer_type):
                 kwargs = {}
                 if hasattr(GridSearchWriter, writer_type): 

@@ -25,7 +25,8 @@
                 "ETHUSDT"
             ],
             "time_scales": [
-                "1d"
+                "1d",
+                "1h"
             ]
         }
     },
@@ -39,21 +40,21 @@
         "bearish_fractal_3": {},
         "bullish_fractal_3": {},
         "market_class_aroon": {
-            "validation_threshold": 14,
-            "timeperiod": 30
+            "validation_threshold": 3,
+            "timeperiod": 14
         },
         "market_class_aroonosc": {
-            "validation_threshold": 14,
-            "timeperiod": 30
+            "validation_threshold": 3,
+            "timeperiod": 14
         },
         "market_class_fractal_aroon": {
-            "validation_threshold": 14,
-            "timeperiod": 30
+            "validation_threshold": 3,
+            "timeperiod": 14
         }
     },
     "report_folder_name": "reports_grid_search_reporters",
     "report": {
-        "PPC Accuracy BTCUSDT": {
+        "PPC Accuracy BTCUSDT 1d": {
             "source": "database",
             "collection": "market_class_table_stats",
             "queries": [
@@ -65,6 +66,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -86,6 +90,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -107,6 +114,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -128,6 +138,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -149,6 +162,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -170,6 +186,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -191,6 +210,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -212,6 +234,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -233,6 +258,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -251,7 +279,232 @@
                 "heatmap_w_sub_matrices"
             ]
         },
-        "PPC Accuracy ETHUSDT": {
+        "PPC Accuracy BTCUSDT 1h": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        },
+        "PPC Accuracy ETHUSDT 1d": {
             "source": "database",
             "collection": "market_class_table_stats",
             "queries": [
@@ -263,6 +516,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -284,6 +540,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -305,6 +564,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -326,6 +588,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -347,6 +612,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -368,6 +636,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -389,6 +660,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -410,6 +684,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -431,6 +708,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -449,7 +729,232 @@
                 "heatmap_w_sub_matrices"
             ]
         },
-        "PVPC Accuracy BTCUSDT": {
+        "PPC Accuracy ETHUSDT 1h": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        },
+        "PVPC Accuracy BTCUSDT 1d": {
             "source": "database",
             "collection": "market_class_table_stats",
             "queries": [
@@ -461,6 +966,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -482,6 +990,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -503,6 +1014,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -524,6 +1038,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -545,6 +1062,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -566,6 +1086,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -587,6 +1110,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -608,6 +1134,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -629,6 +1158,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -647,7 +1179,7 @@
                 "heatmap_w_sub_matrices"
             ]
         },
-        "PVPC Accuracy ETHUSDT": {
+        "PVPC Accuracy BTCUSDT 1h": {
             "source": "database",
             "collection": "market_class_table_stats",
             "queries": [
@@ -658,7 +1190,10 @@
                                 "$eq": "market_class_aroon"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -679,7 +1214,10 @@
                                 "$eq": "market_class_aroon"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -700,7 +1238,10 @@
                                 "$eq": "market_class_aroon"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -721,7 +1262,10 @@
                                 "$eq": "market_class_aroonosc"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -742,7 +1286,10 @@
                                 "$eq": "market_class_aroonosc"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -763,7 +1310,10 @@
                                 "$eq": "market_class_aroonosc"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -784,7 +1334,10 @@
                                 "$eq": "market_class_fractal_aroon"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -805,7 +1358,10 @@
                                 "$eq": "market_class_fractal_aroon"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -826,7 +1382,10 @@
                                 "$eq": "market_class_fractal_aroon"
                             },
                             "pair": {
-                                "$eq": "ETHUSDT"
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -845,7 +1404,457 @@
                 "heatmap_w_sub_matrices"
             ]
         },
-        "Occurence BTCUSDT": {
+        "PVPC Accuracy ETHUSDT 1d": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PVPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PVPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PVPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PVPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PVPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PVPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PVPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PVPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PVPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        },
+        "PVPC Accuracy ETHUSDT 1h": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PVPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PVPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PVPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PVPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PVPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PVPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.PVPC Accuracy",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.PVPC Accuracy",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.PVPC Accuracy",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        },
+        "Occurence BTCUSDT 1d": {
             "source": "database",
             "collection": "market_class_table_stats",
             "queries": [
@@ -857,6 +1866,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -878,6 +1890,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -899,6 +1914,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -920,6 +1938,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -941,6 +1962,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -962,6 +1986,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -983,6 +2010,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1004,6 +2034,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1025,6 +2058,9 @@
                             },
                             "pair": {
                                 "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1043,7 +2079,232 @@
                 "heatmap_w_sub_matrices"
             ]
         },
-        "Occurence ETHUSDT": {
+        "Occurence BTCUSDT 1h": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "BTCUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        },
+        "Occurence ETHUSDT 1d": {
             "source": "database",
             "collection": "market_class_table_stats",
             "queries": [
@@ -1055,6 +2316,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1076,6 +2340,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1097,6 +2364,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1118,6 +2388,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1139,6 +2412,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1160,6 +2436,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1181,6 +2460,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1202,6 +2484,9 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
                             }
                         }
                     },
@@ -1223,6 +2508,234 @@
                             },
                             "pair": {
                                 "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1d"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ]
+            ],
+            "writers": [
+                "heatmap_w_sub_matrices"
+            ]
+        },
+        "Occurence ETHUSDT 1h": {
+            "source": "database",
+            "collection": "market_class_table_stats",
+            "queries": [
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_aroonosc"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.uptrend.Occurence",
+                            "market_regime": "uptrend",
+                            "analyzer": "market_class_aroonosc",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.downtrend.Occurence",
+                            "market_regime": "downtrend",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "value": "$data.ranging.Occurence",
+                            "market_regime": "ranging",
+                            "analyzer": "market_class_fractal_aroon",
+                            "pair": "$pair",
+                            "folder_name": "$folder_name"
+                        }
+                    }
+                ],
+                [
+                    {
+                        "$match": {
+                            "analyzer": {
+                                "$eq": "market_class_fractal_aroon"
+                            },
+                            "pair": {
+                                "$eq": "ETHUSDT"
+                            },
+                            "timeframe": {
+                                "$eq": "1h"
                             }
                         }
                     },
@@ -1271,10 +2784,14 @@
             "<pair>": [
                 "BTCUSDT",
                 "ETHUSDT"
+            ],
+            "<timeframe>": [
+                "1d",
+                "1h"
             ]
         },
         "reporters": {
-            "<statistic> <pair>": {
+            "<statistic> <pair> <timeframe>": {
                 "parameters": {
                     "<analyzer>": [
                         "market_class_aroon",
@@ -1295,6 +2812,9 @@
                             },
                             "pair": {
                                 "$eq": "<pair>"
+                            },
+                            "timeframe": {
+                                "$eq": "<timeframe>"
                             }
                         }
                     },

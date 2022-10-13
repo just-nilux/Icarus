@@ -79,18 +79,24 @@ Parameters:
 
 
 ## PPC Accuracy
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_BTCUSDT.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_ETHUSDT.png" />
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_BTCUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_ETHUSDT_1d.png" />
+
 
 ## PVPC Accuracy
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_BTCUSDT.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_ETHUSDT.png" />
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_BTCUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_ETHUSDT_1d.png" />
 
 ## Market Regime Occurence
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_BTCUSDT.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_ETHUSDT.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_BTCUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_ETHUSDT_1d.png" /> 
 
 # Personal Notes
 TBD
 
 In the fractal_arron calculation, either ffill().bfill() or bfill().ffill() needs to be use. the result of bfill().ffill() (which is the the default one) performs way better on PPC and PPVC metrics. However it cannot be used since the future values are used to fill the missing current values.
+
+Interestingly the ranging market is easyily detected ath the 1h timeframe with the -1 +1 percentage rule. It may open different doors

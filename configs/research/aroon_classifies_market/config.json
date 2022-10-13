@@ -5,7 +5,7 @@
     "mongodb": {
         "host": "localhost",
         "port": 27017,
-        "clean": true
+        "clean": false
     },
     "balances": [
         {
@@ -25,7 +25,8 @@
                 "ETHUSDT"
             ],
             "time_scales": [
-                "1d"
+                "1d",
+                "1h"
             ]
         }
     },
@@ -39,19 +40,19 @@
         "bearish_fractal_3": {},
         "bullish_fractal_3": {},
         "market_class_aroon": {
-            "validation_threshold": 14,
-            "timeperiod": 30
+            "validation_threshold": 3,
+            "timeperiod": 14
         },
         "market_class_aroonosc": {
-            "validation_threshold": 14,
-            "timeperiod": 30
+            "validation_threshold": 3,
+            "timeperiod": 14
         },
         "market_class_fractal_aroon": {
-            "validation_threshold": 14,
-            "timeperiod": 30
+            "validation_threshold": 3,
+            "timeperiod": 14
         }
     },
-    "report_folder_name": "reports",
+    "report_folder_name": "reports_3_14",
     "report": {
         "market_class_table_stats": {
             "source": "analyzer",
@@ -115,10 +116,14 @@
             "<pair>": [
                 "BTCUSDT",
                 "ETHUSDT"
+            ],
+            "<timeframe>": [
+                "1d",
+                "1h"
             ]
         },
         "reporters": {
-            "<statistic> <pair>": {
+            "<statistic> <pair> <timeframe>": {
                 "parameters": {
                     "<analyzer>": [
                         "market_class_aroon",
@@ -139,6 +144,9 @@
                             },
                             "pair": {
                                 "$eq": "<pair>"
+                            },
+                            "timeframe": {
+                                "$eq": "<timeframe>"
                             }
                         }
                     },
