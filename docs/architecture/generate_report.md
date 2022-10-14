@@ -16,6 +16,11 @@
 * Organize markdown files
 
 # Configuration
+## Config fields:
+* **source:** 
+
+## Read analysis data from analysis dict
+Indices of reporters: reporter x timeframes x pairs x analyzers
 
     "report": {
         "market_class_table_stats": {
@@ -24,6 +29,44 @@
                 "market_class_aroon",
                 "market_class_aroonosc",
                 "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        }
+    }
+
+## Read analysis data from database
+Indices of reporters: reporter x timeframes x pairs x analyzers
+
+
+    "report": {
+        "market_class_table_stats": {
+            "source": "database",
+            "analyzers": [
+                "market_class_aroon",
+                "market_class_aroonosc",
+                "market_class_fractal_aroon"
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        }
+    }
+
+## Read multiple and/or custom fields from analysis dict
+The "analyzers" field enables indices to be created in the following format: _reporter x timeframes x pairs x analyzers_. Instead "indices" field enables multiple field from analysis_dict to be fed in to reporter
+
+
+    "report": {
+        "market_class_table_stats": {
+            "source": "analyzer"
+            "indices": [
+                ["BTCUSDT","1d", "close"],
+                ["ETHUSDT","1d", "close"],
+                ["XRPUSDT","1d", "close"]
             ],
             "writers": [
                 "markdown_table",
