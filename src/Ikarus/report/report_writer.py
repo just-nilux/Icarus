@@ -61,6 +61,12 @@ class ImageWriter():
         plt.savefig(report_path, bbox_inches='tight')
 
 
+    def heatmap_plot(self, indice, report_dict, **kwargs):
+        pass
+
+
+
+
 class MarkdownWriter():
     def __init__(self, report_folder) -> None:
         self.report_folder = report_folder
@@ -87,7 +93,6 @@ class MarkdownWriter():
         pass
 
 class DatabaseWriter():
-    # TODO: Find a way to overright existing content or check if this mechanism needed
     def __init__(self, mongo_client, report_folder='reports') -> None:
         self.mongo_client = mongo_client
         self.report_folder = report_folder

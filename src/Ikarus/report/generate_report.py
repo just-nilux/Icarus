@@ -53,9 +53,9 @@ async def main():
             indice_data.append(report_config['analyzers'])
             primal_indices = list(itertools.product(*indice_data))
             indices.extend([[report_tool]+list(indice) for indice in primal_indices])
-        else:
-            indices.append([report_tool])
 
+        elif 'indices' in report_config or 'queries' in report_config:
+            indices.append([report_tool])
 
 
     for indice in indices:
@@ -63,19 +63,24 @@ async def main():
         report_config = config['report'].get(indice[0]) # The first indice is always the name of the reporter
         source = report_config.get('source', 'analyzer')
         
-        if 'queries' in report_config.keys():
-            report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
-        
-        elif 'analyzers' in report_config.keys(): 
-            report_tool, timeframe, symbol, analyzer = indice
 
-            if source == 'database':
-                    # aggregate([{"$match":{'pair':'ETHUSDT','timeframe':'1d','analyzer':'market_class_fractal_aroon'}}, {"$project": {"data": "$data"}}])
-                    report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
+        if source == 'database':
+            if 'indices' in report_config.keys():
+                pass
+            elif 'analyzers' in report_config.keys():
+                report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
+            elif 'queries' in report_config.keys():
+                report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
 
-            elif source == 'analyzer':
-                if analyzer not in analysis_dict[symbol][timeframe].keys():
-                    raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
+        elif source == 'analyzer':
+            if 'indices' in report_config.keys():
+                handler = getattr(report_tools, report_tool)
+                analysis_data = [analysis_dict[indice[0]][indice[1]][indice[2]] for indice in report_config['indices']]
+                report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
+            elif 'analyzers' in report_config.keys():
+                report_tool, timeframe, symbol, analyzer = indice
+                #if analyzer not in analysis_dict[symbol][timeframe].keys():
+                #    raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
 
                 handler = getattr(report_tools, report_tool)
                 report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))

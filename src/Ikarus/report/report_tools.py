@@ -1,12 +1,18 @@
 from statistics import mean
 import numpy as np
-
+import pandas as pd
 
 accuracy_conditions_for_ppc = {
     'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
     'uptrend': lambda a,count : (np.array(a) > 1 ).sum() / count * 100,
     'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
 }
+
+async def correlation_matrix(indices, analysis):
+    # TODO: Continue from here
+    df = pd.DataFrame(analysis, index=[indice[0] for indice in indices]).T
+    logretdf = np.log(df.pct_change() + 1)
+    return logretdf.corr()
 
 # *ppc: price percentage change
 async def market_class_ppc(index, detected_market_regimes):
