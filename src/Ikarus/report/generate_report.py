@@ -99,7 +99,7 @@ async def main():
         for writer_type in config['report'][indice[0]].get('writers', []): #shitcode
             if hasattr(report_writer, writer_type):
                 kwargs = {}
-                if hasattr(GridSearchWriter, writer_type): 
+                if 'plot' in writer_type: 
                     #shitcode
                     # NOTE: Non standart way of providing data
                     kwargs = {

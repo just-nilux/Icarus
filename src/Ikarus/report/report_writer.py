@@ -61,8 +61,37 @@ class ImageWriter():
         plt.savefig(report_path, bbox_inches='tight')
 
 
-    def heatmap_plot(self, indice, report_dict, **kwargs):
-        pass
+    def heatmap_plot(self, indice, df, **kwargs):
+
+        x_labels, y_labels = df.columns.to_list(), df.index.to_list()
+        fig, ax = plt.subplots(figsize=(12,12))
+        title = '-'.join([str(idc) for idc in indice])
+
+        fig.suptitle(title, fontsize=24)
+
+        ax.xaxis.tick_top()
+        ax.set_xticks(np.arange(len(x_labels)), x_labels)
+        ax.set_yticks(np.arange(len(y_labels)), y_labels)
+
+        im = ax.imshow(df.values, cmap='jet', vmin=-1, vmax=1)
+        fig.colorbar(im)
+        for i in range(df.values.shape[0]):
+            for j in range(df.values.shape[1]):
+                #if not math.isnan(matrice[0, 0]):
+                text = ax.text(j, i, "%.2f" % df.values[i, j],
+                            ha="center", va="center", color="black")
+
+        target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
+
+        # shitcode
+        footnote = f"""
+        Configuration: {kwargs}
+        """
+
+        plt.figtext(0, 0, footnote, ha="left", fontsize=12)
+        plt.tight_layout()
+        plt.savefig(target_path, bbox_inches='tight')
+        print(f'File saved: {target_path}')
 
 
 
@@ -118,7 +147,7 @@ class GridSearchWriter():
         self.report_folder = report_folder
         pass
 
-    async def heatmap_w_sub_matrices(self, indice, query_results, **kwargs):
+    async def heatmap_w_sub_matrices_plot(self, indice, query_results, **kwargs):
         # shitcode
         sub_matrices = []
         analyzers = list()
