@@ -37,11 +37,7 @@
     "report": {
         "correlation_matrix": {
             "source": "analyzer",
-            "indices": [
-                ["BTCUSDT","1d", "close"],
-                ["ETHUSDT","1d", "close"],
-                ["XRPUSDT","1d", "close"]
-            ],
+            "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
             "writers": [
                 "heatmap_plot"
             ]

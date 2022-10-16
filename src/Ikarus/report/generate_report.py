@@ -12,6 +12,22 @@ from .. import mongo_utils
 from . import report_tools
 from .report_writer import ReportWriter, GridSearchWriter
 
+
+def replace_all(text, dic):
+    for i, j in dic.items():
+        text = text.replace(i, j)
+    return text
+
+
+def get_reporter_name(indice):
+    if type(indice[0]) == str:
+        return indice[0]
+    elif type(indice[0][0]) == str:
+        return indice[0][0]
+    else:
+        return None
+
+
 async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
@@ -54,13 +70,24 @@ async def main():
             primal_indices = list(itertools.product(*indice_data))
             indices.extend([[report_tool]+list(indice) for indice in primal_indices])
 
-        elif 'indices' in report_config or 'queries' in report_config:
+        elif 'indices' in report_config:
+            indices.append([[report_tool]+list(indice) for indice in report_config['indices']])
+
+        elif 'queries' in report_config:
             indices.append([report_tool])
+
+        elif 'indice_template' in report_config:
+            # NOTE: For now indice_template value looks meaningless
+            indice_data = [pair_pool, time_scale_pool]
+            indice_data.append(list(config['analysis'].keys()))
+            primal_indices = list(itertools.product(*indice_data))
+            indices.append([[report_tool]+list(indice) for indice in primal_indices])
 
 
     for indice in indices:
         #timeframe, symbol, analyzer
-        report_config = config['report'].get(indice[0]) # The first indice is always the name of the reporter
+        reporter_name = get_reporter_name(indice)
+        report_config = config['report'].get(reporter_name) # The first indice is always the name of the reporter
         source = report_config.get('source', 'analyzer')
         
 
@@ -73,10 +100,16 @@ async def main():
                 report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
 
         elif source == 'analyzer':
-            if 'indices' in report_config.keys():
+            if 'indice_template' in report_config.keys():
                 handler = getattr(report_tools, report_tool)
-                analysis_data = [analysis_dict[indice[0]][indice[1]][indice[2]] for indice in report_config['indices']]
+                analysis_data = [analysis_dict[reporter_indice[1]][reporter_indice[2]][reporter_indice[3]] for reporter_indice in indice]
+                report_tool_coroutines.append(handler(report_config['indice_template'], analysis_data)) # Use indices as the index
+
+            elif 'indices' in report_config.keys():
+                handler = getattr(report_tools, report_tool)
+                analysis_data = [analysis_dict[reporter_indice[1]][reporter_indice[2]][reporter_indice[3]] for reporter_indice in indice]
                 report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
+
             elif 'analyzers' in report_config.keys():
                 report_tool, timeframe, symbol, analyzer = indice
                 #if analyzer not in analysis_dict[symbol][timeframe].keys():
@@ -95,8 +128,9 @@ async def main():
     async_writers = []
     for indice, report_dict in zip(indices, report_tool_results):
         #reporter, timeframe, symbol, analyzer = indice
+        reporter_name = get_reporter_name(indice)
 
-        for writer_type in config['report'][indice[0]].get('writers', []): #shitcode
+        for writer_type in config['report'][reporter_name].get('writers', []): #shitcode
             if hasattr(report_writer, writer_type):
                 kwargs = {}
                 if 'plot' in writer_type: 
