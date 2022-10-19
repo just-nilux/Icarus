@@ -34,6 +34,7 @@ def time_scale_to_minute(interval: str):
         "h": 60,
         "d": 24 * 60,
         "w": 7 * 24 * 60,
+        "M": 30 * 24 * 60
     }
     try:
         return int(interval[:-1]) * minute_per_unit[interval[-1]]

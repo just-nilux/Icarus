@@ -47,7 +47,7 @@ async def main():
         pair_pool.append(strategy['pairs'])
 
     time_scale_pool = list(set(chain(*time_scale_pool)))
-    pair_pool = list(set(chain(*pair_pool)))
+    pair_pool = list(chain(*pair_pool))
 
     meta_data_pool = list(itertools.product(time_scale_pool, pair_pool))
 
@@ -103,7 +103,7 @@ async def main():
             if 'indice_template' in report_config.keys():
                 handler = getattr(report_tools, report_tool)
                 analysis_data = [analysis_dict[reporter_indice[1]][reporter_indice[2]][reporter_indice[3]] for reporter_indice in indice]
-                report_tool_coroutines.append(handler(report_config['indice_template'], analysis_data)) # Use indices as the index
+                report_tool_coroutines.append(handler(indice, analysis_data)) # Use indices as the index
 
             elif 'indices' in report_config.keys():
                 handler = getattr(report_tools, report_tool)

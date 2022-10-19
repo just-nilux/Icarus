@@ -50,7 +50,7 @@ class BrokerWrapper(ABC):
 class BinanceWrapper(BrokerWrapper):
 
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
-                        "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
+                        "num_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
     def __init__(self, _client, _config, _telbot):
         # TODO: Think about the binance.exceptions.BinanceAPIException: APIError(code=-1021): Timestamp for this request was 1000ms ahead of the server's time.
@@ -681,7 +681,7 @@ class BinanceWrapper(BrokerWrapper):
 class TestBinanceWrapper(BrokerWrapper):
 
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
-                        "nbum_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
+                        "num_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
     df_tickers = None
     fee_rate = 0
@@ -923,7 +923,8 @@ class TestBinanceWrapper(BrokerWrapper):
             df = df.set_index(['open_time'])
             # NOTE: WARNING: Be aware that the last line is removed to not to affect analysis
             #       Since it requires closed candles.
-            df.drop(df.index[-1], inplace=True)
+            if composit_klines[idx] != []:
+                df.drop(df.index[-1], inplace=True)
             df = df.astype(float)
             do_dict[meta_data[1]][meta_data[0]] = df
 

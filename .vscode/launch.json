@@ -11,7 +11,19 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/src/Ikarus"
+            "args": [
+                "${workspaceFolder}/configs/research/correlated_symbols/config.json"
+            ]
+        },
+        {
+            "name": "get_most_volume",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "src.Ikarus.scripts.get_most_volume",
+            "args": [
+                "${workspaceFolder}/configs/research/correlated_symbols/config_order_pairs.json"
+            ]
         },
         {
             "name": "objects",
@@ -57,7 +69,7 @@
             "module": "src.Ikarus.report.generate_report",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/research/aroon_classifies_market/config_grid_seach_reporters.json"
+                "${workspaceFolder}/configs/research/correlated_symbols/config.json"
             ]
         },
         {

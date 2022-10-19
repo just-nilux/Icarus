@@ -13,6 +13,15 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 
 
+def get_reporter_name(indice):
+    if type(indice[0]) == str:
+        return indice[0]
+    elif type(indice[0][0]) == str:
+        return indice[0][0]
+    else:
+        return None
+
+
 class ImageWriter():
     def __init__(self, report_folder) -> None:
         super().__init__()
@@ -65,21 +74,22 @@ class ImageWriter():
 
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
         fig, ax = plt.subplots(figsize=(12,12))
-        title = '-'.join([str(idc) for idc in indice])
+
+        title = get_reporter_name(indice)
 
         fig.suptitle(title, fontsize=24)
 
         ax.xaxis.tick_top()
-        ax.set_xticks(np.arange(len(x_labels)), x_labels)
+        ax.set_xticks(np.arange(len(x_labels)), x_labels, rotation=90)
         ax.set_yticks(np.arange(len(y_labels)), y_labels)
 
-        im = ax.imshow(df.values, cmap='jet', vmin=-1, vmax=1)
+        im = ax.imshow(df.values, cmap='coolwarm', vmin=-1, vmax=1)
         fig.colorbar(im)
         for i in range(df.values.shape[0]):
             for j in range(df.values.shape[1]):
                 #if not math.isnan(matrice[0, 0]):
                 text = ax.text(j, i, "%.2f" % df.values[i, j],
-                            ha="center", va="center", color="black")
+                            ha="center", va="center", color="black", fontsize=4)
 
         target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
 
@@ -90,7 +100,7 @@ class ImageWriter():
 
         plt.figtext(0, 0, footnote, ha="left", fontsize=12)
         plt.tight_layout()
-        plt.savefig(target_path, bbox_inches='tight')
+        plt.savefig(target_path, bbox_inches='tight', dpi=300)
         print(f'File saved: {target_path}')
 
 
