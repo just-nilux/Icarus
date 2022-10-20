@@ -9,7 +9,6 @@ accuracy_conditions_for_ppc = {
 }
 
 async def correlation_matrix(indices, analysis):
-    # TODO: Continue from here
     df = pd.DataFrame(analysis, index=[indice[1] for indice in indices]).T
     logretdf = np.log(df.pct_change() + 1)
     return logretdf.corr()

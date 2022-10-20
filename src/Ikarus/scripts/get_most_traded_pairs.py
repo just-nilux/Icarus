@@ -47,9 +47,6 @@ async def main():
     import json
     pair_dict = {'pairs': list(df_sorted_numoftrades.loc[:50]['pair'].values)}
     print(json.dumps(pair_dict))
-    
-    print('')
-
 
 
 if __name__ == '__main__':
