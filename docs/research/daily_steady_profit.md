@@ -5,7 +5,7 @@
 2. [Results](#results)
 
 # Purpose
-Purpose of this research is to find out: "What is the possibility of making %1 profit during next 24 hours?". As an artifact, the distribution plots of max profit, max loss and the chance of %1 profit.
+Purpose of this research is to find out: "What is the possibility of making %1 profit during next 24 hours?". As an artifact, the distribution plots of max profit, max loss and the chance of %1 profit is generated.
 
 As a result, it is aimed to reveal the most probable daily steady profit level.
 
@@ -14,4 +14,7 @@ Using the '1h' time frame, for each candlestick, evaluating the lowest and highe
 
 # Results
 
-The choosen pairs:
+The choosen pairs and the correlation:
+
+
+<img src="../../configs/research/daily_steady_profit/reports/correlation_matrix.png" /> 

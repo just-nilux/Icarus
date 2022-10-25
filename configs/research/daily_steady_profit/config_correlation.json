@@ -20,7 +20,7 @@
     },
     "strategy": {
         "MACDStrategy": {
-            "pairs": ["BTCUSDT", "ETHUSDT", "LUNAUSDT", "BUSDUSDT", "XRPUSDT", "LUNCUSDT", "ATOMUSDT", "BNBUSDT", "SOLUSDT", "ETCUSDT", "RVNUSDT", "ADAUSDT", "CHZUSDT", "MATICUSDT", "APEUSDT", "LINKUSDT", "SHIBUSDT", "LTCUSDT", "DOGEUSDT", "NEARUSDT", "GMTUSDT", "SANTOSUSDT", "ANCUSDT", "AVAXUSDT", "VGXUSDT", "REEFUSDT", "EOSUSDT", "SANDUSDT", "TRXUSDT", "ALGOUSDT", "OPUSDT", "STGUSDT", "LDOUSDT", "DOTUSDT", "EURUSDT", "GALAUSDT", "FTMUSDT", "ROSEUSDT", "GALUSDT", "FILUSDT", "LAZIOUSDT", "ENSUSDT", "UNFIUSDT", "HNTUSDT", "MIRUSDT", "WAVESUSDT", "MANAUSDT", "RUNEUSDT", "JASMYUSDT", "AXSUSDT", "PORTOUSDT"],
+            "pairs": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT"],
             "time_scales": [
                 "1d"
             ]
@@ -48,12 +48,12 @@
         "2h": 84,
         "4h": 540,
         "12h": 60,
-        "1d": 365,
+        "1d": 1,
         "1w": 52,
         "1M": 1
     },
     "backtest": {
-        "start_time": "2021-10-10 13:00:00",
+        "start_time": "2022-9-10 13:00:00",
         "end_time": "2022-10-10 13:00:00",
         "online": true
     },

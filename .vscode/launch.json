@@ -16,13 +16,13 @@
             ]
         },
         {
-            "name": "get_most_volume",
+            "name": "get_most_traded_pairs",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
-            "module": "src.Ikarus.scripts.get_most_volume",
+            "module": "src.Ikarus.scripts.get_most_traded_pairs",
             "args": [
-                "${workspaceFolder}/configs/research/correlated_symbols/config_order_pairs.json"
+                "${workspaceFolder}/configs/research/daily_steady_profit/config_get_most_traded_pairs.json"
             ]
         },
         {

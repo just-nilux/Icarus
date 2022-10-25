@@ -8,6 +8,13 @@ import datetime
 from itertools import chain
 import itertools
 import pandas as pd
+import json
+
+def write_to_json(config_dict, filename):
+    report_folder = os.path.dirname(str(sys.argv[1])) + '/' + config.get('report_folder_name', 'reports')
+    f = open(report_folder + '/' + filename,'w')
+    json.dump(config_dict, f)
+    f.close()
 
 
 async def main():
@@ -39,13 +46,15 @@ async def main():
         if not data['1M']['volume'].empty:
             volume_dict_list.append({'pair':pair, 'num_of_trades':int(data['1M']['num_of_trades']), 'volume':float(data['1M']['volume'])})
 
-    x = 1
     df = pd.DataFrame(volume_dict_list)
     df_sorted_numoftrades = df.sort_values(by=['num_of_trades'], ascending=False).reset_index(drop=True)
     df_sorted_volume = df.sort_values(by=['volume'], ascending=False).reset_index(drop=True)
 
-    import json
-    pair_dict = {'pairs': list(df_sorted_numoftrades.loc[:50]['pair'].values)}
+    pair_dict = {
+        'num_of_trades': list(df_sorted_numoftrades.loc[:50]['pair'].values), 
+        'volume': list(df_sorted_volume.loc[:50]['pair'].values)
+    }
+    write_to_json(pair_dict, 'ordered_pairs.json')
     print(json.dumps(pair_dict))
 
 
