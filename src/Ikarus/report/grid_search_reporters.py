@@ -33,6 +33,18 @@ def generate_queries(reporter_config):
     return queries
 
 
+def generate_indices(reporter_config):
+    grid_configs = list(itertools.product(*reporter_config['parameters'].values()))
+
+    queries = []
+    for grid_config in grid_configs:
+        query = deepcopy(reporter_config['indice_template'])
+        for key_idx, key in enumerate(reporter_config['parameters'].keys()):
+            query = ast.literal_eval(str(query).replace(key, grid_config[key_idx]))
+        queries.append(query)
+    return queries
+
+
 def grid_search():
     parameters = list(config['grid_search_reporters']['grid'].keys())
     grid_values = list(config['grid_search_reporters']['grid'].values())
@@ -40,27 +52,36 @@ def grid_search():
     grid_configs = list(itertools.product(*grid_values))
 
     # First loop is for generating the reporter items but not filling its query templates
-    reporter_instances = {}
+    reporter_instances = []
     for grid_config in grid_configs:
         replace_rule = {}
         for param, rep_value in zip(parameters, grid_config):
             replace_rule[param] = rep_value
 
-        for reporter_config in config['grid_search_reporters']['reporters'].items():    
+        for reporter_config in config['grid_search_reporters']['reporters']:    
             replaced_text = replace_all(str(reporter_config), replace_rule)
             reporter_instance = ast.literal_eval(replaced_text)
-            reporter_instances[reporter_instance[0]] = reporter_instance[1]
+            reporter_instances.append(reporter_instance)
 
     # Second loop is for generating the queries for reporters
-    config_report = {}
-    for reporter_name, reporter_config in reporter_instances.items():
+    config_report = []
+    for reporter_instance in reporter_instances:
         reporter = {}
-        reporter['source'] = 'database'
-        reporter['collection'] = reporter_config['collection']
-        reporter['queries'] = generate_queries(reporter_config)
-        reporter['writers'] = reporter_config['writers']
-        config_report[reporter_name] = reporter
-    
+        if 'query_template' in reporter_instance:
+            reporter['source'] = reporter_instance['source']
+            reporter['reporter'] = reporter_instance['reporter']
+            reporter['collection'] = reporter_instance['collection']
+            reporter['queries'] = generate_queries(reporter_instance)
+            reporter['writers'] = reporter_instance['writers']
+            config_report.append(reporter)
+        
+        elif 'indice_template' in reporter_instance:
+            reporter['source'] = reporter_instance['source']
+            reporter['reporter'] = reporter_instance['reporter']
+            reporter['indices'] = generate_indices(reporter_instance)
+            reporter['writers'] = reporter_instance['writers']
+            config_report.append(reporter)
+
     return config_report
 
 
