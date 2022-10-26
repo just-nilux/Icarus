@@ -34,7 +34,7 @@ def generate_queries(reporter_config):
 
 
 def generate_indices(reporter_config):
-    grid_configs = list(itertools.product(*reporter_config['parameters'].values()))
+    grid_configs = list(itertools.product(*reporter_config.get('parameters',{}).values()))
 
     queries = []
     for grid_config in grid_configs:
@@ -118,11 +118,11 @@ if __name__ == '__main__':
     generated_config_report = grid_search()
     config['mongodb']['clean'] = False
     config['report'] = generated_config_report
-    config['report_folder_name'] = f'reports_grid_search_reporters'
-    config_file_path = write_to_config_file(config, '/config_grid_search_reporters.json')
-
+    config['report_folder_name'] = f'{config["report_folder_name"]}_grid_search_reporters'
+    config_file_path = write_to_config_file(config, f'/grid_search_reporters_{os.path.basename(str(sys.argv[1]))}')
+    print(f'Config File written: {config_file_path}')
     print('\033[32m' + f'[1/1] : {config["report_folder_name"]}\033[90m')
-    os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
-    os.system(f'python -m src.Ikarus.report.generate_report  {config_file_path}')
+    #os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
+    #os.system(f'python -m src.Ikarus.report.generate_report  {config_file_path}')
 
     

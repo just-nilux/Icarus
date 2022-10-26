@@ -5,7 +5,7 @@
     "mongodb": {
         "host": "localhost",
         "port": 27017,
-        "clean": true
+        "clean": false
     },
     "balances": [
         {
@@ -51,8 +51,98 @@
             "timeperiod": 30
         }
     },
-    "report_folder_name": "reports",
+    "report_folder_name": "reports_grid_search_reporters",
     "report": [
+        {
+            "source": "analyzer",
+            "reporter": "market_class_table_stats",
+            "indices": [
+                [
+                    "BTCUSDT",
+                    "1d",
+                    "market_class_aroon"
+                ]
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        },
+        {
+            "source": "analyzer",
+            "reporter": "market_class_table_stats",
+            "indices": [
+                [
+                    "BTCUSDT",
+                    "1d",
+                    "market_class_aroonosc"
+                ]
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        },
+        {
+            "source": "analyzer",
+            "reporter": "market_class_table_stats",
+            "indices": [
+                [
+                    "BTCUSDT",
+                    "1d",
+                    "market_class_fractal_aroon"
+                ]
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        },
+        {
+            "source": "analyzer",
+            "reporter": "market_class_table_stats",
+            "indices": [
+                [
+                    "ETHUSDT",
+                    "1d",
+                    "market_class_aroon"
+                ]
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        },
+        {
+            "source": "analyzer",
+            "reporter": "market_class_table_stats",
+            "indices": [
+                [
+                    "ETHUSDT",
+                    "1d",
+                    "market_class_aroonosc"
+                ]
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        },
+        {
+            "source": "analyzer",
+            "reporter": "market_class_table_stats",
+            "indices": [
+                [
+                    "ETHUSDT",
+                    "1d",
+                    "market_class_fractal_aroon"
+                ]
+            ],
+            "writers": [
+                "markdown_table",
+                "database"
+            ]
+        }
     ],
     "grid_search_analyzers": {
         "analyzers": [

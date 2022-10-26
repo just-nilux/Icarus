@@ -74,12 +74,7 @@ async def main():
                 report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
 
         elif source == 'analyzer':
-            if 'indice_template' in report_config.keys():
-                handler = getattr(report_tools, report_tool)
-                analysis_data = [analysis_dict[reporter_indice[1]][reporter_indice[2]][reporter_indice[3]] for reporter_indice in indice]
-                report_tool_coroutines.append(handler(indice, analysis_data)) # Use indices as the index
-
-            elif 'indices' in report_config.keys():
+            if 'indices' in report_config.keys():
                 handler = getattr(report_tools, report_config['reporter'])
                 analysis_data = [analysis_dict[reporter_indice[0]][reporter_indice[1]][reporter_indice[2]] for reporter_indice in report_config['indices']]
                 report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
@@ -167,17 +162,13 @@ async def main():
 
         for writer_type in report_config.get('writers', []): #shitcode
             if hasattr(report_writer, writer_type):
-                kwargs = {}
-                if 'plot' in writer_type: 
-                    #shitcode
-                    # NOTE: Non standart way of providing data
-                    kwargs = {
-                        'start_time': config['backtest']['start_time'],
-                        'end_time': config['backtest']['end_time'],
-                        'title': report_config['reporter']
-                        #'pair': indice[2],
-                        #'timeframe': indice[1]
-                    }
+                kwargs = {
+                    'start_time': config['backtest']['start_time'],
+                    'end_time': config['backtest']['end_time'],
+                    'reporter': report_config['reporter']
+                    #'pair': indice[2],
+                    #'timeframe': indice[1]
+                }
 
                 if attr := getattr(report_writer, writer_type)(report_config['indices'],report_dict,**kwargs):
                     async_writers.append(attr)

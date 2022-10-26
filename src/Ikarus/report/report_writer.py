@@ -76,7 +76,7 @@ class ImageWriter():
         fig, ax = plt.subplots(figsize=(12,12))
 
         #title = get_reporter_name(indice)
-        title = kwargs.get('title','heatmap_plot')
+        title = kwargs.get('reporter','heatmap_plot')
 
         fig.suptitle(title, fontsize=24)
 
@@ -132,9 +132,9 @@ class MarkdownWriter():
             self.md_file.write(" \n\n")
 
 
-    def markdown_table(self, indice, report_dict):
-        reporter, timeframe, symbol, analyzer = indice
-        title = '{}_{}_{}_{}'.format(reporter,timeframe,symbol,analyzer)
+    def markdown_table(self, indice, report_dict, **kwargs):
+        timeframe, symbol, analyzer = indice[0]
+        title = '{}_{}_{}_{}'.format(kwargs.get('reporter',''),timeframe,symbol,analyzer)
         df = pd.DataFrame(data=report_dict)
         self.md_file.write(title, color='yellow', bold_italics_code='b')
         self.md_file.write('\n' + df.to_markdown() + '\n\n')
@@ -150,15 +150,16 @@ class DatabaseWriter():
         if not os.path.exists(self.report_folder):
             os.makedirs(self.report_folder)
 
-    async def database(self, indice, report_dict):
+    async def database(self, indice, report_dict, **kwargs):
+        timeframe, symbol, analyzer = indice[0]
         document = {
             'folder_name': os.path.basename(str(self.report_folder)),
-            'timeframe': indice[1],
-            'pair': indice[2],
-            'analyzer': indice[3],
+            'timeframe': timeframe,
+            'pair': symbol,
+            'analyzer': analyzer,
             'data': report_dict
         }
-        await self.mongo_client.do_insert_one(indice[0],document)
+        await self.mongo_client.do_insert_one(kwargs['reporter'], document)
         #await mongocli.do_insert_one("observer", initial_observation_item)
 
 class GridSearchWriter():

@@ -36,7 +36,7 @@ def grid_search():
         if config_idx != 0:
             config['mongodb']['clean'] = False
 
-        write_to_config_file(config)
+        write_to_config_file(config, f'/{os.path.basename(str(sys.argv[1]))}')
         
         print('\033[32m' + f'[{config_idx+1}/{len(grid_configs)}] : {config["report_folder_name"]}\033[90m')
         os.system('cd C:\\Users\\bilko\\PycharmProjects\\trade-bot')
@@ -55,4 +55,4 @@ if __name__ == '__main__':
     grid_search()
 
     # Rewrite the original back
-    write_to_config_file(config_original)
+    write_to_config_file(config_original, f'/{os.path.basename(str(sys.argv[1]))}')

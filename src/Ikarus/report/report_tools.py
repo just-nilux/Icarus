@@ -33,7 +33,7 @@ async def market_class_pvpc(index, detected_market_regimes):
 async def market_class_table_stats(index, detected_market_regimes):
 
     tabular_dict = {}
-    for regime_name, regime_instances in detected_market_regimes.items():
+    for regime_name, regime_instances in detected_market_regimes[0].items():
         # "Exception has occurred: ValueError: not enough values to unpack..." error fixed
         if not regime_instances:
             continue
