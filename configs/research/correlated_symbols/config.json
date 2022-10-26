@@ -31,13 +31,24 @@
     },
     "report_folder_name": "reports",
     "report": {
-        "correlation_matrix": {
-            "source": "analyzer",
-            "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
-            "writers": [
-                "heatmap_plot"
-            ]
-        }
+    },
+    "grid_search_reporters": {
+        "grid":{},
+        "reporters": [
+            {
+                "parameters": {
+                    "<analyzer>": ["close"],
+                    "<timeframe>": ["1d"],
+                    "<pair>": ["BTCUSDT", "ETHUSDT", "LUNAUSDT", "BUSDUSDT", "XRPUSDT", "LUNCUSDT", "ATOMUSDT", "BNBUSDT", "SOLUSDT", "ETCUSDT", "RVNUSDT", "ADAUSDT", "CHZUSDT", "MATICUSDT", "APEUSDT", "LINKUSDT", "SHIBUSDT", "LTCUSDT", "DOGEUSDT", "NEARUSDT", "GMTUSDT", "SANTOSUSDT", "ANCUSDT", "AVAXUSDT", "VGXUSDT", "REEFUSDT", "EOSUSDT", "SANDUSDT", "TRXUSDT", "ALGOUSDT", "OPUSDT", "STGUSDT", "LDOUSDT", "DOTUSDT", "EURUSDT", "GALAUSDT", "FTMUSDT", "ROSEUSDT", "GALUSDT", "FILUSDT", "LAZIOUSDT", "ENSUSDT", "UNFIUSDT", "HNTUSDT", "MIRUSDT", "WAVESUSDT", "MANAUSDT", "RUNEUSDT", "JASMYUSDT", "AXSUSDT", "PORTOUSDT"]
+                },
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "reporter": "correlation_matrix",
+                "source": "analyzer",
+                "writers": [
+                    "heatmap_plot"
+                ]
+            }
+        ]
     },
     "time_scales": {
         "1m": 720,
@@ -48,7 +59,7 @@
         "2h": 84,
         "4h": 540,
         "12h": 60,
-        "1d": 365,
+        "1d": 1,
         "1w": 52,
         "1M": 1
     },

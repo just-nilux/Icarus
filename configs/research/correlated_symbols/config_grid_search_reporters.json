@@ -1,0 +1,463 @@
+{
+    "tag": "test-bot",
+    "log-level": "DEBUG",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb": {
+        "host": "localhost",
+        "port": 27017,
+        "clean": false
+    },
+    "balances": [
+        {
+            "asset": "USDT",
+            "free": 10000,
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+        "fee_rate": 0.001
+    },
+    "strategy": {
+        "MACDStrategy": {
+            "pairs": [
+                "BTCUSDT",
+                "ETHUSDT",
+                "LUNAUSDT",
+                "BUSDUSDT",
+                "XRPUSDT",
+                "LUNCUSDT",
+                "ATOMUSDT",
+                "BNBUSDT",
+                "SOLUSDT",
+                "ETCUSDT",
+                "RVNUSDT",
+                "ADAUSDT",
+                "CHZUSDT",
+                "MATICUSDT",
+                "APEUSDT",
+                "LINKUSDT",
+                "SHIBUSDT",
+                "LTCUSDT",
+                "DOGEUSDT",
+                "NEARUSDT",
+                "GMTUSDT",
+                "SANTOSUSDT",
+                "ANCUSDT",
+                "AVAXUSDT",
+                "VGXUSDT",
+                "REEFUSDT",
+                "EOSUSDT",
+                "SANDUSDT",
+                "TRXUSDT",
+                "ALGOUSDT",
+                "OPUSDT",
+                "STGUSDT",
+                "LDOUSDT",
+                "DOTUSDT",
+                "EURUSDT",
+                "GALAUSDT",
+                "FTMUSDT",
+                "ROSEUSDT",
+                "GALUSDT",
+                "FILUSDT",
+                "LAZIOUSDT",
+                "ENSUSDT",
+                "UNFIUSDT",
+                "HNTUSDT",
+                "MIRUSDT",
+                "WAVESUSDT",
+                "MANAUSDT",
+                "RUNEUSDT",
+                "JASMYUSDT",
+                "AXSUSDT",
+                "PORTOUSDT"
+            ],
+            "time_scales": [
+                "1d"
+            ]
+        }
+    },
+    "analysis": {
+        "close": {}
+    },
+    "report_folder_name": "reports_grid_search_reporters",
+    "report": [
+        {
+            "source": "analyzer",
+            "reporter": "correlation_matrix",
+            "indices": [
+                [
+                    "BTCUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ETHUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "LUNAUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "BUSDUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "XRPUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "LUNCUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ATOMUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "BNBUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "SOLUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ETCUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "RVNUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ADAUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "CHZUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "MATICUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "APEUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "LINKUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "SHIBUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "LTCUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "DOGEUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "NEARUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "GMTUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "SANTOSUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ANCUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "AVAXUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "VGXUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "REEFUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "EOSUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "SANDUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "TRXUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ALGOUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "OPUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "STGUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "LDOUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "DOTUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "EURUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "GALAUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "FTMUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ROSEUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "GALUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "FILUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "LAZIOUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "ENSUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "UNFIUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "HNTUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "MIRUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "WAVESUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "MANAUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "RUNEUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "JASMYUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "AXSUSDT",
+                    "1d",
+                    "close"
+                ],
+                [
+                    "PORTOUSDT",
+                    "1d",
+                    "close"
+                ]
+            ],
+            "writers": [
+                "heatmap_plot"
+            ]
+        }
+    ],
+    "grid_search_reporters": {
+        "grid": {},
+        "reporters": [
+            {
+                "parameters": {
+                    "<analyzer>": [
+                        "close"
+                    ],
+                    "<timeframe>": [
+                        "1d"
+                    ],
+                    "<pair>": [
+                        "BTCUSDT",
+                        "ETHUSDT",
+                        "LUNAUSDT",
+                        "BUSDUSDT",
+                        "XRPUSDT",
+                        "LUNCUSDT",
+                        "ATOMUSDT",
+                        "BNBUSDT",
+                        "SOLUSDT",
+                        "ETCUSDT",
+                        "RVNUSDT",
+                        "ADAUSDT",
+                        "CHZUSDT",
+                        "MATICUSDT",
+                        "APEUSDT",
+                        "LINKUSDT",
+                        "SHIBUSDT",
+                        "LTCUSDT",
+                        "DOGEUSDT",
+                        "NEARUSDT",
+                        "GMTUSDT",
+                        "SANTOSUSDT",
+                        "ANCUSDT",
+                        "AVAXUSDT",
+                        "VGXUSDT",
+                        "REEFUSDT",
+                        "EOSUSDT",
+                        "SANDUSDT",
+                        "TRXUSDT",
+                        "ALGOUSDT",
+                        "OPUSDT",
+                        "STGUSDT",
+                        "LDOUSDT",
+                        "DOTUSDT",
+                        "EURUSDT",
+                        "GALAUSDT",
+                        "FTMUSDT",
+                        "ROSEUSDT",
+                        "GALUSDT",
+                        "FILUSDT",
+                        "LAZIOUSDT",
+                        "ENSUSDT",
+                        "UNFIUSDT",
+                        "HNTUSDT",
+                        "MIRUSDT",
+                        "WAVESUSDT",
+                        "MANAUSDT",
+                        "RUNEUSDT",
+                        "JASMYUSDT",
+                        "AXSUSDT",
+                        "PORTOUSDT"
+                    ]
+                },
+                "indice_template": [
+                    "<pair>",
+                    "<timeframe>",
+                    "<analyzer>"
+                ],
+                "reporter": "correlation_matrix",
+                "source": "analyzer",
+                "writers": [
+                    "heatmap_plot"
+                ]
+            }
+        ]
+    },
+    "time_scales": {
+        "1m": 720,
+        "5m": 480,
+        "15m": 96,
+        "30m": 336,
+        "1h": 336,
+        "2h": 84,
+        "4h": 540,
+        "12h": 60,
+        "1d": 1,
+        "1w": 52,
+        "1M": 1
+    },
+    "backtest": {
+        "start_time": "2021-10-10 13:00:00",
+        "end_time": "2022-10-10 13:00:00",
+        "online": true
+    },
+    "visualization": {
+        "observers": {
+            "qc": [
+                "free",
+                "total",
+                "in_trade"
+            ],
+            "qc_leak": [
+                "binary"
+            ],
+            "breakpoints": {
+                "1562371200000": "decision_time",
+                "1562803200000": "result.enter.time"
+            }
+        }
+    }
+}

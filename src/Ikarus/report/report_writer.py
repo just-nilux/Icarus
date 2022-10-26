@@ -75,7 +75,8 @@ class ImageWriter():
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
         fig, ax = plt.subplots(figsize=(12,12))
 
-        title = get_reporter_name(indice)
+        #title = get_reporter_name(indice)
+        title = kwargs.get('title','heatmap_plot')
 
         fig.suptitle(title, fontsize=24)
 
@@ -85,13 +86,21 @@ class ImageWriter():
 
         im = ax.imshow(df.values, cmap='coolwarm', vmin=-1, vmax=1)
         fig.colorbar(im)
+
+        # NOTE: Shitty code
+        if df.values.size < 100:
+            fontsize = 12
+        else:
+            fontsize = 4
+
         for i in range(df.values.shape[0]):
             for j in range(df.values.shape[1]):
                 #if not math.isnan(matrice[0, 0]):
                 text = ax.text(j, i, "%.2f" % df.values[i, j],
-                            ha="center", va="center", color="black", fontsize=4)
+                            ha="center", va="center", color="black", fontsize=fontsize)
 
-        target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
+        #target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
+        target_path = '{}/{}.png'.format(self.report_folder,title)
 
         # shitcode
         footnote = f"""
