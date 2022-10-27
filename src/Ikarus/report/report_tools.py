@@ -16,7 +16,7 @@ async def correlation_matrix(indices, analysis):
 # *ppc: price percentage change
 async def market_class_ppc(index, detected_market_regimes):
     tabular_dict = {}
-    for regime_name, regime_instances in detected_market_regimes.items():
+    for regime_name, regime_instances in detected_market_regimes[0].items():
         perc_price_change_list = [instance.perc_price_change for instance in regime_instances]
         tabular_dict[regime_name] = perc_price_change_list
     return tabular_dict
@@ -24,7 +24,7 @@ async def market_class_ppc(index, detected_market_regimes):
 
 async def market_class_pvpc(index, detected_market_regimes):
     tabular_dict = {}
-    for regime_name, regime_instances in detected_market_regimes.items():
+    for regime_name, regime_instances in detected_market_regimes[0].items():
         perc_val_price_change_list = [instance.perc_val_price_change for instance in regime_instances if instance.perc_val_price_change != None]
         tabular_dict[regime_name] = perc_val_price_change_list
     return tabular_dict

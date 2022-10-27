@@ -11,6 +11,16 @@ from ..analyzers import Analyzer
 from .. import mongo_utils
 from . import report_tools
 from .report_writer import ReportWriter, GridSearchWriter
+import ast
+from copy import deepcopy
+
+
+def write_to_config_file(config_dict, filename="generated_config.json"):
+    config_file_path = os.path.dirname(str(sys.argv[1])) + '/' + filename
+    f = open(config_file_path,'w')
+    json.dump(config_dict, f,  indent=4)
+    f.close()
+    return config_file_path
 
 
 def replace_all(text, dic):
@@ -26,6 +36,70 @@ def get_reporter_name(indice):
         return indice[0][0]
     else:
         return None
+
+
+def generate_queries(reporter_config):
+    grid_configs = list(itertools.product(*reporter_config['parameters'].values()))
+
+    queries = []
+    for grid_config in grid_configs:
+        query = deepcopy(reporter_config['query_template'])
+        for key_idx, key in enumerate(reporter_config['parameters'].keys()):
+            query = ast.literal_eval(str(query).replace(key, grid_config[key_idx]))
+        queries.append(query)
+    return queries
+
+
+def generate_indices(reporter_config):
+    grid_configs = list(itertools.product(*reporter_config.get('parameters',{}).values()))
+
+    queries = []
+    for grid_config in grid_configs:
+        query = deepcopy(reporter_config['indice_template'])
+        for key_idx, key in enumerate(reporter_config['parameters'].keys()):
+            query = ast.literal_eval(str(query).replace(key, grid_config[key_idx]))
+        queries.append(query)
+    return queries
+
+
+def grid_search():
+    parameters = list(config['grid_search_reporters']['grid'].keys())
+    grid_values = list(config['grid_search_reporters']['grid'].values())
+
+    grid_configs = list(itertools.product(*grid_values))
+
+    # First loop is for generating the reporter items but not filling its query templates
+    reporter_instances = []
+    for grid_config in grid_configs:
+        replace_rule = {}
+        for param, rep_value in zip(parameters, grid_config):
+            replace_rule[param] = rep_value
+
+        for reporter_config in config['grid_search_reporters']['reporters']:    
+            replaced_text = replace_all(str(reporter_config), replace_rule)
+            reporter_instance = ast.literal_eval(replaced_text)
+            reporter_instances.append(reporter_instance)
+
+    # Second loop is for generating the queries for reporters
+    config_report = []
+    for reporter_instance in reporter_instances:
+        reporter = {}
+        if 'query_template' in reporter_instance:
+            reporter['source'] = reporter_instance['source']
+            reporter['reporter'] = reporter_instance['reporter']
+            reporter['collection'] = reporter_instance['collection']
+            reporter['queries'] = generate_queries(reporter_instance)
+            reporter['writers'] = reporter_instance['writers']
+            config_report.append(reporter)
+        
+        elif 'indice_template' in reporter_instance:
+            reporter['source'] = reporter_instance['source']
+            reporter['reporter'] = reporter_instance['reporter']
+            reporter['indices'] = generate_indices(reporter_instance)
+            reporter['writers'] = reporter_instance['writers']
+            config_report.append(reporter)
+
+    return config_report
 
 
 async def main():
@@ -59,7 +133,10 @@ async def main():
     report_tool_coroutines = []
     indices = []
 
-    ###################
+    if not config['report']:
+        generated_report_config = grid_search()
+        config['report'] = generated_report_config
+        write_to_config_file(config)
 
     for report_config in config['report']:
         #timeframe, symbol, analyzer
@@ -86,69 +163,7 @@ async def main():
 
                 handler = getattr(report_tools, report_tool)
                 report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
-    ###################
 
-
-    '''
-    for report_config in config['report']:
-        # NOTE: This section is commented out due to the effect of grid_search.py on reporter generation. 
-        #if not hasattr(report_tools, report_tool):
-        #    continue
-
-        #indice_data = [time_scale_pool, pair_pool]
-        if 'analyzers' in report_config:
-            indice_data = [time_scale_pool, pair_pool]
-            indice_data.append(report_config['analyzers'])
-            primal_indices = list(itertools.product(*indice_data))
-            indices.extend([[report_config['reporter']]+list(indice) for indice in primal_indices])
-
-        elif 'indices' in report_config:
-            indices.append([[report_config['reporter']]+ indice for indice in report_config['indices']])
-
-        elif 'queries' in report_config:
-            indices.append([report_config['reporter']])
-
-        elif 'indice_template' in report_config:
-            # NOTE: For now indice_template value looks meaningless
-            indice_data = [pair_pool, time_scale_pool]
-            indice_data.append(list(config['analysis'].keys()))
-            primal_indices = list(itertools.product(*indice_data))
-            indices.append([[report_config['reporter']]+list(indice) for indice in primal_indices])
-
-
-    for indice in indices:
-        #timeframe, symbol, analyzer
-        reporter_name = get_reporter_name(indice)
-        report_config = config['report'].get(reporter_name) # The first indice is always the name of the reporter
-        source = report_config.get('source', 'analyzer')
-
-        if source == 'database':
-            if 'indices' in report_config.keys():
-                pass
-            elif 'analyzers' in report_config.keys():
-                report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
-            elif 'queries' in report_config.keys():
-                report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
-
-        elif source == 'analyzer':
-            if 'indice_template' in report_config.keys():
-                handler = getattr(report_tools, report_tool)
-                analysis_data = [analysis_dict[reporter_indice[1]][reporter_indice[2]][reporter_indice[3]] for reporter_indice in indice]
-                report_tool_coroutines.append(handler(indice, analysis_data)) # Use indices as the index
-
-            elif 'indices' in report_config.keys():
-                handler = getattr(report_tools, report_tool)
-                analysis_data = [analysis_dict[reporter_indice[1]][reporter_indice[2]][reporter_indice[3]] for reporter_indice in indice]
-                report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
-
-            elif 'analyzers' in report_config.keys():
-                report_tool, timeframe, symbol, analyzer = indice
-                #if analyzer not in analysis_dict[symbol][timeframe].keys():
-                #    raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
-
-                handler = getattr(report_tools, report_tool)
-                report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
-    '''
     # Get the statistics
     report_tool_results = list(await asyncio.gather(*report_tool_coroutines))
 

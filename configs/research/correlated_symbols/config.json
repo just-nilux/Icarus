@@ -30,8 +30,8 @@
         "close": {}
     },
     "report_folder_name": "reports",
-    "report": {
-    },
+    "report": [
+    ],
     "grid_search_reporters": {
         "grid":{},
         "reporters": [

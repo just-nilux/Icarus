@@ -27,9 +27,9 @@ class ImageWriter():
         super().__init__()
         self.report_folder = report_folder
 
-    def box_plot(self, indice, report_dict):
-        reporter, timeframe, symbol, analyzer = indice
-        filename = '{}_{}_{}_{}'.format(reporter,timeframe,symbol,analyzer)
+    def box_plot(self, indice, report_dict, **kwargs):
+        symbol, timeframe, analyzer = indice[0]
+        filename = '{}_{}_{}_{}'.format(kwargs['reporter'],timeframe,symbol,analyzer)
         target_path = '{}/{}'.format(self.report_folder,filename)
 
         fig, ax = plt.subplots()
@@ -46,10 +46,10 @@ class ImageWriter():
             patch.set_facecolor(color)
         plt.savefig(target_path, bbox_inches='tight')
 
-    def table_plot(self, indice, report_dict):
-        reporter, timeframe, symbol, analyzer = indice
-        filename = '{}-{}-{}-{}'.format(reporter,timeframe,symbol,analyzer)
-        report_path = '{}/{}'.format(self.report_folder,filename)
+    def table_plot(self, indice, report_dict, **kwargs):
+        symbol, timeframe, analyzer = indice[0]
+        filename = '{}_{}_{}_{}'.format(kwargs['reporter'],timeframe,symbol,analyzer)
+        target_path = '{}/{}'.format(self.report_folder,filename)
 
         df = pd.DataFrame(data=report_dict)
         # print(df.to_markdown()) # TODO: How to automate dumping this table
@@ -67,7 +67,7 @@ class ImageWriter():
             loc ='upper left')
         ax.set_title(filename, fontweight ="bold")
         plt.tight_layout()
-        plt.savefig(report_path, bbox_inches='tight')
+        plt.savefig(target_path, bbox_inches='tight')
 
 
     def heatmap_plot(self, indice, df, **kwargs):
@@ -151,7 +151,7 @@ class DatabaseWriter():
             os.makedirs(self.report_folder)
 
     async def database(self, indice, report_dict, **kwargs):
-        timeframe, symbol, analyzer = indice[0]
+        symbol, timeframe, analyzer = indice[0]
         document = {
             'folder_name': os.path.basename(str(self.report_folder)),
             'timeframe': timeframe,

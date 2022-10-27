@@ -52,8 +52,7 @@
         }
     },
     "report_folder_name": "reports",
-    "report": [
-    ],
+    "report": [],
     "grid_search_analyzers": {
         "analyzers": [
             "market_class_aroon",
