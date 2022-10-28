@@ -25,7 +25,8 @@
                 "ETHUSDT"
             ],
             "time_scales": [
-                "1d"
+                "1d",
+                "1h"
             ]
         }
     },
@@ -79,7 +80,8 @@
                 "ETHUSDT"
             ],
             "<timeframe>": [
-                "1d"
+                "1d",
+                "1h"
             ],
             "<analyzer>": [
                 "market_class_aroon",

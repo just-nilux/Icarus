@@ -52,60 +52,8 @@
             "timeperiod": 14
         }
     },
-    "report_folder_name": "reports_3_14",
-    "report": {
-        "market_class_table_stats": {
-            "source": "analyzer",
-            "analyzers": [
-                "market_class_aroon",
-                "market_class_aroonosc",
-                "market_class_fractal_aroon"
-            ],
-            "writers": [
-                "markdown_table",
-                "database"
-            ]
-        },
-        "market_class_ppc": {
-            "analyzers": [
-                "market_class_aroon",
-                "market_class_aroonosc",
-                "market_class_fractal_aroon"
-            ],
-            "writers": [
-                "box_plot"
-            ]
-        },
-        "market_class_pvpc": {
-            "analyzers": [
-                "market_class_aroon",
-                "market_class_aroonosc",
-                "market_class_fractal_aroon"
-            ],
-            "writers": [
-                "box_plot"
-            ]
-        }
-    },
-    "grid_search_analyzers": {
-        "analyzers": [
-            "market_class_aroon",
-            "market_class_aroonosc",
-            "market_class_fractal_aroon"
-        ],
-        "grid": {
-            "validation_threshold": [
-                0,
-                3,
-                7,
-                14
-            ],
-            "timeperiod": [
-                14,
-                30
-            ]
-        }
-    },
+    "report_folder_name": "reports",
+    "report": [],
     "grid_search_reporters": {
         "grid": {
             "<statistic>": [
@@ -122,8 +70,9 @@
                 "1h"
             ]
         },
-        "reporters": {
-            "<statistic> <pair> <timeframe>": {
+        "reporters": [
+            {
+                "reporter": "<statistic> <pair> <timeframe>",
                 "parameters": {
                     "<analyzer>": [
                         "market_class_aroon",
@@ -163,10 +112,10 @@
                 "source": "database",
                 "collection": "market_class_table_stats",
                 "writers": [
-                    "heatmap_w_sub_matrices"
+                    "heatmap_w_sub_matrices_plot"
                 ]
             }
-        }
+        ]
     },
     "time_scales": {
         "1m": 720,

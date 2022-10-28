@@ -79,20 +79,20 @@ Parameters:
 
 
 ## PPC Accuracy
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_BTCUSDT_1h.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_BTCUSDT_1d.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PPC_Accuracy_ETHUSDT_1d.png" />
+<img src="../../configs/research/aroon_classifies_market/reports/PPC_Accuracy_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/PPC_Accuracy_BTCUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/PPC_Accuracy_ETHUSDT_1d.png" />
 
 
 ## PVPC Accuracy
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_BTCUSDT_1h.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_BTCUSDT_1d.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/PVPC_Accuracy_ETHUSDT_1d.png" />
+<img src="../../configs/research/aroon_classifies_market/reports/PVPC_Accuracy_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/PVPC_Accuracy_BTCUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/PVPC_Accuracy_ETHUSDT_1d.png" />
 
 ## Market Regime Occurence
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_BTCUSDT_1h.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_BTCUSDT_1d.png" /> 
-<img src="../../configs/research/aroon_classifies_market/reports_grid_search_reporters/Occurence_ETHUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/Occurence_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/Occurence_BTCUSDT_1d.png" /> 
+<img src="../../configs/research/aroon_classifies_market/reports/Occurence_ETHUSDT_1d.png" /> 
 
 # Personal Notes
 TBD

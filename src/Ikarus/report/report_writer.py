@@ -207,7 +207,8 @@ class GridSearchWriter():
         fig = plt.figure(figsize=(18,10))
 
         #title = f"{indice[0]}-{kwargs.get('pair','pair')}-{kwargs.get('timeframe','timeframe')}" # Name of the reporter
-        title = '-'.join([str(idc) for idc in indice])
+        #title = '-'.join([str(idc) for idc in indice])
+        title = kwargs.get('reporter','heatmap_w_sub_matrices_plot')
 
 
         fig.suptitle(title, fontsize=24)

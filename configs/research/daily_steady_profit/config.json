@@ -1,0 +1,93 @@
+{
+    "tag": "test-bot",
+    "log-level": "DEBUG",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb": {
+        "host": "localhost",
+        "port": 27017,
+        "clean": false
+    },
+    "balances": [
+        {
+            "asset": "USDT",
+            "free": 10000,
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+        "fee_rate": 0.001
+    },
+    "strategy": {
+        "MACDStrategy": {
+            "pairs": ["BTCUSDT"],
+            "time_scales": [
+                "1h"
+            ]
+        }
+    },
+    "analysis": {
+        "open": {},
+        "high": {},
+        "low": {}
+    },
+    "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters": {
+        "grid": {
+            "<pair>": ["BTCUSDT"],
+            "<timeframe>": ["1h"]
+        },
+        "reporters": [
+            {
+                "parameters": {
+                    "<analyzer>": [
+                        "open",
+                        "high",
+                        "low"
+                    ]
+                },
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "reporter": "max_change_in_24",
+                "source": "analyzer",
+                "writers": [
+                    "line_plot"
+                ]
+            }
+        ]
+    },
+    "time_scales": {
+        "1m": 720,
+        "5m": 480,
+        "15m": 96,
+        "30m": 336,
+        "1h": 24,
+        "2h": 84,
+        "4h": 540,
+        "12h": 60,
+        "1d": 1,
+        "1w": 52,
+        "1M": 1
+    },
+    "backtest": {
+        "start_time": "2022-9-10 13:00:00",
+        "end_time": "2022-10-10 13:00:00",
+        "online": true
+    },
+    "visualization": {
+        "observers": {
+            "qc": [
+                "free",
+                "total",
+                "in_trade"
+            ],
+            "qc_leak": [
+                "binary"
+            ],
+            "breakpoints": {
+                "1562371200000": "decision_time",
+                "1562803200000": "result.enter.time"
+            }
+        }
+    }
+}

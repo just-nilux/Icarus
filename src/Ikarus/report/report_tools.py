@@ -8,10 +8,30 @@ accuracy_conditions_for_ppc = {
     'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
 }
 
+
+async def max_change_in_24(indices, analysis):
+    df = pd.DataFrame(analysis).T
+    df.columns = ['open', 'high', 'low']
+
+    rolling_window = 24
+    df['high'] = df['high'].rolling(window=rolling_window).apply(max)
+    df['low'] = df['low'].rolling(window=rolling_window).apply(min)
+    df[['high','low']] = df[['high','low']].shift(-23)
+    df = df.dropna()
+
+    df['pos_change'] = df['high']/df['open'] - 1
+    df['neg_change'] = df['low']/df['open'] - 1
+    df['one_percent'] = df['pos_change'] > 0.01
+
+
+    return df
+
+
 async def correlation_matrix(indices, analysis):
     df = pd.DataFrame(analysis, index=[indice[0] for indice in indices]).T
-    logretdf = np.log(df.pct_change() + 1)
-    return logretdf.corr()
+    #logretdf = np.log(df.pct_change() + 1)
+    pct_changedf = df.pct_change()
+    return pct_changedf.corr()
 
 # *ppc: price percentage change
 async def market_class_ppc(index, detected_market_regimes):

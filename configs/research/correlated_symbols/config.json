@@ -29,7 +29,7 @@
     "analysis": {
         "close": {}
     },
-    "report_folder_name": "reports",
+    "report_folder_name": "reports_non_logarithmic",
     "report": [
     ],
     "grid_search_reporters": {

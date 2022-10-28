@@ -185,7 +185,7 @@ async def main():
                     #'timeframe': indice[1]
                 }
 
-                if attr := getattr(report_writer, writer_type)(report_config['indices'],report_dict,**kwargs):
+                if attr := getattr(report_writer, writer_type)(report_config.get('indices',[]),report_dict,**kwargs):
                     async_writers.append(attr)
 
     await asyncio.gather(*async_writers)
