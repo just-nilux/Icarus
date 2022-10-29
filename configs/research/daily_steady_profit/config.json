@@ -29,7 +29,8 @@
     "analysis": {
         "open": {},
         "high": {},
-        "low": {}
+        "low": {},
+        "index": {}
     },
     "report_folder_name": "reports",
     "report": [],
@@ -40,18 +41,35 @@
         },
         "reporters": [
             {
+                "reporter": "change_in_24h_raw",
                 "parameters": {
                     "<analyzer>": [
+                        "index",
                         "open",
                         "high",
                         "low"
                     ]
                 },
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
-                "reporter": "max_change_in_24",
                 "source": "analyzer",
                 "writers": [
-                    "line_plot"
+                    "double_sided_histogram_plot",
+                    "double_sided_occurence_plot"
+                ]
+            },
+            {
+                "reporter": "change_in_24h_stats",
+                "parameters": {
+                    "<analyzer>": [
+                        "index",
+                        "open",
+                        "high",
+                        "low"
+                    ]
+                },
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "source": "analyzer",
+                "writers": [
                 ]
             }
         ]

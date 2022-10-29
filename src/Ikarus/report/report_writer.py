@@ -9,6 +9,7 @@ import math
 from mdutils.mdutils import MdUtils
 from mdutils import Html
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 
@@ -45,6 +46,7 @@ class ImageWriter():
         for patch, color in zip(bplot['boxes'], colors):
             patch.set_facecolor(color)
         plt.savefig(target_path, bbox_inches='tight')
+
 
     def table_plot(self, indice, report_dict, **kwargs):
         symbol, timeframe, analyzer = indice[0]
@@ -113,7 +115,72 @@ class ImageWriter():
         print(f'File saved: {target_path}')
 
 
+    def double_sided_histogram_plot(self, indice, df, **kwargs):
+        symbol, timeframe, analyzer = indice[0]
+        filename = 'Histogram {}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
+        target_path = '{}/{}'.format(self.report_folder,filename)
 
+        fig = plt.figure(figsize=(16,8))
+        ax = plt.subplot(111)
+        ax.bar(df.index, df.iloc[:,0].values, width=0.05, color='g')
+        ax.bar(df.index, df.iloc[:,1].values, width=0.05, color='r')
+        ax.xaxis.set_major_locator(mdates.DayLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        plt.gcf().autofmt_xdate()
+
+        # Set title
+        fig.suptitle(filename, fontsize=24)
+
+        # shitcode
+        footnote = f"""
+        Configuration: {kwargs}
+        """
+        y_tick_step = 0.01
+        plt.yticks(np.arange(round(df.iloc[:,1].min(), 2)-y_tick_step, df.iloc[:,0].max(), y_tick_step))
+        plt.grid(linewidth=1)
+        plt.figtext(0.5, 0, footnote, ha="center", fontsize=12)
+        #plt.tight_layout()
+
+        plt.savefig(target_path, bbox_inches='tight')
+        print(f'File saved: {target_path}')
+
+
+    def double_sided_occurence_plot(self, indice, df, **kwargs):
+        df_change = pd.DataFrame([
+            df['pos_change'].value_counts(),
+            df['neg_change'].value_counts()]).T
+
+        symbol, timeframe, analyzer = indice[0]
+        filename = 'Occurence {}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
+        target_path = '{}/{}'.format(self.report_folder,filename)
+
+        fig = plt.figure(figsize=(16,8))
+        ax = plt.subplot(111)
+        
+        ax.bar(df_change.index,df_change['pos_change'].values, width=0.001, color='g', alpha=0.5)
+        ax.bar(df_change.index,df_change['neg_change'].values, width=0.001, color='r', alpha=0.5)
+
+        # Set title
+        fig.suptitle(filename, fontsize=24)
+
+        # shitcode
+        footnote = f"""
+        Configuration: {kwargs}
+        """
+        x_tick_step = 0.01
+        plt.xticks(np.arange(round(df_change.index.min(), 2)-x_tick_step, df_change.index.max(), x_tick_step))
+        plt.grid(linewidth=1)
+        plt.figtext(0.5, 0, footnote, ha="center", fontsize=12)
+        #plt.tight_layout()
+
+        plt.savefig(target_path)
+        print(f'File saved: {target_path}')
+
+
+    def line_plot(self, indice, df, **kwargs):
+
+        x_labels, y_labels = df.columns.to_list(), df.index.to_list()
+        fig, ax = plt.subplots(figsize=(12,12))
 
 class MarkdownWriter():
     def __init__(self, report_folder) -> None:

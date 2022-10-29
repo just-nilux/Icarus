@@ -26,6 +26,7 @@ class Indicators():
     async def _last_close(self, candlesticks, **kwargs): return float(candlesticks['close'].tail(1))
     async def _close(self, candlesticks, **kwargs): return list(candlesticks['close'])
     async def _open(self, candlesticks, **kwargs): return list(candlesticks['open'])
+    async def _index(self, candlesticks, **kwargs): return list(candlesticks.index)
     async def _parallel_ma(self, candlesticks, **kwargs): 
         parallel_ma = {}
         for kwarg in kwargs:

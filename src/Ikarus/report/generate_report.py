@@ -142,27 +142,16 @@ async def main():
         #timeframe, symbol, analyzer
         source = report_config.get('source', 'analyzer')
 
-        if source == 'database':
-            if 'indices' in report_config.keys():
-                pass
-            elif 'analyzers' in report_config.keys():
-                report_tool_coroutines.append(mongo_utils.do_find_report(mongo_client, report_tool, {'pair':symbol,'timeframe':timeframe,'analyzer':analyzer}))
-            elif 'queries' in report_config.keys():
-                report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
+        if source == 'database': 
+            # Use queries
+            report_tool_coroutines.append(mongo_utils.do_aggregate_multi_query(mongo_client, report_config.get('collection', report_config), report_config['queries']))
 
         elif source == 'analyzer':
-            if 'indices' in report_config.keys():
-                handler = getattr(report_tools, report_config['reporter'])
-                analysis_data = [analysis_dict[reporter_indice[0]][reporter_indice[1]][reporter_indice[2]] for reporter_indice in report_config['indices']]
-                report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
+            # Use indices
+            handler = getattr(report_tools, report_config['reporter'])
+            analysis_data = [analysis_dict[reporter_indice[0]][reporter_indice[1]][reporter_indice[2]] for reporter_indice in report_config['indices']]
+            report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
 
-            elif 'analyzers' in report_config.keys():
-                report_tool, timeframe, symbol, analyzer = indice
-                #if analyzer not in analysis_dict[symbol][timeframe].keys():
-                #    raise Exception(f'Analyzer not found in analysis_dict: {analyzer}')
-
-                handler = getattr(report_tools, report_tool)
-                report_tool_coroutines.append(handler(data_dict[symbol][timeframe].index, analysis_dict[symbol][timeframe][analyzer]))
 
     # Get the statistics
     report_tool_results = list(await asyncio.gather(*report_tool_coroutines))

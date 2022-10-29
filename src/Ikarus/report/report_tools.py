@@ -9,10 +9,28 @@ accuracy_conditions_for_ppc = {
 }
 
 
-async def max_change_in_24(indices, analysis):
+async def change_in_24h_raw(indices, analysis):
     df = pd.DataFrame(analysis).T
-    df.columns = ['open', 'high', 'low']
+    df.columns = ['index','open', 'high', 'low']
+    df.set_index(df['index'].astype('int64').astype('datetime64[ms]'), inplace=True)
+    del df['index']
 
+    rolling_window = 24
+    df['high'] = df['high'].rolling(window=rolling_window).apply(max)
+    df['low'] = df['low'].rolling(window=rolling_window).apply(min)
+    df[['high','low']] = df[['high','low']].shift(-23)
+    df.dropna(inplace=True)
+
+    df['pos_change'] = round(df['high']/df['open'] - 1, 3)
+    df['neg_change'] = round(df['low']/df['open'] - 1, 3)
+    df.drop(['open', 'high', 'low'], axis=1, inplace=True)
+
+    return df
+
+
+async def change_in_24h_stats(indices, analysis):
+    df = pd.DataFrame(analysis).T
+    df.columns = ['index','open', 'high', 'low']
     rolling_window = 24
     df['high'] = df['high'].rolling(window=rolling_window).apply(max)
     df['low'] = df['low'].rolling(window=rolling_window).apply(min)
@@ -21,10 +39,21 @@ async def max_change_in_24(indices, analysis):
 
     df['pos_change'] = df['high']/df['open'] - 1
     df['neg_change'] = df['low']/df['open'] - 1
+    df['three_percent'] = df['pos_change'] > 0.03
+    df['two_percent'] = df['pos_change'] > 0.02
     df['one_percent'] = df['pos_change'] > 0.01
+    df['zero_five_percent'] = df['pos_change'] > 0.005
 
+    statistic_dict = {
+        "count": len(df),
+        "average_pos_change": round(df['pos_change'].mean(), 4 ),
+        "average_neg_change": round(df['neg_change'].mean(), 4 ),
+        "one_percent": round(df['one_percent'].sum()/len(df), 2 ),
+        "two_percent": round(df['two_percent'].sum()/len(df), 2 ),
+        "three_percent": round(df['three_percent'].sum()/len(df), 2 ),
+    }
 
-    return df
+    return statistic_dict
 
 
 async def correlation_matrix(indices, analysis):
