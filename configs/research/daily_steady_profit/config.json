@@ -27,10 +27,7 @@
         }
     },
     "analysis": {
-        "open": {},
-        "high": {},
-        "low": {},
-        "index": {}
+        "percentage_possible_change": {"timeperiod":24, "digit":3}
     },
     "report_folder_name": "reports",
     "report": [],
@@ -41,35 +38,29 @@
         },
         "reporters": [
             {
-                "reporter": "change_in_24h_raw",
+                "reporter": "perc_pos_change_raw",
                 "parameters": {
                     "<analyzer>": [
-                        "index",
-                        "open",
-                        "high",
-                        "low"
+                        "percentage_possible_change"
                     ]
                 },
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
                 "source": "analyzer",
                 "writers": [
-                    "double_sided_histogram_plot",
-                    "double_sided_occurence_plot"
+                    "double_sided_histogram_plot"
                 ]
             },
             {
-                "reporter": "change_in_24h_stats",
+                "reporter": "perc_pos_change_occurence",
                 "parameters": {
                     "<analyzer>": [
-                        "index",
-                        "open",
-                        "high",
-                        "low"
+                        "percentage_possible_change"
                     ]
                 },
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
                 "source": "analyzer",
                 "writers": [
+                    "double_sided_occurence_plot"
                 ]
             }
         ]

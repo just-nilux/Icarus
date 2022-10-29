@@ -9,23 +9,12 @@ accuracy_conditions_for_ppc = {
 }
 
 
-async def change_in_24h_raw(indices, analysis):
-    df = pd.DataFrame(analysis).T
-    df.columns = ['index','open', 'high', 'low']
-    df.set_index(df['index'].astype('int64').astype('datetime64[ms]'), inplace=True)
-    del df['index']
+async def perc_pos_change_raw(indices, analysis):
+    return analysis[0]
 
-    rolling_window = 24
-    df['high'] = df['high'].rolling(window=rolling_window).apply(max)
-    df['low'] = df['low'].rolling(window=rolling_window).apply(min)
-    df[['high','low']] = df[['high','low']].shift(-23)
-    df.dropna(inplace=True)
 
-    df['pos_change'] = round(df['high']/df['open'] - 1, 3)
-    df['neg_change'] = round(df['low']/df['open'] - 1, 3)
-    df.drop(['open', 'high', 'low'], axis=1, inplace=True)
-
-    return df
+async def perc_pos_change_occurence(indices, analysis):
+    return pd.DataFrame([analysis[0]['pos_change'].value_counts(), analysis[0]['neg_change'].value_counts()]).T
 
 
 async def change_in_24h_stats(indices, analysis):

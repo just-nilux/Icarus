@@ -117,6 +117,7 @@ class ImageWriter():
 
     def double_sided_histogram_plot(self, indice, df, **kwargs):
         symbol, timeframe, analyzer = indice[0]
+
         filename = 'Histogram {}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
         target_path = '{}/{}'.format(self.report_folder,filename)
 
@@ -146,9 +147,6 @@ class ImageWriter():
 
 
     def double_sided_occurence_plot(self, indice, df, **kwargs):
-        df_change = pd.DataFrame([
-            df['pos_change'].value_counts(),
-            df['neg_change'].value_counts()]).T
 
         symbol, timeframe, analyzer = indice[0]
         filename = 'Occurence {}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
@@ -157,8 +155,8 @@ class ImageWriter():
         fig = plt.figure(figsize=(16,8))
         ax = plt.subplot(111)
         
-        ax.bar(df_change.index,df_change['pos_change'].values, width=0.001, color='g', alpha=0.5)
-        ax.bar(df_change.index,df_change['neg_change'].values, width=0.001, color='r', alpha=0.5)
+        ax.bar(df.index, df['pos_change'].values, width=0.001, color='g', alpha=0.5)
+        ax.bar(df.index, df['neg_change'].values, width=0.001, color='r', alpha=0.5)
 
         # Set title
         fig.suptitle(filename, fontsize=24)
@@ -168,7 +166,7 @@ class ImageWriter():
         Configuration: {kwargs}
         """
         x_tick_step = 0.01
-        plt.xticks(np.arange(round(df_change.index.min(), 2)-x_tick_step, df_change.index.max(), x_tick_step))
+        plt.xticks(np.arange(round(df.index.min(), 2)-x_tick_step, df.index.max(), x_tick_step))
         plt.grid(linewidth=1)
         plt.figtext(0.5, 0, footnote, ha="center", fontsize=12)
         #plt.tight_layout()

@@ -27,6 +27,31 @@ class Indicators():
     async def _close(self, candlesticks, **kwargs): return list(candlesticks['close'])
     async def _open(self, candlesticks, **kwargs): return list(candlesticks['open'])
     async def _index(self, candlesticks, **kwargs): return list(candlesticks.index)
+
+
+    async def _percentage_possible_change(self, candlesticks, **kwargs):
+        timeperiod = kwargs.get('timeperiod',24)
+        digit = kwargs.get('digit',3)
+
+        # TODO: FIX THE WARNINGS
+        df = candlesticks[['open', 'high', 'low']]
+        df['index'] = df.index
+        df.reset_index()
+        df.set_index(df['index'].astype('int64').astype('datetime64[ms]'), inplace=True)
+        del df['index']
+
+
+        df['high'] = df['high'].rolling(window=timeperiod).apply(max)
+        df['low'] = df['low'].rolling(window=timeperiod).apply(min)
+        df[['high','low']] = df[['high','low']].shift(-timeperiod+1)
+        df.dropna(inplace=True)
+
+        df['pos_change'] = round(df['high']/df['open'] - 1, 3)
+        df['neg_change'] = round(df['low']/df['open'] - 1, 3)
+        df.drop(['open', 'high', 'low'], axis=1, inplace=True)
+
+        return df
+
     async def _parallel_ma(self, candlesticks, **kwargs): 
         parallel_ma = {}
         for kwarg in kwargs:
