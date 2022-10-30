@@ -5,7 +5,7 @@
     "mongodb": {
         "host": "localhost",
         "port": 27017,
-        "clean": false
+        "clean": true
     },
     "balances": [
         {
@@ -61,6 +61,21 @@
                 "source": "analyzer",
                 "writers": [
                     "double_sided_occurence_plot"
+                ]
+            },
+            {
+                "reporter": "perc_pos_change_stats",
+                "parameters": {
+                    "<analyzer>": [
+                        "percentage_possible_change"
+                    ]
+                },
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "source": "analyzer",
+                "writers": [
+                    "database",
+                    "markdown_table",
+                    "heatmap_plot"
                 ]
             }
         ]

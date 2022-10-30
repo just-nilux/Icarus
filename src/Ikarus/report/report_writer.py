@@ -13,14 +13,46 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 
-
 def get_reporter_name(indice):
+    
     if type(indice[0]) == str:
         return indice[0]
     elif type(indice[0][0]) == str:
         return indice[0][0]
     else:
         return None
+
+def evaluate_min_max_limits(df):
+    if (df.values<=1).all():
+        if (df.values>=0).all():
+            return 0, 1
+        elif (df.values>=-1).all():
+            return -1, 1
+    else:
+        return df.values.min(), df.values.max()
+
+
+def evaluate_value_fontsize(df):
+    if df.values.size < 100:
+        return 12
+    else:
+        return 4
+
+
+def evaluate_figsize(df):
+    if df.values.size < 50: limit = 12
+    else: limit = 16
+
+    if df.shape[1] >  df.shape[0]:
+        ratio = int(df.shape[1] / df.shape[0])
+        x = limit
+        y = limit / ratio
+    else:
+        ratio = int(df.shape[0] / df.shape[1])
+        x = limit / ratio
+        y = limit
+
+    return x, y
 
 
 class ImageWriter():
@@ -48,12 +80,16 @@ class ImageWriter():
         plt.savefig(target_path, bbox_inches='tight')
 
 
-    def table_plot(self, indice, report_dict, **kwargs):
+    def table_plot(self, indice, report_data, **kwargs):
+        if type(report_data) == dict:
+            df = pd.DataFrame(data=report_data)
+        elif type(report_data) == pd.DataFrame:
+            df = report_data
+        
         symbol, timeframe, analyzer = indice[0]
         filename = '{}_{}_{}_{}'.format(kwargs['reporter'],timeframe,symbol,analyzer)
         target_path = '{}/{}'.format(self.report_folder,filename)
 
-        df = pd.DataFrame(data=report_dict)
         # print(df.to_markdown()) # TODO: How to automate dumping this table
         rcolors = plt.cm.BuPu(np.full(len(df.index), 0.1))
         ccolors = plt.cm.BuPu(np.full(len(df.columns), 0.1))
@@ -72,28 +108,33 @@ class ImageWriter():
         plt.savefig(target_path, bbox_inches='tight')
 
 
-    def heatmap_plot(self, indice, df, **kwargs):
+    def heatmap_plot(self, indice, report_data, **kwargs):
+        symbol, timeframe, analyzer = indice[0]
+        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
+        target_path = '{}/{}'.format(self.report_folder,filename)
+
+        if type(report_data) == dict:
+            df = pd.DataFrame(data=report_data)
+        elif type(report_data) == pd.DataFrame:
+            df = report_data
 
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
-        fig, ax = plt.subplots(figsize=(12,12))
+        fig, ax = plt.subplots(figsize=evaluate_figsize(df))
 
         #title = get_reporter_name(indice)
-        title = kwargs.get('reporter','heatmap_plot')
+        #title = kwargs.get('reporter','heatmap_plot')
 
-        fig.suptitle(title, fontsize=24)
+        fig.suptitle(filename, fontsize=24)
 
         ax.xaxis.tick_top()
         ax.set_xticks(np.arange(len(x_labels)), x_labels, rotation=90)
         ax.set_yticks(np.arange(len(y_labels)), y_labels)
 
-        im = ax.imshow(df.values, cmap='coolwarm', vmin=-1, vmax=1)
+        vmin, vmax = evaluate_min_max_limits(df)
+        im = ax.imshow(df.values, cmap='coolwarm', vmin=vmin, vmax=vmax)
         fig.colorbar(im)
 
-        # NOTE: Shitty code
-        if df.values.size < 100:
-            fontsize = 12
-        else:
-            fontsize = 4
+        fontsize = evaluate_value_fontsize(df)
 
         for i in range(df.values.shape[0]):
             for j in range(df.values.shape[1]):
@@ -102,23 +143,22 @@ class ImageWriter():
                             ha="center", va="center", color="black", fontsize=fontsize)
 
         #target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
-        target_path = '{}/{}.png'.format(self.report_folder,title)
 
         # shitcode
         footnote = f"""
         Configuration: {kwargs}
         """
 
-        plt.figtext(0, 0, footnote, ha="left", fontsize=12)
+        plt.figtext(0, 0, footnote, ha="left", fontsize=8)
         plt.tight_layout()
-        plt.savefig(target_path, bbox_inches='tight', dpi=300)
+        plt.savefig(target_path, bbox_inches='tight') # dpi=300
         print(f'File saved: {target_path}')
 
 
     def double_sided_histogram_plot(self, indice, df, **kwargs):
         symbol, timeframe, analyzer = indice[0]
 
-        filename = 'Histogram {}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
+        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
         target_path = '{}/{}'.format(self.report_folder,filename)
 
         fig = plt.figure(figsize=(16,8))
@@ -149,7 +189,7 @@ class ImageWriter():
     def double_sided_occurence_plot(self, indice, df, **kwargs):
 
         symbol, timeframe, analyzer = indice[0]
-        filename = 'Occurence {}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
+        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
         target_path = '{}/{}'.format(self.report_folder,filename)
 
         fig = plt.figure(figsize=(16,8))
@@ -197,10 +237,16 @@ class MarkdownWriter():
             self.md_file.write(" \n\n")
 
 
-    def markdown_table(self, indice, report_dict, **kwargs):
-        timeframe, symbol, analyzer = indice[0]
+    def markdown_table(self, indice, report_data, **kwargs):
+
+        if type(report_data) == dict:
+            df = pd.DataFrame(data=report_data)
+        elif type(report_data) == pd.DataFrame:
+            df = report_data
+
+        symbol, timeframe, analyzer = indice[0]
         title = '{}_{}_{}_{}'.format(kwargs.get('reporter',''),timeframe,symbol,analyzer)
-        df = pd.DataFrame(data=report_dict)
+
         self.md_file.write(title, color='yellow', bold_italics_code='b')
         self.md_file.write('\n' + df.to_markdown() + '\n\n')
         pass

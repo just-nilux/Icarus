@@ -17,32 +17,26 @@ async def perc_pos_change_occurence(indices, analysis):
     return pd.DataFrame([analysis[0]['pos_change'].value_counts(), analysis[0]['neg_change'].value_counts()]).T
 
 
-async def change_in_24h_stats(indices, analysis):
-    df = pd.DataFrame(analysis).T
-    df.columns = ['index','open', 'high', 'low']
-    rolling_window = 24
-    df['high'] = df['high'].rolling(window=rolling_window).apply(max)
-    df['low'] = df['low'].rolling(window=rolling_window).apply(min)
-    df[['high','low']] = df[['high','low']].shift(-23)
-    df = df.dropna()
+async def perc_pos_change_stats(indices, analysis):
+    df = analysis[0]
+    pos_change_thresholds = [0.0025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05]
 
-    df['pos_change'] = df['high']/df['open'] - 1
-    df['neg_change'] = df['low']/df['open'] - 1
-    df['three_percent'] = df['pos_change'] > 0.03
-    df['two_percent'] = df['pos_change'] > 0.02
-    df['one_percent'] = df['pos_change'] > 0.01
-    df['zero_five_percent'] = df['pos_change'] > 0.005
+    #statistic_dict = {
+    #    "count": len(df),
+    #    "average_pos_change": round(df['pos_change'].mean(), 4 ),
+    #    "average_neg_change": round(df['neg_change'].mean(), 4 )
+    #}
 
-    statistic_dict = {
-        "count": len(df),
-        "average_pos_change": round(df['pos_change'].mean(), 4 ),
-        "average_neg_change": round(df['neg_change'].mean(), 4 ),
-        "one_percent": round(df['one_percent'].sum()/len(df), 2 ),
-        "two_percent": round(df['two_percent'].sum()/len(df), 2 ),
-        "three_percent": round(df['three_percent'].sum()/len(df), 2 ),
-    }
-
-    return statistic_dict
+    table = []
+    for th in pos_change_thresholds:
+        #statistic_dict[key] = round((df['pos_change'] > value).sum()/len(df), 2 )
+        table.append([
+            round((df['pos_change'] > th).sum()/len(df), 2 ),
+            round((df['neg_change'] < -th).sum()/len(df), 2 )
+        ])
+    df_th = pd.DataFrame(table, columns=['pos_change','neg_change'], index=list(map(lambda x: str(x).replace('.','_'), pos_change_thresholds)))
+    #statistic_dict['threshold_table'] = df_th.to_dict()
+    return df_th.T.to_dict()
 
 
 async def correlation_matrix(indices, analysis):
