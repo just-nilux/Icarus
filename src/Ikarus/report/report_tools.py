@@ -8,6 +8,11 @@ accuracy_conditions_for_ppc = {
     'ranging': lambda a,count : ((np.array(a) > -1) & (np.array(a) < 1)).sum() / count * 100,
 }
 
+async def ohlcv(indices, analysis):
+    df = analysis[0][['open', 'high', 'low', 'close', 'volume']]
+    df.set_index(np.array(df.index).astype('datetime64[ms]'), inplace=True)
+    return df
+
 
 async def perc_pos_change_raw(indices, analysis):
     return analysis[0]

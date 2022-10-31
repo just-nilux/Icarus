@@ -1,4 +1,3 @@
-from fileinput import filename
 from matplotlib import pyplot as plt
 import os
 import glob
@@ -12,6 +11,8 @@ from mdutils import Html
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
+
+import mplfinance as mpf
 
 def get_reporter_name(indice):
     
@@ -60,6 +61,40 @@ class ImageWriter():
         super().__init__()
         self.report_folder = report_folder
 
+    def candlestick_plot(self, indice, report_data, **kwargs):
+        if type(report_data) == dict:
+            df = pd.DataFrame(data=report_data)
+        elif type(report_data) == pd.DataFrame:
+            df = report_data
+
+        symbol, timeframe = indice[0]
+        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
+        target_path = '{}/{}'.format(self.report_folder,filename)
+
+        # Creating Subplots
+        mpf.plot(df,
+                type="candle", 
+                title = filename,  
+                style="binance", 
+                volume=True, 
+                figsize=(16, 10),
+                returnfig=False,
+                show_nontrading=False,
+                datetime_format='%Y-%m-%d',
+                tight_layout=True
+            )
+
+        # Formatting Date    
+        #ax[1].xaxis.set_major_locator(mdates.DayLocator())
+        #ax[1].xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d')) # Does not working somehow
+        #ax[1].tick_params(labelsize=1)
+        #plt.gcf().autofmt_xdate()
+    
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
+
+
     def box_plot(self, indice, report_dict, **kwargs):
         symbol, timeframe, analyzer = indice[0]
         filename = '{}_{}_{}_{}'.format(kwargs['reporter'],timeframe,symbol,analyzer)
@@ -78,6 +113,8 @@ class ImageWriter():
         for patch, color in zip(bplot['boxes'], colors):
             patch.set_facecolor(color)
         plt.savefig(target_path, bbox_inches='tight')
+        plt.close()
+        print(f'File saved: {target_path}')
 
 
     def table_plot(self, indice, report_data, **kwargs):
@@ -106,6 +143,8 @@ class ImageWriter():
         ax.set_title(filename, fontweight ="bold")
         plt.tight_layout()
         plt.savefig(target_path, bbox_inches='tight')
+        plt.close()
+        print(f'File saved: {target_path}')
 
 
     def heatmap_plot(self, indice, report_data, **kwargs):
@@ -152,6 +191,7 @@ class ImageWriter():
         plt.figtext(0, 0, footnote, ha="left", fontsize=8)
         plt.tight_layout()
         plt.savefig(target_path, bbox_inches='tight') # dpi=300
+        plt.close()
         print(f'File saved: {target_path}')
 
 
@@ -165,8 +205,8 @@ class ImageWriter():
         ax = plt.subplot(111)
         ax.bar(df.index, df.iloc[:,0].values, width=0.05, color='g')
         ax.bar(df.index, df.iloc[:,1].values, width=0.05, color='r')
-        ax.xaxis.set_major_locator(mdates.DayLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        #ax.xaxis.set_major_locator(mdates.DayLocator())
+        #ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
         plt.gcf().autofmt_xdate()
 
         # Set title
@@ -183,6 +223,7 @@ class ImageWriter():
         #plt.tight_layout()
 
         plt.savefig(target_path, bbox_inches='tight')
+        plt.close()
         print(f'File saved: {target_path}')
 
 
@@ -206,12 +247,13 @@ class ImageWriter():
         Configuration: {kwargs}
         """
         x_tick_step = 0.01
-        plt.xticks(np.arange(round(df.index.min(), 2)-x_tick_step, df.index.max(), x_tick_step))
+        plt.xticks(np.arange(round(df.index.min(), 2)-x_tick_step, df.index.max(), x_tick_step), rotation=45)
         plt.grid(linewidth=1)
         plt.figtext(0.5, 0, footnote, ha="center", fontsize=12)
         #plt.tight_layout()
 
         plt.savefig(target_path)
+        plt.close()
         print(f'File saved: {target_path}')
 
 

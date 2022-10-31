@@ -16,5 +16,6 @@ Using the '1h' time frame, for each candlestick, evaluating the lowest and highe
 
 The choosen pairs and the correlation:
 
+        ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"]
 
 <img src="../../configs/research/daily_steady_profit/reports/correlation_matrix.png" /> 

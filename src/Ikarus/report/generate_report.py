@@ -152,6 +152,11 @@ async def main():
             analysis_data = [analysis_dict[reporter_indice[0]][reporter_indice[1]][reporter_indice[2]] for reporter_indice in report_config['indices']]
             report_tool_coroutines.append(handler(report_config['indices'], analysis_data)) # Use indices as the index
 
+        elif source == 'candlesticks':
+            # Use indices
+            handler = getattr(report_tools, report_config['reporter'])
+            candlestick_data = [data_dict[reporter_indice[0]][reporter_indice[1]] for reporter_indice in report_config['indices']]
+            report_tool_coroutines.append(handler(report_config['indices'], candlestick_data)) # Use indices as the index
 
     # Get the statistics
     report_tool_results = list(await asyncio.gather(*report_tool_coroutines))
