@@ -55,6 +55,33 @@ def evaluate_figsize(df):
 
     return x, y
 
+def evaluate_filename(reporter, indice):
+
+    # Check if there are multiple symbols or timeframes
+    symbol = indice[0][0]
+    timeframe = indice[0][1]
+
+    if len(indice) > 1:
+        for ind in indice[1:]:
+            if ind[0] != symbol:
+                symbol = '<symbol>'
+            
+            if ind[1] != timeframe:
+                timeframe = '<timeframe>'
+                
+        filename = '{}_{}_{}'.format(reporter,symbol,timeframe)
+    else:
+        symbol, timeframe, analyzer = indice[0]
+        filename = '{}_{}_{}'.format(reporter, symbol, timeframe)
+
+    return filename
+
+
+def evaluate_target_path(report_folder, filename):
+    filename.replace('<', '').replace('>', '')
+    target_path = '{}/{}'.format(report_folder, filename.replace('<', '').replace('>', ''))
+    return target_path
+
 
 class ImageWriter():
     def __init__(self, report_folder) -> None:
@@ -148,9 +175,8 @@ class ImageWriter():
 
 
     def heatmap_plot(self, indice, report_data, **kwargs):
-        symbol, timeframe, analyzer = indice[0]
-        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
-        target_path = '{}/{}'.format(self.report_folder,filename)
+        filename = evaluate_filename(kwargs['reporter'], indice)
+        target_path = evaluate_target_path(self.report_folder,filename)
 
         if type(report_data) == dict:
             df = pd.DataFrame(data=report_data)

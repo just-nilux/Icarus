@@ -18,4 +18,26 @@ The choosen pairs and the correlation:
 
         ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"]
 
-<img src="../../configs/research/daily_steady_profit/reports/correlation_matrix.png" /> 
+## Correlation
+<img src="../../configs/research/daily_steady_profit/reports_correlation/correlation_matrix_symbol_1d.png" /> 
+
+## Possible Max-Min Price Change
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_BTCUSDT_1h.png" />
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_CHZUSDT_1h.png" />
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_EURUSDT_1h.png" />
+
+
+## Max-Min Price Change Distribution
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_BTCUSDT_1h.png" />
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_CHZUSDT_1h.png" />
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_EURUSDT_1h.png" />
+
+
+## Threshold Exceed Possibility
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_BTCUSDT_1h.png" /> 
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_CHZUSDT_1h.png" /> 
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_ETHUSDT_1h.png" /> 
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_EURUSDT_1h.png" /> 
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_SHIBUSDT_1h.png" /> 
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_SOLUSDT_1h.png" /> 
+<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_stats_XRPUSDT_1h.png" /> 
