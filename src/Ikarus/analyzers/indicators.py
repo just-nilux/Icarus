@@ -35,7 +35,7 @@ class Indicators():
         digit = kwargs.get('digit',3)
 
         df = candlesticks[['open', 'high', 'low']]
-        df.set_index(np.array(df.index).astype('datetime64[ms]'), inplace=True)
+        #df.set_index(np.array(df.index).astype('datetime64[ms]'), inplace=True)
 
         df['high'] = df['high'].rolling(window=timeperiod).apply(max)
         df['low'] = df['low'].rolling(window=timeperiod).apply(min)

@@ -1,6 +1,9 @@
 from statistics import mean
 import numpy as np
 import pandas as pd
+from ..utils import time_scale_to_minute
+import copy
+import asyncio
 
 accuracy_conditions_for_ppc = {
     'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
@@ -15,7 +18,7 @@ async def ohlcv(indices, analysis):
 
 
 async def perc_pos_change_raw(indices, analysis):
-    return analysis[0]
+    return analysis[0].set_index(np.array(analysis[0].index).astype('datetime64[ms]'))
 
 
 async def perc_pos_change_occurence(indices, analysis):
@@ -91,3 +94,33 @@ async def market_class_table_stats(index, detected_market_regimes):
         tabular_dict[regime_name] = regime_stats
     
     return tabular_dict
+
+
+async def perc_pos_change_stats_in_market_class(index, detected_market_regimes):
+    market_regimes = detected_market_regimes[0]
+    df_change = copy.deepcopy(detected_market_regimes[1])
+    df_change['downtrend'] = False
+
+    perc_price_change_list = [(instance.start_ts, instance.end_ts)  for instance in market_regimes['downtrend']]
+    #step_ts = time_scale_to_minute(index[0][1]) * 60 * 1000
+    #start_ts = regime_instances[0]
+    #end_ts = regime_instances[-1]
+
+    coroutines = []
+    results = []
+    coroutines.append(perc_pos_change_stats(index, [df_change]))
+
+    for regime_name, regime_instances in market_regimes.items():
+        df_change[regime_name] = False
+        for instance in regime_instances:
+            df_change.loc[instance.start_ts:instance.end_ts, regime_name]=True
+        coroutines.append(perc_pos_change_stats(index, [df_change[df_change[regime_name]]]))
+
+    results = await asyncio.gather(*coroutines)
+    # NOTE: FOR '1d':
+    # I think the results are meaningful. As expected in downtrend,
+    # neg_change possibility is higher and pos_change is lower. It is vice-versa in
+    # uptrend
+    # TODO: Ad just writers to handle multiple heatmap at once
+
+    return results

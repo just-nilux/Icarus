@@ -1,0 +1,116 @@
+{
+    "tag": "test-bot",
+    "log-level": "DEBUG",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb": {
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "balances": [
+        {
+            "asset": "USDT",
+            "free": 10000,
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+        "fee_rate": 0.001
+    },
+    "strategy": {
+        "MACDStrategy": {
+            "pairs": [
+                "BTCUSDT",
+                "CHZUSDT"
+            ],
+            "time_scales": [
+                "1d",
+                "1h"
+            ]
+        }
+    },
+    "analysis": {
+        "market_class_aroon": {
+            "validation_threshold": 0,
+            "timeperiod": 14
+        },
+        "percentage_possible_change": {"timeperiod":24, "digit":3}
+    },
+    "report_folder_name": "reports_market_class",
+    "report": [],
+    "grid_search_reporters": {
+        "grid": {
+            "<pair>": [
+                "BTCUSDT",
+                "CHZUSDT"
+            ],
+            "<timeframe>": [
+                "1d",
+                "1h"
+            ],
+            "<analyzer>": [
+                "market_class_aroon"
+            ]
+        },
+        "reporters": [
+            {
+                "parameters": {
+                    "<analyzer2>": [
+                        "market_class_aroon",
+                        "percentage_possible_change"
+                    ]
+                },
+                "reporter": "perc_pos_change_stats_in_market_class",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer2>"],
+                "writers": [
+                    "database"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "market_class_table_stats",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "writers": [
+                    "database"
+                ]
+            }
+        ]
+    },
+    "time_scales": {
+        "1m": 720,
+        "5m": 480,
+        "15m": 96,
+        "30m": 336,
+        "1h": 24,
+        "2h": 84,
+        "4h": 540,
+        "12h": 60,
+        "1d": 1,
+        "1w": 52,
+        "1M": 12
+    },
+    "backtest": {
+        "start_time": "2022-3-10 13:00:00",
+        "end_time": "2022-10-10 13:00:00",
+        "online": true
+    },
+    "visualization": {
+        "observers": {
+            "qc": [
+                "free",
+                "total",
+                "in_trade"
+            ],
+            "qc_leak": [
+                "binary"
+            ],
+            "breakpoints": {
+                "1562371200000": "decision_time",
+                "1562803200000": "result.enter.time"
+            }
+        }
+    }
+}
