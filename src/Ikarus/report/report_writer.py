@@ -24,33 +24,38 @@ def get_reporter_name(indice):
         return None
 
 def evaluate_min_max_limits(df):
-    if (df.values<=1).all():
-        if (df.values>=0).all():
+    if type(df) == pd.DataFrame:
+        values = df.values
+    else:
+        values = df
+
+    if (values<=1).all():
+        if (values>=0).all():
             return 0, 1
-        elif (df.values>=-1).all():
+        elif (values>=-1).all():
             return -1, 1
     else:
-        return df.values.min(), df.values.max()
+        return values.min(), values.max()
 
 
-def evaluate_value_fontsize(df):
-    if df.values.size < 100:
+def evaluate_value_fontsize(shape):
+    if shape[1]*shape[0] < 100:
         return 12
     else:
         return 4
 
 
-def evaluate_figsize(df):
-    if df.values.size < 50: limit = 12
+def evaluate_figsize(shape):
+    if shape[1]*shape[0] < 50: limit = 12
     else: limit = 16
 
-    if df.shape[1] >  df.shape[0]:
-        ratio = int(df.shape[1] / df.shape[0])
+    if shape[1] >  shape[0]:
+        ratio = int(shape[1] / shape[0])
         x = limit
-        y = limit / ratio
+        y = int(limit / ratio)
     else:
-        ratio = int(df.shape[0] / df.shape[1])
-        x = limit / ratio
+        ratio = int(shape[0] / shape[1])
+        x = int(limit / ratio)
         y = limit
 
     return x, y
@@ -184,7 +189,7 @@ class ImageWriter():
             df = report_data
 
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
-        fig, ax = plt.subplots(figsize=evaluate_figsize(df))
+        fig, ax = plt.subplots(figsize=evaluate_figsize(df.shape))
 
         #title = get_reporter_name(indice)
         #title = kwargs.get('reporter','heatmap_plot')
@@ -199,7 +204,7 @@ class ImageWriter():
         im = ax.imshow(df.values, cmap='coolwarm', vmin=vmin, vmax=vmax)
         fig.colorbar(im)
 
-        fontsize = evaluate_value_fontsize(df)
+        fontsize = evaluate_value_fontsize(df.shape)
 
         for i in range(df.values.shape[0]):
             for j in range(df.values.shape[1]):
@@ -220,6 +225,76 @@ class ImageWriter():
         plt.close()
         print(f'File saved: {target_path}')
 
+
+    def heatmap_multiplot(self, indice, report_data, **kwargs):
+        filename = evaluate_filename(kwargs['reporter'], indice)
+        target_path = evaluate_target_path(self.report_folder,filename)
+
+        sub_matrices = []
+
+        if type(report_data) == dict:
+            #x_labels = list(report_data.keys())
+            #y_labels = [""]
+            #sub_matrices = [pd.DataFrame(data=datum).values for datum in report_data.values()]
+            pass
+        else:
+            return
+
+        for key, report_datum in report_data.items():
+            tabular_df = pd.DataFrame(data=report_datum)
+            sub_matrices.append(tabular_df.values)
+
+        x_labels, y_labels, sub_x_labels, sub_y_labels = [""], list(report_data.keys()), tabular_df.columns.to_list(), tabular_df.index.to_list()
+
+        fig = plt.figure(figsize=evaluate_figsize((len(sub_x_labels)*len(x_labels),len(sub_y_labels)*len(y_labels))))
+        fig.suptitle(filename, fontsize=24)
+
+        grid = AxesGrid(fig, 111,
+                        nrows_ncols=(len(y_labels), len(x_labels)),
+                        axes_pad=0.05,
+                        share_all=True,
+                        label_mode="L",
+                        cbar_location="right",
+                        cbar_mode="single",
+                        )
+
+        for idx, (matrice, ax) in enumerate(zip(sub_matrices,grid)):
+            fontsize = evaluate_value_fontsize(matrice.shape)
+            if idx < len(x_labels):
+                ax2 = ax.secondary_xaxis('top')
+                ax2.tick_params(axis='x')
+                ax2.set_xticks(np.arange(len(sub_x_labels)), sub_x_labels, minor=False, fontsize=fontsize)
+                ax2.set_xlabel(x_labels[idx], fontsize=fontsize)
+
+            else:
+                ax.set_xticks([])
+
+            if True: #idx % len(y_labels) == 0:
+                ax.set_ylabel(y_labels[idx], fontsize=fontsize)
+                #ax.set(ylabel=y_labels[idx % len(y_labels)])
+
+            vmin, vmax = evaluate_min_max_limits(matrice)
+            ax.set_yticks(np.arange(len(sub_y_labels)), sub_y_labels, fontsize=fontsize)
+            im = ax.imshow(matrice, cmap='coolwarm' ,vmin=vmin, vmax=vmax)
+
+            for i in range(matrice.shape[0]):
+                for j in range(matrice.shape[1]):
+                    if not math.isnan(matrice[0, 0]):
+                        text = ax.text(j, i, "%.2f" % matrice[i, j],
+                                    ha="center", va="center", color="black", fontsize=fontsize)
+        grid.cbar_axes[0].colorbar(im)
+
+
+        # shitcode
+        footnote = f"""
+        Configuration: {kwargs}
+        """
+
+        plt.figtext(0, 0, footnote, ha="left", fontsize=8)
+        plt.tight_layout()
+        plt.savefig(target_path, bbox_inches='tight')
+        plt.close()
+        print(f'File saved: {target_path}')
 
     def double_sided_histogram_plot(self, indice, df, **kwargs):
         symbol, timeframe, analyzer = indice[0]

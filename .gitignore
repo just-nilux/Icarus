@@ -133,4 +133,5 @@ test_credentials.json
 log/
 *stats.*
 *stat.*
+generated_config.json
 reports*/

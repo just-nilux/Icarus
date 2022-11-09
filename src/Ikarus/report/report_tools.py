@@ -117,10 +117,10 @@ async def perc_pos_change_stats_in_market_class(index, detected_market_regimes):
         coroutines.append(perc_pos_change_stats(index, [df_change[df_change[regime_name]]]))
 
     results = await asyncio.gather(*coroutines)
+    result_dict = {key:value for key, value in zip(['all'] + list(market_regimes.keys()), results)}
+
     # NOTE: FOR '1d':
     # I think the results are meaningful. As expected in downtrend,
     # neg_change possibility is higher and pos_change is lower. It is vice-versa in
     # uptrend
-    # TODO: Ad just writers to handle multiple heatmap at once
-
-    return results
+    return result_dict

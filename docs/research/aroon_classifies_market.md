@@ -55,7 +55,7 @@ Duration of a regime instances with the unit candlestick.
 ### Coverage: 
 Total coverage of a regime instances in percentage on a given chart.
 ### Percentage Price Change (PPC):
-The change between the **open price** of the first and **close price** of the last candles in a detected section of the chart.
+The change between the **open price** of the first and **close price** of the last candles in a detected section of the chart. When a validation threshold is applied (in this case the values: 0,3,7,14) the regimes that has lower duration than the thresholds are eliminated.
 ### PPC Accuracy:
 For a a type of market regime: "How much of the detected regimes fits to a threshold rule":
 * UpTrend: PPC > 1

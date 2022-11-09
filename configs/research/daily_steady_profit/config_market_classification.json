@@ -20,10 +20,7 @@
     },
     "strategy": {
         "MACDStrategy": {
-            "pairs": [
-                "BTCUSDT",
-                "CHZUSDT"
-            ],
+            "pairs": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"],
             "time_scales": [
                 "1d",
                 "1h"
@@ -41,10 +38,7 @@
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<pair>": [
-                "BTCUSDT",
-                "CHZUSDT"
-            ],
+            "<pair>": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"],
             "<timeframe>": [
                 "1d",
                 "1h"
@@ -65,7 +59,7 @@
                 "source": "analyzer",
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer2>"],
                 "writers": [
-                    "database"
+                    "heatmap_multiplot"
                 ]
             },
             {
