@@ -68,7 +68,8 @@
                 "source": "analyzer",
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
                 "writers": [
-                    "database"
+                    "database",
+                    "markdown_table"
                 ]
             }
         ]
@@ -82,12 +83,12 @@
         "2h": 84,
         "4h": 540,
         "12h": 60,
-        "1d": 1,
+        "1d": 24,
         "1w": 52,
         "1M": 12
     },
     "backtest": {
-        "start_time": "2022-3-10 13:00:00",
+        "start_time": "2021-10-10 13:00:00",
         "end_time": "2022-10-10 13:00:00",
         "online": true
     },
