@@ -24,22 +24,7 @@
     "strategy": {
         "MACDStrategy": {
             "pairs": ["BTCUSDT","ETHUSDT", "XRPUSDT"],
-            "time_scales": ["1d", "4h", "1h"],
-            "enter": {
-                "type": "market"
-            },
-            "exit": {
-                "type": "market"
-            },
-            "action_mapping": {
-                "enter_expire": "cancel",
-                "exit_expire": "market_exit"
-            },
-            "max_lto": 3
-        },
-        "RSIStrategy": {
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1d"],
+            "time_scales": ["1d", "1h"],
             "enter": {
                 "type": "market"
             },
@@ -54,15 +39,14 @@
         }
     },
     "analysis": {
-        "mkfi": {},
-        "stoch":{"fastk_period":14, "slowk_period":3, "slowd_period":3, "slowk_matype":0, "slowd_matype":0},
-        "stochf":{"fastk_period":14, "fastd_period":3, "fastd_matype":0},
-        "rvol":{"period":10},
-        "market_class_fractal_aroon": {"validation_threshold": 0, "plot":["distribution"]},
-        "market_class_aroonosc": {"validation_threshold": 3, "plot":["distribution"]},
-        "mfi":{"timeperiod":14},
-        "kaufman_efficiency_ratio": {"timeperiod":20},
-        "price_density": {"timeperiod":20}
+        "support_dbscan":{"source":"bullish_fractal_3"},
+        "resistance_dbscan":{"source":"bearish_fractal_3"},
+        "support_birch":{"source":"bullish_fractal_3"},
+        "resistance_birch":{"source":"bearish_fractal_3"},
+        "support_optics":{"source":"bullish_fractal_3"},
+        "resistance_optics":{"source":"bearish_fractal_3"},
+        "support_meanshift":{"source":"bullish_fractal_3"},
+        "resistance_meanshift":{"source":"bearish_fractal_3"}
     },
     "time_scales": {
         "1m": 720,

@@ -188,7 +188,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bullish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(birch, candle_chunks, chart_price_range)
@@ -208,7 +208,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bearish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(birch, candle_chunks, chart_price_range)
@@ -228,7 +228,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bullish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(optics, candle_chunks, chart_price_range)
@@ -249,7 +249,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bearish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(optics, candle_chunks, chart_price_range)
@@ -266,7 +266,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bullish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, candle_chunks, chart_price_range)
@@ -287,7 +287,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bearish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, candle_chunks, chart_price_range)
@@ -310,7 +310,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bullish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(meanshift, candle_chunks, chart_price_range)
@@ -329,7 +329,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(bearish_frac, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(meanshift, candle_chunks, chart_price_range)
@@ -352,7 +352,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(data_points, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(kmeans, candle_chunks, chart_price_range)
@@ -375,7 +375,7 @@ class SupportResistance():
         chunk_size = None
         if kwargs.get('discrete_mode', False):
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)][1]
+            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
         candle_chunks = await SupportResistance.create_candle_chunks(data_points, chunk_size)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(kmeans, candle_chunks, chart_price_range)

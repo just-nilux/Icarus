@@ -59,8 +59,8 @@
         "resistance_dbscan":{"source":"bearish_fractal_3"},
 
         // Market Classification
-        "market_class_fractal_aroon": {"validation_threshold": 10, "plot":["distribution"]},
-        "market_class_aroonosc": {"validation_threshold": 3, "plot":["distribution"]},
+        "market_class_fractal_aroon": {"validation_threshold": 10},
+        "market_class_aroonosc": {"validation_threshold": 3},
         
         "kaufman_efficiency_ratio": {"timeperiod":20},
         "price_density": {"timeperiod":20},
@@ -80,53 +80,44 @@
         "ad":{},
         "obv":{}
     },
-    "report": {
-        "market_class_table_stats": {
-            "source": "analyzer",
-            "analyzers": [
-                "market_class_aroon",
-                "market_class_aroonosc",
-                "market_class_fractal_aroon"
+    "report": [],
+    "grid_search_reporters": {
+        "grid": {
+            "<pair>": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"],
+            "<timeframe>": [
+                "1d",
+                "1h"
             ],
-            "writers": [
-                "markdown_table",
-                "database"
+            "<analyzer>": [
+                "market_class_aroon"
             ]
         },
-        "market_class_ppc": {
-            "source": "database",
-            "analyzers": [
-                "market_class_aroon",
-                "market_class_aroonosc",
-                "market_class_fractal_aroon"
-            ],
-            "writers": [
-                "box_plot"
-            ]
-        },
-        "market_class_tabulate_query": {
-            "source": "database",
-            "queries": [
-                [
-                    {
-                        "$match": {
-                            "analyzer": {
-                                "$eq": "market_class_aroon"
-                            }
-                        }
-                    },
-                    {
-                        "$project": {
-                            "ppc": "$data.downtrend.PPC Accuracy (%)",
-                            "folder_name": "$folder_name"
-                        }
-                    }
+        "reporters": [
+            {
+                "parameters": {
+                    "<analyzer2>": [
+                        "market_class_aroon",
+                        "percentage_possible_change"
+                    ]
+                },
+                "reporter": "perc_pos_change_stats_in_market_class",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer2>"],
+                "writers": [
+                    "heatmap_multiplot"
                 ]
-            ],
-            "writers": [
-                "heatmap_w_sub_matrices"
-            ]
-        }
+            },
+            {
+                "parameters": {},
+                "reporter": "market_class_table_stats",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "writers": [
+                    "database",
+                    "markdown_table"
+                ]
+            }
+        ]
     },
     "time_scales": {
         "1m": 720,  // 12 hours

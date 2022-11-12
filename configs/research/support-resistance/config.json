@@ -1,0 +1,46 @@
+{
+    "tag": "test-bot",
+    "log-level": "DEBUG",
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb": {
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "balances": [
+        {
+            "asset": "USDT",
+            "free": 10000,
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+        "fee_rate": 0.001
+    },
+    "strategy": {
+        "MACDStrategy": {
+            "pairs": ["BTCUSDT"],
+            "time_scales": [
+                "1h"
+            ]
+        }
+    },
+    "analysis": {
+        "support_dbscan":{"source":"bullish_fractal_3", "discrete_mode":true}
+    },
+    "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters": {},
+    "time_scales": {
+        "1h": 336,
+        "4h": 360,
+        "1d": 365,
+        "1w": 260
+    },
+    "backtest":{
+        "start_time": "2020-01-11 13:00:00",
+        "end_time": "2020-01-18 13:00:00",
+        "online": true
+    }
+}
