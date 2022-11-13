@@ -43,10 +43,12 @@ def fibonacci_handler(x, y, axes):
             fplt.add_rect((x[fibo_cluster.validation_index], max(fibo_cluster.centroids)), (x[-1], min(fibo_cluster.centroids)), ax=axes['ax'], color='#CCCCFF')
 
 
-def support_handler(x, y, axes):
-    global color_map_support
+def support_resistance_handler(x, y, axes, **kwargs):
+    sr_type = kwargs.get('type','')
+    sr_cmap = kwargs.get('cmap',[('#0000FF', '#CCCCFF')])
+
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
-    hover_label.setText(f"Support", color='#0000FF', bold=True)
+    hover_label.setText(sr_type, color=sr_cmap[0][0], bold=True)
     #hover_label.setText(f'<textarea name="Text1" cols="40" rows="5"></textarea>', color='#0000FF', bold=True)
 
     # Color Map params
@@ -69,49 +71,16 @@ def support_handler(x, y, axes):
             sr_cluster.vertical_distribution_score, 
             round(sr_cluster.horizontal_distribution_score/sr_cluster.vertical_distribution_score,2))
 
-        text_top = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
-
+        text_top_left = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
+        text_top_right = "#Frame:{}".format(sr_cluster.chunk_end_index-sr_cluster.chunk_start_index)
+        fplt.add_text((x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), text_top_right, color='#000000',anchor=(1,1), ax=axes['ax'])
         fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
-        print(sr_cluster.chunk_end_index)
+        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top_left, color='#000000',anchor=(0,1), ax=axes['ax'])
         fplt.add_line((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), 
-            (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color=color_map_support[colormap_idx][0], width=2, interactive=False)
+            (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color=sr_cmap[colormap_idx][0], width=2, interactive=False)
         fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), 
-            (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color=color_map_support[colormap_idx][1])
+            (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color=sr_cmap[colormap_idx][1])
 
-def resistance_handler(x, y, axes):
-    global color_map_resistance
-    hover_label = fplt.add_legend('aaa', ax=axes['ax'])
-    hover_label.setText(f"Resistance", color='#00FF00', bold=True)
-
-    # Color Map params
-    colormap_idx = 0
-    start_idx = None
-
-    for sr_cluster in y:
-
-        if start_idx == None:
-            start_idx = sr_cluster.chunk_start_index
-
-        # Change color of cluster based on the start_index of cluster
-        if start_idx != sr_cluster.chunk_start_index:
-            start_idx = sr_cluster.chunk_start_index
-            colormap_idx += 1
-            colormap_idx = colormap_idx % len(color_map_support)
-
-        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
-            sr_cluster.horizontal_distribution_score, 
-            sr_cluster.vertical_distribution_score, 
-            round(sr_cluster.horizontal_distribution_score/sr_cluster.vertical_distribution_score,2))
-
-        text_top = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
-
-        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
-        fplt.add_line((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), 
-            (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color=color_map_resistance[colormap_idx][1], width=2, interactive=False)
-        fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), 
-            (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color=color_map_resistance[colormap_idx][1])
 
 def line_handler(x, y, axis):
     # TODO: Improve the plot configuration, such as legend texts and the colors
@@ -233,16 +202,16 @@ def fractal_line_3(x, y, axes): axes['ax'].set_visible(xaxis=True); line_handler
 def fractal_aroon(x, y, axes): enable_ax_bot(axes, y_range=(0,100), ); line_handler(x, y, axes['ax_bot'])
 def fractal_aroonosc(x, y, axes): enable_ax_bot(axes, y_range=(-100,100)); line_handler(x, y, axes['ax_bot'])
 
-def support_birch(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_birch(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
-def support_optics(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_optics(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
-def support_meanshift(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_meanshift(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
-def support_dbscan(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_dbscan(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
-def support_kmeans(x, y, axes): disable_ax_bot(axes); support_handler(x, y, axes)
-def resistance_kmeans(x, y, axes): disable_ax_bot(axes); resistance_handler(x, y, axes)
+def support_birch(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Support', 'cmap':color_map_support})
+def resistance_birch(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Resistance', 'cmap':color_map_resistance})
+def support_optics(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Support', 'cmap':color_map_support})
+def resistance_optics(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Resistance', 'cmap':color_map_resistance})
+def support_meanshift(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Support', 'cmap':color_map_support})
+def resistance_meanshift(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Resistance', 'cmap':color_map_resistance})
+def support_dbscan(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Support', 'cmap':color_map_support})
+def resistance_dbscan(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Resistance', 'cmap':color_map_resistance})
+def support_kmeans(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Support', 'cmap':color_map_support})
+def resistance_kmeans(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Resistance', 'cmap':color_map_resistance})
 def fibonacci(x, y, axes): disable_ax_bot(axes); fibonacci_handler(x, y, axes)
 
 def bullish_fractal_5(x, y, axes): 

@@ -5,6 +5,26 @@ import numpy as np
 from ..utils import minute_to_time_scale
 import pandas as pd
 
+@dataclass
+class SRConfig():
+    kwargs: dict                   # Mandatory
+    source: str = ''
+    min_members: int = 3
+    frame_length: int = None
+    step_length: int = None
+
+    def __post_init__(self):
+        self.source = '_' + self.kwargs.get('source','')
+
+    def parse_chunks_params(self, diff_in_minute, time_scales_config):
+        if "step_length" in self.kwargs.keys() or "step_to_frame_ratio" in self.kwargs.keys():
+            self.frame_length = time_scales_config[minute_to_time_scale(diff_in_minute)]
+
+            if "step_length" in self.kwargs.keys():
+                self.step_length = self.kwargs.get('step_length')
+            elif "step_to_frame_ratio" in self.kwargs.keys():
+                self.step_length = int(self.frame_length * self.kwargs.get('step_to_frame_ratio'))
+
 
 @dataclass
 class SRCluster():
@@ -271,48 +291,31 @@ class SupportResistance():
         return sr_clusters
 
     async def _support_dbscan(self, candlesticks, **kwargs):
-        source = '_' + kwargs.get('source','bullish_fractal_3')
-        bullish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
+
+        sr_config = SRConfig(kwargs)
+        sr_config.parse_chunks_params(int((candlesticks.index[1]-candlesticks.index[0])/60000), self.time_scales_config)
+
+        bullish_frac = np.nan_to_num(await getattr(self, sr_config.source)(candlesticks)).reshape(-1,1)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
         eps = float(chart_price_range * 0.005) # NOTE: Band of %0.5 unless optimized
         dbscan = DBSCAN(eps=eps) # NOTE: min_sample is set inside of the eval_sup_res_clusters method
 
-        # Calculate chunk_size if the discrete mode enabled
-        frame_length = None
-        step_length = None
-        if "step_length" in kwargs.keys() or "step_to_frame_ratio" in kwargs.keys():
-            diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            frame_length = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
-
-            if "step_length" in kwargs.keys():
-                step_length = kwargs['step_length']
-            elif "step_to_frame_ratio" in kwargs.keys():
-                step_length = int(frame_length / kwargs['step_to_frame_ratio'])
-
-
-        meta_chunks = await SupportResistance.create_meta_chunks(bullish_frac, frame_length, step_length)
+        meta_chunks = await SupportResistance.create_meta_chunks(bullish_frac, sr_config.frame_length, sr_config.step_length)
         sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, bullish_frac, meta_chunks, chart_price_range)
         return sr_clusters
 
 
     async def _resistance_dbscan(self, candlesticks, **kwargs):
-        source = '_' + kwargs.get('source','bearish_fractal_3')
-        # NOTE: In order to yield validation points, nan values are assigned to 0. 
-        #       They are visualized but not in the appeared window        
+        sr_config = SRConfig(kwargs)
+        sr_config.parse_chunks_params(int((candlesticks.index[1]-candlesticks.index[0])/60000), self.time_scales_config)    
 
-        bearish_frac = np.nan_to_num(await getattr(self, source)(candlesticks)).reshape(-1,1)
+        bearish_frac = np.nan_to_num(await getattr(self, sr_config.source)(candlesticks)).reshape(-1,1)
         chart_price_range = candlesticks['high'].max() - candlesticks['low'].min()
         eps = float(chart_price_range * 0.005) # TODO: Optimize this epsilon value based on volatility or sth else
         dbscan = DBSCAN(eps=eps) # NOTE: min_sample is set inside of the eval_sup_res_clusters method
 
-        # Calculate chunk_size if the discrete mode enabled
-        chunk_size = None
-        if kwargs.get('discrete_mode', False):
-            diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
-
-        candle_chunks = await SupportResistance.create_candle_chunks(bearish_frac, chunk_size)
-        sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, candle_chunks, chart_price_range)
+        meta_chunks = await SupportResistance.create_meta_chunks(bearish_frac, sr_config.frame_length, sr_config.step_length)
+        sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, bearish_frac, meta_chunks, chart_price_range)
         return sr_clusters
 
 

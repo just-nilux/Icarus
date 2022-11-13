@@ -27,7 +27,8 @@
         }
     },
     "analysis": {
-        "support_dbscan":{"source":"bullish_fractal_3", "discrete_mode":true}
+        "support_dbscan":{"source":"bullish_fractal_3", "step_to_frame_ratio":0.5},
+        "resistance_dbscan":{"source":"bearish_fractal_3", "step_to_frame_ratio":0.5}
     },
     "report_folder_name": "reports",
     "report": [],
