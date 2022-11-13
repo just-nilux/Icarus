@@ -2,6 +2,18 @@ import finplot as fplt
 from statistics import mean
 import pandas as pd
 import numpy as np
+
+
+color_map_support = [
+    ('#0000FF', '#CCCCFF'),
+    ('#00FF00', '#CCFFCC')
+]
+
+color_map_resistance = [
+    ('#FF0000', '#FFCCCC'),
+    ('#FFFB00', '#FFFBCC')
+]
+
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -32,13 +44,25 @@ def fibonacci_handler(x, y, axes):
 
 
 def support_handler(x, y, axes):
-
+    global color_map_support
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
     hover_label.setText(f"Support", color='#0000FF', bold=True)
     #hover_label.setText(f'<textarea name="Text1" cols="40" rows="5"></textarea>', color='#0000FF', bold=True)
 
-    # Visualize Support Lines
+    # Color Map params
+    colormap_idx = 0
+    start_idx = None
+
     for sr_cluster in y:
+
+        if start_idx == None:
+            start_idx = sr_cluster.chunk_start_index
+
+        # Change color of cluster based on the start_index of cluster
+        if start_idx != sr_cluster.chunk_start_index:
+            start_idx = sr_cluster.chunk_start_index
+            colormap_idx += 1
+            colormap_idx = colormap_idx % len(color_map_support)
 
         text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
             sr_cluster.horizontal_distribution_score, 
@@ -47,27 +71,34 @@ def support_handler(x, y, axes):
 
         text_top = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
 
-        if sr_cluster.chunk_start_index == 0 and sr_cluster.chunk_end_index == 0:
-            fplt.add_text((x[0], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-            fplt.add_text((x[0], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
-            fplt.add_line((x[0], mean(sr_cluster.centroids)), (x[-1], mean(sr_cluster.centroids)), style='.', color='#0000FF', width=2, interactive=False)
-            #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
-            fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), (x[-1], min(sr_cluster.centroids)), ax=axes['ax'], color='#CCCCFF')
-        else:
-            fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-            fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
-            fplt.add_line((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), 
-                (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color='#0000FF', width=2, interactive=False)
-            fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), 
-                (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color='#CCCCFF')
+        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
+        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
+        print(sr_cluster.chunk_end_index)
+        fplt.add_line((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), 
+            (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color=color_map_support[colormap_idx][0], width=2, interactive=False)
+        fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), 
+            (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color=color_map_support[colormap_idx][1])
 
 def resistance_handler(x, y, axes):
-
+    global color_map_resistance
     hover_label = fplt.add_legend('aaa', ax=axes['ax'])
-    hover_label.setText(f"Support", color='#0000FF', bold=True)
+    hover_label.setText(f"Resistance", color='#00FF00', bold=True)
 
-    # Visualize Resistance Lines
+    # Color Map params
+    colormap_idx = 0
+    start_idx = None
+
     for sr_cluster in y:
+
+        if start_idx == None:
+            start_idx = sr_cluster.chunk_start_index
+
+        # Change color of cluster based on the start_index of cluster
+        if start_idx != sr_cluster.chunk_start_index:
+            start_idx = sr_cluster.chunk_start_index
+            colormap_idx += 1
+            colormap_idx = colormap_idx % len(color_map_support)
+
         text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
             sr_cluster.horizontal_distribution_score, 
             sr_cluster.vertical_distribution_score, 
@@ -75,19 +106,12 @@ def resistance_handler(x, y, axes):
 
         text_top = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
 
-        if sr_cluster.chunk_start_index == 0 and sr_cluster.chunk_end_index == 0:
-            fplt.add_text((x[0], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-            fplt.add_text((x[0], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
-            fplt.add_line((x[0], mean(sr_cluster.centroids)), (x[-1], mean(sr_cluster.centroids)), style='.', color='#FF0000', width=2, interactive=False)
-            #fplt.add_band(min(sr_level), max(sr_level), ax=axes['ax'], color='#CCCCFF')
-            fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), (x[-1], min(sr_cluster.centroids)), ax=axes['ax'], color='#FFCCCC')
-        else:
-            fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
-            fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
-            fplt.add_line((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), 
-                (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color='#FF0000', width=2, interactive=False)
-            fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), 
-                (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color='#FFCCCC')
+        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
+        fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_top, color='#000000',anchor=(0,1), ax=axes['ax'])
+        fplt.add_line((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), 
+            (x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), style='.', color=color_map_resistance[colormap_idx][1], width=2, interactive=False)
+        fplt.add_rect((x[sr_cluster.validation_index], max(sr_cluster.centroids)), 
+            (x[sr_cluster.chunk_end_index], min(sr_cluster.centroids)), ax=axes['ax'], color=color_map_resistance[colormap_idx][1])
 
 def line_handler(x, y, axis):
     # TODO: Improve the plot configuration, such as legend texts and the colors

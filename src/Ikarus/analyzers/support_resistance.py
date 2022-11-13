@@ -71,12 +71,14 @@ class SupportResistance():
         return np.round(cluster_price_range_perc/len(centroids), 4)
 
 
-    async def eval_sup_res_clusters(algorithm, candle_chunks, chart_price_range):
+    async def eval_sup_res_clusters(algorithm, candles, meta_chunks, chart_price_range):
         sr_levels = []
-        chunk_start_index = 0
-        chunk_end_index = 0
-        for chunk in candle_chunks:
+        #chunk_start_index = 0
+        #chunk_end_index = 0
+        for meta_chunk in meta_chunks:
 
+            #chunk
+            chunk = candles[meta_chunk[0] : meta_chunk[1]]
             min_cluster_members = max(round(chunk.size/100),3)
 
             if hasattr(algorithm, 'min_samples'):
@@ -86,7 +88,7 @@ class SupportResistance():
             cls_tokens = np.unique(cluster_predictions)
 
             # Increase the chunk_end_index
-            chunk_end_index += (chunk.size - 1)
+            #chunk_end_index += (chunk.size - 1)
 
             for token in cls_tokens:
                 # NOTE: Ignore outliers
@@ -102,31 +104,44 @@ class SupportResistance():
 
                 srcluster = SRCluster(
                     centroids,
-                    chunk_start_index + indices[min_cluster_members-1],
+                    meta_chunk[0] + indices[min_cluster_members-1],
                     min_cluster_members,
                     await SupportResistance.eval_sup_res_cluster_horizontal_score(indices, len(cluster_predictions)),
-                    await SupportResistance.eval_sup_res_cluster_vertical_score(centroids, chart_price_range)
+                    await SupportResistance.eval_sup_res_cluster_vertical_score(centroids, chart_price_range),
+                    meta_chunk[0],
+                    meta_chunk[1]
                 )
 
                 # If there is more then 1 chunk, it means that there are different start and end points for sr_clusters
-                if len(candle_chunks) > 1:
-                    srcluster.chunk_start_index = chunk_start_index
-                    srcluster.chunk_end_index = chunk_end_index
+                #if len(candle_chunks) > 1:
+                #    srcluster.chunk_start_index = chunk_start_index
+                #    srcluster.chunk_end_index = chunk_end_index
                 sr_levels.append(srcluster)
 
             # Since the current chunk is completed, move the start point to next chunk
-            chunk_start_index += chunk.size # TODO TEST
+            #chunk_start_index += chunk.size # TODO TEST
         return sr_levels
 
-    async def create_candle_chunks(data_points, chunk_size):
+    async def create_meta_chunks(data_points, frame_length, step_length):
+        meta_chunks = []
+        if frame_length and data_points.size > frame_length:
 
-        if chunk_size and data_points.size > chunk_size:
-            filled_chunk_num = math.floor(data_points.size/chunk_size)
-            candle_chunks = [data_points[i:i+chunk_size] for i in range(filled_chunk_num)]    # Add filled chunks
-            candle_chunks.append(data_points[filled_chunk_num*chunk_size:])                   # Add residual chunks
-            return candle_chunks
+            # Number of chunks that will be in full length: frame_length
+            filled_chunk_num = math.ceil((data_points.size - frame_length)/step_length)
+
+            # List of meta_chunks with the length of frame_length
+            for i in range(filled_chunk_num):
+                chunk_start_idx = i*step_length
+                chunk_end_idx = chunk_start_idx+frame_length
+                meta_chunks.append((chunk_start_idx,chunk_end_idx))
+            
+            # Add the last chunk which has a length less than frame_length
+            # TODO: NEXT: Check the case where there is no residual chunk
+            meta_chunks.append((filled_chunk_num*step_length, data_points.size-1))
+
         else:
-            return [data_points]
+            meta_chunks.append((0,data_points.size-1))
+        return meta_chunks
 
 
     async def _fibonacci(self, candlesticks, **kwargs):
@@ -263,13 +278,20 @@ class SupportResistance():
         dbscan = DBSCAN(eps=eps) # NOTE: min_sample is set inside of the eval_sup_res_clusters method
 
         # Calculate chunk_size if the discrete mode enabled
-        chunk_size = None
-        if kwargs.get('discrete_mode', False):
+        frame_length = None
+        step_length = None
+        if "step_length" in kwargs.keys() or "step_to_frame_ratio" in kwargs.keys():
             diff_in_minute = int((candlesticks.index[1]-candlesticks.index[0])/60000)
-            chunk_size = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
+            frame_length = self.time_scales_config[minute_to_time_scale(diff_in_minute)]
 
-        candle_chunks = await SupportResistance.create_candle_chunks(bullish_frac, chunk_size)
-        sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, candle_chunks, chart_price_range)
+            if "step_length" in kwargs.keys():
+                step_length = kwargs['step_length']
+            elif "step_to_frame_ratio" in kwargs.keys():
+                step_length = int(frame_length / kwargs['step_to_frame_ratio'])
+
+
+        meta_chunks = await SupportResistance.create_meta_chunks(bullish_frac, frame_length, step_length)
+        sr_clusters = await SupportResistance.eval_sup_res_clusters(dbscan, bullish_frac, meta_chunks, chart_price_range)
         return sr_clusters
 
 
