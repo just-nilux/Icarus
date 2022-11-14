@@ -69,7 +69,7 @@ def support_resistance_handler(x, y, axes, **kwargs):
         text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
             sr_cluster.horizontal_distribution_score, 
             sr_cluster.vertical_distribution_score, 
-            round(sr_cluster.horizontal_distribution_score/sr_cluster.vertical_distribution_score,2))
+            sr_cluster.distribution_score)
 
         text_top_left = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
         text_top_right = "#Frame:{}".format(sr_cluster.chunk_end_index-sr_cluster.chunk_start_index)
