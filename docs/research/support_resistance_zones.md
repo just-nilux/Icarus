@@ -16,6 +16,8 @@
     * [Number of Clusters](#number-of-clusters)
     * [Retest Ratio](#retest-ratio)
 6. [Results](#results)
+    * [Approach](#approach)
+    * [Plots](#plots)
 
 # Purpose
 Support resistance zones are quite useful to make prediction about the possible price levels that will support or resist. Breakout of these level make indicate an end of a market regime and a start of a new one.
@@ -122,16 +124,56 @@ The comparisons between the pairs has the lowest importance.
 
 ## Approach
 1. What are the characteristic of each clustering algo?
+
+    [Pair]
+    [Metric]
+    | | DBSCAN | MeanShift | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | x | x | x |
+    | 4h | x | x | x |
+    | ... | x | x | x |
+
+    [Pair]
+    [ClusteringAlgo]
+    | | HDS | VDS | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | x | x | x |
+    | 4h | x | x | x |
+    | ... | x | x | x |
+
+
 1. Which clustering algorithm works better(have higher accuracy)?
+
+    [Pair]
+    | | DBSCAN | MeanShift | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | DS | DS | DS |
+    | 4h | DS | DS | DS |
+    | ... | DS | DS | DS |
+
 1. Which timeframes are more suitable/reliable in terms of SR levels?
-1. Does it give an edge on the market to be profittable?
 
+    [Pair]
+    | | DBSCAN | MeanShift | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | DS | DS | DS |
+    | 4h | DS | DS | DS |
+    | ... | DS | DS | DS |
 
-For each pair use the grid as follows: Timeframes x SR Analyzers. Using this grid structure, create a table for each metric
+    [Pair]
+    | | DBSCAN | MeanShift | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | NoC | NoC | NoC |
+    | 4h | NoC | NoC | NoC |
+    | ... | NoC | NoC | NoC |
 
-Heatmap:
-Layout: [Timeframes x SR Analyzers]
-Cluster Algos: ["DBSCAN", "MeanShift", "OPTICS", "BIRCH"]
-Value: [HS x VS x RS x NoM]
+1. Does it give an edge on the market to be profitable?
 
-Alternatively maybe all of these 4 tables can be combined in one big table by using the approach on market regime. That function even might be generalized for this kind of multiplots
+    [Pair]
+    | | DBSCAN | MeanShift | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | RR | RR | RR |
+    | 4h | RR | RR | RR |
+    | ... | RR | RR | RR |
+
+## Plots
