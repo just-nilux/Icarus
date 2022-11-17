@@ -3,7 +3,8 @@ import math
 from sklearn.cluster import KMeans, DBSCAN, MeanShift, OPTICS, Birch
 import numpy as np
 from ..utils import minute_to_time_scale
-import pandas as pd
+import asyncio
+import itertools
 
 @dataclass
 class SRConfig():
@@ -46,12 +47,16 @@ class SRCluster():
     min_cluster_members: int = 0
     horizontal_distribution_score: float = 0.0
     vertical_distribution_score: float = 0.0
-    chunk_start_index: int = 0
-    chunk_end_index: int = 0
-    distribution_score: float = 0.0
+    chunk_start_index: int = None
+    chunk_end_index: int = None
+    distribution_score: float = None
+    number_of_retest: int = None
+    number_of_members: int = None
 
     def __post_init__(self):
         self.distribution_score = round(self.horizontal_distribution_score/self.vertical_distribution_score,2)
+        self.number_of_members =len(self.centroids)
+        self.number_of_retest = self.number_of_members-self.min_cluster_members
 
 @dataclass
 class FibonacciSRCluster(SRCluster):
@@ -88,7 +93,7 @@ class FibonacciClustering():
 
 class SupportResistance():
 
-    async def eval_min_cluster_members(chunk_size):
+    def eval_min_cluster_members(chunk_size):
         return max(round(chunk_size/100),3)
 
     async def eval_sup_res_cluster_horizontal_score(indices, num_of_candle):
@@ -106,7 +111,9 @@ class SupportResistance():
 
         cluster_price_range = max(centroids) - min(centroids)
         cluster_price_range_perc = cluster_price_range / chart_price_range
-        return np.round(cluster_price_range_perc/len(centroids), 4)
+
+        # The returned value should not be zero since it will be denominator in distribution_score calculation
+        return max(np.round(cluster_price_range_perc/len(centroids), 6), 0.000001)
 
 
     async def eval_sup_res_clusters(algorithm, candles, meta_chunks, chart_price_range):
@@ -366,3 +373,32 @@ class SupportResistance():
         return sr_clusters
 
 
+    # _sr_<algorithm>
+    async def _sr_dbscan(self, candlesticks, **kwargs):
+        cors = [self._support_dbscan(candlesticks, **kwargs),
+            self._resistance_dbscan(candlesticks, **kwargs)]
+        return list(itertools.chain.from_iterable(await asyncio.gather(*cors)))
+
+
+    async def _sr_kmeans(self, candlesticks, **kwargs):
+        cors = [self._support_kmeans(candlesticks, **kwargs),
+            self._resistance_kmeans(candlesticks, **kwargs)]
+        return list(itertools.chain.from_iterable(await asyncio.gather(*cors)))
+
+
+    async def _sr_birch(self, candlesticks, **kwargs):
+        cors = [self._support_birch(candlesticks, **kwargs),
+            self._resistance_birch(candlesticks, **kwargs)]
+        return list(itertools.chain.from_iterable(await asyncio.gather(*cors)))
+
+
+    async def _sr_optics(self, candlesticks, **kwargs):
+        cors = [self._support_optics(candlesticks, **kwargs),
+            self._resistance_optics(candlesticks, **kwargs)]
+        return list(itertools.chain.from_iterable(await asyncio.gather(*cors)))
+
+
+    async def _sr_meanshift(self, candlesticks, **kwargs):
+        cors = [self._support_meanshift(candlesticks, **kwargs),
+            self._resistance_meanshift(candlesticks, **kwargs)]
+        return list(itertools.chain.from_iterable(await asyncio.gather(*cors)))

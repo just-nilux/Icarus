@@ -178,6 +178,9 @@ class ImageWriter():
         plt.close()
         print(f'File saved: {target_path}')
 
+    def multiple_heatmap_plot(self, indice, report_data, **kwargs):
+        self.heatmap_plot(indice, report_data, **kwargs)
+        pass
 
     def heatmap_plot(self, indice, report_data, **kwargs):
         filename = evaluate_filename(kwargs['reporter'], indice)

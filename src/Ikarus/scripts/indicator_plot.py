@@ -14,6 +14,11 @@ color_map_resistance = [
     ('#FFFB00', '#FFFBCC')
 ]
 
+color_map_cluster = [
+    ('#FF00FF', '#FFCCFF'),
+    ('#00FFFF', '#CCFFFF')
+]
+
 #####################################  Fundamental Handler Fuctions ######################################
 
 def fibonacci_handler(x, y, axes):
@@ -66,12 +71,12 @@ def support_resistance_handler(x, y, axes, **kwargs):
             colormap_idx += 1
             colormap_idx = colormap_idx % len(color_map_support)
 
-        text_bot = "HorDist:{}, VerDist:{}, Score:{}".format(
+        text_bot = "HorDist:{}, VerDist:{}, Dist:{}".format(
             sr_cluster.horizontal_distribution_score, 
             sr_cluster.vertical_distribution_score, 
             sr_cluster.distribution_score)
 
-        text_top_left = "#MinMember: {}, #Members:{}".format(sr_cluster.min_cluster_members,len(sr_cluster.centroids))
+        text_top_left = "#MinMember: {}, #NumOfRetest:{}".format(sr_cluster.min_cluster_members,sr_cluster.number_of_retest)
         text_top_right = "#Frame:{}".format(sr_cluster.chunk_end_index-sr_cluster.chunk_start_index)
         fplt.add_text((x[sr_cluster.chunk_end_index], mean(sr_cluster.centroids)), text_top_right, color='#000000',anchor=(1,1), ax=axes['ax'])
         fplt.add_text((x[sr_cluster.chunk_start_index], mean(sr_cluster.centroids)), text_bot, color='#000000',anchor=(0,0), ax=axes['ax'])
@@ -213,6 +218,12 @@ def resistance_dbscan(x, y, axes): disable_ax_bot(axes); support_resistance_hand
 def support_kmeans(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Support', 'cmap':color_map_support})
 def resistance_kmeans(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Resistance', 'cmap':color_map_resistance})
 def fibonacci(x, y, axes): disable_ax_bot(axes); fibonacci_handler(x, y, axes)
+
+def sr_birch(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Horizontal Clusters', 'cmap':color_map_cluster})
+def sr_optics(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Horizontal Clusters', 'cmap':color_map_cluster})
+def sr_meanshift(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Horizontal Clusters', 'cmap':color_map_cluster})
+def sr_dbscan(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Horizontal Clusters', 'cmap':color_map_cluster})
+def sr_kmeans(x, y, axes): disable_ax_bot(axes); support_resistance_handler(x, y, axes, **{'type':'Horizontal Clusters', 'cmap':color_map_cluster})
 
 def bullish_fractal_5(x, y, axes): 
     disable_ax_bot(axes)

@@ -22,17 +22,50 @@
         "MACDStrategy": {
             "pairs": ["BTCUSDT"],
             "time_scales": [
-                "1h"
+                "1h",
+                "4h",
+                "1d",
+                "1w"
             ]
         }
     },
     "analysis": {
-        "support_dbscan":{"source":"bullish_fractal_3", "step_to_frame_ratio":0.5},
-        "resistance_dbscan":{"source":"bearish_fractal_3", "step_to_frame_ratio":0.5}
+        "sr_dbscan":{"source":"bullish_fractal_3", "step_to_frame_ratio":0.5},
+        "sr_birch":{"source":"bullish_fractal_3", "step_to_frame_ratio":0.5},
+        "sr_optics":{"source":"bullish_fractal_3", "step_to_frame_ratio":0.5},
+        "sr_meanshift":{"source":"bullish_fractal_3", "step_to_frame_ratio":0.5}
     },
     "report_folder_name": "reports",
     "report": [],
-    "grid_search_reporters": {},
+    "grid_search_reporters": {
+        "grid": {
+            "<pair>": ["BTCUSDT"]
+        },
+        "reporters": [
+            {
+                "parameters": {
+                    "<timeframe>": [
+                        "1h",
+                        "4h",
+                        "1d",
+                        "1w"
+                    ],
+                    "<analyzer>": [
+                        "sr_dbscan",
+                        "sr_birch",
+                        "sr_optics",
+                        "sr_meanshift"
+                    ]
+                },
+                "reporter": "sup_res_metrics",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "writers": [
+                    "multiple_heatmap_plot"
+                ]
+            }
+        ]
+    },
     "time_scales": {
         "1h": 336,
         "4h": 360,
@@ -40,8 +73,8 @@
         "1w": 260
     },
     "backtest":{
-        "start_time": "2020-01-11 13:00:00",
-        "end_time": "2020-01-18 13:00:00",
+        "start_time": "2020-01-05 13:00:00",
+        "end_time": "2020-01-25 15:00:00",
         "online": true
     }
 }

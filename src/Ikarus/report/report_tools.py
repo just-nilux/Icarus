@@ -4,6 +4,7 @@ import pandas as pd
 from ..utils import time_scale_to_minute
 import copy
 import asyncio
+from dataclasses import asdict
 
 accuracy_conditions_for_ppc = {
     'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
@@ -123,4 +124,40 @@ async def perc_pos_change_stats_in_market_class(index, detected_market_regimes):
     # I think the results are meaningful. As expected in downtrend,
     # neg_change possibility is higher and pos_change is lower. It is vice-versa in
     # uptrend
+    return result_dict
+
+
+async def sup_res_metrics(index, analysis_data):
+    metrics = ['vertical_distribution_score', 'horizontal_distribution_score', 'distribution_score',
+        'number_of_members', 'number_of_retest']
+
+    timeframes_x_algo = []
+    for  clusters in analysis_data:
+        timeframes_x_algo.append(pd.DataFrame([asdict(cluster) for cluster in clusters], columns=metrics))
+
+    tuple_index = pd.MultiIndex.from_tuples(list(map(tuple, index)))
+    df_timeframes_x_algo_mean = pd.DataFrame(index=tuple_index, columns=timeframes_x_algo[0].columns)
+
+    for tuple_indice, df_tf_x_algo in zip(tuple_index,timeframes_x_algo):
+        df_timeframes_x_algo_mean.loc[tuple_indice] = df_tf_x_algo.mean()
+    
+    
+    # Heatmap 1
+    '''
+    [Pair]
+    [ClusteringAlgo]
+    | | HDS | VDS | ... |
+    |:-:|:-:|:-:|:-:|
+    | 1h | x | x | x |
+    | 4h | x | x | x |
+    | ... | x | x | x |
+    '''
+
+    coroutines = []
+
+    algos = df_timeframes_x_algo_mean.index.get_level_values(2).unique()
+    per_algo_tables = {}
+
+    
+
     return result_dict
