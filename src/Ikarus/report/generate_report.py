@@ -61,21 +61,30 @@ def generate_indices(reporter_config):
         queries.append(query)
     return queries
 
-
 def grid_search():
-    parameters = list(config['grid_search_reporters']['grid'].keys())
-    grid_values = list(config['grid_search_reporters']['grid'].values())
-
-    grid_configs = list(itertools.product(*grid_values))
+    reporter_instances = []
+    all_parameters = list(config['grid_search_reporters']['grid'].keys())
+    all_grid_values = list(config['grid_search_reporters']['grid'].values())
 
     # First loop is for generating the reporter items but not filling its query templates
-    reporter_instances = []
-    for grid_config in grid_configs:
-        replace_rule = {}
-        for param, rep_value in zip(parameters, grid_config):
-            replace_rule[param] = rep_value
+    for reporter_config in config['grid_search_reporters']['reporters']:
 
-        for reporter_config in config['grid_search_reporters']['reporters']:    
+        # Get only the related parameters
+        grid_values, parameters = [], []
+        for param, grid_value in zip(all_parameters, all_grid_values):
+            if param in str(reporter_config):
+                grid_values.append(grid_value)
+                parameters.append(param)
+
+        # Create grid configs
+        grid_configs = list(itertools.product(*grid_values))
+
+        # Create replace rules
+        for grid_config in grid_configs:
+            replace_rule = {}
+            for param, rep_value in zip(parameters, grid_config):
+                replace_rule[param] = rep_value
+
             replaced_text = replace_all(str(reporter_config), replace_rule)
             reporter_instance = ast.literal_eval(replaced_text)
             reporter_instances.append(reporter_instance)

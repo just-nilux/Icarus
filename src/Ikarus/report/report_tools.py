@@ -190,3 +190,29 @@ async def supres_tables_per_timeframe(index, analysis_data):
     tables_per_algo = {tf:df_timeframes_x_algo_mean.xs(tf, level=1, drop_level=True) for tf in timeframes}
 
     return tables_per_algo
+
+
+async def supres_distribution_per_metric(index, analysis_data):
+    metrics = ['vertical_distribution_score', 'horizontal_distribution_score', 'distribution_score',
+        'number_of_members', 'number_of_retest']
+
+    timeframes_x_algo = []
+    for  clusters in analysis_data:
+        timeframes_x_algo.append(pd.DataFrame([asdict(cluster) for cluster in clusters], columns=metrics))
+
+    result_dict = {}
+    for metric in metrics:
+        metric_dict = {}
+        for idx, tf_x_algo in zip(index, timeframes_x_algo):
+            metric_dict[idx[-1]] = tf_x_algo[metric]
+        result_dict[metric] = metric_dict 
+
+    # result_dict: 
+    # 1h timeframe
+    # {
+    #   number_of_retest: {sr_dbscan:number_of_retest, sr_birch:number_of_retest,...}, # Plot
+    #   number_of_members: {sr_dbscan:number_of_members, sr_birch:number_of_members,...},
+    #   ...
+    # }
+    # The results will go to box plots so for each metric
+    return result_dict

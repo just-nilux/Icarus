@@ -71,7 +71,7 @@ def evaluate_filename(reporter, indice, special_char=True):
     # Check if there are multiple symbols or timeframes
     symbol = indice[0][0]
     timeframe = indice[0][1]
-
+    analyzer = indice[0][2]
     if len(indice) > 1:
         for ind in indice[1:]:
             if ind[0] != symbol:
@@ -79,11 +79,11 @@ def evaluate_filename(reporter, indice, special_char=True):
             
             if ind[1] != timeframe:
                 timeframe = '<timeframe>'
+
+            if ind[1] != timeframe:
+                analyzer = '<analyzer>'
                 
-        filename = '{}_{}_{}'.format(reporter,symbol,timeframe)
-    else:
-        symbol, timeframe, analyzer = indice[0]
-        filename = '{}_{}_{}'.format(reporter, symbol, timeframe)
+    filename = '{}_{}_{}_{}'.format(reporter, symbol, timeframe, analyzer)
 
     if not special_char:
         return filename.replace('<', '').replace('>', '')
@@ -95,6 +95,10 @@ def evaluate_target_path(report_folder, filename):
     filename.replace('<', '').replace('>', '')
     target_path = '{}/{}'.format(report_folder, filename.replace('<', '').replace('>', ''))
     return target_path
+
+
+def plt_add_footnote(text,fontsize=8):
+    plt.figtext(0, 0, text, ha="left", fontsize=fontsize)
 
 
 class ImageWriter():
@@ -136,10 +140,17 @@ class ImageWriter():
         print(f'File saved: {target_path}')
 
 
+    def multiple_box_plot(self, indice, report_data, **kwargs):
+
+        for analyzer, report in report_data.items():
+            indice_report = [ind[:-1]+[analyzer] for ind in indice]
+            self.box_plot(indice_report, report, **kwargs)
+        pass
+
+
     def box_plot(self, indice, report_dict, **kwargs):
-        symbol, timeframe, analyzer = indice[0]
-        filename = '{}_{}_{}_{}'.format(kwargs['reporter'],timeframe,symbol,analyzer)
-        target_path = '{}/{}'.format(self.report_folder,filename)
+        filename = evaluate_filename(kwargs['reporter'], indice)
+        target_path = evaluate_target_path(self.report_folder,filename)
 
         fig, ax = plt.subplots()
 
@@ -149,10 +160,12 @@ class ImageWriter():
         plt.grid(True)
         ax.set_xticklabels(report_dict.keys())
 
-        colors = ['pink', 'lightblue', 'lightgreen']
+        colors = ['pink', 'lightblue', 'lightgreen', 'lightsalmon', 'lightgrey', 'lightyellow']
 
         for patch, color in zip(bplot['boxes'], colors):
             patch.set_facecolor(color)
+
+        plt_add_footnote(kwargs)
         plt.savefig(target_path, bbox_inches='tight')
         plt.close()
         print(f'File saved: {target_path}')
@@ -219,7 +232,7 @@ class ImageWriter():
         ax.set_yticks(np.arange(len(y_labels)), y_labels)
 
         vmin, vmax = evaluate_min_max_limits(df)
-        im = ax.imshow(df.values, cmap='coolwarm', vmin=vmin, vmax=vmax)
+        im = ax.imshow(df.values, cmap='YlGn', vmin=vmin, vmax=vmax)
         fig.colorbar(im)
 
         fontsize = evaluate_value_fontsize(df.shape)
