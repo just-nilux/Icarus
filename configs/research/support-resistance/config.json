@@ -57,11 +57,55 @@
                         "sr_meanshift"
                     ]
                 },
-                "reporter": "sup_res_metrics",
+                "reporter": "supres_tables_per_metric",
                 "source": "analyzer",
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
                 "writers": [
                     "multiple_heatmap_plot"
+                ]
+            },
+            {
+                "parameters": {
+                    "<timeframe>": [
+                        "1h",
+                        "4h",
+                        "1d",
+                        "1w"
+                    ],
+                    "<analyzer>": [
+                        "sr_dbscan",
+                        "sr_birch",
+                        "sr_optics",
+                        "sr_meanshift"
+                    ]
+                },
+                "reporter": "supres_tables_per_algo",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "writers": [
+                    "multiple_markdown_table"
+                ]
+            },
+            {
+                "parameters": {
+                    "<timeframe>": [
+                        "1h",
+                        "4h",
+                        "1d",
+                        "1w"
+                    ],
+                    "<analyzer>": [
+                        "sr_dbscan",
+                        "sr_birch",
+                        "sr_optics",
+                        "sr_meanshift"
+                    ]
+                },
+                "reporter": "supres_tables_per_timeframe",
+                "source": "analyzer",
+                "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
+                "writers": [
+                    "multiple_markdown_table"
                 ]
             }
         ]

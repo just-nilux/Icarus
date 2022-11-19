@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import os
 import glob
+import copy
 import pandas as pd
 import numpy as np
 import shutil
@@ -31,6 +32,11 @@ def evaluate_min_max_limits(df):
 
     if (values<=1).all():
         if (values>=0).all():
+
+            # Shitty Code
+            if values.max()<0.9:
+                return 0, values.max()
+
             return 0, 1
         elif (values>=-1).all():
             return -1, 1
@@ -60,7 +66,7 @@ def evaluate_figsize(shape):
 
     return x, y
 
-def evaluate_filename(reporter, indice):
+def evaluate_filename(reporter, indice, special_char=True):
 
     # Check if there are multiple symbols or timeframes
     symbol = indice[0][0]
@@ -78,6 +84,9 @@ def evaluate_filename(reporter, indice):
     else:
         symbol, timeframe, analyzer = indice[0]
         filename = '{}_{}_{}'.format(reporter, symbol, timeframe)
+
+    if not special_char:
+        return filename.replace('<', '').replace('>', '')
 
     return filename
 
@@ -179,7 +188,13 @@ class ImageWriter():
         print(f'File saved: {target_path}')
 
     def multiple_heatmap_plot(self, indice, report_data, **kwargs):
-        self.heatmap_plot(indice, report_data, **kwargs)
+        #self.heatmap_plot(indice, report_data, **kwargs)
+
+        for analyzer, report in report_data.items():
+            indice_report = [indice+(analyzer,) for indice in report.index.to_list()]
+            kwargs_reporter = copy.deepcopy(kwargs)
+            kwargs_reporter['reporter'] = analyzer
+            self.heatmap_plot(indice_report, report, **kwargs_reporter)
         pass
 
     def heatmap_plot(self, indice, report_data, **kwargs):
@@ -209,10 +224,13 @@ class ImageWriter():
 
         fontsize = evaluate_value_fontsize(df.shape)
 
+        if vmax < 0.1: text_format = "%.6f"
+        else: text_format = "%.2f"
+
         for i in range(df.values.shape[0]):
             for j in range(df.values.shape[1]):
                 #if not math.isnan(matrice[0, 0]):
-                text = ax.text(j, i, "%.2f" % df.values[i, j],
+                text = ax.text(j, i, text_format % df.values[i, j],
                             ha="center", va="center", color="black", fontsize=fontsize)
 
         #target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
@@ -383,6 +401,18 @@ class MarkdownWriter():
             self.md_file.write(" \n\n")
 
 
+    def multiple_markdown_table(self, indice, report_data, **kwargs):
+        # NOTE: In case of a dictionary of table, the indice parameter may not be applicable.
+        # Thus each table should handle the indice part on its own
+
+        for analyzer, report in report_data.items():
+            indice_report = [indice+(analyzer,) for indice in report.index.to_list()]
+            kwargs_reporter = copy.deepcopy(kwargs)
+            kwargs_reporter['reporter'] = analyzer
+            self.markdown_table(indice_report, report, **kwargs_reporter)
+        pass
+
+
     def markdown_table(self, indice, report_data, **kwargs):
 
         if type(report_data) == dict:
@@ -390,11 +420,11 @@ class MarkdownWriter():
         elif type(report_data) == pd.DataFrame:
             df = report_data
 
-        symbol, timeframe, analyzer = indice[0]
-        title = '{}_{}_{}_{}'.format(kwargs.get('reporter',''),timeframe,symbol,analyzer)
-
+        title = evaluate_filename(kwargs['reporter'], indice, special_char=False)
+        
         self.md_file.write(title, color='yellow', bold_italics_code='b')
         self.md_file.write('\n' + df.to_markdown() + '\n\n')
+        print(f'Table created: {title}')
         pass
 
 class DatabaseWriter():
