@@ -44,19 +44,26 @@ class SRConfig():
 class SRCluster():
     centroids: list = field(default_factory=list)
     validation_index: int = 0
+    # NOTE: relative_validation_index parameter can also be added by thinking that it may give a clue about a normal
+    # validation time so that anomalies might be foreseen. However it also has other dependencies such as: 
+    # - the chunk start index 
+    # - chunk length
+    # Thus it requires a bit more effort to figure out if it worths to effort to implement and investigate
     min_cluster_members: int = 0
-    horizontal_distribution_score: float = 0.0
-    vertical_distribution_score: float = 0.0
+    horizontal_distribution_score: float = 0.0          # Higher the better
+    vertical_distribution_score: float = 0.0            # Lower the better
     chunk_start_index: int = None
     chunk_end_index: int = None
-    distribution_score: float = None
-    number_of_retest: int = None
-    number_of_members: int = None
+    distribution_score: float = None                    # Higher the better
+    number_of_retest: int = None                        # Higher the better
+    number_of_members: int = None                       # Higher the better
+    distribution_efficiency: int = None                 # Higher the better
 
     def __post_init__(self):
-        self.distribution_score = round(self.horizontal_distribution_score/self.vertical_distribution_score,2)
+        self.distribution_score = round(self.horizontal_distribution_score/self.vertical_distribution_score,2) 
         self.number_of_members =len(self.centroids)
         self.number_of_retest = self.number_of_members-self.min_cluster_members
+        self.distribution_efficiency = round(self.distribution_score * self.number_of_members,2)
 
 @dataclass
 class FibonacciSRCluster(SRCluster):

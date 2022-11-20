@@ -68,6 +68,8 @@ Since the clustering is performed over a dataset and the features of clusters hi
         "1w": 260,  // 5 year
     },
 
+It can also be defended to have equal length for each timeframe but since the results are mostly relative to
+
 ## Evaluation:
 
 Cluster based support-resistance level calculation is made in 3 steps:
@@ -112,9 +114,15 @@ Pseudo Code:
 1. Get the vertical length of the cluster.
 1. Divide the vertical length to the length of the chart to have a normalized value between 0 and 1
 ## Distribution Score 
-(DS): [Horizontal Score] / [Vertical Score]
+(DS): [HDS] / [VDS]
+
+It aims to reward a cluster due to the high HDS and also punish the cluster as the VDS values get bigger. 
 ## Number of Members
 (NoM): Total number of members of a cluster
+## Distribution Efficiency
+(DE): [DS] * [NoM] = ([HDS] / [VDS]) * [NoM]
+
+It aims to give a clue about "How well a cluster is distributed?". The well distributed cluster is a cluster where the height is small but the distance between the members are large and the number of members are also as large as possible. The ideal is a thin zone with bunch of points from the start to the end of the chunk.
 ## Number of Retest
 (NoR): Number of Members after the valdiation point
 ## Number of Clusters
@@ -187,8 +195,19 @@ The comparisons between the pairs has the lowest importance.
 
 
     Retest distributions
+
+1. What is optimal chart length?
     
+    TBD
+
+    | | Number of Member | Number of Retest | Distribution Score |
+    |:--:|:--:|:--:|:--:|
+    |260 |<img src="../../configs/research/support-resistance/reports_260/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |360|<img src="../../configs/research/support-resistance/reports_360/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |Custom|<img src="../../configs/research/support-resistance/reports_custom/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+
 ## Tables
+
 ### Per Timeframe
 
 **<font color="yellow">1h_BTCUSDT_timeframe_analyzer</font>**
@@ -267,15 +286,17 @@ The comparisons between the pairs has the lowest importance.
 | Vertical Distribution Score | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_vertical_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_vertical_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_vertical_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_vertical_distribution_score.png" width="640"/> |
 | Distribution Score | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_distribution_score.png" width="640"/> |
 | Number of Members | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_number_of_members.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_number_of_members.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_number_of_members.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_number_of_members.png" width="640"/> |
+| Distribution Efficiency | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_distribution_efficiency.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_distribution_efficiency.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_distribution_efficiency.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_distribution_efficiency.png" width="640"/> |
 | Number of Retest | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_number_of_retest.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_number_of_retest.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_number_of_retest.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_number_of_retest.png" width="640"/> |
 
 
 ### Heatmap Plots
 |Heatmap Plots|
 |:---:|
-|<img src="../../configs/research/support-resistance/reports/horizontal_distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-|<img src="../../configs/research/support-resistance/reports/vertical_distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-|<img src="../../configs/research/support-resistance/reports/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-|<img src="../../configs/research/support-resistance/reports/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-|<img src="../../configs/research/support-resistance/reports/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-|<img src="../../configs/research/support-resistance/reports/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+|<img src="../../configs/research/support-resistance/reports/horizontal_distribution_score_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+|<img src="../../configs/research/support-resistance/reports/vertical_distribution_score_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+|<img src="../../configs/research/support-resistance/reports/distribution_score_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+|<img src="../../configs/research/support-resistance/reports/number_of_members_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+|<img src="../../configs/research/support-resistance/reports/distribution_efficiency_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+|<img src="../../configs/research/support-resistance/reports/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+|<img src="../../configs/research/support-resistance/reports/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="1280"/>|

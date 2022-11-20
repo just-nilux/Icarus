@@ -5,6 +5,7 @@ from ..utils import time_scale_to_minute
 import copy
 import asyncio
 from dataclasses import asdict
+import itertools
 
 accuracy_conditions_for_ppc = {
     'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
@@ -129,7 +130,7 @@ async def perc_pos_change_stats_in_market_class(index, detected_market_regimes):
 
 async def supres_tables_per_metric(index, analysis_data):
     metrics = ['vertical_distribution_score', 'horizontal_distribution_score', 'distribution_score',
-        'number_of_members', 'number_of_retest', 'number_of_cluster']
+        'number_of_members', 'distribution_efficiency', 'number_of_retest', 'number_of_cluster']
 
     timeframes_x_algo = []
     for  clusters in analysis_data:
@@ -142,17 +143,21 @@ async def supres_tables_per_metric(index, analysis_data):
         df_timeframes_x_algo_mean.loc[tuple_indice] = df_tf_x_algo.mean()
         df_timeframes_x_algo_mean.loc[tuple_indice, 'number_of_cluster'] = len(df_tf_x_algo)
 
-    tables_per_metric = {
-        metric:df_timeframes_x_algo_mean[metric].unstack(level=2).astype(float)
-        for metric in metrics
-    }
+    tables_per_metric = {}
+    for metric in metrics:
+        df_unstacked = df_timeframes_x_algo_mean[metric].unstack(level=2).astype(float)
+
+        # Hack for retaining the index order after unstack operation
+        level0 = df_timeframes_x_algo_mean[metric].index.get_level_values(0).unique()
+        level1 = df_timeframes_x_algo_mean[metric].index.get_level_values(1).unique()
+        tables_per_metric[metric] = df_unstacked.reindex(list(itertools.product(*[level0, level1])))
 
     return tables_per_metric
 
 
 async def supres_tables_per_algo(index, analysis_data):
     metrics = ['vertical_distribution_score', 'horizontal_distribution_score', 'distribution_score',
-        'number_of_members', 'number_of_retest', 'number_of_cluster']
+        'number_of_members', 'distribution_efficiency', 'number_of_retest', 'number_of_cluster']
 
     timeframes_x_algo = []
     for  clusters in analysis_data:
@@ -173,7 +178,7 @@ async def supres_tables_per_algo(index, analysis_data):
 
 async def supres_tables_per_timeframe(index, analysis_data):
     metrics = ['vertical_distribution_score', 'horizontal_distribution_score', 'distribution_score',
-        'number_of_members', 'number_of_retest', 'number_of_cluster']
+        'number_of_members', 'distribution_efficiency', 'number_of_retest', 'number_of_cluster']
 
     timeframes_x_algo = []
     for  clusters in analysis_data:
@@ -194,7 +199,7 @@ async def supres_tables_per_timeframe(index, analysis_data):
 
 async def supres_distribution_per_metric(index, analysis_data):
     metrics = ['vertical_distribution_score', 'horizontal_distribution_score', 'distribution_score',
-        'number_of_members', 'number_of_retest']
+        'number_of_members', 'distribution_efficiency', 'number_of_retest']
 
     timeframes_x_algo = []
     for  clusters in analysis_data:
