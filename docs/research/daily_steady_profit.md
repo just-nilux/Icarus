@@ -58,15 +58,19 @@ The choosen pairs and the correlation:
 <img src="../../configs/research/daily_steady_profit/reports_correlation/correlation_matrix_symbol_1d.png" /> 
 
 ## Possible Max-Min Price Change
-<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_BTCUSDT_1h.png" />
-<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_CHZUSDT_1h.png" />
-<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_EURUSDT_1h.png" />
-
+|Possible Max-Min Price Change||
+|:---:|:---:|
+|BTCUSDT|<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_BTCUSDT_1h.png" width="1280"/>|
+|CHZUSDT|<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_CHZUSDT_1h.png" width="1280"/>|
+|EURUSDT|<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_raw_EURUSDT_1h.png" width="1280"/>|
 
 ## Max-Min Price Change Distribution
-<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_BTCUSDT_1h.png" />
-<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_CHZUSDT_1h.png" />
-<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_EURUSDT_1h.png" />
+
+|Max-Min Price Change Distribution|1h|
+|:---|:-----------------|
+|BTCUSDT|<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_BTCUSDT_1h.png" width="1280"/>|
+|CHZUSDT|<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_CHZUSDT_1h.png" width="1280"/>|
+|EURUSDT|<img src="../../configs/research/daily_steady_profit/reports/perc_pos_change_occurence_EURUSDT_1h.png" width="1280"/>|
 
 
 ## Threshold Exceed Possibility with Market States

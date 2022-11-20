@@ -13,12 +13,17 @@
     * [Vertical Distribution Score](#vertical-distribution-score)
     * [Distribution Score](#distribution-score)
     * [Number of Members](#number-of-members)
+    * [Number of Retest](#number-of-retest)
     * [Number of Clusters](#number-of-clusters)
-    * [Retest Ratio](#retest-ratio)
 6. [Results](#results)
-    * [Approach](#approach)
+    * [Answers to Questions](#answers-to-questions)
+    * [Tables](#tables)
+        * [Per Timeframe](#per-timeframe)
+        * [Per Clustering Algorithm](#per-clustering-algorithm)
     * [Plots](#plots)
-
+        * [Distribution Plots](#distribution-plots)
+        * [Heatmap Plots](#heatmap-plots)
+        
 # Purpose
 Support resistance zones are quite useful to make prediction about the possible price levels that will support or resist. Breakout of these level make indicate an end of a market regime and a start of a new one.
 
@@ -27,7 +32,7 @@ When placing limit or oco orders, the support-resistance zones may indicate the 
 ## Questiones and Expected Answers
 1. What are the characteristic of each clustering algo?
 
-    Example Output: HDS, VDS, Number of members, Number of Cluster and Retest-Ratio: 
+    Example Output: HDS, VDS, Number of members, Number of Cluster and Number of Retest: 
     * The algorithm x generally have higher VDS score it might be used to make less precise but more reliable predictions about price action.
     * The algorithm y generally have lower HDS, it may indicate to not to use a cluster that is too far away in the past
     * The algorithm z has generally high number of clusters, it may indicate that this algo has false positives but it also makes sense to consult to it when we need a basis for the future price action prediction. Because it emits a lot of cluster and one of them may become true
@@ -110,46 +115,50 @@ Pseudo Code:
 (DS): [Horizontal Score] / [Vertical Score]
 ## Number of Members
 (NoM): Total number of members of a cluster
+## Number of Retest
+(NoR): Number of Members after the valdiation point
 ## Number of Clusters
 (NoC): Total Number of cluster that an algorithm crated
-## Retest Ratio
-(RR): It is ratio of the number of validation candles and the retest candles. If the ratio is low, then the possibility of creating a trading edge out of the sr line is low and vice-versa.
 
 # Results
-HDS, VDS, DS, NoM and RR parameters are evaluated per cluster. For each **[timeframe] x [pair] x [algorithm]** there will be multiple of these statistics
+HDS, VDS, DS, NoM and NoR parameters are evaluated per cluster. For each **[timeframe] x [pair] x [algorithm]** there will be multiple of these statistics
 
 NoC is evaluated per  **[timeframe] x [pair] x [algorithm]**
 
 The comparisons between the pairs has the lowest importance.
 
-## Approach
+## Answers to Questions
 1. What are the characteristic of each clustering algo?
+    * 
+    * supres_tables_per_metric
 
-    [Pair]
-    [Metric]
-    | | DBSCAN | MeanShift | ... |
-    |:-:|:-:|:-:|:-:|
-    | 1h | x | x | x |
-    | 4h | x | x | x |
-    | ... | x | x | x |
+        [Pair]x[Metric]
+        | | DBSCAN | MeanShift | ... |
+        |:-:|:-:|:-:|:-:|
+        | 1h | x | x | x |
+        | 4h | x | x | x |
+        | ... | x | x | x |
+        
+    * supres_tables_per_timeframe
 
-    [Pair]
-    [ClusteringAlgo]
-    | | HDS | VDS | ... |
-    |:-:|:-:|:-:|:-:|
-    | 1h | x | x | x |
-    | 4h | x | x | x |
-    | ... | x | x | x |
+        [Pair]x[Timeframe]
+        | | HDS | VDS | ... |
+        |:-:|:-:|:-:|:-:|
+        | sr_dbscan | x | x | x |
+        | sr_birch | x | x | x |
+        | ... | x | x | x |
 
 
 1. Which clustering algorithm works better(have higher accuracy)?
 
-    [Pair]
-    | | DBSCAN | MeanShift | ... |
-    |:-:|:-:|:-:|:-:|
-    | 1h | DS | DS | DS |
-    | 4h | DS | DS | DS |
-    | ... | DS | DS | DS |
+    * supres_tables_per_metric
+
+        [Pair]x[Metric]
+        | | DBSCAN | MeanShift | ... |
+        |:-:|:-:|:-:|:-:|
+        | 1h | DS | DS | DS |
+        | 4h | DS | DS | DS |
+        | ... | DS | DS | DS |
 
 1. Which timeframes are more suitable/reliable in terms of SR levels?
 
@@ -176,4 +185,97 @@ The comparisons between the pairs has the lowest importance.
     | 4h | RR | RR | RR |
     | ... | RR | RR | RR |
 
+
+    Retest distributions
+    
+## Tables
+### Per Timeframe
+
+**<font color="yellow">1h_BTCUSDT_timeframe_analyzer</font>**
+|                             |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:----------------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', 'sr_dbscan')    |                   0.00106029  |                       0.0247727 |              31.3346 |            26.8052  |           23.8052  |                 308 |
+| ('BTCUSDT', 'sr_birch')     |                   0.00112593  |                       0.0461584 |              53.406  |            12.2757  |            9.27566 |                 682 |
+| ('BTCUSDT', 'sr_optics')    |                   0.000449194 |                       0.109696  |             923.849  |             4.59309 |            1.59309 |                1504 |
+| ('BTCUSDT', 'sr_meanshift') |                   0.00154643  |                       0.0328082 |              30.6518 |            19.35    |           16.35    |                 440 |
+
+**<font color="yellow">4h_BTCUSDT_timeframe_analyzer</font>**
+|                             |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:----------------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', 'sr_dbscan')    |                    0.00132954 |                       0.0361944 |              31.3024 |            13.493   |            9.53521 |                 142 |
+| ('BTCUSDT', 'sr_birch')     |                    0.00141191 |                       0.0528393 |              42.6913 |             8.30328 |            4.33607 |                 244 |
+| ('BTCUSDT', 'sr_optics')    |                    0.00134163 |                       0.0697788 |             218.056  |             6.19178 |            2.23973 |                 292 |
+| ('BTCUSDT', 'sr_meanshift') |                    0.00189393 |                       0.0462692 |              26.866  |            11.967   |            8       |                 182 |
+
+**<font color="yellow">1d_BTCUSDT_timeframe_analyzer</font>**
+|                             |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:----------------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', 'sr_dbscan')    |                    0.0016265  |                       0.0658214 |              47.1471 |                6.5  |               2.5  |                  28 |
+| ('BTCUSDT', 'sr_birch')     |                    0.00200128 |                       0.092776  |              48.4632 |                4.96 |               0.96 |                  50 |
+| ('BTCUSDT', 'sr_optics')    |                    0.00435697 |                       0.0764156 |              34.2781 |                6.25 |               2.25 |                  64 |
+| ('BTCUSDT', 'sr_meanshift') |                    0.0023733  |                       0.105213  |              47.3603 |                5.4  |               1.4  |                  60 |
+
+**<font color="yellow">1w_BTCUSDT_timeframe_analyzer</font>**
+|                             |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:----------------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', 'sr_dbscan')    |                    0.00164657 |                       0.0554429 |              37.8314 |             5.85714 |            2.85714 |                  14 |
+| ('BTCUSDT', 'sr_birch')     |                    0.00199455 |                       0.0626636 |              37.7091 |             4.36364 |            1.36364 |                  22 |
+| ('BTCUSDT', 'sr_optics')    |                    0.00667907 |                       0.0598    |              65.5814 |             5.78571 |            2.78571 |                  28 |
+| ('BTCUSDT', 'sr_meanshift') |                    0.00232722 |                       0.0565778 |              26.3378 |             5.88889 |            2.88889 |                  18 |
+
+
+
+### Per Clustering Algorithm
+
+**<font color="yellow">sr_dbscan_BTCUSDT_timeframe_analyzer</font>**
+|                   |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', '1h') |                    0.00106029 |                       0.0247727 |              31.3346 |            26.8052  |           23.8052  |                 308 |
+| ('BTCUSDT', '4h') |                    0.00132954 |                       0.0361944 |              31.3024 |            13.493   |            9.53521 |                 142 |
+| ('BTCUSDT', '1d') |                    0.0016265  |                       0.0658214 |              47.1471 |             6.5     |            2.5     |                  28 |
+| ('BTCUSDT', '1w') |                    0.00164657 |                       0.0554429 |              37.8314 |             5.85714 |            2.85714 |                  14 |
+
+**<font color="yellow">sr_birch_BTCUSDT_timeframe_analyzer</font>**
+|                   |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', '1h') |                    0.00112593 |                       0.0461584 |              53.406  |            12.2757  |            9.27566 |                 682 |
+| ('BTCUSDT', '4h') |                    0.00141191 |                       0.0528393 |              42.6913 |             8.30328 |            4.33607 |                 244 |
+| ('BTCUSDT', '1d') |                    0.00200128 |                       0.092776  |              48.4632 |             4.96    |            0.96    |                  50 |
+| ('BTCUSDT', '1w') |                    0.00199455 |                       0.0626636 |              37.7091 |             4.36364 |            1.36364 |                  22 |
+
+**<font color="yellow">sr_optics_BTCUSDT_timeframe_analyzer</font>**
+|                   |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', '1h') |                   0.000449194 |                       0.109696  |             923.849  |             4.59309 |            1.59309 |                1504 |
+| ('BTCUSDT', '4h') |                   0.00134163  |                       0.0697788 |             218.056  |             6.19178 |            2.23973 |                 292 |
+| ('BTCUSDT', '1d') |                   0.00435697  |                       0.0764156 |              34.2781 |             6.25    |            2.25    |                  64 |
+| ('BTCUSDT', '1w') |                   0.00667907  |                       0.0598    |              65.5814 |             5.78571 |            2.78571 |                  28 |
+
+**<font color="yellow">sr_meanshift_BTCUSDT_timeframe_analyzer</font>**
+|                   |   vertical_distribution_score |   horizontal_distribution_score |   distribution_score |   number_of_members |   number_of_retest |   number_of_cluster |
+|:------------------|------------------------------:|--------------------------------:|---------------------:|--------------------:|-------------------:|--------------------:|
+| ('BTCUSDT', '1h') |                    0.00154643 |                       0.0328082 |              30.6518 |            19.35    |           16.35    |                 440 |
+| ('BTCUSDT', '4h') |                    0.00189393 |                       0.0462692 |              26.866  |            11.967   |            8       |                 182 |
+| ('BTCUSDT', '1d') |                    0.0023733  |                       0.105213  |              47.3603 |             5.4     |            1.4     |                  60 |
+| ('BTCUSDT', '1w') |                    0.00232722 |                       0.0565778 |              26.3378 |             5.88889 |            2.88889 |                  18 |
+
 ## Plots
+### Distribution Plots
+| | 1h | 4h | 1d | 1w |
+|:-:|:-:|:-:|:-:|:-:|
+| Horizontal Distribution Score | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_horizontal_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_horizontal_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_horizontal_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_horizontal_distribution_score.png" width="640"/> |
+| Vertical Distribution Score | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_vertical_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_vertical_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_vertical_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_vertical_distribution_score.png" width="640"/> |
+| Distribution Score | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_distribution_score.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_distribution_score.png" width="640"/> |
+| Number of Members | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_number_of_members.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_number_of_members.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_number_of_members.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_number_of_members.png" width="640"/> |
+| Number of Retest | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1h_number_of_retest.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_4h_number_of_retest.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1d_number_of_retest.png" width="640"/> | <img src="../../configs/research/support-resistance/reports/supres_distribution_per_metric_BTCUSDT_1w_number_of_retest.png" width="640"/> |
+
+
+### Heatmap Plots
+|Heatmap Plots|
+|:---:|
+|<img src="../../configs/research/support-resistance/reports/horizontal_distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+|<img src="../../configs/research/support-resistance/reports/vertical_distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+|<img src="../../configs/research/support-resistance/reports/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+|<img src="../../configs/research/support-resistance/reports/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+|<img src="../../configs/research/support-resistance/reports/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+|<img src="../../configs/research/support-resistance/reports/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|
