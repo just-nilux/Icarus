@@ -50,6 +50,8 @@ When placing limit or oco orders, the support-resistance zones may indicate the 
 
     Example Output: "In the timeframes x and y, the algorithm z and t creates sr zones that are generally tested multiple times after the validation. So they may create a profitable trading edge."
 
+1. What is the optimal chart length?
+
 # Definitions
 ## Support
 A certain price level/zone that is tested multiple times by the price action and acts as a support.
@@ -198,13 +200,25 @@ The comparisons between the pairs has the lowest importance.
 
 1. What is optimal chart length?
     
-    TBD
+    Detected clusters and their features strictly rely on the length of the charts. As the charts gets larger, the possibility of having close points in certain price levels is higer. Thus the threshold for a cluster should be higher as the length of the chart is higher. Otherwise the algorithm will generate too much clusters and the result will be noisy.
 
-    | | Number of Member | Number of Retest | Distribution Score |
+    Dynamic threshold approach:
+
+        def eval_min_cluster_members(chunk_size):
+            return max(round(chunk_size/100),3)
+
+    This approach makes sure that the minimum number of member is 3, and the minimum NoM will be incremented per 100 candles(In example: 3 for 260, 4 for 350, 5 for 450).
+
+    In order to decide which chart length and min NoM combination provides the most meaningful and reliable results, the following table is organized. 
+    * [(260,3) (360,3) (360,4) (custom,dynamic)]
+    * ["Number of Member", "Number of Cluster", "Distribution Score"]
+
+    | | Number of Member | Number of Cluster | Distribution Score |
     |:--:|:--:|:--:|:--:|
-    |260 |<img src="../../configs/research/support-resistance/reports_260/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-    |360|<img src="../../configs/research/support-resistance/reports_360/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-    |Custom|<img src="../../configs/research/support-resistance/reports_custom/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |260_3|<img src="../../configs/research/support-resistance/reports_260_3/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260_3/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260_3/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |360_3|<img src="../../configs/research/support-resistance/reports_360_3/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_3/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_3/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |360_4|<img src="../../configs/research/support-resistance/reports_360_4/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_4/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_4/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |custom_dynamic|<img src="../../configs/research/support-resistance/reports_custom_dynamic/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom_dynamic/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom_dynamic/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
 
 ## Tables
 
