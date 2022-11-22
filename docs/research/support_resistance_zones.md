@@ -139,25 +139,55 @@ The comparisons between the pairs has the lowest importance.
 
 ## Answers to Questions
 1. What are the characteristic of each clustering algo?
-    * 
-    * supres_tables_per_metric
+    ### sr_optics
 
-        [Pair]x[Metric]
-        | | DBSCAN | MeanShift | ... |
-        |:-:|:-:|:-:|:-:|
-        | 1h | x | x | x |
-        | 4h | x | x | x |
-        | ... | x | x | x |
-        
-    * supres_tables_per_timeframe
+       ['1h','4h']: Less member | Less retest | More cluster Dense distribution | High efficiency
+       Suitable for small timeframes ['1h','4h']
+       Okay to use in big timeframes ['1d','1w']
 
-        [Pair]x[Timeframe]
-        | | HDS | VDS | ... |
-        |:-:|:-:|:-:|:-:|
-        | sr_dbscan | x | x | x |
-        | sr_birch | x | x | x |
-        | ... | x | x | x |
+    * Higher  HDS values in small tfs and lower VDS values in low tfs. As a result the DS is significantly higher in small tfs compare to other algorithms.
+    * When the cluster features are investigated, sr_optics has
+        * significantly higher NoC in ['1h','4h'] , and relatively higher NoC in ['1d','1w']
+        * significantly smaller NoM in ['1h','4h'] and average NoM in ['1d','1w']
+        * significantly smaller NoR in ['1h','4h'] and average NoM in ['1d','1w']
+    * sr_optics, in ['1h','4h'], generates large number of clusters with a small height and small NoM. Since the cluster is tight in height, NoR is generally lower compare to others. In ['1d','1w'], since it has a large vds but relatively nomal hds, the ds is an average value.
+    * Considering the fact that the NoM and NoR is average as well, it can be suggested that the generated clusters are a bit inefficient and inprecise. Because the heigth is quite large but there are just a few members within the boundies of the cluster
+    * Distribution efficiency in ['1d','1w'] is quite average but in ['1h','4h'] the DE is huge compare to others
 
+    ### sr_meanshift
+    
+        More member | More retest ['1h','4h'] | Less cluster | Sparse distribution | Less Efficiency
+        Might be average alternat
+        ve to use in big timeframes ['1d','1w']
+
+    * High HDS in ['1d'] and average in['1h','4h','1w'].
+    * Generally slightly high VDS in all timeframes.
+    * NoC increases as the timeframe gets smaller. Average NoC compare to other algotihms
+    * When the DS is investigated, meanshift is the lowest at all the timeframes. It leads to lowest DE as well.
+    * NoR is average for ['1d','1w'] and above average for ['1h','4h'].  Considering NoR it makes sense to use it for small timeframes. 
+
+    ### sr_dbscan
+
+        More member | More retest | Less cluster | Average distribution
+        Suitable for all timeframes, the best is the small timeframes
+
+    * Generally lower HDS compare to other algorithms. HDS increases as the timeframe gets bigger.
+    * Generally lower VDS compare to other algorithms.
+    * Average DS
+    * Significantly higher NoR in '1h' and still high value on '4h'. However in ['1d','1w'], the values are on average.
+    * Generally higher DE compare to other algorithms but the difference is not significant, especially in ['1d','1w'].
+    * Lowest NoC in all timeframes compare to other algorithms
+    * As a result, sr_dbscan can be described as an algorithm that creates smaller number of cluster with a better distribution scores(VDS, DE). Considering the NoR statistics, it can be stated that these small number of clusters are generally dense and tested more compare to other algorithms
+
+    ### sr_birch
+
+        Less member | Less retest | More cluster | Average distribution
+        Can be used as a last option to rely on due to low NoR. Not suitable for big timeframes ['1d','1w']
+
+    * Generally average HDS. Increases as the timeframe gets bigger
+    * Generally average VDS. Increases as the timeframe gets bigger
+    * Generally less NoM and NoR in all timeframes but the difference is not significant. NoR in '1d' is less than 1. Does not look suitable for big timeframes
+    * High number of cluster. (If you really need a cluster to have a reference for a price level, then as a last option ıt may work)
 
 1. Which clustering algorithm works better(have higher accuracy)?
 
@@ -212,6 +242,13 @@ The comparisons between the pairs has the lowest importance.
     In order to decide which chart length and min NoM combination provides the most meaningful and reliable results, the following table is organized. 
     * [(260,3) (360,3) (360,4) (custom,dynamic)]
     * ["Number of Member", "Number of Cluster", "Distribution Score"]
+
+    As a result it can be stated that:
+    * There is no significantly better or worse configuration
+    * When the 260_3 and 360_3 is compared, 360_3 looks better since the NoM, NoC and DS is higher
+    * When the 360_3 and 360_4 is compared, NoM of 360_4 slightly higher. NoC of 360_4 significantly high. DS values are pretty close to each other except a few outlier.
+    * Custom_dynamic configuration shares some portion of the previous configurations for different timeframes.
+    * **There is no reason to not to use the custom_dynamic setup.**
 
     | | Number of Member | Number of Cluster | Distribution Score |
     |:--:|:--:|:--:|:--:|
