@@ -1,6 +1,6 @@
 # Table of Contents
 0. [Purpose](#purpose)
-    * [Questiones and Expected Answers](#questiones-and-expected-answers)
+    * [Questiones](#questiones)
 1. [Definitions](#definitions)
     * [Support](#support)
     * [Resistance](#resistance)
@@ -16,41 +16,26 @@
     * [Number of Retest](#number-of-retest)
     * [Number of Clusters](#number-of-clusters)
 6. [Results](#results)
-    * [Answers to Questions](#answers-to-questions)
     * [Tables](#tables)
         * [Per Timeframe](#per-timeframe)
         * [Per Clustering Algorithm](#per-clustering-algorithm)
     * [Plots](#plots)
         * [Distribution Plots](#distribution-plots)
         * [Heatmap Plots](#heatmap-plots)
+7. [Conclusion](#conclusion)
+8. [Future Works](#future-works)
         
 # Purpose
 Support resistance zones are quite useful to make prediction about the possible price levels that will support or resist. Breakout of these level make indicate an end of a market regime and a start of a new one.
 
 When placing limit or oco orders, the support-resistance zones may indicate the target price levels. This reseach only focuses on the straight horizontal sr zones not the ones with a slope or curve.
 
-## Questiones and Expected Answers
-1. What are the characteristic of each clustering algo?
-
-    Example Output: HDS, VDS, Number of members, Number of Cluster and Number of Retest: 
-    * The algorithm x generally have higher VDS score it might be used to make less precise but more reliable predictions about price action.
-    * The algorithm y generally have lower HDS, it may indicate to not to use a cluster that is too far away in the past
-    * The algorithm z has generally high number of clusters, it may indicate that this algo has false positives but it also makes sense to consult to it when we need a basis for the future price action prediction. Because it emits a lot of cluster and one of them may become true
-
-
-1. Which clustering algorithm works better(have higher accuracy)?
-
-    Example Output: Based on the DS scores, the algorithm x generally have higer scores then the others. The algorithm y is always has the lowest scores.
-
-1. Which timeframes are more suitable/reliable in terms of SR levels?
-    
-    Example Output: "In _1d_, average DS score for all clusters are generally higher. It means that using _1d_ timeframe may create much more **meaningful/reliable** info than the timeframes _1h_ and _4h_."
-
-1. Does it give an edge on the market to be profittable?
-
-    Example Output: "In the timeframes x and y, the algorithm z and t creates sr zones that are generally tested multiple times after the validation. So they may create a profitable trading edge."
-
+## Questiones
 1. What is the optimal chart length?
+1. What are the characteristic of each clustering algorithm?
+1. Which clustering algorithm works better?
+1. Which timeframes are more suitable/reliable in terms of SR levels?
+1. Does it give an edge on the market to be profittable?
 
 # Definitions
 ## Support
@@ -131,131 +116,6 @@ It aims to give a clue about "How well a cluster is distributed?". The well dist
 (NoC): Total Number of cluster that an algorithm crated
 
 # Results
-HDS, VDS, DS, NoM and NoR parameters are evaluated per cluster. For each **[timeframe] x [pair] x [algorithm]** there will be multiple of these statistics
-
-NoC is evaluated per  **[timeframe] x [pair] x [algorithm]**
-
-The comparisons between the pairs has the lowest importance.
-
-## Answers to Questions
-1. What are the characteristic of each clustering algo?
-    ### sr_optics
-
-       ['1h','4h']: Less member | Less retest | More cluster Dense distribution | High efficiency
-       Suitable for small timeframes ['1h','4h']
-       Okay to use in big timeframes ['1d','1w']
-
-    * Higher  HDS values in small tfs and lower VDS values in low tfs. As a result the DS is significantly higher in small tfs compare to other algorithms.
-    * When the cluster features are investigated, sr_optics has
-        * significantly higher NoC in ['1h','4h'] , and relatively higher NoC in ['1d','1w']
-        * significantly smaller NoM in ['1h','4h'] and average NoM in ['1d','1w']
-        * significantly smaller NoR in ['1h','4h'] and average NoM in ['1d','1w']
-    * sr_optics, in ['1h','4h'], generates large number of clusters with a small height and small NoM. Since the cluster is tight in height, NoR is generally lower compare to others. In ['1d','1w'], since it has a large vds but relatively nomal hds, the ds is an average value.
-    * Considering the fact that the NoM and NoR is average as well, it can be suggested that the generated clusters are a bit inefficient and inprecise. Because the heigth is quite large but there are just a few members within the boundies of the cluster
-    * Distribution efficiency in ['1d','1w'] is quite average but in ['1h','4h'] the DE is huge compare to others
-
-    ### sr_meanshift
-    
-        More member | More retest ['1h','4h'] | Less cluster | Sparse distribution | Less Efficiency
-        Might be average alternat
-        ve to use in big timeframes ['1d','1w']
-
-    * High HDS in ['1d'] and average in['1h','4h','1w'].
-    * Generally slightly high VDS in all timeframes.
-    * NoC increases as the timeframe gets smaller. Average NoC compare to other algotihms
-    * When the DS is investigated, meanshift is the lowest at all the timeframes. It leads to lowest DE as well.
-    * NoR is average for ['1d','1w'] and above average for ['1h','4h'].  Considering NoR it makes sense to use it for small timeframes. 
-
-    ### sr_dbscan
-
-        More member | More retest | Less cluster | Average distribution
-        Suitable for all timeframes, the best is the small timeframes
-
-    * Generally lower HDS compare to other algorithms. HDS increases as the timeframe gets bigger.
-    * Generally lower VDS compare to other algorithms.
-    * Average DS
-    * Significantly higher NoR in '1h' and still high value on '4h'. However in ['1d','1w'], the values are on average.
-    * Generally higher DE compare to other algorithms but the difference is not significant, especially in ['1d','1w'].
-    * Lowest NoC in all timeframes compare to other algorithms
-    * As a result, sr_dbscan can be described as an algorithm that creates smaller number of cluster with a better distribution scores(VDS, DE). Considering the NoR statistics, it can be stated that these small number of clusters are generally dense and tested more compare to other algorithms
-
-    ### sr_birch
-
-        Less member | Less retest | More cluster | Average distribution
-        Can be used as a last option to rely on due to low NoR. Not suitable for big timeframes ['1d','1w']
-
-    * Generally average HDS. Increases as the timeframe gets bigger
-    * Generally average VDS. Increases as the timeframe gets bigger
-    * Generally less NoM and NoR in all timeframes but the difference is not significant. NoR in '1d' is less than 1. Does not look suitable for big timeframes
-    * High number of cluster. (If you really need a cluster to have a reference for a price level, then as a last option ıt may work)
-
-1. Which clustering algorithm works better(have higher accuracy)?
-
-    * supres_tables_per_metric
-
-        [Pair]x[Metric]
-        | | DBSCAN | MeanShift | ... |
-        |:-:|:-:|:-:|:-:|
-        | 1h | DS | DS | DS |
-        | 4h | DS | DS | DS |
-        | ... | DS | DS | DS |
-
-1. Which timeframes are more suitable/reliable in terms of SR levels?
-
-    [Pair]
-    | | DBSCAN | MeanShift | ... |
-    |:-:|:-:|:-:|:-:|
-    | 1h | DS | DS | DS |
-    | 4h | DS | DS | DS |
-    | ... | DS | DS | DS |
-
-    [Pair]
-    | | DBSCAN | MeanShift | ... |
-    |:-:|:-:|:-:|:-:|
-    | 1h | NoC | NoC | NoC |
-    | 4h | NoC | NoC | NoC |
-    | ... | NoC | NoC | NoC |
-
-1. Does it give an edge on the market to be profitable?
-
-    [Pair]
-    | | DBSCAN | MeanShift | ... |
-    |:-:|:-:|:-:|:-:|
-    | 1h | RR | RR | RR |
-    | 4h | RR | RR | RR |
-    | ... | RR | RR | RR |
-
-
-    Retest distributions
-
-1. What is optimal chart length?
-    
-    Detected clusters and their features strictly rely on the length of the charts. As the charts gets larger, the possibility of having close points in certain price levels is higer. Thus the threshold for a cluster should be higher as the length of the chart is higher. Otherwise the algorithm will generate too much clusters and the result will be noisy.
-
-    Dynamic threshold approach:
-
-        def eval_min_cluster_members(chunk_size):
-            return max(round(chunk_size/100),3)
-
-    This approach makes sure that the minimum number of member is 3, and the minimum NoM will be incremented per 100 candles(In example: 3 for 260, 4 for 350, 5 for 450).
-
-    In order to decide which chart length and min NoM combination provides the most meaningful and reliable results, the following table is organized. 
-    * [(260,3) (360,3) (360,4) (custom,dynamic)]
-    * ["Number of Member", "Number of Cluster", "Distribution Score"]
-
-    As a result it can be stated that:
-    * There is no significantly better or worse configuration
-    * When the 260_3 and 360_3 is compared, 360_3 looks better since the NoM, NoC and DS is higher
-    * When the 360_3 and 360_4 is compared, NoM of 360_4 slightly higher. NoC of 360_4 significantly high. DS values are pretty close to each other except a few outlier.
-    * Custom_dynamic configuration shares some portion of the previous configurations for different timeframes.
-    * **There is no reason to not to use the custom_dynamic setup.**
-
-    | | Number of Member | Number of Cluster | Distribution Score |
-    |:--:|:--:|:--:|:--:|
-    |260_3|<img src="../../configs/research/support-resistance/reports_260_3/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260_3/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260_3/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-    |360_3|<img src="../../configs/research/support-resistance/reports_360_3/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_3/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_3/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-    |360_4|<img src="../../configs/research/support-resistance/reports_360_4/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_4/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_4/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
-    |custom_dynamic|<img src="../../configs/research/support-resistance/reports_custom_dynamic/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom_dynamic/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom_dynamic/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
 
 ## Tables
 
@@ -351,3 +211,119 @@ The comparisons between the pairs has the lowest importance.
 |<img src="../../configs/research/support-resistance/reports/distribution_efficiency_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
 |<img src="../../configs/research/support-resistance/reports/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
 |<img src="../../configs/research/support-resistance/reports/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="1280"/>|
+
+# Conclusion
+
+1. What is optimal chart length?
+    
+    Detected clusters and their features strictly rely on the length of the charts. As the charts gets larger, the possibility of having close points in certain price levels is higer. Thus the threshold for a cluster should be higher as the length of the chart is higher. Otherwise the algorithm will generate too much clusters and the result will be noisy.
+
+    Dynamic threshold approach:
+
+        def eval_min_cluster_members(chunk_size):
+            return max(round(chunk_size/100),3)
+
+    This approach makes sure that the minimum number of member is 3, and the minimum NoM will be incremented per 100 candles(In example: 3 for 260, 4 for 350, 5 for 450).
+
+    In order to decide which chart length and min NoM combination provides the most meaningful and reliable results, the following table is organized. 
+    * [(260,3) (360,3) (360,4) (custom,dynamic)]
+    * ["Number of Member", "Number of Cluster", "Distribution Score"]
+
+    As a result it can be stated that:
+    * There is no significantly better or worse configuration
+    * When the 260_3 and 360_3 is compared, 360_3 looks better since the NoM, NoC and DS is higher
+    * When the 360_3 and 360_4 is compared, NoM of 360_4 slightly higher. NoC of 360_4 significantly high. DS values are pretty close to each other except a few outlier.
+    * Custom_dynamic configuration shares some portion of the previous configurations for different timeframes.
+    * **There is no reason to not to use the custom_dynamic setup.**
+
+    | | Number of Member | Number of Cluster | Distribution Score |
+    |:--:|:--:|:--:|:--:|
+    |260_3|<img src="../../configs/research/support-resistance/reports_260_3/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260_3/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_260_3/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |360_3|<img src="../../configs/research/support-resistance/reports_360_3/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_3/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_3/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |360_4|<img src="../../configs/research/support-resistance/reports_360_4/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_4/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_360_4/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+    |custom_dynamic|<img src="../../configs/research/support-resistance/reports_custom_dynamic/number_of_members_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom_dynamic/number_of_cluster_BTCUSDT_timeframe_analyzer.png" width="640"/>|<img src="../../configs/research/support-resistance/reports_custom_dynamic/distribution_score_BTCUSDT_timeframe_analyzer.png" width="640"/>|
+
+1. What are the characteristic of each clustering algo?
+    ### sr_optics
+
+       ['1h','4h']: Less member | Less retest | More cluster Dense distribution | High efficiency
+       Suitable for small timeframes ['1h','4h']
+       Okay to use in big timeframes ['1d','1w']
+
+    * Higher  HDS values in small tfs and lower VDS values in low tfs. As a result the DS is significantly higher in small tfs compare to other algorithms.
+    * When the cluster features are investigated, sr_optics has
+        * significantly higher NoC in ['1h','4h'] , and relatively higher NoC in ['1d','1w']
+        * significantly smaller NoM in ['1h','4h'] and average NoM in ['1d','1w']
+        * significantly smaller NoR in ['1h','4h'] and average NoM in ['1d','1w']
+    * sr_optics, in ['1h','4h'], generates large number of clusters with a small height and small NoM. Since the cluster is tight in height, NoR is generally lower compare to others. In ['1d','1w'], since it has a large vds but relatively nomal hds, the ds is an average value.
+    * Considering the fact that the NoM and NoR is average as well, it can be suggested that the generated clusters are a bit inefficient and inprecise. Because the heigth is quite large but there are just a few members within the boundies of the cluster
+    * Distribution efficiency in ['1d','1w'] is quite average but in ['1h','4h'] the DE is huge compare to others
+
+    ### sr_meanshift
+    
+        More member | More retest ['1h','4h'] | Less cluster | Sparse distribution | Less Efficiency
+        Might be average alternat
+        ve to use in big timeframes ['1d','1w']
+
+    * High HDS in ['1d'] and average in['1h','4h','1w'].
+    * Generally slightly high VDS in all timeframes.
+    * NoC increases as the timeframe gets smaller. Average NoC compare to other algotihms
+    * When the DS is investigated, meanshift is the lowest at all the timeframes. It leads to lowest DE as well.
+    * NoR is average for ['1d','1w'] and above average for ['1h','4h'].  Considering NoR it makes sense to use it for small timeframes. 
+
+    ### sr_dbscan
+
+        More member | More retest | Less cluster | Average distribution
+        Suitable for all timeframes, the best is the small timeframes
+
+    * Generally lower HDS compare to other algorithms. HDS increases as the timeframe gets bigger.
+    * Generally lower VDS compare to other algorithms.
+    * Average DS
+    * Significantly higher NoR in '1h' and still high value on '4h'. However in ['1d','1w'], the values are on average.
+    * Generally higher DE compare to other algorithms but the difference is not significant, especially in ['1d','1w'].
+    * Lowest NoC in all timeframes compare to other algorithms
+    * As a result, sr_dbscan can be described as an algorithm that creates smaller number of cluster with a better distribution scores(VDS, DE). Considering the NoR statistics, it can be stated that these small number of clusters are generally dense and tested more compare to other algorithms
+
+    ### sr_birch
+
+        Less member | Less retest | More cluster | Average distribution
+        Can be used as a last option to rely on due to low NoR. Not suitable for big timeframes ['1d','1w']
+
+    * Generally average HDS. Increases as the timeframe gets bigger
+    * Generally average VDS. Increases as the timeframe gets bigger
+    * Generally less NoM and NoR in all timeframes but the difference is not significant. NoR in '1d' is less than 1. Does not look suitable for big timeframes
+    * High number of cluster. (If you really need a cluster to have a reference for a price level, then as a last option ıt may work)
+
+1. Which clustering algorithm works better?
+
+    Based on Distribution Score
+    |Order| 1h | 4h | 1d | 1w |
+    |:--:|:--:|:--:|:--:|:--:|
+    |1| **sr_optics** | **sr_optics** | **sr_birch** | **sr_optics** |
+    |2| sr_birch | sr_birch | sr_meanshift | sr_dbscan |
+    |3| sr_dbscan | sr_dbscan | sr_dbscan | sr_birch |
+    |4| sr_meanshift | sr_meanshift | sr_optics | sr_meanshift |
+
+    Based on Number of Retest
+    |Order| 1h | 4h | 1d | 1w |
+    |:--:|:--:|:--:|:--:|:--:|
+    |1| **sr_dbscan** | **sr_dbscan** | **sr_dbscan** | **sr_meanshift** |
+    |2| sr_meanshift | sr_meanshift | sr_optics | sr_dbscan |
+    |3| sr_birch | sr_birch | sr_meanshift | sr_optics |
+    |4| sr_optics | sr_optics | sr_birch | sr_birch |
+
+1. Which timeframes are more suitable/reliable in terms of SR levels?
+
+    |Order| Distribution Score | Number of Retest | Number of Cluster |
+    |:--:|:--:|:--:|:--:|
+    |1| **1h** | **1h** | **1h** |
+    |2| 4h | 4h | 4h |
+    |3| 1w | 1d | 1d |
+    |4| 1d | 1w | 1w |
+
+1. Does it give an edge on the market to be profitable?
+
+    Considering the following plot, in small timeframes NoR is quite high and in big timeframes it might still be  profitable.
+    <img src="../../configs/research/support-resistance/reports/number_of_retest_BTCUSDT_timeframe_analyzer.png" width="640"/>
+
+# Future Works
