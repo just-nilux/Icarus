@@ -20,7 +20,7 @@ class TestLimitUpdateMarket(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 1.05 # Enter
+            enter_price = time_dict[self.min_period]['close'][-1] * 1.05 # Enter
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -42,7 +42,7 @@ class TestLimitUpdateMarket(StrategyBase):
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
         trade.command = ECommand.UPDATE
         trade.stash_exit()
-        close_price = kwargs['analysis_dict'][trade.pair][self.min_period]['close'] 
+        close_price = kwargs['analysis_dict'][trade.pair][self.min_period]['close'][-1]
         trade.set_exit( Market(quantity=trade.result.enter.quantity, price=close_price) )
 
 
@@ -63,7 +63,7 @@ class TestLimitUpdateMarket(StrategyBase):
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
-        exit_price = time_dict[self.min_period]['close'] * 1.5
+        exit_price = time_dict[self.min_period]['close'][-1] * 1.5
 
         exit_limit_order = Limit(
             exit_price,

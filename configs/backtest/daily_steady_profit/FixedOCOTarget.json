@@ -26,41 +26,27 @@
         "max_capital_use_ratio": 0.95
     },
     "strategy": {
-        "RSI": {
+        "FixedOCOTarget": {
             "pairs": ["XRPUSDT"],
-            "time_scales": ["1d"],
-            "max_live_trade": 3,
-            "kwargs":{
-                "upper_limit": 70,
-                "lower_limit": 30
-            }
+            "time_scales": ["1h"],
+            "max_live_trade": 1
         }
     },
     "analysis": {
-        "close":{},
-        "rsi":{}
+        "close":{}
     },
     "time_scales": {
-        "1m": 720,
-        "5m": 480,
-        "15m": 96,
-        "30m": 336,
-        "1h": 336,
-        "2h": 84,
-        "4h": 540,
-        "12h": 60,
-        "1d": 365,
-        "1w": 52,
-        "1M": 12
+        "1h": 2
     },
     "backtest":{
-        "start_time": "2019-05-12 12:15:00",
-        "end_time": "2020-06-19 13:00:00",
+        "start_time": "2021-11-24 00:00:00",
+        "end_time": "2022-11-24 00:00:00",
         "online": true,
         "breakpoints": {
             "1563321600": ""
         }
     },
+    "report_folder_name": "reports",
     "visualization":{
         "observers":{
             "quote_asset":["free", "total", "in_trade"],
@@ -68,7 +54,7 @@
         },
         "indicators": {
             "close":"",
-            "rsi":{}
+            "aroon":{"timeperiod":14}
         },
         "patterns":[]
     }

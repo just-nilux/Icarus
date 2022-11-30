@@ -39,6 +39,8 @@
         }
     },
     "analysis": {
+        "bullish_fractal_3":{},
+        "bearish_fractal_3":{},
         "support_dbscan":{"source":"bullish_fractal_3"},
         "resistance_dbscan":{"source":"bearish_fractal_3"},
         "support_birch":{"source":"bullish_fractal_3"},
@@ -63,7 +65,7 @@
     },
     "backtest":{
         "start_time": "2020-01-11 13:00:00",
-        "end_time": "2020-01-18 13:00:00",
+        "end_time": "2020-03-30 13:00:00",
         "online": true
     },
     "visualization":{

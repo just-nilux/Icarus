@@ -23,7 +23,7 @@ class RSI(StrategyBase):
             if time_dict[self.min_period]['rsi'][-2] < self.lower_limit and \
                 self.lower_limit < time_dict[self.min_period]['rsi'][-1] < self.upper_limit:
                 # BUY
-                enter_price = time_dict[self.min_period]['close']
+                enter_price = time_dict[self.min_period]['close'][-1]
                 enter_ref_amount=pairwise_alloc_share
 
                 enter_order = Market(amount=enter_ref_amount, price=enter_price)
@@ -45,7 +45,7 @@ class RSI(StrategyBase):
         if time_dict[self.min_period]['rsi'][-2] > self.upper_limit and \
             self.lower_limit < time_dict[self.min_period]['rsi'][-1] < self.upper_limit:
 
-            trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close']) )
+            trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close'][-1]) )
 
             if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
                 trade.reset_exit()

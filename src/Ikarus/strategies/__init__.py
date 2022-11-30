@@ -1,5 +1,7 @@
 from .sample import RSI, Aroon
 
+from . import FixedLimitTarget, FixedOCOTarget
+
 from . import StrategyBase,\
     TestLimitLimit, \
     TestEnterExpire, \
