@@ -6,6 +6,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import time
 from .safe_operators import *
+import itertools
 
 
 def minute_to_time_scale(minute: int):
@@ -168,3 +169,17 @@ def setup_logger(logger, log_config):
     logger.addHandler(ch)
 
     logger.info('logger has been set')
+
+
+def generate_pair_x_timescale_pool(strategy_config):
+    time_scale_pool = []
+    pair_pool = []
+    for strategy in strategy_config.values():
+        time_scale_pool.append(strategy['time_scales'])
+        pair_pool.append(strategy['pairs'])
+
+    time_scale_pool = list(set(itertools.chain(*time_scale_pool)))
+    pair_pool = list(itertools.chain(*pair_pool))
+
+    meta_data_pool = list(itertools.product(time_scale_pool, pair_pool))
+    return meta_data_pool

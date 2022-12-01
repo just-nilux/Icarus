@@ -197,10 +197,7 @@ if __name__ == '__main__':
         cred_info = json.load(cred_file)
 
     logger = logging.getLogger('app')
-    mongocli = mongo_utils.MongoClient(host=config['mongodb']['host'], 
-        port=config['mongodb']['port'], 
-        db=config['tag'],
-        clean=config['mongodb']['clean'])
+    mongocli = mongo_utils.MongoClient(**config['mongodb'])
     
     # Initialize and configure objects
     setup_logger(logger, config['log'])
