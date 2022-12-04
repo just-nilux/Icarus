@@ -7,6 +7,7 @@
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
+        "database": "test-bot",
         "host": "localhost",
         "port": 27017,
         "clean": true
@@ -26,7 +27,7 @@
         "max_capital_use_ratio": 0.95
     },
     "strategy": {
-        "FixedOCOTarget": {
+        "FixedLimitTarget": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1
@@ -39,14 +40,34 @@
         "1h": 2
     },
     "backtest":{
-        "start_time": "2021-11-24 00:00:00",
+        "start_time": "2022-5-24 00:00:00",
         "end_time": "2022-11-24 00:00:00",
         "online": true,
-        "breakpoints": {
-            "1563321600": ""
-        }
+        "breakpoints": {}
     },
     "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters": {
+        "grid": {
+            "<strategy>": ["FixedLimitTarget"]
+        },
+        "reporters": [
+            {
+                "parameters": {
+                    "<cause>": ["closed", "closed_stop_limit"]
+                },
+                "reporter": "strategy_statistics",
+                "query_template": [
+                    {"$match":{"strategy":"<strategy>", "result.cause":"<cause>"}}
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "database"
+                ]
+            }
+        ]
+    },
     "visualization":{
         "observers":{
             "quote_asset":["free", "total", "in_trade"],

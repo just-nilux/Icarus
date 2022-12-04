@@ -56,7 +56,8 @@ class MongoClient():
     async def do_aggregate(self, col, query) -> None:
         docs = []
         if type(query) == list:
-            async for doc in self.db_bot[col].aggregate(query):
+            cursor = self.db_bot[col].aggregate(query)
+            async for doc in cursor:
                 docs.append(doc)
         else:
             raise NotImplementedException('do_aggregate requires type list as input')
