@@ -51,12 +51,12 @@ class FixedLimitTarget(StrategyBase):
 
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
 
-        exit_price = trade.result.enter.price * 1.005 # %0.05
+        exit_price = trade.result.enter.price * 1.01 # %0.05
 
         exit_limit_order = Limit(
             exit_price,
             quantity=trade.result.enter.quantity,
-            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],24,time_scale_to_minute(self.min_period))
+            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],2,time_scale_to_minute(self.min_period))
         )
         trade.set_exit(exit_limit_order)
 

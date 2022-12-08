@@ -113,7 +113,7 @@ def plot_enter_orders(trade_list) -> None:
         
         # There is no scenario where "cause = ECause.EXIT_EXP". The updated orders simply go with ECause.CLOSED
         # NOTE: If it is required to get updatd orders only, then the query might look for {"order_stash": "null"} 
-        elif trade.result.cause in [ECause.CLOSED, ECause.CLOSED_STOP_LIMIT]: 
+        elif trade.result.cause not in [ECause.MARKET, ECause.CLOSED_STOP_LIMIT]: 
             fplt.add_line((trade.decision_time, trade.result.enter.price),
                 (trade.result.exit.time, trade.result.enter.price),
                 color='#0000FF', width=3, interactive=False)

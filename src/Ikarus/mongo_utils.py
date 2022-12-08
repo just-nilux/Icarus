@@ -145,10 +145,6 @@ async def update_live_trades(mongo_client, trade_list): # TODO: REFACTOR: checko
             result_insert = await mongo_client.do_insert_one("hist-trades",asdict(trade))
             result_remove = await mongo_client.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
 
-            if trade.result.cause == ECause.CLOSED:
-                hto_stat = trade_statistics.eval_hto_stat(trade) # TODO : REFACTORING
-                pass
-
         # NOTE: Manual trade option is omitted, needs to be added
         # TODO: REFACTORING: Why did you handle all of these 3 state in the same place?
         elif trade.status in [ EState.OPEN_EXIT, EState.WAITING_EXIT, EState.EXIT_EXP]:

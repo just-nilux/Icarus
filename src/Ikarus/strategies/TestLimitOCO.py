@@ -63,9 +63,9 @@ class TestLimitOCO(StrategyBase):
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
-        target_price = time_dict[self.min_period]['close'][-1] * 1.01
-        stop_price = time_dict[self.min_period]['close'][-1] * 0.99
-        stop_limit_price = time_dict[self.min_period]['close'][-1] * 0.989
+        target_price = trade.result.enter.price * 1.01
+        stop_price = trade.result.enter.price * 0.99
+        stop_limit_price = trade.result.enter.price * 0.989
 
         #target_price = trade.result.enter.price * 1.05
         #stop_price = trade.result.enter.price * 0.95

@@ -52,15 +52,16 @@ class ECommand(str, Enum):
     EXEC_ENTER = 'execute_enter'        # Execute enter order
 
 
+'''
+ECause is used to explain the cause for a Trade to become EState.CLOSED
+'''
 class ECause(str, Enum):
     NONE = None
     ENTER_EXP = 'enter_expire'
     MAN_CHANGE = 'manual_change'
-    CLOSED = 'closed'
-    CLOSED_STOP_LIMIT = 'closed_stop_limit' # 'oco_stoploss'
-    # Previously:
-    #   lto_list[i]['result']['cause'] = STAT_CLOSED
-    #   lto_list[i]['result']['exit']['type'] = 'oco_stoploss'
+    MARKET = 'market'
+    LIMIT = 'limit' 
+    STOP_LIMIT = 'stop_limit' 
 
 
 class EState(str, Enum):
@@ -264,7 +265,7 @@ class Trade():
         self.result.enter.amount = safe_multiply(self.result.enter.quantity, self.result.enter.price)
         
 
-    def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, status=EState.CLOSED, cause=ECause.CLOSED):
+    def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, status=EState.CLOSED, cause=ECause.NONE):
         self.result.exit = Result()
         if quantity: 
             self.result.exit.quantity = quantity

@@ -30,7 +30,7 @@ async def visualize_dashboard(bwrapper, mongocli, config):
 
     for idx, item in enumerate(pair_scale_mapping.items()):
         canceled = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':ECause.ENTER_EXP, 'pair':item[0]})
-        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.CLOSED,ECause.CLOSED_STOP_LIMIT]}, 'pair':item[0]})
+        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.MARKET, ECause.STOP_LIMIT, ECause.LIMIT]}, 'pair':item[0]})
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['canceled'] = canceled
@@ -54,11 +54,10 @@ async def main():
         client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                         api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
         bwrapper = broker.TestBinanceWrapper(client, config)
-        mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
-            config['mongodb']['port'], 
-            config['tag'],
-            clean=False)
-        await visualize_dashboard(bwrapper, mongocli, config)
+
+        config['mongodb']['clean'] = False
+        mongo_client = mongo_utils.MongoClient(**config['mongodb'])
+        await visualize_dashboard(bwrapper, mongo_client, config)
 
 
 if __name__ == '__main__':
