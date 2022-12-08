@@ -91,9 +91,12 @@ async def eval_primary_strategy_stats(stats, config, mongo_client):
         strategy_stat['pairs'] = config['strategy'][strategy]['pairs']
         strategy_stat['time_scales'] = config['strategy'][strategy]['time_scales']
         strategy_stat['Live'] = int(await mongo_client.count("live-trades", {'strategy':strategy}))
-        # TODO: REWORK on the following queries needed
-        strategy_stat['Closed'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.CLOSED}))
-        strategy_stat['Closed OCO Stop Limit'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.CLOSED_STOP_LIMIT}))
+        # TODO: REWORK on the following queries needed{$match:{'order_stash.1': {$exists: true}}}
+        # [{$match:{'order_stash.0': {$exists: false}}}] # not updated
+        # [{$match:{'order_stash.0': {$exists: true}}}] # updated
+
+        strategy_stat['Closed'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause': {"$in": [ECause.MARKET, ECause.STOP_LIMIT, ECause.LIMIT]}}))
+        strategy_stat['Closed OCO Stop Limit'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.STOP_LIMIT}))
         strategy_stat['Enter Expired'] = int(await mongo_client.count("hist-trades", {'strategy':strategy, 'result.cause':ECause.ENTER_EXP}))
 
         # TODO: Calculate and record the profit of ECause.CLOSED, ECause.CLOSED_STOP_LIMIT seperately 
