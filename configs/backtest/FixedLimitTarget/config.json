@@ -7,7 +7,7 @@
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
-        "database": "test-bot",
+        "database": "FixedLimitTarget",
         "host": "localhost",
         "port": 27017,
         "clean": true
@@ -31,6 +31,11 @@
             "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1
+        },
+        "FixedOCOTarget": {
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1
         }
     },
     "analysis": {
@@ -49,7 +54,7 @@
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": ["FixedLimitTarget","FixedOCOTarget"]
+            "<strategy>": ["FixedLimitTarget", "FixedOCOTarget"]
         },
         "reporters": [
             {
@@ -60,6 +65,7 @@
                         {"$match":{"strategy":"<strategy>"}},
                         {
                             "$project": {
+                                "strategy":"<strategy>",
                                 "status": "$status",
                                 "cause": "$result.cause",
                                 "profit":"$result.profit",

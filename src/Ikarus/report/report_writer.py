@@ -450,16 +450,29 @@ class DatabaseWriter():
         if not os.path.exists(self.report_folder):
             os.makedirs(self.report_folder)
 
-    async def database(self, indice, report_dict, **kwargs):
-        symbol, timeframe, analyzer = indice[0]
+    async def database(self, indice, report_item, **kwargs):
+        # Format report_item
+
+        # Create document
+        
+        meta = kwargs
+        meta['folder_name'] = os.path.basename(str(self.report_folder))
+
+        if indice:
+            symbol, timeframe, analyzer = indice[0]
+            meta = {
+                'timeframe': timeframe,
+                'pair': symbol,
+                'analyzer': analyzer,
+            }
+
         document = {
-            'folder_name': os.path.basename(str(self.report_folder)),
-            'timeframe': timeframe,
-            'pair': symbol,
-            'analyzer': analyzer,
-            'data': report_dict
+            'meta':meta,
+            'data':report_item
         }
-        await self.mongo_client.do_insert_one(kwargs['reporter'], document)
+        
+        
+        result = await self.mongo_client.do_insert_one(kwargs['reporter'], document)
         #await mongocli.do_insert_one("observer", initial_observation_item)
 
 class GridSearchWriter():

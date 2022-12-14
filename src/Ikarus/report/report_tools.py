@@ -2,6 +2,7 @@ from statistics import mean
 import numpy as np
 import pandas as pd
 from ..utils import time_scale_to_minute
+from ..objects import ECause, EState
 import copy
 import asyncio
 from dataclasses import asdict
@@ -221,3 +222,80 @@ async def supres_distribution_per_metric(index, analysis_data):
     # }
     # The results will go to box plots so for each metric
     return result_dict
+
+async def dummy_reporter(index, analysis_data):
+    return analysis_data
+
+async def strategy_statistics(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+
+    stats = {}
+
+    # Count
+    stat_count = {}
+    stat_count['live'] = (df['status'] != EState.CLOSED).sum()
+    stat_count['closed'] = (df['status'] == EState.CLOSED).sum()
+
+    count_cause = df['cause'].value_counts()
+    for cause in ECause:
+        stat_count[cause.value] = count_cause.get(cause,0)
+
+    count_updated = df['is_updated'].value_counts()
+    stat_count['not_updated'] = count_updated.get(False, 0)
+    stat_count['updated'] = count_updated.get(True, 0)
+    stat_count['win'] = (df['profit'] > 0).sum()
+    stat_count['lose'] = (df['profit'] <= 0).sum()
+
+    stat_profit = {
+        'best': df['profit'].max(),
+        'worst': df['profit'].min(),
+        'total': df['profit'].sum(),
+        'total_updated': df[df['is_updated']==True]['profit'].sum(),
+        'total_not_updated': df[df['is_updated']==False]['profit'].sum(),
+        'average': df['profit'].mean(),
+        'average_updated': df[df['is_updated']==True]['profit'].mean(),
+        'average_not_updated': df[df['is_updated']==False]['profit'].mean()  
+    }
+
+    day_in_ms = 1000*60*60*24
+    stat_duration = {
+        'max': df['duration'].max()/day_in_ms,
+        'min': df['duration'].min()/day_in_ms,
+        'total': df['duration'].sum()/day_in_ms,
+        'average': df['duration'].mean()/day_in_ms
+    }
+
+    stat_rates = {
+        'win': (df['profit'] > 0).sum() / len(df['profit']),
+        'lose': (df['profit'] <= 0).sum() / len(df['profit']),
+        'enter': (df['cause'] != ECause.ENTER_EXP).sum() / len(df)
+    }
+
+    stat_others = {
+        'total_fee': df['fee'].sum()
+
+    }
+
+    # Combine Stats
+    stats = {
+        'strategy': df['strategy'][0],
+        'count': stat_count,
+        'profit': stat_profit,
+        'duration':stat_duration,
+        'rates': stat_rates,
+        'others': stat_others
+    }
+
+    # Round all floats to 2
+    for stat_key, stat in stats.items():
+        if type(stat) != dict:
+            continue
+        
+        for k,v in stat.items():
+            if type(v) in [np.float64, float]:
+                stat[k] = round(v,2)
+            elif type(v) == np.int64:
+                stat[k] = int(v)
+
+    return stats
