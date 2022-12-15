@@ -79,7 +79,7 @@
                 "source": "database",
                 "collection": "hist-trades",
                 "writers": [
-                    "database"
+                    "json_file"
                 ]
             }
         ]

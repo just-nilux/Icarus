@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import shutil
 import math
+import json
+import sys
 from mdutils.mdutils import MdUtils
 from mdutils import Html
 
@@ -397,13 +399,32 @@ class ImageWriter():
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
         fig, ax = plt.subplots(figsize=(12,12))
 
+
 class MarkdownWriter():
     def __init__(self, report_folder) -> None:
         self.report_folder = report_folder
         self.md_file = MdUtils(file_name=f'{self.report_folder}/report.md', title='Report')
         pass
 
-    def add_images(self):
+    def add_strategies_to_markdown(self):
+        filepaths = [file for file in glob.glob(f'{self.report_folder}/strategy_*.json')]
+        self.md_file.new_header(1, 'strategies')
+
+        strategy_stat = []
+        for filepath in filepaths:
+            f = open(filepath,'r')
+            strategy_stat.append(json.load(f))
+            
+        df = pd.DataFrame(strategy_stat)
+        df.set_index('strategy',inplace=True)
+        for (columnName, columnData) in df.iteritems():
+            df_sub_stat = pd.DataFrame(columnData.to_list(), index=df.index)
+            self.md_file.write("title", color='yellow', bold_italics_code='b')
+            self.md_file.write('\n' + df_sub_stat.to_markdown() + '\n\n')
+        pass
+
+
+    def add_images_to_markdown(self):
         png_file_names = [os.path.basename(png_file) for png_file in glob.glob(f'{self.report_folder}/*.png')]
         self.md_file.new_header(1, "Plots")
         #<img src="../../../../configs/research/aroon_classifies_market/reports_grid_search/PPC_Accuracy.png" /> 
@@ -440,7 +461,24 @@ class MarkdownWriter():
         print(f'Table created: {title}')
         pass
 
+
+class TradeStatWriter():
+    def __init__(self, report_folder) -> None:
+        self.report_folder = report_folder
+        pass
+
+
+    def json_file(self, indice, report_data, **kwargs):
+        config_file_path = self.report_folder + '/' + 'strategy_' + report_data.get('strategy','_') + '.json'
+        f = open(config_file_path,'w')
+        json.dump(report_data, f,  indent=4)
+        f.close()
+
+        print(f'File created: {config_file_path}')
+
+
 class DatabaseWriter():
+
     def __init__(self, mongo_client, report_folder='reports') -> None:
         self.mongo_client = mongo_client
         self.report_folder = report_folder
@@ -578,7 +616,7 @@ class GridSearchWriter():
         print(f'File saved: {target_path}')
 
 
-class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter, GridSearchWriter):
+class ReportWriter(ImageWriter, MarkdownWriter, DatabaseWriter, GridSearchWriter, TradeStatWriter):
     def __init__(self, report_folder='', mongo_client=None, **kwargs) -> None:
         self.report_folder = report_folder
         self.clean_report_folder()
