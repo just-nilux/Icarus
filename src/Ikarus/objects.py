@@ -74,6 +74,20 @@ class EState(str, Enum):
     CLOSED = 'closed'
 
 
+class EObserverType(str, Enum):
+    BALANCE = 'balance'
+    QUOTE_ASSET = 'quote_asset'
+
+
+@dataclass
+class Observer:
+    type: EObserverType
+    ts: bson.Int64
+    data: None
+
+    def to_dict(self):
+        return asdict(self)
+
 @dataclass
 class Order:
     '''

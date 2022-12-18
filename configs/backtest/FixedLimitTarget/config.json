@@ -65,7 +65,31 @@
                         {"$match":{"strategy":"<strategy>"}},
                         {
                             "$project": {
-                                "strategy":"<strategy>",
+                                "strategy":"$strategy",
+                                "status": "$status",
+                                "cause": "$result.cause",
+                                "profit":"$result.profit",
+                                "fee":{"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]},
+                                "duration":"$result.live_time",
+                                "is_updated":{"$ne": ["$order_stash", []]}
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "json_file"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "strategy_statistics",
+                "query_template": [
+                    [
+                        {
+                            "$project": {
+                                "strategy":"All",
                                 "status": "$status",
                                 "cause": "$result.cause",
                                 "profit":"$result.profit",

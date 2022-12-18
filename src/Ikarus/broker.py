@@ -725,7 +725,7 @@ class TestBinanceWrapper(BrokerWrapper):
         '''
 
         balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
-                   for b in last_observer_item['balances'] if float(b['free']) > 0 or float(b['locked']) > 0 or b['asset']==self.config['broker']['quote_currency'] ]
+                   for b in last_observer_item['data'] if float(b['free']) > 0 or float(b['locked']) > 0 or b['asset']==self.config['broker']['quote_currency'] ]
         # NOTE: Make sure that quote_currency stays in the df_balance even if it is 0
 
         df_balance = pd.DataFrame(balance)

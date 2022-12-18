@@ -38,7 +38,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
 
     # TODO: give index paramter to retrieve a single object instead of a list
-    info = await mongocli.get_n_docs('observer', {'type':'balance'}) # Default is the last doc
+    info = await mongocli.get_n_docs('observer', {'type':EObserverType.BALANCE}) # Default is the last doc
 
     
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
@@ -103,14 +103,33 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
+
+    observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
+    obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()
+
+    observation_obj = {}
+    observation_obj['free'] = df_balance.loc[config['broker']['quote_currency'],'free']
+    observation_obj['in_trade'] = eval_total_capital_in_lto(live_trade_list+new_trade_list)
+    observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
+    obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
+
+    observation_obj = {}
+    free = df_balance.loc[config['broker']['quote_currency'],'free']
+    in_trade = eval_total_capital_in_lto(live_trade_list+new_trade_list)
+    observation_obj['total'] = safe_sum(free, in_trade)
+    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['risk_management']['max_capital_use_ratio']))
+    observation_obj['real_free'] = free
+    observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
+    obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
+
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
-        observer.quote_asset(ikarus_time, df_balance, live_trade_list+new_trade_list),
-        observer.quote_asset_leak(ikarus_time, df_balance, live_trade_list+new_trade_list),
-        observer.balance(ikarus_time, df_balance)
+        obs_quote_asset,
+        obs_quote_asset_leak,
+        obs_balance
     ]
-    observer_objs = list(await asyncio.gather(*observer_list))
-    await mongocli.do_insert_many("observer", observer_objs)
+    #observer_objs = list(await asyncio.gather(*observer_list))
+    await mongocli.do_insert_many("observer", observer_list)
 
     pass
 
@@ -153,11 +172,8 @@ async def main():
     TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
-    initial_observation_item = {
-        'type': 'balance',
-        'balances': config['balances']
-    }
-    await mongocli.do_insert_one("observer", initial_observation_item)
+    initial_observer = Observer(EObserverType.BALANCE, None, config['balances']).to_dict()
+    await mongocli.do_insert_one("observer", initial_observer)
 
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
@@ -182,7 +198,7 @@ async def main():
         await application(strategy_list, bwrapper, start_time)
 
     # Evaluate the statistics
-    await trade_statistics.main(config, mongocli)
+    # await trade_statistics.main(config, mongocli)
 
 
 if __name__ == '__main__':

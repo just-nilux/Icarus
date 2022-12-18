@@ -408,7 +408,7 @@ class MarkdownWriter():
 
     def add_strategies_to_markdown(self):
         filepaths = [file for file in glob.glob(f'{self.report_folder}/strategy_*.json')]
-        self.md_file.new_header(1, 'strategies')
+        self.md_file.new_header(1, 'Strategies')
 
         strategy_stat = []
         for filepath in filepaths:
@@ -419,7 +419,7 @@ class MarkdownWriter():
         df.set_index('strategy',inplace=True)
         for (columnName, columnData) in df.iteritems():
             df_sub_stat = pd.DataFrame(columnData.to_list(), index=df.index)
-            self.md_file.write("title", color='yellow', bold_italics_code='b')
+            self.md_file.new_header(2, columnName)
             self.md_file.write('\n' + df_sub_stat.to_markdown() + '\n\n')
         pass
 

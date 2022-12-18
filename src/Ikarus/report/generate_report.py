@@ -25,7 +25,7 @@ def write_to_config_file(config_dict, filename="generated_config.json"):
 
 def replace_all(text, dic):
     for i, j in dic.items():
-        text = text.replace(i, j)
+        text = text.replace(i, str(j))
     return text
 
 
