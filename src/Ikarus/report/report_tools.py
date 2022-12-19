@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from ..utils import time_scale_to_minute
 from ..objects import ECause, EState
+from ..safe_operators import safe_divide, safe_sum, safe_substract
 import copy
 import asyncio
 from dataclasses import asdict
@@ -298,4 +299,33 @@ async def strategy_statistics(index, reporter_input):
             elif type(v) == np.int64:
                 stat[k] = int(v)
 
-    return stats
+    meta = {
+        'title': 'strategy_{}'.format(df['strategy'][0])
+        }
+
+    return (meta, stats)
+
+
+async def balance_statistics(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+    mdd_percentage = (df['total'].max() - df['total'].min() ) / df['total'].max() * 100
+
+
+    quote_asset_start = df['total'].iloc[0]
+    quote_asset_end = df['total'].iloc[-1]
+    
+    stats = {
+        'start':quote_asset_start,
+        'end':quote_asset_end,
+        'absolute_profit': safe_substract(quote_asset_end, quote_asset_start, quant='0.01')
+    }
+    stats['percentage_profit'] = safe_divide(stats['absolute_profit']*100, stats['start'], quant='0.01')
+    stats['max_drawdown'] = round(mdd_percentage,2)
+    stats['title'] = 'balance_statistics'
+
+    meta = {
+        'title': 'balance_statistics'
+        }
+
+    return (meta, stats)

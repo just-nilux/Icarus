@@ -105,6 +105,25 @@
                 "writers": [
                     "json_file"
                 ]
+            },
+            {
+                "parameters": {},
+                "reporter": "balance_statistics",
+                "query_template": [
+                    [
+                        {"$match":{"type":"quote_asset"}},
+                        { "$project" : {
+                            "ts": "$ts", 
+                            "total": "$data.total"
+                            } 
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "observer",
+                "writers": [
+                    "json_file"
+                ]
             }
         ]
     },

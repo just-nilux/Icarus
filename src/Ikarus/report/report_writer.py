@@ -469,12 +469,14 @@ class TradeStatWriter():
 
 
     def json_file(self, indice, report_data, **kwargs):
-        config_file_path = self.report_folder + '/' + 'strategy_' + report_data.get('strategy','_') + '.json'
-        f = open(config_file_path,'w')
-        json.dump(report_data, f,  indent=4)
+        meta = report_data[0]
+        report = report_data[1]
+        path = self.report_folder + '/' + meta.get('title','title') + '.json'
+        f = open(path,'w')
+        json.dump(report, f,  indent=4)
         f.close()
 
-        print(f'File created: {config_file_path}')
+        print(f'File created: {path}')
 
 
 class DatabaseWriter():

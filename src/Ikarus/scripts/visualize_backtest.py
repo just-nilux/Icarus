@@ -39,9 +39,10 @@ async def visualize_dashboard(bwrapper, mongocli, config):
     # Get observer objects
     for obs_type, obs_list in config['visualization']['observers'].items():
         df_observers = pd.DataFrame(list(await mongocli.do_find('observer',{'type':obs_type})))
-        df_observers.set_index(['timestamp'], inplace=True)
-        df_observers = df_observers[obs_list]
-        dashboard_data_pack[obs_type] = df_observers
+        df_obs_data = pd.DataFrame(df_observers['data'].to_list())
+        df_obs_data.set_index(df_observers['ts'])
+        df_obs_data = df_obs_data[obs_list]
+        dashboard_data_pack[obs_type] = df_obs_data
 
     fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, title=f'Visualizing Time Frame: {config["backtest"]["start_time"]} - {config["backtest"]["end_time"]}')
 
