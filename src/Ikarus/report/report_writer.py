@@ -406,9 +406,20 @@ class MarkdownWriter():
         self.md_file = MdUtils(file_name=f'{self.report_folder}/report.md', title='Report')
         pass
 
-    def add_strategies_to_markdown(self):
+    def add_backtest_to_markdown(self):
+
+        self.md_file.new_header(1, 'Backtest')
+        # Add balance statistics
+        self.md_file.new_header(2, 'Balance')
+        balance_file_path = f'{self.report_folder}/balance_statistics.json'
+        if os.path.exists(balance_file_path):
+            f = open(balance_file_path,'r')
+            df_balance = pd.DataFrame([json.load(f)])
+            self.md_file.write('\n' + df_balance.to_markdown() + '\n\n')
+
+        # Add strategy statistics
         filepaths = [file for file in glob.glob(f'{self.report_folder}/strategy_*.json')]
-        self.md_file.new_header(1, 'Strategies')
+        self.md_file.new_header(2, 'Strategies')
 
         strategy_stat = []
         for filepath in filepaths:
@@ -419,7 +430,7 @@ class MarkdownWriter():
         df.set_index('strategy',inplace=True)
         for (columnName, columnData) in df.iteritems():
             df_sub_stat = pd.DataFrame(columnData.to_list(), index=df.index)
-            self.md_file.new_header(2, columnName)
+            self.md_file.new_header(3, columnName)
             self.md_file.write('\n' + df_sub_stat.to_markdown() + '\n\n')
         pass
 
@@ -467,13 +478,11 @@ class TradeStatWriter():
         self.report_folder = report_folder
         pass
 
+    def json_file(self, indice, report, **kwargs):
 
-    def json_file(self, indice, report_data, **kwargs):
-        meta = report_data[0]
-        report = report_data[1]
-        path = self.report_folder + '/' + meta.get('title','title') + '.json'
+        path = self.report_folder + '/' + report.meta.title + '.json'
         f = open(path,'w')
-        json.dump(report, f,  indent=4)
+        json.dump(report.data, f,  indent=4)
         f.close()
 
         print(f'File created: {path}')

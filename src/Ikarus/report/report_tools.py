@@ -2,7 +2,7 @@ from statistics import mean
 import numpy as np
 import pandas as pd
 from ..utils import time_scale_to_minute
-from ..objects import ECause, EState
+from ..objects import ECause, EState, Report, ReportMeta
 from ..safe_operators import safe_divide, safe_sum, safe_substract
 import copy
 import asyncio
@@ -299,11 +299,7 @@ async def strategy_statistics(index, reporter_input):
             elif type(v) == np.int64:
                 stat[k] = int(v)
 
-    meta = {
-        'title': 'strategy_{}'.format(df['strategy'][0])
-        }
-
-    return (meta, stats)
+    return Report(ReportMeta(title='strategy_{}'.format(df['strategy'][0])), data=stats)
 
 
 async def balance_statistics(index, reporter_input):
@@ -322,10 +318,5 @@ async def balance_statistics(index, reporter_input):
     }
     stats['percentage_profit'] = safe_divide(stats['absolute_profit']*100, stats['start'], quant='0.01')
     stats['max_drawdown'] = round(mdd_percentage,2)
-    stats['title'] = 'balance_statistics'
 
-    meta = {
-        'title': 'balance_statistics'
-        }
-
-    return (meta, stats)
+    return  Report(ReportMeta(title='balance_statistics'),data=stats)

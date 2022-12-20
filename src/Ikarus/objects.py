@@ -80,6 +80,17 @@ class EObserverType(str, Enum):
 
 
 @dataclass
+class ReportMeta:
+    title: str
+
+
+@dataclass
+class Report:
+    meta: ReportMeta
+    data: None
+
+
+@dataclass
 class Observer:
     type: EObserverType
     ts: bson.Int64

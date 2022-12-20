@@ -195,8 +195,7 @@ async def main():
 
     await asyncio.gather(*report_writer_coroutines)
     report_writer.add_images_to_markdown()
-    report_writer.add_strategies_to_markdown()
-
+    report_writer.add_backtest_to_markdown()
     report_writer.md_file.create_md_file()
     pass
 
