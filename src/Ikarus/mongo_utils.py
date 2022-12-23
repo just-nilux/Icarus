@@ -13,7 +13,7 @@ logger = logging.getLogger('app')
 class MongoClient():
 
     
-    def __init__(self, host, port, db='bot', clean=False) -> None:
+    def __init__(self, host, port, database='bot', clean=False) -> None:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(host=host, port=port)
 
         # TODO: Implement normal client as well. It is hard to test with asycn cli
@@ -22,8 +22,8 @@ class MongoClient():
 
         # Drop the db if it is no the main one
         if clean:
-            self.client.drop_database(db)
-        self.db_bot = self.client[db]
+            self.client.drop_database(database)
+        self.db_bot = self.client[database]
 
 
     async def get_collection_names(self):
@@ -56,7 +56,8 @@ class MongoClient():
     async def do_aggregate(self, col, query) -> None:
         docs = []
         if type(query) == list:
-            async for doc in self.db_bot[col].aggregate(query):
+            cursor = self.db_bot[col].aggregate(query)
+            async for doc in cursor:
                 docs.append(doc)
         else:
             raise NotImplementedException('do_aggregate requires type list as input')
@@ -143,10 +144,6 @@ async def update_live_trades(mongo_client, trade_list): # TODO: REFACTOR: checko
             # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
             result_insert = await mongo_client.do_insert_one("hist-trades",asdict(trade))
             result_remove = await mongo_client.do_delete_many("live-trades",{"_id":trade._id}) # "do_delete_many" does not hurt, since the _id is unique
-
-            if trade.result.cause == ECause.CLOSED:
-                hto_stat = trade_statistics.eval_hto_stat(trade) # TODO : REFACTORING
-                pass
 
         # NOTE: Manual trade option is omitted, needs to be added
         # TODO: REFACTORING: Why did you handle all of these 3 state in the same place?

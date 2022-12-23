@@ -18,7 +18,7 @@ class Aroon(StrategyBase):
 
             if aroon['aroonup'][-1] > aroon['aroondown'][-1] and aroon['aroonup'][-2] < aroon['aroondown'][-2]:
                 # BUY
-                enter_price = analysis_dict[ao_pair][self.min_period]['close']
+                enter_price = analysis_dict[ao_pair][self.min_period]['close'][-1]
                 enter_ref_amount=pairwise_alloc_share
 
                 enter_order = Market(amount=enter_ref_amount, price=enter_price)
@@ -40,7 +40,7 @@ class Aroon(StrategyBase):
 
         if aroon['aroondown'][-1] > aroon['aroonup'][-1] and aroon['aroondown'][-2] < aroon['aroonup'][-2]:
 
-            trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close']) )
+            trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close'][-1]) )
 
             if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
                 trade.reset_exit()

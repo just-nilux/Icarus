@@ -725,7 +725,7 @@ class TestBinanceWrapper(BrokerWrapper):
         '''
 
         balance = [{'asset':b['asset'], 'free':b['free'], 'locked':b['locked']}
-                   for b in last_observer_item['balances'] if float(b['free']) > 0 or float(b['locked']) > 0 or b['asset']==self.config['broker']['quote_currency'] ]
+                   for b in last_observer_item['data'] if float(b['free']) > 0 or float(b['locked']) > 0 or b['asset']==self.config['broker']['quote_currency'] ]
         # NOTE: Make sure that quote_currency stays in the df_balance even if it is 0
 
         df_balance = pd.DataFrame(balance)
@@ -1002,7 +1002,8 @@ class TestBinanceWrapper(BrokerWrapper):
 
         trade.set_result_exit( bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)), 
             price=float(last_kline['close']),
-            fee_rate=TestBinanceWrapper.fee_rate)
+            fee_rate=TestBinanceWrapper.fee_rate,
+            cause=ECause.MARKET)
 
         # NOTE: The order is PLACED and FILLED
         base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
@@ -1174,7 +1175,9 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                 # Check if the open sell trade is filled or stoploss is taken
                 if float(last_kline['high']) > trade_list[i].exit.price:
 
-                    trade_list[i].set_result_exit(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
+                    trade_list[i].set_result_exit(last_closed_candle_open_time, 
+                        fee_rate=TestBinanceWrapper.fee_rate, 
+                        cause=ECause.LIMIT)
                     base_cur = pair.replace(quote_currency,'')
                     if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit):
                         logger.error(f"Function failed: balance_manager.sell().")
@@ -1189,9 +1192,8 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
 
                 if float(last_kline['low']) < trade_list[i].exit.stop_price:
                     # Stop Loss takens
-                    # NOTE: Previously "cause=ECause.CLOSED_STOP_LIMIT" statement were here
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        cause=ECause.CLOSED_STOP_LIMIT, # NOTE: 22.07.2022 Tested a bit and no problem observed
+                        cause=ECause.STOP_LIMIT,
                         price=trade_list[i].exit.stop_limit_price,
                         fee_rate=TestBinanceWrapper.fee_rate)
 
@@ -1201,7 +1203,8 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                 elif float(last_kline['high']) > trade_list[i].exit.price:
                     # Limit taken
                     trade_list[i].set_result_exit(last_closed_candle_open_time,
-                        fee_rate=TestBinanceWrapper.fee_rate)
+                        fee_rate=TestBinanceWrapper.fee_rate,
+                        cause=ECause.LIMIT)
 
                     base_cur = pair.replace(quote_currency,'')
                     if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit):

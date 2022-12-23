@@ -37,10 +37,8 @@
         }
     },
     "analysis": {
-        "indicators": {
-            "close":"",
-            "rsi":{}
-        }
+        "close":{},
+        "rsi":{}
     },
     "time_scales": {
         "1m": 720,

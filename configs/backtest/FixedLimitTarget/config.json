@@ -1,0 +1,141 @@
+{
+    "tag": "test-bot",
+    "log":{
+        "level": "DEBUG",
+        "file": "log/test-ikarus-app.log",
+        "clear": true
+    },
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb":{
+        "database": "FixedLimitTarget",
+        "host": "localhost",
+        "port": 27017,
+        "clean": true
+    },
+    "balances": [
+        {
+            "asset": "USDT", 
+            "free": 10000, 
+            "locked": 0
+        }
+    ],
+    "broker": {
+        "quote_currency": "USDT",
+         "fee_rate": 0.001
+    },
+    "risk_management":{
+        "max_capital_use_ratio": 0.95
+    },
+    "strategy": {
+        "FixedLimitTarget": {
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1
+        },
+        "FixedOCOTarget": {
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1
+        }
+    },
+    "analysis": {
+        "close":{}
+    },
+    "time_scales": {
+        "1h": 2
+    },
+    "backtest":{
+        "start_time": "2022-11-20 00:00:00",
+        "end_time": "2022-11-24 00:00:00",
+        "online": true,
+        "breakpoints": {}
+    },
+    "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters": {
+        "grid": {
+            "<strategy>": ["FixedLimitTarget", "FixedOCOTarget"]
+        },
+        "reporters": [
+            {
+                "parameters": {},
+                "reporter": "strategy_statistics",
+                "query_template": [
+                    [
+                        {"$match":{"strategy":"<strategy>"}},
+                        {
+                            "$project": {
+                                "strategy":"$strategy",
+                                "status": "$status",
+                                "cause": "$result.cause",
+                                "profit":"$result.profit",
+                                "fee":{"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]},
+                                "duration":"$result.live_time",
+                                "is_updated":{"$ne": ["$order_stash", []]}
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "json_file"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "strategy_statistics",
+                "query_template": [
+                    [
+                        {
+                            "$project": {
+                                "strategy":"All",
+                                "status": "$status",
+                                "cause": "$result.cause",
+                                "profit":"$result.profit",
+                                "fee":{"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]},
+                                "duration":"$result.live_time",
+                                "is_updated":{"$ne": ["$order_stash", []]}
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "json_file"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "balance_statistics",
+                "query_template": [
+                    [
+                        {"$match":{"type":"quote_asset"}},
+                        { "$project" : {
+                            "ts": "$ts", 
+                            "total": "$data.total"
+                            } 
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "observer",
+                "writers": [
+                    "json_file"
+                ]
+            }
+        ]
+    },
+    "visualization":{
+        "observers":{
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
+        },
+        "indicators": {
+            "close":"",
+            "aroon":{"timeperiod":14}
+        },
+        "patterns":[]
+    }
+}

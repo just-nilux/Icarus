@@ -12,7 +12,6 @@ from .. import binance_filters as filters
 logger = logging.getLogger('app')
 
 class StrategyBase(metaclass=abc.ABCMeta):
-    # NOTE: fee can stay here until a better place is found
 
     def __init__(self, _name, _config, _symbol_info):
         self.name = _name

@@ -7,6 +7,7 @@
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
+        "database": "LimitOCO",
         "host": "localhost",
         "port": 27017,
         "clean": true
@@ -33,11 +34,9 @@
         }
     },
     "analysis": {
-        "indicators": {
-            "low":"",
-            "high":"",
-            "close":""
-        }
+        "low":{},
+        "high":{},
+        "close":{}
     },
     "time_scales": {
         "1m": 720,
@@ -56,6 +55,30 @@
         "start_time": "2019-05-12 12:15:00",
         "end_time": "2019-06-19 13:00:00",
         "online": true
+    },
+    "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters": {
+        "grid": {
+            "<strategy>": ["TestLimitOCO","FixedOCOTarget"]
+        },
+        "reporters": [
+            {
+                "parameters": {},
+                "reporter": "strategy_statistics",
+                "query_template": [
+                    [
+                        {"$match":{"strategy":"<strategy>"}},
+                        {"$group":{"_id": "$result.cause", "count": {"$sum": 1}, "profit":{"$sum": "$result.profit"}}}
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "database"
+                ]
+            }
+        ]
     },
     "visualization":{
         "observers":{

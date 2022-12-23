@@ -4,10 +4,10 @@ from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class TestMarketLimit(StrategyBase):
+class FixedLimitTarget(StrategyBase):
 
     def __init__(self, _config, _symbol_info={}):
-        super().__init__("TestMarketLimit", _config, _symbol_info)
+        super().__init__("FixedLimitTarget", _config, _symbol_info)
         return
 
 
@@ -19,7 +19,6 @@ class TestMarketLimit(StrategyBase):
 
             time_dict = analysis_dict[ao_pair]
 
-            # Calculate enter/exit prices
             enter_price = time_dict[self.min_period]['close'][-1]
             enter_ref_amount=pairwise_alloc_share
 
@@ -34,12 +33,13 @@ class TestMarketLimit(StrategyBase):
             return trade
 
 
-    async def on_update(self, trade, ikarus_time):
-        # TODO: Give a call to methods that calculates exit point
+    async def on_update(self, trade, ikarus_time, **kwargs):
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
-        trade.set_command(ECommand.UPDATE)
-        trade.expire = StrategyBase._eval_future_candle_time(ikarus_time,3,time_scale_to_minute(self.min_period))
-        trade.set_price(trade.price*0.9)
+        trade.command = ECommand.UPDATE
+        trade.stash_exit()
+        close_price = kwargs['analysis_dict'][trade.pair][self.min_period]['close'][-1]
+        trade.set_exit( Market(quantity=trade.result.enter.quantity, price=close_price) )
+
 
         # Apply the filters
         # TODO: Add min notional fix (No need to add the check because we are not gonna do anything with that)
@@ -50,14 +50,13 @@ class TestMarketLimit(StrategyBase):
 
 
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
-        time_dict = analysis_dict[trade.pair]
 
-        exit_price = time_dict[self.min_period]['close'][-1] * 0.95
+        exit_price = trade.result.enter.price * 1.01 # %0.05
 
         exit_limit_order = Limit(
             exit_price,
             quantity=trade.result.enter.quantity,
-            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],15,time_scale_to_minute(self.min_period))
+            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],2,time_scale_to_minute(self.min_period))
         )
         trade.set_exit(exit_limit_order)
 

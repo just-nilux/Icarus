@@ -20,7 +20,7 @@ class TestEnterExpire(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 0.5 # Expect to never enter
+            enter_price = time_dict[self.min_period]['close'][-1] * 0.5 # Expect to never enter
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -62,7 +62,7 @@ class TestEnterExpire(StrategyBase):
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
         time_dict = analysis_dict[trade.pair]
 
-        exit_price = time_dict[self.min_period]['close'] * 0.95
+        exit_price = time_dict[self.min_period]['close'][-1] * 0.95
 
         exit_limit_order = Limit(
             exit_price,

@@ -31,18 +31,15 @@ async def application(strategy_list, bwrapper, ikarus_time):
     if str(ikarus_time*1000) in config['backtest'].get('breakpoints',{}).keys():
         logger.debug(f"Stopped at breakpoint \"{config['backtest']['breakpoints'][str(ikarus_time*1000)]}\": {ikarus_time}")
 
-    # NOTE: 'ikarus-time' denotes the current_time in old implementation
-    #################### Phase 1: Perform pre-calculation tasks ####################
     
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
     logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
 
-    # 1.1 Get balance and datadict,
     # TODO: give index paramter to retrieve a single object instead of a list
-    info = await mongocli.get_n_docs('observer', {'type':'balance'}) # Default is the last doc
-    # NOTE:info given to the get_current_balance only for test-engine.p
+    info = await mongocli.get_n_docs('observer', {'type':EObserverType.BALANCE}) # Default is the last doc
+
     
     # Each strategy has a min_period. Thus I can iterate over it to see the matches between the current time and their period
     meta_data_pool = []
@@ -58,31 +55,21 @@ async def application(strategy_list, bwrapper, ikarus_time):
     ikarus_time = ikarus_time * 1000 # Convert to ms
     meta_data_pool = set(chain(*meta_data_pool))
 
-    # All you need to give to data_dcit is actually the (time_scale, pair) tuples and the ikarus_time
     tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict_download(meta_data_pool, ikarus_time)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
-    # 1.2 Get live trade objects (LTOs)
     # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
     live_trade_dicts = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
 
-    # 1.3: Query the status of LTOs from the Broker
-    # 1.4: Update the LTOs
     live_trade_list = [trade_from_dict(trade_dict) for trade_dict in live_trade_dicts]
     await sync_trades_of_backtest(live_trade_list, data_dict, strategy_period_mapping, df_balance, config['broker']['quote_currency'])
 
-    # 2.1: Analyzer only provide the simplified informations, it does not make any decision
     analysis_dict = await analyzer.analyze(data_dict)
 
-    #################### Phase 2: Perform calculation tasks ####################
-
-    # 2.2: Algorithm is the only authority to make decision
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
-    logger.debug('Phase 2')
     # Total usable qc
     total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
     
-    # Total qc in use. Thus total_qc >= total_qc_in_lto
     total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
@@ -102,14 +89,11 @@ async def application(strategy_list, bwrapper, ikarus_time):
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     new_trade_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
 
-    # 2.3: Execute LTOs and NTOs if any
     if len(new_trade_list) or len(live_trade_list):
-        # 2.3.1: Execute the TOs
         # NOTE: If there is any error during execution, then it the trade can be removed/fixed and the error can be handled inside the execute_decisison
         bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list, data_dict)
         # TODO: Investigate if the lto_list and the nto_list is updated directly (which means no need for re-assignment)
 
-    #################### Phase 3: Perform post-calculation tasks ####################
 
     if len(new_trade_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
@@ -119,15 +103,33 @@ async def application(strategy_list, bwrapper, ikarus_time):
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
-    # 3.3: Get the onserver
+
+    observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
+    obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()
+
+    observation_obj = {}
+    observation_obj['free'] = df_balance.loc[config['broker']['quote_currency'],'free']
+    observation_obj['in_trade'] = eval_total_capital_in_lto(live_trade_list+new_trade_list)
+    observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
+    obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
+
+    observation_obj = {}
+    free = df_balance.loc[config['broker']['quote_currency'],'free']
+    in_trade = eval_total_capital_in_lto(live_trade_list+new_trade_list)
+    observation_obj['total'] = safe_sum(free, in_trade)
+    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['risk_management']['max_capital_use_ratio']))
+    observation_obj['real_free'] = free
+    observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
+    obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
+
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
-        observer.quote_asset(ikarus_time, df_balance, live_trade_list+new_trade_list),
-        observer.quote_asset_leak(ikarus_time, df_balance, live_trade_list+new_trade_list),
-        observer.balance(ikarus_time, df_balance)
+        obs_quote_asset,
+        obs_quote_asset_leak,
+        obs_balance
     ]
-    observer_objs = list(await asyncio.gather(*observer_list))
-    await mongocli.do_insert_many("observer", observer_objs)
+    #observer_objs = list(await asyncio.gather(*observer_list))
+    await mongocli.do_insert_many("observer", observer_list)
 
     pass
 
@@ -170,11 +172,8 @@ async def main():
     TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
-    initial_observation_item = {
-        'type': 'balance',
-        'balances': config['balances']
-    }
-    await mongocli.do_insert_one("observer", initial_observation_item)
+    initial_observer = Observer(EObserverType.BALANCE, None, config['balances']).to_dict()
+    await mongocli.do_insert_one("observer", initial_observer)
 
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
@@ -199,7 +198,7 @@ async def main():
         await application(strategy_list, bwrapper, start_time)
 
     # Evaluate the statistics
-    await trade_statistics.main(config, mongocli)
+    # await trade_statistics.main(config, mongocli)
 
 
 if __name__ == '__main__':
@@ -214,10 +213,7 @@ if __name__ == '__main__':
         cred_info = json.load(cred_file)
 
     logger = logging.getLogger('app')
-    mongocli = mongo_utils.MongoClient(host=config['mongodb']['host'], 
-        port=config['mongodb']['port'], 
-        db=config['tag'],
-        clean=config['mongodb']['clean'])
+    mongocli = mongo_utils.MongoClient(**config['mongodb'])
     
     # Initialize and configure objects
     setup_logger(logger, config['log'])

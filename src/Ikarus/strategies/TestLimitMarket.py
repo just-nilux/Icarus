@@ -20,7 +20,7 @@ class TestLimitMarket(StrategyBase):
             time_dict = analysis_dict[ao_pair]
 
             # Calculate enter/exit prices
-            enter_price = time_dict[self.min_period]['close'] * 1.05 # Enter
+            enter_price = time_dict[self.min_period]['close'][-1] * 1.05 # Enter
             enter_ref_amount=pairwise_alloc_share
 
             enter_limit_order = Limit(
@@ -63,7 +63,7 @@ class TestLimitMarket(StrategyBase):
         trade.command = ECommand.EXEC_EXIT
 
         # NOTE: The orders contain the initial idea. For market orders, it is meaningless to have others except quantity
-        trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close']) )
+        trade.set_exit( Market(quantity=trade.result.enter.quantity, price=analysis_dict[trade.pair][self.min_period]['close'][-1]) )
 
         if not StrategyBase.apply_exchange_filters(trade.exit, self.symbol_info[trade.pair]):
             return False
