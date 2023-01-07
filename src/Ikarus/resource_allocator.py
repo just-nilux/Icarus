@@ -1,10 +1,12 @@
 import math
 import logging
+from abc import ABC, abstractmethod
+from .objects import EState
 
 logger = logging.getLogger('app')
 
 
-class ResourceAllocator():
+class ResourceAllocator_legacy():
 
     def __init__(self, _strategy_names, _mongo_cli) -> None:
         self.strategy_names = _strategy_names
@@ -38,4 +40,37 @@ class ResourceAllocator():
     async def strategy_manager_plugin(self, res_alloc_obj):
         # Insert data to DB
         return await self.mongo_cli.do_insert_one('strmgr_plugin', res_alloc_obj)
+
+
+class DiscreteStrategyAllocator():
+
+    def __init__(self, config, max_capital_use=None, stop_capital=None) -> None:
+        self.distribution_config = config
+
+        # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
+        self.max_capital_use = max_capital_use
+        self.stop_capital = stop_capital
+        self.distribution_status = None
+
+
+    def set_distribution_config(self, config):
+        self.distribution_config = config
+
+
+    def allocate(self, df_balance, live_trades):
+
+        # Check if a trade is closed
+        #   If so, apply the profit amount to the self.distribution_status['strategy1']
+        for lt in live_trades:
+            if lt.status != EState.CLOSED:
+                continue
+            self.distribution_status[lt.strategy] += lt.results.profit
+
+        # Check if stop capital is reached
+        #   If so, make all allocatıons 0 to stop strategies from creating new trades
+
+        # Apply max_capital_use by restricting the in_use amount if specified
+
+
+        return self.distribution_status
 

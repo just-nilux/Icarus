@@ -12,8 +12,8 @@ import sys
 import bson
 from itertools import chain
 import itertools
-from Ikarus.resource_allocator import ResourceAllocator 
-
+from Ikarus.resource_allocator import ResourceAllocator_legacy, ResourceAllocator, DiscretePool, PercentDistributer
+from Ikarus import resource_allocator
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
@@ -73,6 +73,9 @@ async def application(strategy_list, bwrapper, ikarus_time):
     total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
+    strategy_allocator = getattr(resource_allocator, config['strategy_allocation']['type'])
+    strategy_allocator(**config['strategy_allocation']['kwargs'])
+
     grouped_ltos = {}
     for live_trade in live_trade_list:
         grouped_ltos.setdefault(live_trade.strategy, []).append(live_trade)
@@ -120,6 +123,10 @@ async def application(strategy_list, bwrapper, ikarus_time):
     observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['risk_management']['max_capital_use_ratio']))
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
+
+    
+    if observation_obj['binary'] == 0:
+        x=2
     obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
 
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
@@ -145,7 +152,7 @@ async def main():
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
     # Create Resource Allocator and initialize allocation for strategies
-    res_allocater = ResourceAllocator(list(config['strategy'].keys()), mongocli)
+    res_allocater = ResourceAllocator_legacy(list(config['strategy'].keys()), mongocli)
     await res_allocater.allocate()
     # NOTE: This implementation uses Resource Allocator only in the boot time.
     #       For dynamic allocation (or at least updating each day/week automatically), allocator needs to
@@ -194,7 +201,7 @@ async def main():
     for idx, start_time in enumerate(range(session_start_timestamp, session_end_timestamp, time_scale_to_second(ikarus_cycle_period))):
         logger.debug(f'Iteration {idx}:')
         printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
-
+        
         await application(strategy_list, bwrapper, start_time)
 
     # Evaluate the statistics
