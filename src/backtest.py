@@ -12,7 +12,7 @@ import sys
 import bson
 from itertools import chain
 import itertools
-from Ikarus.resource_allocator import ResourceAllocator_legacy, ResourceAllocator, DiscretePool, PercentDistributer
+from Ikarus.resource_allocator import ResourceAllocator_legacy, DiscreteStrategyAllocator
 from Ikarus import resource_allocator
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
@@ -26,7 +26,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         print()
 
 
-async def application(strategy_list, bwrapper, ikarus_time):
+async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_time):
 
     if str(ikarus_time*1000) in config['backtest'].get('breakpoints',{}).keys():
         logger.debug(f"Stopped at breakpoint \"{config['backtest']['breakpoints'][str(ikarus_time*1000)]}\": {ikarus_time}")
@@ -73,8 +73,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
     total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
-    strategy_allocator = getattr(resource_allocator, config['strategy_allocation']['type'])
-    strategy_allocator(**config['strategy_allocation']['kwargs'])
+    strategy_resources = strategy_res_allocator.allocate(df_balance, live_trade_list)
 
     grouped_ltos = {}
     for live_trade in live_trade_list:
@@ -86,8 +85,7 @@ async def application(strategy_list, bwrapper, ikarus_time):
             analysis_dict, 
             grouped_ltos.get(active_strategy.name, []), 
             ikarus_time, 
-            total_qc, 
-            df_balance.loc[config['broker']['quote_currency'],'free'])))
+            strategy_resources[active_strategy.name])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     new_trade_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
@@ -151,16 +149,10 @@ async def main():
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
-    # Create Resource Allocator and initialize allocation for strategies
-    res_allocater = ResourceAllocator_legacy(list(config['strategy'].keys()), mongocli)
-    await res_allocater.allocate()
-    # NOTE: This implementation uses Resource Allocator only in the boot time.
-    #       For dynamic allocation (or at least updating each day/week automatically), allocator needs to
-    #       create a new allocation and strategy manager needs to consume it in an cycle
 
     # Create Strategy Manager and configure strategies
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info, mongocli)
-    await strategy_mgr.source_plugin()
+    #await strategy_mgr.source_plugin()
     # TODO: Receive data from plugin once. This needs to be a periodic operations for each cycle if a new
     #       resource_allocation object exist
     strategy_list = strategy_mgr.get_strategies()
@@ -182,6 +174,10 @@ async def main():
     initial_observer = Observer(EObserverType.BALANCE, None, config['balances']).to_dict()
     await mongocli.do_insert_one("observer", initial_observer)
 
+    # Initate a ResourceAllocator for strategies
+    strategywise_resource_allocator = getattr(resource_allocator, config['strategy_allocation']['type'])\
+        (**config['strategy_allocation']['kwargs'])
+
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
     session_start_timestamp = int(datetime.timestamp(session_start_time)) # UTC
@@ -202,7 +198,7 @@ async def main():
         logger.debug(f'Iteration {idx}:')
         printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
         
-        await application(strategy_list, bwrapper, start_time)
+        await application(strategy_list, strategywise_resource_allocator, bwrapper, start_time)
 
     # Evaluate the statistics
     # await trade_statistics.main(config, mongocli)

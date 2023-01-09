@@ -31,14 +31,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
         # Since it facilitates so much new strategy creation and modular implementation
 
-        # NOTE: strategywise_alloc_rate determines the available rate of use from the main capital
-        #       If self.strategywise_alloc_rate is 0.25 then this strategy can use max %25 of the main capital
-        self.strategywise_alloc_rate = 0 # Will be filled by the strategy manager
-
-        # NOTE: pairwise_alloc_rate determines the available rate of use from the strategywise allocated capital
-        #       If self.strategywise_alloc_rate is 0.25 then this strategy can use max %25 of the main capital
-        pass
-
 
     @staticmethod
     def is_lto_dead(trade):
@@ -50,7 +42,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, trade_list, ikarus_time, total_qc, free_qc):
+    async def run_logic(self, analysis_dict, trade_list, ikarus_time, strategy_capital):
         """[summary]
 
         Args:
@@ -87,18 +79,15 @@ class StrategyBase(metaclass=abc.ABCMeta):
             pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
             
             # It is needed to know how many of LTOs are dead or will be dead
-            if not StrategyBase.is_lto_dead(trade_list[lto_idx]): 
+            if trade_list[lto_idx].status != EState.CLOSED: 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
-                #in_trade_capital += lto_list[lto_idx][PHASE_ENTER][TYPE_LIMIT]['amount']
                 # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance
                 #       market_exit is not considered as dead lto
                 #       The result of the OCO orders is unknown
                 in_trade_capital = safe_sum(in_trade_capital, trade_list[lto_idx].enter.amount)
                 alive_lto_counter += 1
                 # NOTE: TYPE_MARKET PHASE:_EXIT LTOs are considered as alive right here. Not sure if it is a good approach
-            else:
-                # Dead capital
-                dead_lto_capital = safe_sum(dead_lto_capital, trade_list[lto_idx].enter.amount)
+
 
         # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
         total_lto_slot = min(self.max_live_trade, len(self.config['pairs']))
@@ -107,16 +96,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
         if empty_lto_slot < 1:
             return [] # TODO Debug this ansync LTO issue buy doing debugging around here
 
-        # Evaluate pairwise_alloc_share
-        strategy_capital = safe_multiply(total_qc, self.strategywise_alloc_rate)
-        
-        #for lto in lto_list:
-        #    in_trade_capital += lto[PHASE_ENTER][TYPE_LIMIT]['amount']
         free_strategy_capital = safe_substract(strategy_capital, in_trade_capital)
-
-        available_capital = min(free_strategy_capital, safe_sum(free_qc, dead_lto_capital))
         # TODO: This can be updated to use some kind of precision from the symbol info instead of hardcoded 8
-        pairwise_alloc_share = truncate(available_capital/empty_lto_slot, 8)
+        pairwise_alloc_share = truncate(free_strategy_capital/empty_lto_slot, 8)
 
         #available_lto_capital = min(pairwise_alloc_share, free_qc+dead_lto_capital)
         

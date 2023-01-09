@@ -24,7 +24,16 @@
          "fee_rate": 0.001
     },
     "risk_management":{
-        "max_capital_use_ratio": 0.95
+        "max_capital_use_ratio": 1
+    },
+    "strategy_allocation":{
+        "type": "DiscreteStrategyAllocator",
+        "kwargs": {
+            "initial_capital": 10000,
+            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "max_capital_use":null, 
+            "stop_capital":null
+        }
     },
     "strategy": {
         "FixedLimitTarget": {
@@ -48,7 +57,9 @@
         "start_time": "2022-11-20 00:00:00",
         "end_time": "2022-11-24 00:00:00",
         "online": true,
-        "breakpoints": {}
+        "breakpoints": {
+            "1668927600000":""
+        }
     },
     "report_folder_name": "reports",
     "report": [],
