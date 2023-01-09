@@ -312,7 +312,9 @@ class Trade():
         self.result.exit.fee = safe_multiply(self.result.exit.amount, fee_rate)
         self.result.exit.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
-        self.result.profit = safe_substract(self.result.exit.amount, self.result.enter.amount)
+        # self.result.profit indicates the effect of this trade to the capital
+        enter_cost = safe_sum(self.result.enter.amount, safe_multiply(self.result.enter.fee, self.result.enter.price)) # trade.enter.amount
+        self.result.profit = safe_substract(self.result.exit.amount, enter_cost)
         self.result.live_time = self.result.exit.time - self.decision_time
 
 

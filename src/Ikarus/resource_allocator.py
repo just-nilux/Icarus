@@ -44,13 +44,19 @@ class ResourceAllocator_legacy():
 
 class DiscreteStrategyAllocator():
 
-    def __init__(self, config, max_capital_use=None, stop_capital=None) -> None:
-        self.distribution_config = config
+    def __init__(self, initial_capital, distribution_config, max_capital_use=None, stop_capital=None) -> None:
+        self.distribution_config = distribution_config
 
         # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
         self.max_capital_use = max_capital_use
         self.stop_capital = stop_capital
         self.distribution_status = None
+
+        total_capital = initial_capital
+        if self.max_capital_use:
+            total_capital *= max_capital_use
+        
+        self.distribution_status = {key: value*total_capital for key, value in self.distribution_config.items()}
 
 
     def set_distribution_config(self, config):
@@ -62,13 +68,16 @@ class DiscreteStrategyAllocator():
         # Check if a trade is closed
         #   If so, apply the profit amount to the self.distribution_status['strategy1']
         for lt in live_trades:
-            if lt.status != EState.CLOSED:
-                continue
-            self.distribution_status[lt.strategy] += lt.results.profit
+            if lt.status == EState.CLOSED:
+                # trade.result.profit reflects the impact of a trade on balance
+                self.distribution_status[lt.strategy] += lt.result.profit 
 
         # Check if stop capital is reached
         #   If so, make all allocatıons 0 to stop strategies from creating new trades
-
+        if self.stop_capital:
+            total_capital = sum(self.distribution_status.values())
+            if total_capital <= self.stop_capital:
+                return {key: 0 for key in self.distribution_config.keys()}
         # Apply max_capital_use by restricting the in_use amount if specified
 
 

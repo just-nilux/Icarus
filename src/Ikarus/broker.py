@@ -988,7 +988,9 @@ class TestBinanceWrapper(BrokerWrapper):
         base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
 
         if balance_manager.place_enter_order(df_balance, self.quote_currency, trade.enter):
-            balance_manager.buy(df_balance, self.quote_currency, base_cur, trade.result.enter)
+            # NOTE: balance_manager.buy should not use trade.resut.enter because trade.result.enter reflects the amount
+            # after the fee is cut. If this value substracted from the locked amount. then the fee will always remain in locked
+            balance_manager.buy(df_balance, self.quote_currency, base_cur, trade)
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.WAITING_EXIT
             return True
@@ -1009,7 +1011,7 @@ class TestBinanceWrapper(BrokerWrapper):
         base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
 
         if balance_manager.place_exit_order(df_balance, base_cur, trade.exit):
-            balance_manager.sell(df_balance, self.quote_currency, base_cur, trade.result.exit)
+            balance_manager.sell(df_balance, self.quote_currency, base_cur, trade)
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.CLOSED
             return True
@@ -1155,7 +1157,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                     # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
                     
                     trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
-                    if not balance_manager.buy(df_balance, quote_currency, base_cur, trade_list[i].result.enter):
+                    if not balance_manager.buy(df_balance, quote_currency, base_cur, trade_list[i]):
                         logger.error(f"Function failed: balance_manager.buy().")
                         # TODO: Fix the logic. The balance manager should be called prior
 
@@ -1179,7 +1181,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                         fee_rate=TestBinanceWrapper.fee_rate, 
                         cause=ECause.LIMIT)
                     base_cur = pair.replace(quote_currency,'')
-                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit):
+                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i]):
                         logger.error(f"Function failed: balance_manager.sell().")
                         # TODO: Fix the logic. The balance manager should be called prior
 
@@ -1198,7 +1200,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                         fee_rate=TestBinanceWrapper.fee_rate)
 
                     base_cur = pair.replace(quote_currency,'')
-                    balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit)
+                    balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i])
                 
                 elif float(last_kline['high']) > trade_list[i].exit.price:
                     # Limit taken
@@ -1207,7 +1209,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                         cause=ECause.LIMIT)
 
                     base_cur = pair.replace(quote_currency,'')
-                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit):
+                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i]):
                         logger.error(f"Function failed: balance_manager.sell().")
                         # TODO: Fix the logic. The balance manager should be called prior
 
