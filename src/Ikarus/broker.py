@@ -999,21 +999,12 @@ class TestBinanceWrapper(BrokerWrapper):
 
 
     def execute_market_sell(self, trade, df_balance, data_dict):
-        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
-        last_kline = data_dict[trade.pair][min_scale].tail(1)
 
-        trade.set_result_exit( bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)), 
-            price=float(last_kline['close']),
-            fee_rate=TestBinanceWrapper.fee_rate,
-            cause=ECause.MARKET)
-
-        # NOTE: The order is PLACED and FILLED
+        # NOTE: The order is PLACED but NOT FILLED
         base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
-
         if balance_manager.place_exit_order(df_balance, base_cur, trade.exit):
-            balance_manager.sell(df_balance, self.quote_currency, base_cur, trade)
-            trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
-            trade.status = EState.CLOSED
+            trade.status = EState.OPEN_EXIT
+            trade.exit.orderId = int(time.time() * 1000)
             return True
             
         return False
@@ -1218,6 +1209,16 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
 
                 else:
                     pass
+
+
+            elif type(trade_list[i].exit) == Market:
+
+                trade_list[i].set_result_exit( last_closed_candle_open_time, 
+                    price=float(last_kline['open']),
+                    fee_rate=TestBinanceWrapper.fee_rate,
+                    cause=ECause.MARKET)
+                if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i]):
+                    logger.error(f"Function failed: balance_manager.sell().")
 
             else:
                 # TODO: Internal Error

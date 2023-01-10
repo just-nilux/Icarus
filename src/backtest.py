@@ -104,6 +104,8 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
+    obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
+
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
     obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()
@@ -131,7 +133,8 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     observer_list = [
         obs_quote_asset,
         obs_quote_asset_leak,
-        obs_balance
+        obs_balance,
+        obs_strategy_capitals
     ]
     #observer_objs = list(await asyncio.gather(*observer_list))
     await mongocli.do_insert_many("observer", observer_list)

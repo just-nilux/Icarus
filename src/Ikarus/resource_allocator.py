@@ -2,6 +2,7 @@ import math
 import logging
 from abc import ABC, abstractmethod
 from .objects import EState
+from .utils import safe_multiply
 
 logger = logging.getLogger('app')
 
@@ -51,16 +52,17 @@ class DiscreteStrategyAllocator():
         self.max_capital_use = max_capital_use
         self.stop_capital = stop_capital
         self.distribution_status = None
-
-        total_capital = initial_capital
-        if self.max_capital_use:
-            total_capital *= max_capital_use
         
-        self.distribution_status = {key: value*total_capital for key, value in self.distribution_config.items()}
+        self.strategy_capitals = {key: safe_multiply(value,initial_capital) for key, value in self.distribution_config.items()}
+        self.distribution_status = self.distribute()
 
 
     def set_distribution_config(self, config):
         self.distribution_config = config
+
+
+    def distribute(self):
+        return {key: safe_multiply(value,self.max_capital_use) for key, value in self.strategy_capitals.items()}
 
 
     def allocate(self, df_balance, live_trades):
@@ -70,16 +72,16 @@ class DiscreteStrategyAllocator():
         for lt in live_trades:
             if lt.status == EState.CLOSED:
                 # trade.result.profit reflects the impact of a trade on balance
-                self.distribution_status[lt.strategy] += lt.result.profit 
-
+                self.strategy_capitals[lt.strategy] += lt.result.profit
+                
         # Check if stop capital is reached
         #   If so, make all allocatıons 0 to stop strategies from creating new trades
         if self.stop_capital:
-            total_capital = sum(self.distribution_status.values())
+            total_capital = sum(self.strategy_capitals.values())
             if total_capital <= self.stop_capital:
                 return {key: 0 for key in self.distribution_config.keys()}
         # Apply max_capital_use by restricting the in_use amount if specified
 
-
+        self.distribution_status = self.distribute()
         return self.distribution_status
 
