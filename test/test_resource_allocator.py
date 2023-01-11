@@ -9,8 +9,8 @@ class test_StrategyAllocator(unittest.TestCase):
 
         distribution_config = {
             "initial_capital": 10000,
-            "config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":None, 
+            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "max_capital_use":1, 
             "stop_capital":None
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
@@ -23,7 +23,7 @@ class test_StrategyAllocator(unittest.TestCase):
 
         distribution_config = {
             "initial_capital": 10000,
-            "config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
             "max_capital_use":0.95, 
             "stop_capital":None
         }
@@ -37,8 +37,8 @@ class test_StrategyAllocator(unittest.TestCase):
 
         distribution_config = {
             "initial_capital": 1000,
-            "config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":None, 
+            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "max_capital_use":1, 
             "stop_capital":1000
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
@@ -48,62 +48,46 @@ class test_StrategyAllocator(unittest.TestCase):
         self.assertEqual(allocation, {"FixedLimitTarget":0, "FixedOCOTarget":0})
 
     def test_trade_with_positive_profit(self):
+        distribution_config = {
+            "initial_capital": 1000,
+            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "max_capital_use":0.95, 
+            "stop_capital":None
+        }
+        discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
+            **distribution_config
+        )
+
+        allocation = discrete_allocator.allocate(None, [])
+        self.assertEqual(allocation, {"FixedLimitTarget":237.5, "FixedOCOTarget":712.5})
+
         trade = Trade(123, "FixedLimitTarget", "pair")
         trade.status = EState.CLOSED
         trade.result = TradeResult(profit=+100)
         live_trades = [trade]
+        allocation = discrete_allocator.allocate(None, live_trades)
+        self.assertEqual(allocation, {"FixedLimitTarget":332.5, "FixedOCOTarget":712.5})
 
+    def test_trade_with_negative_profit(self):
         distribution_config = {
             "initial_capital": 1000,
-            "config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":None, 
+            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "max_capital_use":0.95, 
             "stop_capital":None
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
             **distribution_config
         )
 
-        allocation = discrete_allocator.allocate(None, live_trades)
-        self.assertEqual(allocation, {"FixedLimitTarget":350, "FixedOCOTarget":750})
+        allocation = discrete_allocator.allocate(None, [])
+        self.assertEqual(allocation, {"FixedLimitTarget":237.5, "FixedOCOTarget":712.5})
 
-    def test_trade_with_negative_profit(self):
         trade = Trade(123, "FixedLimitTarget", "pair")
         trade.status = EState.CLOSED
         trade.result = TradeResult(profit=-100)
         live_trades = [trade]
-
-        distribution_config = {
-            "initial_capital": 1000,
-            "config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":None, 
-            "stop_capital":None
-        }
-        discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
-            **distribution_config
-        )
-
         allocation = discrete_allocator.allocate(None, live_trades)
-        self.assertEqual(allocation, {"FixedLimitTarget":150, "FixedOCOTarget":750})
-
-
-    def test_trade_with_negative_profit(self):
-        trade = Trade(123, "FixedLimitTarget", "pair")
-        trade.status = EState.CLOSED
-        trade.result = TradeResult(profit=-100)
-        live_trades = [trade]
-
-        distribution_config = {
-            "initial_capital": 1000,
-            "config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":None, 
-            "stop_capital":None
-        }
-        discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
-            **distribution_config
-        )
-
-        allocation = discrete_allocator.allocate(None, live_trades)
-        self.assertEqual(allocation, {"FixedLimitTarget":150, "FixedOCOTarget":750})
+        self.assertEqual(allocation, {"FixedLimitTarget":142.5, "FixedOCOTarget":712.5})
 
 
     def setUp(self):

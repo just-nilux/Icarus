@@ -190,7 +190,6 @@ class OCO(Order):
 class Result(Order):
     type: string = '' # type(trade.enter).__name__
     time: bson.Int64 = None
-    fee_rate: float = 0.0
     fee: float = 0.0
 
 
@@ -337,7 +336,6 @@ def order_from_dict(order_data):
     order = Order()
     if 'type' in order_data.keys():
         order = Result()
-        order.fee_rate = order_data['fee_rate']
         order.fee = order_data['fee']
     elif 'expire' not in order_data.keys():
         order = Market()

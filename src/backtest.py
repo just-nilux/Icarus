@@ -92,20 +92,17 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 
     if len(new_trade_list) or len(live_trade_list):
         # NOTE: If there is any error during execution, then it the trade can be removed/fixed and the error can be handled inside the execute_decisison
-        bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list, data_dict)
-        # TODO: Investigate if the lto_list and the nto_list is updated directly (which means no need for re-assignment)
+        bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list)
 
 
     if len(new_trade_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades", [trade_to_dict(new_trade) for new_trade in new_trade_list])
 
-
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
     obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
-
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
     obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()

@@ -45,7 +45,7 @@ class ResourceAllocator_legacy():
 
 class DiscreteStrategyAllocator():
 
-    def __init__(self, initial_capital, distribution_config, max_capital_use=None, stop_capital=None) -> None:
+    def __init__(self, initial_capital, distribution_config, max_capital_use=1, stop_capital=None) -> None:
         self.distribution_config = distribution_config
 
         # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
