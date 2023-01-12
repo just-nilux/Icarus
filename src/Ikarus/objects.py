@@ -190,7 +190,6 @@ class OCO(Order):
 class Result(Order):
     type: string = '' # type(trade.enter).__name__
     time: bson.Int64 = None
-    fee_rate: float = 0.0
     fee: float = 0.0
 
 
@@ -312,7 +311,9 @@ class Trade():
         self.result.exit.fee = safe_multiply(self.result.exit.amount, fee_rate)
         self.result.exit.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
-        self.result.profit = safe_substract(self.result.exit.amount, self.result.enter.amount)
+        # self.result.profit indicates the effect of this trade to the capital
+        enter_cost = safe_sum(self.result.enter.amount, safe_multiply(self.result.enter.fee, self.result.enter.price)) # trade.enter.amount
+        self.result.profit = safe_substract(self.result.exit.amount, enter_cost)
         self.result.live_time = self.result.exit.time - self.decision_time
 
 
@@ -335,7 +336,6 @@ def order_from_dict(order_data):
     order = Order()
     if 'type' in order_data.keys():
         order = Result()
-        order.fee_rate = order_data['fee_rate']
         order.fee = order_data['fee']
     elif 'expire' not in order_data.keys():
         order = Market()

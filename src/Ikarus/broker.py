@@ -677,8 +677,8 @@ class BinanceWrapper(BrokerWrapper):
 
         return nto_list, lto_list
 
-
-class TestBinanceWrapper(BrokerWrapper):
+#class TestBinanceWrapper(BrokerWrapper):
+class TestBinanceWrapper():
 
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
                         "num_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
@@ -931,93 +931,34 @@ class TestBinanceWrapper(BrokerWrapper):
         logger.debug("decompose ended")
         return do_dict
 
-    def execute_cancel(self, trade, df_balance) -> bool:
 
+    def execute_cancel(self, trade, df_balance) -> bool:
         if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP] : # NOTE: REFACTORING: EState.CLOSED was here as well
             return balance_manager.cancel_enter_order(df_balance, self.quote_currency, trade.enter)
         elif trade.status in [EState.EXIT_EXP, EState.OPEN_EXIT]:
             base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
             return balance_manager.cancel_exit_order(df_balance, base_cur, trade.exit)
-
-        return False
-
-    # TODO: Add TestBinanceAPI orders to these functions to make the mock functions more realistic
-    def execute_oco_sell(self, trade, df_balance) -> bool:
-        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
-        if balance_manager.place_exit_order(df_balance, base_cur, trade.exit):
-            trade.status = EState.OPEN_EXIT
-            trade.exit.orderId = int(time.time() * 1000)
-            trade.exit.stop_limit_orderId = trade.exit.orderId + 1
-            return True
         return False
 
 
-    def execute_limit_sell(self, trade, df_balance) -> bool:
-        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
-        if balance_manager.place_exit_order(df_balance, base_cur, trade.exit): # NOTE: REFACTORING It was lto['result']['enter']['quantity']
-            trade.status = EState.OPEN_EXIT
-            trade.exit.orderId = int(time.time() * 1000)
-            return True
-
-        return False
-
-
-    def execute_limit_buy(self, trade, df_balance):
-        # NOTE: In live-trading orderId's are gathered from the broker and it is unique. Here it is set to a unique
-        #       timestamp values
-
-        # NOTE: The order is only PLACED but not FILLED. No fee here
+    def execute_buy(self, trade, df_balance):
         if balance_manager.place_enter_order(df_balance, self.quote_currency, trade.enter):
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.OPEN_ENTER
             return True
-
         return False
 
 
-    def execute_market_buy(self, trade, df_balance, data_dict):
-
-        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
-        last_kline = data_dict[trade.pair][min_scale].tail(1)
-
-        trade.set_result_enter( bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)), 
-            price=float(last_kline['close']),
-            fee_rate=TestBinanceWrapper.fee_rate)
-
-        # NOTE: The order is PLACED and FILLED
-        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
-
-        if balance_manager.place_enter_order(df_balance, self.quote_currency, trade.enter):
-            balance_manager.buy(df_balance, self.quote_currency, base_cur, trade.result.enter)
-            trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
-            trade.status = EState.WAITING_EXIT
-            return True
-            
-        return False
-
-
-    def execute_market_sell(self, trade, df_balance, data_dict):
-        min_scale = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
-        last_kline = data_dict[trade.pair][min_scale].tail(1)
-
-        trade.set_result_exit( bson.Int64(last_kline.index.values + time_scale_to_milisecond(min_scale)), 
-            price=float(last_kline['close']),
-            fee_rate=TestBinanceWrapper.fee_rate,
-            cause=ECause.MARKET)
-
-        # NOTE: The order is PLACED and FILLED
-        base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
-
+    def execute_sell(self, trade, df_balance):
+        base_cur = trade.pair.replace(self.quote_currency,'')
         if balance_manager.place_exit_order(df_balance, base_cur, trade.exit):
-            balance_manager.sell(df_balance, self.quote_currency, base_cur, trade.result.exit)
-            trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
-            trade.status = EState.CLOSED
+            trade.status = EState.OPEN_EXIT
+            trade.exit.orderId = int(time.time() * 1000)
             return True
-            
         return False
 
 
-    def _execute_lto(self, trade_list, df_balance, data_dict):
+    def _execute_lto(self, trade_list, df_balance):
         for i in range(len(trade_list)):
             if trade_list[i].command == ECommand.CANCEL:
 
@@ -1035,13 +976,10 @@ class TestBinanceWrapper(BrokerWrapper):
                     strategy will create a new update action and send it here in the next cycle
                     '''
                     # Place the order
-                    if type(trade_list[i].exit) == OCO:
-                        self.execute_oco_sell(trade_list[i], df_balance) #TODO: REFACTORING
-                    elif type(trade_list[i].exit) == Limit:
-                        self.execute_limit_sell(trade_list[i], df_balance)
-                    elif type(trade_list[i].exit) == Market:
-                        self.execute_market_sell(trade_list[i], df_balance, data_dict)
-                    trade_list[i].reset_command()
+                    is_success = self.execute_sell(trade_list[i], df_balance)
+                    if is_success:
+                        trade_list[i].reset_command()
+
                 else:
                     '''
                     If the cancel failed, then the exit orders are still there.
@@ -1053,84 +991,28 @@ class TestBinanceWrapper(BrokerWrapper):
             elif trade_list[i].command == ECommand.EXEC_EXIT:
                 # If the enter is successful and the algorithm decides to execute the exit order
 
-                # NOTE: TYPE_MARKET orders executed and closed right here
-                is_success = False
-
-                if type(trade_list[i].exit) == Market:
-                    is_success = self.execute_market_sell(trade_list[i], df_balance, data_dict)
-                elif type(trade_list[i].exit) == Limit:
-                    is_success = self.execute_limit_sell(trade_list[i], df_balance) # trade_list[i] is mutable so problem
-                elif type(trade_list[i].exit) == OCO:
-                    is_success = self.execute_oco_sell(trade_list[i], df_balance)
-                else: pass # TODO: Internal Error
-
+                is_success = self.execute_sell(trade_list[i], df_balance)
                 if is_success:
                     trade_list[i].reset_command()
 
 
-    def _execute_nto(self, new_trades, df_balance, data_dict):
-        """
-        Handles trade.command
-        Args:
-            new_trades (list): [description]
-            df_balances (pd.DataFrame): [description]
-
-        Returns:
-            list: new_trades
-        """
+    def _execute_nto(self, new_trades, df_balance):
 
         for i in range(len(new_trades)):
 
             if new_trades[i].command == ECommand.NONE:
                 continue
 
-            # NOTE: If the order successfully executed then reset the command.
-            if type(new_trades[i].enter) == Market:
-                if self.execute_market_buy(new_trades[i], df_balance, data_dict): 
-                    new_trades[i].command = ECommand.NONE
-
-            elif type(new_trades[i].enter) == Limit:
-                is_success = self.execute_limit_buy(new_trades[i], df_balance)
-                if is_success: new_trades[i].command = ECommand.NONE
-
-            else: pass # TODO: Internal Error
+            if self.execute_buy(new_trades[i], df_balance): 
+                new_trades[i].command = ECommand.NONE
 
 
-
-    def execute_decision(self, new_trades, df_balance, live_trades, data_dict):
-        """
-        'execute_decision' method is responsible for
-            - execute new to's
-            - execute lto updates
-                - Strategy do not update the status. It creates the 'action' and the execute_decision update the status
-            - update the df_balance
-
-        TestBinanceWrapper: In test sessions, executing a trade_object means
-        changing the df_balance columns 'free' and 'locked' when a trade is
-        started
-
-        Execution Logic:
-        1. Execute live_trade_objects
-        2. Execute new_trade_objects
-
-        Args:
-            trade_dict (dict): [description]
-            df_balances (pd.DataFrame): [description]
-
-        """
-
+    def execute_decision(self, new_trades, df_balance, live_trades):
         # Execute decsisions about ltos
-        self._execute_lto(live_trades, df_balance, data_dict)
+        self._execute_lto(live_trades, df_balance)
 
         # Execute new trade objects
-        self._execute_nto(new_trades, df_balance, data_dict)
-            
-        # TODO: HIGH: TEST: In the execute section commission needs to be evaluated. This section should behave
-        #       exactly as the broker. 
-        # NOTE: As a result the equity will be less than evaluated since the comission has been cut.
-
-        #return live_trades, new_trades
-        pass
+        self._execute_nto(new_trades, df_balance)
 
 
 async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping, df_balance, quote_currency):
@@ -1150,19 +1032,23 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
             if type(trade_list[i].enter) == Limit:
 
                 # Check if the open enter trade is filled else if the trade is expired
-                if float(last_kline['low']) < trade_list[i].enter.price:
-
-                    # TODO: If the enter is successful then the exit order should be placed. This is only required in DEPLOY
-                    
+                if float(last_kline['low']) < trade_list[i].enter.price:                    
                     trade_list[i].set_result_enter(last_closed_candle_open_time, fee_rate=TestBinanceWrapper.fee_rate)
-                    if not balance_manager.buy(df_balance, quote_currency, base_cur, trade_list[i].result.enter):
+                    if not balance_manager.buy(df_balance, quote_currency, base_cur, trade_list[i]):
                         logger.error(f"Function failed: balance_manager.buy().")
                         # TODO: Fix the logic. The balance manager should be called prior
 
                 elif int(trade_list[i].enter.expire) <= last_closed_candle_open_time:
-                    # Report the expiration to algorithm
                     trade_list[i].status = EState.ENTER_EXP
                     # NOTE: No update on command because it is, only placed by the strategies
+
+            elif type(trade_list[i].enter) == Market:
+                trade_list[i].set_result_enter( last_closed_candle_open_time, 
+                    price=float(last_kline['open']),
+                    fee_rate=TestBinanceWrapper.fee_rate)
+
+                if not balance_manager.buy(df_balance, quote_currency, base_cur, trade_list[i]):
+                    logger.error(f"Function failed: balance_manager.buy().")
 
             else:
                 # TODO: Internal Error
@@ -1179,7 +1065,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                         fee_rate=TestBinanceWrapper.fee_rate, 
                         cause=ECause.LIMIT)
                     base_cur = pair.replace(quote_currency,'')
-                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit):
+                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i]):
                         logger.error(f"Function failed: balance_manager.sell().")
                         # TODO: Fix the logic. The balance manager should be called prior
 
@@ -1198,7 +1084,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                         fee_rate=TestBinanceWrapper.fee_rate)
 
                     base_cur = pair.replace(quote_currency,'')
-                    balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit)
+                    balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i])
                 
                 elif float(last_kline['high']) > trade_list[i].exit.price:
                     # Limit taken
@@ -1207,7 +1093,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                         cause=ECause.LIMIT)
 
                     base_cur = pair.replace(quote_currency,'')
-                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i].result.exit):
+                    if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i]):
                         logger.error(f"Function failed: balance_manager.sell().")
                         # TODO: Fix the logic. The balance manager should be called prior
 
@@ -1216,6 +1102,16 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
 
                 else:
                     pass
+
+
+            elif type(trade_list[i].exit) == Market:
+
+                trade_list[i].set_result_exit( last_closed_candle_open_time, 
+                    price=float(last_kline['open']),
+                    fee_rate=TestBinanceWrapper.fee_rate,
+                    cause=ECause.MARKET)
+                if not balance_manager.sell(df_balance, quote_currency, base_cur, trade_list[i]):
+                    logger.error(f"Function failed: balance_manager.sell().")
 
             else:
                 # TODO: Internal Error

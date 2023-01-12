@@ -6,13 +6,13 @@ from ..utils import time_scale_to_minute
 
 class FixedLimitTarget(StrategyBase):
 
-    def __init__(self, _config, _symbol_info={}):
-        super().__init__("FixedLimitTarget", _config, _symbol_info)
+    def __init__(self, _config, _symbol_info, _resource_allocator):
+        super().__init__("FixedLimitTarget", _config, _symbol_info, _resource_allocator)
         return
 
 
-    async def run(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc)
+    async def run(self, analysis_dict, lto_list, ikarus_time, strategy_capital):
+        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, strategy_capital)
 
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):

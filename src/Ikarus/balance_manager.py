@@ -2,21 +2,22 @@ from .utils import safe_substract, safe_sum
 from .strategies.StrategyBase import StrategyBase
 
 
-def buy(df_balance, quote_cur, base_cur, result_enter):
+def buy(df_balance, quote_cur, base_cur, trade):
 
-    if df_balance.loc[quote_cur,'locked'] < result_enter.amount:
+    if df_balance.loc[quote_cur,'locked'] < trade.enter.amount:
         return False
 
-    # NOTE: Cut the amount from the 'locked' since the enter amount is located to there until execution
-    df_balance.loc[quote_cur, 'locked'] = safe_substract(df_balance.loc[quote_cur, 'locked'], result_enter.amount)
+    # This should be the quantity after the fee is paid which requires trade.result.enter
+    df_balance.loc[quote_cur, 'locked'] = safe_substract(df_balance.loc[quote_cur, 'locked'], trade.enter.amount)
 
     # Add the enter quantity to the base currency
     if base_cur in list(df_balance.index):
-        df_balance.loc[base_cur, 'free' ] = safe_sum(df_balance.loc[base_cur, 'free' ], result_enter.quantity)
+        # This should be the quantity after the fee is paid which requires trade.result.enter
+        df_balance.loc[base_cur, 'free' ] = safe_sum(df_balance.loc[base_cur, 'free' ], trade.result.enter.quantity) 
     else:
         # Previously there was no base_currency, so we create a row for it
         # free locked total
-        df_balance.loc[base_cur] = [result_enter.quantity, 0, 0]
+        df_balance.loc[base_cur] = [trade.result.enter.quantity, 0, 0]
 
     # Sync with total
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
@@ -24,14 +25,14 @@ def buy(df_balance, quote_cur, base_cur, result_enter):
     return True
 
 
-def sell(df_balance, quote_cur, base_cur, result_exit):
+def sell(df_balance, quote_cur, base_cur, trade):
 
-    if df_balance.loc[base_cur,'locked'] < result_exit.quantity:
+    if df_balance.loc[base_cur,'locked'] < trade.result.exit.quantity:
         return False
 
     # NOTE: Locked base_cur will be withdrew and deposited to free qc
-    df_balance.loc[base_cur,'locked'] = safe_substract(df_balance.loc[base_cur,'locked'], result_exit.quantity)
-    df_balance.loc[quote_cur,'free'] = safe_sum(df_balance.loc[quote_cur,'free'], result_exit.amount)
+    df_balance.loc[base_cur,'locked'] = safe_substract(df_balance.loc[base_cur,'locked'], trade.result.exit.quantity)
+    df_balance.loc[quote_cur,'free'] = safe_sum(df_balance.loc[quote_cur,'free'], trade.result.exit.amount)
 
     if not df_balance[['free', 'locked', 'total']].ge(0).all().all(): raise Exception('Negative balance')
     df_balance['total'] = df_balance['free'] + df_balance['locked']

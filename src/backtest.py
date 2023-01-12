@@ -12,8 +12,7 @@ import sys
 import bson
 from itertools import chain
 import itertools
-from Ikarus.resource_allocator import ResourceAllocator 
-
+from Ikarus import resource_allocator
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
@@ -26,7 +25,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         print()
 
 
-async def application(strategy_list, bwrapper, ikarus_time):
+async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_time):
 
     if str(ikarus_time*1000) in config['backtest'].get('breakpoints',{}).keys():
         logger.debug(f"Stopped at breakpoint \"{config['backtest']['breakpoints'][str(ikarus_time*1000)]}\": {ikarus_time}")
@@ -73,6 +72,8 @@ async def application(strategy_list, bwrapper, ikarus_time):
     total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
+    strategy_resources = strategy_res_allocator.allocate(df_balance, live_trade_list)
+
     grouped_ltos = {}
     for live_trade in live_trade_list:
         grouped_ltos.setdefault(live_trade.strategy, []).append(live_trade)
@@ -83,26 +84,24 @@ async def application(strategy_list, bwrapper, ikarus_time):
             analysis_dict, 
             grouped_ltos.get(active_strategy.name, []), 
             ikarus_time, 
-            total_qc, 
-            df_balance.loc[config['broker']['quote_currency'],'free'])))
+            strategy_resources[active_strategy.name])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
     new_trade_list = list(chain(*strategy_decisions)) # TODO: NEXT: Strategy output is only nto but it edits the ltos as well, so return ltos too
 
     if len(new_trade_list) or len(live_trade_list):
         # NOTE: If there is any error during execution, then it the trade can be removed/fixed and the error can be handled inside the execute_decisison
-        bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list, data_dict)
-        # TODO: Investigate if the lto_list and the nto_list is updated directly (which means no need for re-assignment)
+        bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list)
 
 
     if len(new_trade_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades", [trade_to_dict(new_trade) for new_trade in new_trade_list])
 
-
     # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
+    obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
     obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()
@@ -120,13 +119,18 @@ async def application(strategy_list, bwrapper, ikarus_time):
     observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['risk_management']['max_capital_use_ratio']))
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
+
+    
+    if observation_obj['binary'] == 0:
+        x=2
     obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
 
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
         obs_quote_asset,
         obs_quote_asset_leak,
-        obs_balance
+        obs_balance,
+        obs_strategy_capitals
     ]
     #observer_objs = list(await asyncio.gather(*observer_list))
     await mongocli.do_insert_many("observer", observer_list)
@@ -144,18 +148,8 @@ async def main():
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
-    # Create Resource Allocator and initialize allocation for strategies
-    res_allocater = ResourceAllocator(list(config['strategy'].keys()), mongocli)
-    await res_allocater.allocate()
-    # NOTE: This implementation uses Resource Allocator only in the boot time.
-    #       For dynamic allocation (or at least updating each day/week automatically), allocator needs to
-    #       create a new allocation and strategy manager needs to consume it in an cycle
-
     # Create Strategy Manager and configure strategies
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info, mongocli)
-    await strategy_mgr.source_plugin()
-    # TODO: Receive data from plugin once. This needs to be a periodic operations for each cycle if a new
-    #       resource_allocation object exist
     strategy_list = strategy_mgr.get_strategies()
 
     meta_data_pool = []
@@ -174,6 +168,10 @@ async def main():
     # Initiate the cash in the [observer]
     initial_observer = Observer(EObserverType.BALANCE, None, config['balances']).to_dict()
     await mongocli.do_insert_one("observer", initial_observer)
+
+    # Initate a ResourceAllocator for strategies
+    strategywise_resource_allocator = getattr(resource_allocator, config['strategy_allocation']['type'])\
+        (**config['strategy_allocation']['kwargs'])
 
     # Evaluate start and end times
     session_start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
@@ -194,8 +192,8 @@ async def main():
     for idx, start_time in enumerate(range(session_start_timestamp, session_end_timestamp, time_scale_to_second(ikarus_cycle_period))):
         logger.debug(f'Iteration {idx}:')
         printProgressBar(idx + 1, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
-
-        await application(strategy_list, bwrapper, start_time)
+        
+        await application(strategy_list, strategywise_resource_allocator, bwrapper, start_time)
 
     # Evaluate the statistics
     # await trade_statistics.main(config, mongocli)
