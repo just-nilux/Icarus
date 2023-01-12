@@ -1,6 +1,7 @@
 import logging
 from binance.helpers import round_step_size
 from . import strategies
+from . import resource_allocator
 # TODO: Make the StrategyManager static and use it so
 
 logger = logging.getLogger('app')
@@ -14,12 +15,20 @@ class StrategyManager():
         self.strategy_names = []
         for strategy_name in _config['strategy'].keys():
             
-            if hasattr(strategies,strategy_name):
-                strategy_class = getattr(getattr(strategies, strategy_name),strategy_name)
-                self.strategy_list.append(strategy_class(_config, _symbol_info, **_config['strategy'][strategy_name].get('kwargs',{})))
-                self.strategy_names.append(strategy_name)
-            else:
+            if not hasattr(strategies,strategy_name):
                 raise Exception(f'Unknown strategy: {strategy_name}!')
+            
+            # Init resource allocator
+            res_alloc_name = _config['strategy'][strategy_name]['resource_allocator']
+            if not hasattr(resource_allocator, res_alloc_name):
+                raise Exception(f"Unknown resource_allocator: {res_alloc_name}!")
+            
+            pairs = _config['strategy'][strategy_name]['pairs']
+            res_allocator = getattr(resource_allocator, res_alloc_name)(pairs)
+            strategy_class = getattr(getattr(strategies, strategy_name),strategy_name)
+
+            self.strategy_list.append(strategy_class(_config, _symbol_info, res_allocator, **_config['strategy'][strategy_name].get('kwargs',{})))
+            self.strategy_names.append(strategy_name)
 
         self.mongo_cli = _mongo_cli
         pass

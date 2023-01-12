@@ -6,15 +6,26 @@ from .utils import safe_multiply, safe_sum, safe_divide
 
 logger = logging.getLogger('app')
 
-class SharedTradeAllocator():
+class DefaultTradeAllocator():
 
-    def __init__(self, pairs, ) -> None:
+    def __init__(self, pairs) -> None:
         self.pairs = pairs
 
 
     def distribute(self, free_trade_slot, free_capital, free_pairs):
+        if free_trade_slot == 0:
+            return {}
+
         capital_per_trade = safe_divide(free_capital, free_trade_slot)
-        return {pair: capital_per_trade for pair in free_pairs}
+        disribution = dict()
+        
+        for pair in free_pairs:
+            if free_trade_slot <= 0:
+                break
+            free_trade_slot -= 1
+            disribution[pair] = capital_per_trade
+
+        return disribution
 
 
     def allocate(self, max_live_trade, strategy_capital, trade_list):
@@ -24,10 +35,13 @@ class SharedTradeAllocator():
         for trade in trade_list:
             if trade.status == EState.CLOSED:
                 continue
-            in_trade_pairs.append(trade.pair)
+            in_trade_pairs.add(trade.pair)
             in_trade_capital = safe_sum(in_trade_capital, trade.enter.amount)
         
         free_capital = strategy_capital - in_trade_capital
+        if free_capital <= 0:
+            return {}
+        
         free_pairs = set(self.pairs) - in_trade_pairs
         free_trade_slot = max_live_trade-len(in_trade_pairs)
         

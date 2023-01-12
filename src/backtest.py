@@ -12,7 +12,6 @@ import sys
 import bson
 from itertools import chain
 import itertools
-from Ikarus.resource_allocator import ResourceAllocator_legacy, DiscreteStrategyAllocator
 from Ikarus import resource_allocator
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
@@ -149,12 +148,8 @@ async def main():
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
-
     # Create Strategy Manager and configure strategies
     strategy_mgr = strategy_manager.StrategyManager(config, symbol_info, mongocli)
-    #await strategy_mgr.source_plugin()
-    # TODO: Receive data from plugin once. This needs to be a periodic operations for each cycle if a new
-    #       resource_allocation object exist
     strategy_list = strategy_mgr.get_strategies()
 
     meta_data_pool = []

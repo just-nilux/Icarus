@@ -5,8 +5,8 @@ from ..utils import time_scale_to_minute
 
 class FixedOCOTarget(StrategyBase):
 
-    def __init__(self, _config, _symbol_info={}):
-        super().__init__("FixedOCOTarget", _config, _symbol_info)
+    def __init__(self, _config, _symbol_info, _resource_allocator):
+        super().__init__("FixedOCOTarget", _config, _symbol_info, _resource_allocator)
         return
 
 

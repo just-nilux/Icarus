@@ -13,7 +13,7 @@ logger = logging.getLogger('app')
 
 class StrategyBase(metaclass=abc.ABCMeta):
 
-    def __init__(self, _name, _config, _resource_allocator, _symbol_info):
+    def __init__(self, _name, _config, _symbol_info, _resource_allocator):
         self.name = _name
         self.alloc_ratio = 0
         self.config = _config['strategy'][self.name]
@@ -32,14 +32,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # Since it facilitates so much new strategy creation and modular implementation
         self.trade_resource_allocator = _resource_allocator
 
-    @staticmethod
-    def is_lto_dead(trade):
-      
-        if trade.command == ECommand.CANCEL or trade.status == EState.CLOSED:
-            return True     # Trade is dead
-        else:
-            return False    # Trade is alive # Skip evaluation if non of this is true (LTO will be alive until the next cycle)
-
 
     @staticmethod
     async def run_logic(self, analysis_dict, trade_list, ikarus_time, strategy_capital):
@@ -48,41 +40,15 @@ class StrategyBase(metaclass=abc.ABCMeta):
             logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
             return []
 
-        # Initialize trade_dict to be filled
-        trade_objects = []
-
-        # Handle LTOs separately before the new evaluation
-        # Create a mapping between the pair and lto such as {'BTCUSDT':{...}, ...}
-        pair_grouped_ltos = {}
-        alive_lto_counter = 0
-        in_trade_capital = 0
         for lto_idx in range(len(trade_list)):
 
             # If handle_lto_logic fails then it means that the trade_list[lto_idx] is unchanged.
             if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time):
                 logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
-            pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
-            if trade_list[lto_idx].status != EState.CLOSED: 
-                # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
-                # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance
-                #       market_exit is not considered as dead lto
-                #       The result of the OCO orders is unknown
-                in_trade_capital = safe_sum(in_trade_capital, trade_list[lto_idx].enter.amount)
-                alive_lto_counter += 1
-
-
-        allocation = self.trade_resource_allocator.allocate(strategy_capital, trade_list)
+        trade_objects = []
+        allocation = self.trade_resource_allocator.allocate(self.max_live_trade, strategy_capital, trade_list)
         for pair, cap in allocation.items():
-
-            # Break if there is no empty_lto_slot left
-            #if empty_lto_slot < 1:
-            #    break 
-
-            # Continue if the LTO of the pair is not dead
-            #if ao_pair in pair_grouped_ltos.keys():
-            #    if not StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
-            #        continue
 
             # Perform evaluation
             if trade:= await self.make_decision(analysis_dict, pair, ikarus_time, cap):
@@ -91,8 +57,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 if not StrategyBase.apply_exchange_filters(trade.enter, self.symbol_info[pair]): 
                     continue
 
-                trade_objects.append(trade)
-                #empty_lto_slot -= 1
+                trade_objects.append(trade)            
 
         return trade_objects
 
