@@ -13,11 +13,11 @@ logger = logging.getLogger('app')
 
 class StrategyBase(metaclass=abc.ABCMeta):
 
-    def __init__(self, _name, _config, _symbol_info):
+    def __init__(self, _name, _config, _resource_allocator, _symbol_info):
         self.name = _name
         self.alloc_ratio = 0
         self.config = _config['strategy'][self.name]
-        self.max_live_trade = self.config.get('max_live_trade',1)
+        self.max_live_trade = self.config.get('max_live_trade',len(self.config['pairs']))
 
         # TODO: Rename this config as strategy config etc. because some modules means the whole config dict some are just a portion
         self.quote_currency = _config['broker']['quote_currency']
@@ -30,7 +30,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
         # Since it facilitates so much new strategy creation and modular implementation
-
+        self.trade_resource_allocator = _resource_allocator
 
     @staticmethod
     def is_lto_dead(trade):
@@ -43,19 +43,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
     @staticmethod
     async def run_logic(self, analysis_dict, trade_list, ikarus_time, strategy_capital):
-        """[summary]
-
-        Args:
-            analysis_dict ([type]): [description]
-            lto_list ([type]): [description]
-            df_balance ([type]): [description]
-            ikarus_time ([type]): [description]
-            total_qc ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
             logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
@@ -69,7 +56,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         pair_grouped_ltos = {}
         alive_lto_counter = 0
         in_trade_capital = 0
-        dead_lto_capital = 0
         for lto_idx in range(len(trade_list)):
 
             # If handle_lto_logic fails then it means that the trade_list[lto_idx] is unchanged.
@@ -77,8 +63,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
             pair_grouped_ltos[trade_list[lto_idx].pair] = trade_list[lto_idx]
-            
-            # It is needed to know how many of LTOs are dead or will be dead
             if trade_list[lto_idx].status != EState.CLOSED: 
                 # NOTE: in_trade_capital is only calcualted for LTOs that will last until at least next candle
                 # NOTE: For the enter_expire, PHASE_ENTER can be directly reflected to balance
@@ -86,43 +70,29 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 #       The result of the OCO orders is unknown
                 in_trade_capital = safe_sum(in_trade_capital, trade_list[lto_idx].enter.amount)
                 alive_lto_counter += 1
-                # NOTE: TYPE_MARKET PHASE:_EXIT LTOs are considered as alive right here. Not sure if it is a good approach
 
 
-        # NOTE: Only iterate for the configured pairs. Do not run the strategy if any of them is missing in analysis_dict
-        total_lto_slot = min(self.max_live_trade, len(self.config['pairs']))
-        empty_lto_slot = total_lto_slot - alive_lto_counter
-
-        if empty_lto_slot < 1:
-            return [] # TODO Debug this ansync LTO issue buy doing debugging around here
-
-        free_strategy_capital = safe_substract(strategy_capital, in_trade_capital)
-        # TODO: This can be updated to use some kind of precision from the symbol info instead of hardcoded 8
-        pairwise_alloc_share = truncate(free_strategy_capital/empty_lto_slot, 8)
-
-        #available_lto_capital = min(pairwise_alloc_share, free_qc+dead_lto_capital)
-        
-        # Iterate over pairs and make decisions about them
-        for ao_pair in self.config['pairs']:
+        allocation = self.trade_resource_allocator.allocate(strategy_capital, trade_list)
+        for pair, cap in allocation.items():
 
             # Break if there is no empty_lto_slot left
-            if empty_lto_slot < 1:
-                break 
+            #if empty_lto_slot < 1:
+            #    break 
 
             # Continue if the LTO of the pair is not dead
-            if ao_pair in pair_grouped_ltos.keys():
-                if not StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
-                    continue
+            #if ao_pair in pair_grouped_ltos.keys():
+            #    if not StrategyBase.is_lto_dead(pair_grouped_ltos[ao_pair]): 
+            #        continue
 
             # Perform evaluation
-            if trade:= await self.make_decision(analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
+            if trade:= await self.make_decision(analysis_dict, pair, ikarus_time, cap):
                 
                 # Apply exchange filters
-                if not StrategyBase.apply_exchange_filters(trade.enter, self.symbol_info[ao_pair]): 
+                if not StrategyBase.apply_exchange_filters(trade.enter, self.symbol_info[pair]): 
                     continue
 
                 trade_objects.append(trade)
-                empty_lto_slot -= 1
+                #empty_lto_slot -= 1
 
         return trade_objects
 

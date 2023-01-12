@@ -2,45 +2,36 @@ import math
 import logging
 from abc import ABC, abstractmethod
 from .objects import EState
-from .utils import safe_multiply
+from .utils import safe_multiply, safe_sum, safe_divide
 
 logger = logging.getLogger('app')
 
+class SharedTradeAllocator():
 
-class ResourceAllocator_legacy():
-
-    def __init__(self, _strategy_names, _mongo_cli) -> None:
-        self.strategy_names = _strategy_names
-        self.mongo_cli = _mongo_cli
-        pass
-
-    async def allocate(self):
-        # Clear all the resource_allocation if any
-        await self.mongo_cli.do_delete_many('strmgr_plugin', {'type':'resource_allocation'})
-
-        res_alloc_obj = self.alloc_default()
-        result = await self.strategy_manager_plugin(res_alloc_obj)
-        logger.debug(f'Resource Allocate object "{result.inserted_id}" inserted')
-        return result
+    def __init__(self, pairs, ) -> None:
+        self.pairs = pairs
 
 
-    def alloc_default(self):
-        # Do simple equal allocation for each strategy
-        capital_share = round(math.floor(1/len(self.strategy_names)*10000)*0.0001, 4)
-        allocation_dict = { name : capital_share for name in self.strategy_names  }
-        return {'type':'resource_allocation','strategy':allocation_dict}
+    def distribute(self, free_trade_slot, free_capital, free_pairs):
+        capital_per_trade = safe_divide(free_capital, free_trade_slot)
+        return {pair: capital_per_trade for pair in free_pairs}
 
-    def alloc_custom():
-        # Do experimental allocation
-        pass
 
-    def alloc_from_backtest():
-        # Do allocation based on the historical results in backtest
-        pass
+    def allocate(self, max_live_trade, strategy_capital, trade_list):
 
-    async def strategy_manager_plugin(self, res_alloc_obj):
-        # Insert data to DB
-        return await self.mongo_cli.do_insert_one('strmgr_plugin', res_alloc_obj)
+        in_trade_capital = 0
+        in_trade_pairs = set()
+        for trade in trade_list:
+            if trade.status == EState.CLOSED:
+                continue
+            in_trade_pairs.append(trade.pair)
+            in_trade_capital = safe_sum(in_trade_capital, trade.enter.amount)
+        
+        free_capital = strategy_capital - in_trade_capital
+        free_pairs = set(self.pairs) - in_trade_pairs
+        free_trade_slot = max_live_trade-len(in_trade_pairs)
+        
+        return self.distribute(free_trade_slot, free_capital, free_pairs)
 
 
 class DiscreteStrategyAllocator():
@@ -84,4 +75,3 @@ class DiscreteStrategyAllocator():
 
         self.distribution_status = self.distribute()
         return self.distribution_status
-
