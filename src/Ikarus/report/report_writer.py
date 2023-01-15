@@ -14,7 +14,7 @@ from mdutils import Html
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
-
+import seaborn as sns
 import mplfinance as mpf
 
 def get_reporter_name(indice):
@@ -332,6 +332,23 @@ class ImageWriter():
         plt.close()
         print(f'File saved: {target_path}')
 
+    def joint_histogram(self, indice, report, **kwargs):
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
+
+        df = report.data
+        columns = report.data.columns
+        g = sns.JointGrid(x=df[columns[0]], y=df[columns[1]])
+        #g.ax_joint.set_title(report.meta.title)
+        sns.scatterplot(x=df[columns[0]], y=df[columns[1]], c="blue", alpha=0.3, s=100, ax=g.ax_joint)
+        _ = g.ax_marg_x.hist(df[columns[0]], color="b", alpha=0.5,
+                            bins=np.arange(df[columns[0]].min()-0.5, df[columns[0]].max()+1,1))
+        _ = g.ax_marg_y.hist(df[columns[1]], color="r", alpha=0.5,
+                            orientation="horizontal",
+                            bins=np.arange(df[columns[1]].min(), df[columns[1]].max()+20,20))
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
+
     def double_sided_histogram_plot(self, indice, df, **kwargs):
         symbol, timeframe, analyzer = indice[0]
 
@@ -394,10 +411,58 @@ class ImageWriter():
         print(f'File saved: {target_path}')
 
 
-    def line_plot(self, indice, df, **kwargs):
+    def line_plot(self, indice, report, **kwargs):
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
 
-        x_labels, y_labels = df.columns.to_list(), df.index.to_list()
-        fig, ax = plt.subplots(figsize=(12,12))
+        sns.lineplot(data=report.data)
+        plt.title(report.meta.title)
+        plt.xticks(rotation=45)
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
+
+
+    def pie_plot(self, indice, report, **kwargs):
+
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
+
+        def func(pct, allvals):
+            absolute = int(pct/100.*np.sum(allvals))
+            return "{:.1f}%\n({:d})".format(pct, absolute)
+
+        fig, ax = plt.subplots()
+        fig.suptitle(report.meta.filename, fontsize=24)
+
+        ax.pie(report.data.values(), labels=report.data.keys(), autopct=lambda pct: func(pct,  list(report.data.values())),
+                startangle=90)
+
+        ax.axis('equal')
+        plt.tight_layout()
+
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
+
+
+    def scatter_plot(self, indice, report, **kwargs):
+
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
+
+        df = report.data
+        columns = df.columns
+
+        ax = df.plot.scatter(x=columns[0],
+                              y=columns[1],
+                              c='DarkBlue')
+
+        fig, ax = plt.subplots()
+        ax.scatter(x=df.iloc[:,0], y=df.iloc[:,1], c='tab:blue', alpha=0.2, s=100)
+
+        plt.tight_layout()
+
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
 
 
 class MarkdownWriter():

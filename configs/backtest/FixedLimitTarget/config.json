@@ -98,6 +98,47 @@
             },
             {
                 "parameters": {},
+                "reporter": "trade_cause",
+                "query_template": [
+                    [
+                        {"$match":{"strategy":"<strategy>"}},
+                        {
+                            "$project": {
+                                "strategy":"$strategy",
+                                "cause": "$result.cause"
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "pie_plot"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "trade_profit_duration_distribution",
+                "query_template": [
+                    [
+                        {"$match":{"strategy":"<strategy>"}},
+                        {
+                            "$project": {
+                                "strategy":"$strategy",
+                                "profit": "$result.profit",
+                                "duration":"$result.live_time"
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "joint_histogram"
+                ]
+            },
+            {
+                "parameters": {},
                 "reporter": "strategy_statistics",
                 "query_template": [
                     [
@@ -137,6 +178,25 @@
                 "collection": "observer",
                 "writers": [
                     "json_file"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "strategy_capitals",
+                "query_template": [
+                    [
+                        {"$match":{"type":"strategy_capitals"}},
+                        { "$project" : {
+                            "ts": "$ts", 
+                            "data": "$data"
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "observer",
+                "writers": [
+                    "line_plot"
                 ]
             }
         ]
