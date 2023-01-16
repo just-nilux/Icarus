@@ -82,10 +82,16 @@
                                 "strategy":"$strategy",
                                 "status": "$status",
                                 "cause": "$result.cause",
+                                "exit_type": "$result.exit.type",
                                 "profit":"$result.profit",
                                 "fee":{"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]},
                                 "duration":"$result.live_time",
-                                "is_updated":{"$ne": ["$order_stash", []]}
+                                "is_updated":{"$ne": ["$order_stash", []]},
+                                "risk_data": {
+                                    "enter_price":"$result.enter.price",
+                                    "target_price": "$exit.price",
+                                    "stop_limit_price": "$exit.stop_limit_price"
+                                    }
                             }
                         }
                     ]
@@ -197,6 +203,29 @@
                 "collection": "observer",
                 "writers": [
                     "line_plot"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "r_multiples",
+                "query_template": [
+                    [
+                        {"$match":{"result.exit.type":"oco", "strategy":"<strategy>"}},
+                        { "$project" : {
+                            "strategy":"<strategy>",
+                            "cause":"$result.cause",
+                            "duration":"$result.live_time",
+                            "enter_price":"$result.enter.price",
+                            "target_price":"$exit.price",
+                            "stop_limit_price":"$exit.stop_limit_price"
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "joint_histogram"
                 ]
             }
         ]

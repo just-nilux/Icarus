@@ -340,11 +340,11 @@ class ImageWriter():
         g = sns.JointGrid(x=df[columns[0]], y=df[columns[1]])
         #g.ax_joint.set_title(report.meta.title)
         sns.scatterplot(x=df[columns[0]], y=df[columns[1]], c="blue", alpha=0.3, s=100, ax=g.ax_joint)
-        _ = g.ax_marg_x.hist(df[columns[0]], color="b", alpha=0.5,
-                            bins=np.arange(df[columns[0]].min()-0.5, df[columns[0]].max()+1,1))
+        _ = g.ax_marg_x.hist(df[columns[0]], color="b", alpha=0.5)
+                            #bins=np.arange(df[columns[0]].min()-0.5, df[columns[0]].max()+1,1))
         _ = g.ax_marg_y.hist(df[columns[1]], color="r", alpha=0.5,
-                            orientation="horizontal",
-                            bins=np.arange(df[columns[1]].min(), df[columns[1]].max()+20,20))
+                            orientation="horizontal")
+                            #bins=np.arange(df[columns[1]].min(), df[columns[1]].max()+20,20))
         plt.savefig(target_path)
         plt.close()
         print(f'File saved: {target_path}')
