@@ -1,4 +1,4 @@
-from statistics import mean
+from statistics import mean, stdev
 import numpy as np
 import pandas as pd
 from ..utils import time_scale_to_minute
@@ -273,9 +273,25 @@ async def strategy_statistics(index, reporter_input):
         'enter': (df['cause'] != ECause.ENTER_EXP).sum() / len(df)
     }
 
+    stat_risk = dict()
+    if 'exit_type' in df.columns and any('oco' == df['exit_type']):
+        df_oco = df[df['exit_type'] == 'oco']
+        df_risk = pd.DataFrame(df_oco['risk_data'].to_list())
+        df_r = pd.concat([df_oco,df_risk], axis=1)
+        df_r.loc[df_r['cause'] == 'limit','r_value'] = (df_risk['target_price'] - df_risk['enter_price']) / (df_risk['enter_price'] - df_risk['stop_limit_price'])
+        df_r.loc[df_r['cause'] == 'stop_limit','r_value'] = -1
+
+        stat_risk['expectancy'] = df_r['r_value'].mean()
+
+        if len(df_oco) < 100:
+            sqn_coeff = len(df_oco)
+        else:
+            sqn_coeff = 100
+        stat_risk['SQN'] = stat_risk['expectancy']/df_r['r_value'].std() * np.sqrt(sqn_coeff)
+
+
     stat_others = {
         'total_fee': df['fee'].sum()
-
     }
 
     # Combine Stats
@@ -285,6 +301,7 @@ async def strategy_statistics(index, reporter_input):
         'profit': stat_profit,
         'duration':stat_duration,
         'rates': stat_rates,
+        'risk': stat_risk,
         'others': stat_others
     }
 
@@ -320,3 +337,58 @@ async def balance_statistics(index, reporter_input):
     stats['max_drawdown'] = round(mdd_percentage,2)
 
     return  Report(ReportMeta(title='balance_statistics'),data=stats)
+
+
+async def trade_cause(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+
+    count_cause = df['cause'].value_counts()
+
+    report_meta = ReportMeta(
+        title='trade.cause: {}'.format(df['strategy'][0]),
+        filename='trade_cause_{}'.format(df['strategy'][0])
+        )
+    return  Report(report_meta, data=count_cause.to_dict())
+
+
+async def trade_profit_duration_distribution(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+    df['duration'] = df['duration']/(60*60*1000)
+    report_meta = ReportMeta(
+        title='trade.result.profit: {}'.format(df['strategy'][0]),
+        filename='trade_result_profit_{}'.format(df['strategy'][0])
+        )
+    return Report(report_meta, data=df[['duration', 'profit']])
+
+
+async def strategy_capitals(index, reporter_input):
+
+    df_base = pd.DataFrame(reporter_input[0])
+    df = pd.DataFrame(df_base['data'].to_list(), index=df_base['ts'].astype('datetime64[ms]'))
+    df['Total'] = df.sum(axis=1)
+
+    report_meta = ReportMeta(
+        title='Strategy Capitals',
+        filename='strategy_capitals'
+        )
+    return Report(report_meta, data=df)
+
+
+async def r_multiples(index, reporter_input):
+    if not reporter_input[0]:
+        return None
+    
+    df = pd.DataFrame(reporter_input[0])
+    df.loc[df['cause'] == 'limit','r_value'] = (df['target_price'] - df['enter_price']) / (df['enter_price'] - df['stop_limit_price'])
+    df.loc[df['cause'] == 'stop_limit','r_value'] = -1
+
+    hour_in_ms = 1000*60*60
+    df['duration']  = df['duration'] / hour_in_ms
+
+    report_meta = ReportMeta(
+        title='R Multiple Distribution {}'.format(df['strategy'][0]),
+        filename='r_multiple_distribution_{}'.format(df['strategy'][0]),
+        )
+    return Report(report_meta, data=df[['duration','r_value']])

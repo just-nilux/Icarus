@@ -178,8 +178,10 @@ async def main():
     report_folder = os.path.dirname(str(sys.argv[1])) + '/' + config.get('report_folder_name', 'reports')
     report_writer = ReportWriter(report_folder, mongo_client)
     report_writer_coroutines = []
-    for report_config, report_dict in zip(config['report'], report_tool_results):
-
+    for report_config, report in zip(config['report'], report_tool_results):
+        if report == None:
+            continue
+        
         for writer_type in report_config.get('writers', []): #shitcode
             if not hasattr(report_writer, writer_type):
                 continue
@@ -190,7 +192,7 @@ async def main():
                 'reporter': report_config['reporter']
             }
 
-            if attr := getattr(report_writer, writer_type)(report_config.get('indices',[]),report_dict,**kwargs):
+            if attr := getattr(report_writer, writer_type)(report_config.get('indices',[]),report,**kwargs):
                 report_writer_coroutines.append(attr)
 
     await asyncio.gather(*report_writer_coroutines)

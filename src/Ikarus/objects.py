@@ -81,7 +81,8 @@ class EObserverType(str, Enum):
 
 @dataclass
 class ReportMeta:
-    title: str
+    title: str = ''
+    filename: str = ''
 
 
 @dataclass
