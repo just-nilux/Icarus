@@ -6,7 +6,7 @@ import bson
 import abc
 import itertools
 from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder
-from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract
+from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract, safe_divide
 from .. import binance_filters as filters
 
 logger = logging.getLogger('app')
@@ -43,7 +43,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
         for lto_idx in range(len(trade_list)):
 
             # If handle_lto_logic fails then it means that the trade_list[lto_idx] is unchanged.
-            if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time):
+            if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time, strategy_capital):
                 logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
         trade_objects = []
@@ -63,22 +63,23 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def handle_lto_logic(self, analysis_dict, trade, ikarus_time):
+    async def handle_lto_logic(self, analysis_dict, trade, ikarus_time, strategy_capital):
 
         """
         This function decides what to do for the LTOs based on their 'status'
+        strategy_capital: It is used for position sizing
         """        
         is_success = False
         if trade.status == EState.ENTER_EXP:
             is_success = await self.on_cancel(trade)
 
         elif trade.status == EState.EXIT_EXP:
-            is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict)
+            is_success = await self.on_update(trade, ikarus_time, analysis_dict=analysis_dict, strategy_capital=strategy_capital)
 
         elif trade.status == EState.WAITING_EXIT:
             # LTO is entered succesfully, so exit order should be executed
             # NOTE: expire of the exit_module can be calculated after the trade entered
-            is_success = await self.on_waiting_exit(trade, analysis_dict, ikarus_time=ikarus_time)
+            is_success = await self.on_waiting_exit(trade, analysis_dict, ikarus_time=ikarus_time, strategy_capital=strategy_capital)
 
         else:
             is_success = True
@@ -166,3 +167,34 @@ class StrategyBase(metaclass=abc.ABCMeta):
             return False
 
         return True
+
+
+def calculate_stop_loss(strategy_capital, max_loss_percentage, trade_enter):
+    '''
+    Total capital: 1000
+    capital_at_risk = 1000*0.02 = 20
+
+    Amount Price Quantity
+    100    20    5
+    98     20    4.9
+    100-20=80
+
+    stop_loss price calculation with fee_rate:
+
+        4.9 * price * (1-fee_rate) = 80
+        4.9 * price * 0.98 = 80
+        price = 16.65
+        81.5   16.65 4.9
+
+    stop_loss price calculation without fee_rate:
+
+        100-20=80
+        4.9 * price = 80
+        4.9 * price = 80
+        price = 16.65
+        81.5   16.65 4.9
+    '''
+    max_loss = strategy_capital * max_loss_percentage
+    min_amount = trade_enter.amount - max_loss
+    stop_loss_price = safe_divide(min_amount, trade_enter.quantity) # Should it be trade.result.enter.quantity or trade.enter.quantity
+    return stop_loss_price
