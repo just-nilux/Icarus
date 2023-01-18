@@ -69,7 +69,7 @@
             "module": "src.Ikarus.report.generate_report",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/research/correlated_symbols/config.json"
+                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config.json"
             ]
         },
         {
@@ -83,13 +83,13 @@
             ]
         },
         {
-            "name": "grid_search",
+            "name": "grid_search_analyzers",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.report.grid_search",
+            "module": "src.Ikarus.report.grid_search_analyzers",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/research/aroon_classifies_market/config_multipair.json"
+                "${workspaceFolder}/configs/research/aroon_classifies_market/grid_search_reporters_config.json"
             ]
         },
         {
@@ -116,18 +116,17 @@
             "module": "src.Ikarus.scripts.visualize_analyzers",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/research/aroon_classifies_market/config.json"
+                "${workspaceFolder}/configs/research/support-resistance/config.json"
             ]
         },
         {
-            "name": "visualize_test_session",
+            "name": "visualize_backtest",
             "type": "python",
             "request": "launch",
-            "module": "Ikarus.scripts.visualize_test_session",
+            "module": "src.Ikarus.scripts.visualize_backtest",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/src",
             "args": [
-                "${workspaceFolder}/configs/test/LimitOCO/config.json",
+                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config.json",
                 "${workspaceFolder}/test_credentials.json"
             ]
         },
@@ -155,7 +154,7 @@
             "program": "src/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\test\\LimitLimit\\config.json"
+                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config.json"
             ]
         },
         {

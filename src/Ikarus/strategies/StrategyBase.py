@@ -8,12 +8,13 @@ import itertools
 from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder
 from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract, safe_divide
 from .. import binance_filters as filters
+from .. import position_sizing
 
 logger = logging.getLogger('app')
 
 class StrategyBase(metaclass=abc.ABCMeta):
 
-    def __init__(self, _name, _config, _symbol_info, _resource_allocator):
+    def __init__(self, _name, _config, _symbol_info):
         self.name = _name
         self.alloc_ratio = 0
         self.config = _config['strategy'][self.name]
@@ -27,10 +28,6 @@ class StrategyBase(metaclass=abc.ABCMeta):
         # NOTE: Hardcoded time-scales list (scales should be in ascending order)
         self.min_period = self.config['time_scales'][0]
         self.meta_do = list(itertools.product(self.config['time_scales'], self.config['pairs']))
-
-        # It seems possible to have this on_STAT_EXIT_EXP() like approach. Surely needs to be tried again.
-        # Since it facilitates so much new strategy creation and modular implementation
-        self.trade_resource_allocator = _resource_allocator
 
 
     @staticmethod
@@ -47,8 +44,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
         trade_objects = []
-        allocation = self.trade_resource_allocator.allocate(self.max_live_trade, strategy_capital, trade_list)
-        for pair, cap in allocation.items():
+        position_sizes = position_sizing.evaluate_size(self.config['pairs'], self.max_live_trade, strategy_capital, trade_list)
+
+        for pair, cap in position_sizes.items():
 
             # Perform evaluation
             if trade:= await self.make_decision(analysis_dict, pair, ikarus_time, cap):
@@ -168,33 +166,3 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
         return True
 
-
-def calculate_stop_loss(strategy_capital, max_loss_percentage, trade_enter):
-    '''
-    Total capital: 1000
-    capital_at_risk = 1000*0.02 = 20
-
-    Amount Price Quantity
-    100    20    5
-    98     20    4.9
-    100-20=80
-
-    stop_loss price calculation with fee_rate:
-
-        4.9 * price * (1-fee_rate) = 80
-        4.9 * price * 0.98 = 80
-        price = 16.65
-        81.5   16.65 4.9
-
-    stop_loss price calculation without fee_rate:
-
-        100-20=80
-        4.9 * price = 80
-        4.9 * price = 80
-        price = 16.65
-        81.5   16.65 4.9
-    '''
-    max_loss = strategy_capital * max_loss_percentage
-    min_amount = trade_enter.amount - max_loss
-    stop_loss_price = safe_divide(min_amount, trade_enter.quantity) # Should it be trade.result.enter.quantity or trade.enter.quantity
-    return stop_loss_price

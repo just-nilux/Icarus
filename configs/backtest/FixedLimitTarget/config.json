@@ -39,15 +39,12 @@
         "FixedLimitTarget": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "resource_allocator": "DefaultTradeAllocator"
-
+            "max_live_trade": 1
         },
         "FixedOCOTarget": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "resource_allocator": "DefaultTradeAllocator"
+            "max_live_trade": 1
         }
     },
     "analysis": {
