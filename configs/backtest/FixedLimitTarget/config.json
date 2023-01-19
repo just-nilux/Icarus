@@ -44,7 +44,8 @@
         "FixedOCOTarget": {
             "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
-            "max_live_trade": 1
+            "max_live_trade": 1,
+            "max_loss_coeff": 0.02
         }
     },
     "analysis": {

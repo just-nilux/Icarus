@@ -51,16 +51,14 @@ class FixedOCOTarget(StrategyBase):
 
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
 
-        # %2 rule
-        max_loss_percentage = 0.02
-        stop_loss_price = position_sizing.evaluate_stop_loss(kwargs['strategy_capital'], max_loss_percentage, trade.enter)
+        stop_loss_price = position_sizing.evaluate_stop_loss(kwargs['strategy_capital'], self.config['max_loss_coeff'], trade)
 
         target_price = trade.result.enter.price * 1.01
         stop_price = trade.result.enter.price * 0.95
 
         # If the stop_price causes more capital loss than max_loss_percentage, than do the adjustment
-        stop_price = max(stop_loss_price, stop_price)
-        stop_limit_price = stop_price * 0.99
+        stop_limit_price = max(stop_loss_price, stop_price)
+        stop_price = stop_limit_price*1.001
         #stop_limit_price = trade.result.enter.price * 0.949
 
         exit_oco_order = OCO(
