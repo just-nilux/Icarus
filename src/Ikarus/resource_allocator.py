@@ -34,12 +34,15 @@ class DiscreteStrategyAllocator():
         for lt in live_trades:
             if lt.status == EState.CLOSED:
                 # trade.result.profit reflects the impact of a trade on balance
-                self.strategy_capitals[lt.strategy] += lt.result.profit
-                
+                self.strategy_capitals[lt.strategy] = safe_sum(self.strategy_capitals[lt.strategy], lt.result.profit)
+        
+        total_capital = 0
+        for value in self.strategy_capitals.values():
+            total_capital = safe_sum(total_capital, value)
+        
         # Check if stop capital is reached
         #   If so, make all allocatıons 0 to stop strategies from creating new trades
         if self.stop_capital:
-            total_capital = sum(self.strategy_capitals.values())
             if total_capital <= self.stop_capital:
                 return {key: 0 for key in self.distribution_config.keys()}
         # Apply max_capital_use by restricting the in_use amount if specified
