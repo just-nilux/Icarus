@@ -14,7 +14,7 @@ from .utils import time_scale_to_second, get_min_scale, time_scale_to_milisecond
     safe_multiply, safe_divide, round_to_period
 from . import balance_manager
 import more_itertools
-from .objects import OCO, ECause, ECommand, EState, Limit, Market
+from .objects import OCO, ECause, ECommand, EState, Limit, Market, trade_to_dict
 from abc import ABC, abstractmethod
 
 logger = logging.getLogger('app')
@@ -938,6 +938,7 @@ class TestBinanceWrapper():
         elif trade.status in [EState.EXIT_EXP, EState.OPEN_EXIT]:
             base_cur = trade.pair.replace(self.config['broker']['quote_currency'],'')
             return balance_manager.cancel_exit_order(df_balance, base_cur, trade.exit)
+        logger.warning(f'execute_cancel failed for trade:{trade_to_dict(trade)}')
         return False
 
 
@@ -946,6 +947,7 @@ class TestBinanceWrapper():
             trade.enter.orderId = int(time.time() * 1000) # Get the order id from the broker
             trade.status = EState.OPEN_ENTER
             return True
+        logger.warning(f'execute_buy failed for trade:{trade_to_dict(trade)}')
         return False
 
 
@@ -955,6 +957,7 @@ class TestBinanceWrapper():
             trade.status = EState.OPEN_EXIT
             trade.exit.orderId = int(time.time() * 1000)
             return True
+        logger.warning(f'execute_sell failed for trade:{trade_to_dict(trade)}')
         return False
 
 
@@ -1005,7 +1008,8 @@ class TestBinanceWrapper():
 
             if self.execute_buy(new_trades[i], df_balance): 
                 new_trades[i].command = ECommand.NONE
-
+            else:
+                new_trades[i] = None
 
     def execute_decision(self, new_trades, df_balance, live_trades):
         # Execute decsisions about ltos
@@ -1043,8 +1047,14 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                     # NOTE: No update on command because it is, only placed by the strategies
 
             elif type(trade_list[i].enter) == Market:
+
+                # NOTE: Market order execution is a bit tricky. Since strategy only decides the amount
+                # for the market buy orders
+
+                market_order_qty = safe_divide(trade_list[i].enter.amount, float(last_kline['open']))
                 trade_list[i].set_result_enter( last_closed_candle_open_time, 
                     price=float(last_kline['open']),
+                    quantity=market_order_qty,
                     fee_rate=TestBinanceWrapper.fee_rate)
 
                 if not balance_manager.buy(df_balance, quote_currency, base_cur, trade_list[i]):
@@ -1105,6 +1115,9 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
 
 
             elif type(trade_list[i].exit) == Market:
+
+                # NOTE: Market order execution is a bit tricky. Since strategy only decides the quantity
+                # for the market sell orders
 
                 trade_list[i].set_result_exit( last_closed_candle_open_time, 
                     price=float(last_kline['open']),

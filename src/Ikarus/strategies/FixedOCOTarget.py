@@ -2,11 +2,12 @@ from ..objects import ECause, Result, Trade, OCO, ECommand, TradeResult, Market
 from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
+from .. import position_sizing
 
 class FixedOCOTarget(StrategyBase):
 
-    def __init__(self, _config, _symbol_info, _resource_allocator):
-        super().__init__("FixedOCOTarget", _config, _symbol_info, _resource_allocator)
+    def __init__(self, _config, _symbol_info):
+        super().__init__("FixedOCOTarget", _config, _symbol_info)
         return
 
 
@@ -14,22 +15,22 @@ class FixedOCOTarget(StrategyBase):
         return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, strategy_capital)
 
 
-    async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
+    async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share, **kwargs):
 
-            time_dict = analysis_dict[ao_pair]
+        time_dict = analysis_dict[ao_pair]
 
-            enter_price = time_dict[self.min_period]['close'][-1]
-            enter_ref_amount=pairwise_alloc_share
+        enter_price = time_dict[self.min_period]['close'][-1]
+        enter_ref_amount=pairwise_alloc_share
 
-            enter_order = Market(amount=enter_ref_amount, price=enter_price)
+        enter_order = Market(amount=enter_ref_amount, price=enter_price)
 
-            # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
-            trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
-            trade.set_enter(enter_order)
-            result = TradeResult()
-            trade.result = result
+        # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
+        trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
+        trade.set_enter(enter_order)
+        result = TradeResult()
+        trade.result = result
 
-            return trade
+        return trade
 
 
     async def on_update(self, trade, ikarus_time, **kwargs):
@@ -50,10 +51,15 @@ class FixedOCOTarget(StrategyBase):
 
     async def on_waiting_exit(self, trade, analysis_dict, **kwargs):
 
+        stop_loss_price = position_sizing.evaluate_stop_loss(kwargs['strategy_capital'], self.config['max_loss_coeff'], trade)
 
         target_price = trade.result.enter.price * 1.01
         stop_price = trade.result.enter.price * 0.95
-        stop_limit_price = trade.result.enter.price * 0.949
+
+        # If the stop_price causes more capital loss than max_loss_percentage, than do the adjustment
+        stop_limit_price = max(stop_loss_price, stop_price)
+        stop_price = stop_limit_price*1.001
+        #stop_limit_price = trade.result.enter.price * 0.949
 
         exit_oco_order = OCO(
             price=target_price,

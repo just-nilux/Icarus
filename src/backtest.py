@@ -93,6 +93,7 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
         # NOTE: If there is any error during execution, then it the trade can be removed/fixed and the error can be handled inside the execute_decisison
         bwrapper.execute_decision(new_trade_list, df_balance, live_trade_list)
 
+    new_trade_list = [i for i in new_trade_list if i is not None]
 
     if len(new_trade_list):
         # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)

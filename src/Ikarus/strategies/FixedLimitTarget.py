@@ -6,8 +6,8 @@ from ..utils import time_scale_to_minute
 
 class FixedLimitTarget(StrategyBase):
 
-    def __init__(self, _config, _symbol_info, _resource_allocator):
-        super().__init__("FixedLimitTarget", _config, _symbol_info, _resource_allocator)
+    def __init__(self, _config, _symbol_info):
+        super().__init__("FixedLimitTarget", _config, _symbol_info)
         return
 
 

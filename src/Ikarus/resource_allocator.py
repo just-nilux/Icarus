@@ -4,49 +4,6 @@ from abc import ABC, abstractmethod
 from .objects import EState
 from .utils import safe_multiply, safe_sum, safe_divide
 
-logger = logging.getLogger('app')
-
-class DefaultTradeAllocator():
-
-    def __init__(self, pairs) -> None:
-        self.pairs = pairs
-
-
-    def distribute(self, free_trade_slot, free_capital, free_pairs):
-        if free_trade_slot == 0:
-            return {}
-
-        capital_per_trade = safe_divide(free_capital, free_trade_slot)
-        disribution = dict()
-        
-        for pair in free_pairs:
-            if free_trade_slot <= 0:
-                break
-            free_trade_slot -= 1
-            disribution[pair] = capital_per_trade
-
-        return disribution
-
-
-    def allocate(self, max_live_trade, strategy_capital, trade_list):
-
-        in_trade_capital = 0
-        in_trade_pairs = set()
-        for trade in trade_list:
-            if trade.status == EState.CLOSED:
-                continue
-            in_trade_pairs.add(trade.pair)
-            in_trade_capital = safe_sum(in_trade_capital, trade.enter.amount)
-        
-        free_capital = strategy_capital - in_trade_capital
-        if free_capital <= 0:
-            return {}
-        
-        free_pairs = set(self.pairs) - in_trade_pairs
-        free_trade_slot = max_live_trade-len(in_trade_pairs)
-        
-        return self.distribute(free_trade_slot, free_capital, free_pairs)
-
 
 class DiscreteStrategyAllocator():
 
@@ -77,12 +34,15 @@ class DiscreteStrategyAllocator():
         for lt in live_trades:
             if lt.status == EState.CLOSED:
                 # trade.result.profit reflects the impact of a trade on balance
-                self.strategy_capitals[lt.strategy] += lt.result.profit
-                
+                self.strategy_capitals[lt.strategy] = safe_sum(self.strategy_capitals[lt.strategy], lt.result.profit)
+        
+        total_capital = 0
+        for value in self.strategy_capitals.values():
+            total_capital = safe_sum(total_capital, value)
+        
         # Check if stop capital is reached
         #   If so, make all allocatıons 0 to stop strategies from creating new trades
         if self.stop_capital:
-            total_capital = sum(self.strategy_capitals.values())
             if total_capital <= self.stop_capital:
                 return {key: 0 for key in self.distribution_config.keys()}
         # Apply max_capital_use by restricting the in_use amount if specified
