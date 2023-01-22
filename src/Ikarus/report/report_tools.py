@@ -248,7 +248,7 @@ async def strategy_statistics(index, reporter_input):
     stat_count['win'] = (df['profit'] > 0).sum()
     stat_count['lose'] = (df['profit'] <= 0).sum()
 
-    stat_profit = {
+    stat_absolute_profit = {
         'best': df['profit'].max(),
         'worst': df['profit'].min(),
         'total': df['profit'].sum(),
@@ -256,15 +256,39 @@ async def strategy_statistics(index, reporter_input):
         'total_not_updated': df[df['is_updated']==False]['profit'].sum(),
         'average': df['profit'].mean(),
         'average_updated': df[df['is_updated']==True]['profit'].mean(),
-        'average_not_updated': df[df['is_updated']==False]['profit'].mean()  
+        'average_not_updated': df[df['is_updated']==False]['profit'].mean()
+    }
+
+    stat_percentage_profit = {
+        'best': df['percentage_profit'].max(),
+        'worst': df['percentage_profit'].min(),
+        'total': df['percentage_profit'].sum(),
+        'total_updated': df[df['is_updated']==True]['percentage_profit'].sum(),
+        'total_not_updated': df[df['is_updated']==False]['percentage_profit'].sum(),
+        'average': df['percentage_profit'].mean(),
+        'average_updated': df[df['is_updated']==True]['percentage_profit'].mean(),
+        'average_not_updated': df[df['is_updated']==False]['percentage_profit'].mean()
+    }
+
+    stat_price_change = {
+        'best': df['price_change'].max(),
+        'worst': df['price_change'].min(),
+        'total': df['price_change'].sum(),
+        'total_updated': df[df['is_updated']==True]['price_change'].sum(),
+        'total_not_updated': df[df['is_updated']==False]['price_change'].sum(),
+        'average': df['price_change'].mean(),
+        'average_updated': df[df['is_updated']==True]['price_change'].mean(),
+        'average_not_updated': df[df['is_updated']==False]['price_change'].mean()
     }
 
     day_in_ms = 1000*60*60*24
+    hour_in_ms = 1000*60*60
+    durations = df['duration']/hour_in_ms
     stat_duration = {
-        'max': df['duration'].max()/day_in_ms,
-        'min': df['duration'].min()/day_in_ms,
-        'total': df['duration'].sum()/day_in_ms,
-        'average': df['duration'].mean()/day_in_ms
+        'max': durations.max(),
+        'min': durations.min(),
+        'total': durations.sum(),
+        'average': durations.mean()
     }
 
     stat_rates = {
@@ -298,7 +322,9 @@ async def strategy_statistics(index, reporter_input):
     stats = {
         'strategy': df['strategy'][0],
         'count': stat_count,
-        'profit': stat_profit,
+        'absolute_profit': stat_absolute_profit,
+        'percentage_profit': stat_percentage_profit,
+        'price_change': stat_price_change,
         'duration':stat_duration,
         'rates': stat_rates,
         'risk': stat_risk,
@@ -312,7 +338,7 @@ async def strategy_statistics(index, reporter_input):
         
         for k,v in stat.items():
             if type(v) in [np.float64, float]:
-                stat[k] = round(v,2)
+                stat[k] = round(v,3)
             elif type(v) == np.int64:
                 stat[k] = int(v)
 

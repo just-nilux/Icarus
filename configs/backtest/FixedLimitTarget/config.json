@@ -7,7 +7,7 @@
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
-        "database": "FixedLimitTarget",
+        "database": "FixedTarget",
         "host": "localhost",
         "port": 27017,
         "clean": true
@@ -30,29 +30,35 @@
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
             "initial_capital": 10000,
-            "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
+            "distribution_config": {"FixedLimitTarget":0.5, "FixedOCOTarget":0.5},
             "max_capital_use":1, 
             "stop_capital":null
         }
     },
     "strategy": {
         "FixedLimitTarget": {
-            "pairs": ["XRPUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1
-        },
-        "FixedOCOTarget": {
-            "pairs": ["XRPUSDT"],
+            "pairs": ["BTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
-            "max_loss_coeff": 0.02
+            "kwargs":{
+                "target_profit_coeff":1.01
+            }
+        },
+        "FixedOCOTarget": {
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "max_loss_coeff": 0.02,
+            "kwargs":{
+                "target_profit_coeff":1.01
+            }
         }
     },
     "analysis": {
         "close":{}
     },
     "time_scales": {
-        "1h": 2
+        "1h": 3
     },
     "backtest":{
         "start_time": "2022-11-20 00:00:00",
@@ -89,9 +95,16 @@
                                     "enter_price":"$result.enter.price",
                                     "target_price": "$exit.price",
                                     "stop_limit_price": "$exit.stop_limit_price"
+                                    },
+                                "price_change":{"$divide":[ { "$subtract": [ "$result.exit.price", "$result.enter.price" ] }, "$result.enter.price"]},
+                                "percentage_profit":{"$divide":[ 
+                                    "$result.profit", 
+                                    {"$multiply": [
+                                            "$result.enter.price",
+                                            { "$sum": [ "$result.enter.quantity", "$result.enter.fee" ] }
+                                        ]}]
                                     }
-                            }
-                        }
+                        }}
                     ]
                 ],
                 "source": "database",
@@ -154,7 +167,15 @@
                                 "profit":"$result.profit",
                                 "fee":{"$sum":[ "$result.exit.fee", { "$multiply": [ "$result.enter.fee", "$result.enter.price" ] }]},
                                 "duration":"$result.live_time",
-                                "is_updated":{"$ne": ["$order_stash", []]}
+                                "is_updated":{"$ne": ["$order_stash", []]},
+                                "price_change":{"$divide":[ { "$subtract": [ "$result.exit.price", "$result.enter.price" ] }, "$result.enter.price"]},
+                                "percentage_profit":{"$divide":[ 
+                                    "$result.profit", 
+                                    {"$multiply": [
+                                            "$result.enter.price",
+                                            { "$sum": [ "$result.enter.quantity", "$result.enter.fee" ] }
+                                        ]}]
+                                    }
                             }
                         }
                     ]

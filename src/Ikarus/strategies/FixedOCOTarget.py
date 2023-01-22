@@ -53,7 +53,7 @@ class FixedOCOTarget(StrategyBase):
 
         stop_loss_price = position_sizing.evaluate_stop_loss(kwargs['strategy_capital'], self.config['max_loss_coeff'], trade)
 
-        target_price = trade.result.enter.price * 1.01
+        target_price = trade.result.enter.price * self.config['kwargs'].get('target_profit_coeff')
         stop_price = trade.result.enter.price * 0.95
 
         # If the stop_price causes more capital loss than max_loss_percentage, than do the adjustment
