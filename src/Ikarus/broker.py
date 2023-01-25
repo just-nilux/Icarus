@@ -16,9 +16,11 @@ from . import balance_manager
 import more_itertools
 from .objects import OCO, ECause, ECommand, EState, Limit, Market, trade_to_dict
 from abc import ABC, abstractmethod
-
+from . import binance_filters
 logger = logging.getLogger('app')
 
+# This variable added as deus ex machina
+symbol_info = None
 
 class BrokerWrapper(ABC):
     @abstractmethod
@@ -756,6 +758,7 @@ class TestBinanceWrapper():
 
 
     async def get_all_symbol_info(self, all_pairs):
+        global symbol_info
         all_info = await self.client.get_exchange_info()
 
         selected_info = {}
@@ -763,6 +766,7 @@ class TestBinanceWrapper():
             if item['symbol'] in all_pairs:
                 selected_info[item['symbol']] = item
 
+        symbol_info =selected_info
         return selected_info
 
 
@@ -1020,7 +1024,7 @@ class TestBinanceWrapper():
 
 
 async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping, df_balance, quote_currency):
-
+    global symbol_info
     # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
     for i in range(len(trade_list)):
         pair = trade_list[i].pair
@@ -1052,6 +1056,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                 # for the market buy orders
 
                 market_order_qty = safe_divide(trade_list[i].enter.amount, float(last_kline['open']))
+                market_order_qty = binance_filters.lot_size(market_order_qty, symbol_info[trade_list[i].pair])
                 trade_list[i].set_result_enter( last_closed_candle_open_time, 
                     price=float(last_kline['open']),
                     quantity=market_order_qty,

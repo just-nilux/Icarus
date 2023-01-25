@@ -6,8 +6,8 @@ from ..utils import time_scale_to_minute
 
 class FixedLimitTarget(StrategyBase):
 
-    def __init__(self, _config, _symbol_info):
-        super().__init__("FixedLimitTarget", _config, _symbol_info)
+    def __init__(self, _tag, _config, _symbol_info):
+        super().__init__(_tag, _config, _symbol_info)
         return
 
 
@@ -56,7 +56,7 @@ class FixedLimitTarget(StrategyBase):
         exit_limit_order = Limit(
             exit_price,
             quantity=trade.result.enter.quantity,
-            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],24,time_scale_to_minute(self.min_period))
+            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],4,time_scale_to_minute(self.min_period))
         )
         trade.set_exit(exit_limit_order)
 

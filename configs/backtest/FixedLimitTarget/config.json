@@ -15,7 +15,7 @@
     "balances": [
         {
             "asset": "USDT", 
-            "free": 10000, 
+            "free": 20000, 
             "locked": 0
         }
     ],
@@ -29,28 +29,38 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "initial_capital": 10000,
-            "distribution_config": {"FixedLimitTarget":0.5, "FixedOCOTarget":0.5},
+            "initial_capital": 20000,
+            "distribution_config": {"FixedLimitTarget_01":0.25, "FixedLimitTarget_005":0.25, "FixedLimitTarget_0025":0.25},
             "max_capital_use":1, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget": {
-            "pairs": ["BTCUSDT"],
+        "FixedLimitTarget_01": {
+            "strategy": "FixedLimitTarget",
+            "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01
             }
         },
-        "FixedOCOTarget": {
-            "pairs": ["BTCUSDT"],
+        "FixedLimitTarget_005": {
+            "strategy": "FixedLimitTarget",
+            "pairs": ["XRPUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
-            "max_loss_coeff": 0.02,
             "kwargs":{
-                "target_profit_coeff":1.01
+                "target_profit_coeff":1.005
+            }
+        },
+        "FixedLimitTarget_0025": {
+            "strategy": "FixedLimitTarget",
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.0025
             }
         }
     },
@@ -61,18 +71,18 @@
         "1h": 3
     },
     "backtest":{
-        "start_time": "2022-11-20 00:00:00",
+        "start_time": "2022-8-20 00:00:00",
         "end_time": "2022-11-24 00:00:00",
         "online": true,
         "breakpoints": {
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports",
+    "report_folder_name": "reports_combined",
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": ["FixedLimitTarget", "FixedOCOTarget"]
+            "<strategy>": ["FixedLimitTarget_01", "FixedLimitTarget_005", "FixedLimitTarget_0025"]
         },
         "reporters": [
             {
