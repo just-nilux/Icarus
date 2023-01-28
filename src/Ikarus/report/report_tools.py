@@ -284,12 +284,16 @@ async def strategy_statistics(index, reporter_input):
     day_in_ms = 1000*60*60*24
     hour_in_ms = 1000*60*60
     durations = df['duration']/hour_in_ms
+    durations[df['is_updated']==True].mean(),
     stat_duration = {
         'max': durations.max(),
         'min': durations.min(),
         'total': durations.sum(),
-        'average': durations.mean()
+        'average': durations.mean(),
+        'average_not_updated': durations[df['is_updated']==False].mean(),
+        'average_updated': durations[df['is_updated']==True].mean()
     }
+    # TODO: Add duration for enter and exit orders separetaly
 
     stat_rates = {
         'win': (df['profit'] > 0).sum() / len(df['profit']),

@@ -23,44 +23,64 @@
         "quote_currency": "USDT",
          "fee_rate": 0.001
     },
-    "risk_management":{
-        "max_capital_use_ratio": 1
-    },
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
             "initial_capital": 20000,
-            "distribution_config": {"FixedLimitTarget_01":0.25, "FixedLimitTarget_005":0.25, "FixedLimitTarget_0025":0.25},
-            "max_capital_use":1, 
+            "distribution_config": {"FixedLimitTarget_03":0.20, "FixedLimitTarget_02":0.20, "FixedLimitTarget_01":0.20, "FixedLimitTarget_005":0.20, "FixedLimitTarget_0025":0.20},
+            "max_capital_use":0.9, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget_01": {
+        "FixedLimitTarget_03": {
             "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
+            "pairs": ["DOGEUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01
+                "target_profit_coeff":1.03,
+                "exit_duration":4
+            }
+        },
+        "FixedLimitTarget_02": {
+            "strategy": "FixedLimitTarget",
+            "pairs": ["DOGEUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.02,
+                "exit_duration":4
+            }
+        },
+        "FixedLimitTarget_01": {
+            "strategy": "FixedLimitTarget",
+            "pairs": ["DOGEUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.01,
+                "exit_duration":4
             }
         },
         "FixedLimitTarget_005": {
             "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
+            "pairs": ["DOGEUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.005
+                "target_profit_coeff":1.005,
+                "exit_duration":4
             }
         },
         "FixedLimitTarget_0025": {
             "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
+            "pairs": ["DOGEUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.0025
+                "target_profit_coeff":1.0025,
+                "exit_duration":4
             }
         }
     },
@@ -78,11 +98,11 @@
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_combined",
+    "report_folder_name": "reports_combined_duration_4_doge",
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": ["FixedLimitTarget_01", "FixedLimitTarget_005", "FixedLimitTarget_0025"]
+            "<strategy>": ["FixedLimitTarget_03", "FixedLimitTarget_02", "FixedLimitTarget_01", "FixedLimitTarget_005", "FixedLimitTarget_0025"]
         },
         "reporters": [
             {

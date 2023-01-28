@@ -4,7 +4,7 @@ from binance import AsyncClient
 from datetime import datetime
 import json
 from Ikarus.broker import TestBinanceWrapper, sync_trades_of_backtest
-from Ikarus import strategy_manager, analyzers, observers, mongo_utils, trade_statistics
+from Ikarus import strategy_manager, analyzers, mongo_utils, trade_statistics
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
 import logging
@@ -67,7 +67,7 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     # Total usable qc
-    total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['risk_management']['max_capital_use_ratio'])
+    total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['strategy_allocation']['kwargs']['max_capital_use'])
     
     total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
     logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
@@ -117,7 +117,7 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     free = df_balance.loc[config['broker']['quote_currency'],'free']
     in_trade = eval_total_capital_in_lto(live_trade_list+new_trade_list)
     observation_obj['total'] = safe_sum(free, in_trade)
-    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['risk_management']['max_capital_use_ratio']))
+    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['max_capital_use']))
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
 
@@ -218,7 +218,6 @@ if __name__ == '__main__':
     setup_logger(logger, config['log'])
 
     # Setup initial objects
-    observer = observers.Observer(config)
     analyzer = analyzers.Analyzer(config)
 
     logger.info("---------------------------------------------------------")

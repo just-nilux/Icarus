@@ -56,7 +56,7 @@ class FixedLimitTarget(StrategyBase):
         exit_limit_order = Limit(
             exit_price,
             quantity=trade.result.enter.quantity,
-            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],4,time_scale_to_minute(self.min_period))
+            expire=StrategyBase._eval_future_candle_time(kwargs['ikarus_time'],self.config['kwargs'].get('exit_duration'),time_scale_to_minute(self.min_period))
         )
         trade.set_exit(exit_limit_order)
 
