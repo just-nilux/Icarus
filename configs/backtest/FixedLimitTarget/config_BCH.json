@@ -26,67 +26,15 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "initial_capital": 40000,
+            "initial_capital": 10000,
             "distribution_config": [
-                "FixedLimitTarget_03_XLM", "FixedLimitTarget_03_DIA", "FixedLimitTarget_03_LTC", "FixedLimitTarget_03_XRP", "FixedLimitTarget_03_BTC", "FixedLimitTarget_03_BCH", "FixedLimitTarget_03_ETC","FixedLimitTarget_03_DASH",
-                "FixedLimitTarget_02_XLM", "FixedLimitTarget_02_DIA", "FixedLimitTarget_02_LTC", "FixedLimitTarget_02_XRP", "FixedLimitTarget_02_BTC", "FixedLimitTarget_02_BCH", "FixedLimitTarget_02_ETC","FixedLimitTarget_02_DASH",
-                "FixedLimitTarget_01_XLM", "FixedLimitTarget_01_DIA", "FixedLimitTarget_01_LTC", "FixedLimitTarget_01_XRP", "FixedLimitTarget_01_BTC", "FixedLimitTarget_01_BCH", "FixedLimitTarget_01_ETC","FixedLimitTarget_01_DASH"
+                "FixedLimitTarget_03_BCH"
             ],
             "max_capital_use":0.9, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget_03_XLM": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XLMUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_03_DIA": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DIAUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_03_LTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["LTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_03_XRP": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_03_BTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
         "FixedLimitTarget_03_BCH": {
             "strategy": "FixedLimitTarget",
             "pairs": ["BCHUSDT"],
@@ -94,186 +42,6 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_03_ETC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["ETCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_03_DASH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DASHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_XLM": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XLMUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_DIA": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DIAUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_LTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["LTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_XRP": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_BTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },        
-        "FixedLimitTarget_02_BCH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_ETC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["ETCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_02_DASH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DASHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_XLM": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XLMUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_DIA": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DIAUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_LTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["LTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_XRP": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_BTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_BCH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_ETC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["ETCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":6
-            }
-        },
-        "FixedLimitTarget_01_DASH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DASHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
                 "exit_duration":6
             }
         }
@@ -292,15 +60,11 @@
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_exit_duration_6_1.03",
+    "report_folder_name": "reports_BCH",
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": [
-                "FixedLimitTarget_03_XLM", "FixedLimitTarget_03_DIA", "FixedLimitTarget_03_LTC", "FixedLimitTarget_03_XRP", "FixedLimitTarget_03_BTC", "FixedLimitTarget_03_BCH", "FixedLimitTarget_03_ETC","FixedLimitTarget_03_DASH",
-                "FixedLimitTarget_02_XLM", "FixedLimitTarget_02_DIA", "FixedLimitTarget_02_LTC", "FixedLimitTarget_02_XRP", "FixedLimitTarget_02_BTC", "FixedLimitTarget_02_BCH", "FixedLimitTarget_02_ETC","FixedLimitTarget_02_DASH",
-                "FixedLimitTarget_01_XLM", "FixedLimitTarget_01_DIA", "FixedLimitTarget_01_LTC", "FixedLimitTarget_01_XRP", "FixedLimitTarget_01_BTC", "FixedLimitTarget_01_BCH", "FixedLimitTarget_01_ETC","FixedLimitTarget_01_DASH"
-            ]
+            "<strategy>": ["FixedLimitTarget_03_BCH"]
         },
         "reporters": [
             {

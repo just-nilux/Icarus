@@ -188,7 +188,7 @@ async def main():
     total_len = int((session_end_timestamp - session_start_timestamp) / time_scale_to_second(ikarus_cycle_period)) # length = Second / Min*60
     printProgressBar(0, total_len, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-    await bwrapper.download_all_data(meta_data_pool, session_start_timestamp*1000, session_end_timestamp*1000)
+    await bwrapper.obtain_candlesticks(meta_data_pool, session_start_timestamp*1000, session_end_timestamp*1000)
 
     for idx, start_time in enumerate(range(session_start_timestamp, session_end_timestamp, time_scale_to_second(ikarus_cycle_period))):
         logger.debug(f'Iteration {idx}:')

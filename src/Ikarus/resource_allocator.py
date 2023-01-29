@@ -6,15 +6,34 @@ from .utils import safe_multiply, safe_sum, safe_divide
 
 
 class DiscreteStrategyAllocator():
+    '''
+    Sample Configuration:
+
+    "strategy_allocation":{
+        "type": "DiscreteStrategyAllocator",
+        "kwargs": {
+            "initial_capital": 20000,
+            "distribution_config": ["FixedLimitTarget_03", "FixedLimitTarget_02", "FixedLimitTarget_01"],
+            "max_capital_use":0.9, 
+            "stop_capital":null
+        }
+    },
+    '''
 
     def __init__(self, initial_capital, distribution_config, max_capital_use=1, stop_capital=None) -> None:
-        self.distribution_config = distribution_config
 
         # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
         self.max_capital_use = max_capital_use
         self.stop_capital = stop_capital
         self.distribution_status = None
         
+        if type(distribution_config) == list:
+            cap_per_strategy = safe_divide(1,len(distribution_config))
+            self.distribution_config = {key: cap_per_strategy for key in distribution_config}
+
+        elif type(distribution_config) == dict:
+            self.distribution_config = distribution_config
+
         self.strategy_capitals = {key: safe_multiply(value,initial_capital) for key, value in self.distribution_config.items()}
         self.distribution_status = self.distribute()
 

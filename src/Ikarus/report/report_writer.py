@@ -523,18 +523,18 @@ class MarkdownWriter():
         pass
 
 
-    def markdown_table(self, indice, report_data, **kwargs):
+    def markdown_table(self, indice, report, **kwargs):
 
-        if type(report_data) == dict:
-            df = pd.DataFrame(data=report_data)
-        elif type(report_data) == pd.DataFrame:
-            df = report_data
+        if type(report.data) == dict:
+            df = pd.DataFrame(data=report.data)
+        elif type(report.data) == pd.DataFrame:
+            df = report.data
 
-        title = evaluate_filename(kwargs['reporter'], indice, special_char=False)
+        #title = evaluate_filename(kwargs['reporter'], indice, special_char=False)
         
-        self.md_file.write(title, color='yellow', bold_italics_code='b')
+        self.md_file.write(report.meta.title, color='yellow', bold_italics_code='b')
         self.md_file.write('\n' + df.to_markdown() + '\n\n')
-        print(f'Table created: {title}')
+        print(f'Table created: {report.meta.title}')
         pass
 
 

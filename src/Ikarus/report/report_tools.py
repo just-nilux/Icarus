@@ -406,6 +406,23 @@ async def strategy_capitals(index, reporter_input):
     return Report(report_meta, data=df)
 
 
+async def strategy_capital_statistics(index, reporter_input):
+
+    capitals = [
+        reporter_input[0][0]['first_capitals'],
+        reporter_input[0][0]['last_capitals'],
+    ]
+    df = pd.DataFrame(capitals, index=['first','last']).T
+
+    df['percentage_profit'] = ((df['last']-df['first']) / df['first'] * 100).round(2)
+
+    report_meta = ReportMeta(
+        title='Strategy Capital Statistics',
+        filename='strategy_capital_statistics'
+        )
+    return Report(report_meta, data=df)
+
+
 async def r_multiples(index, reporter_input):
     if not reporter_input[0]:
         return None
