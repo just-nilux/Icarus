@@ -382,6 +382,28 @@ async def trade_cause(index, reporter_input):
     return  Report(report_meta, data=count_cause.to_dict())
 
 
+async def trade_perc_profit_duration_distribution(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+    df['duration'] = df['duration']/(60*60*1000)
+    report_meta = ReportMeta(
+        title='trade.result.percentage_profit: {}'.format(df['strategy'][0]),
+        filename='trade_result_percentage_profit_{}'.format(df['strategy'][0])
+        )
+    return Report(report_meta, data=df[['duration', 'percentage_profit']])
+
+
+async def trade_perc_profit(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+    df = df.set_index(df['decision_time'].astype('datetime64[ms]'))
+    report_meta = ReportMeta(
+        title='trade.result.percentage_profit: {}'.format(df['strategy'][0]),
+        filename='trade_result_percentage_profit_{}'.format(df['strategy'][0])
+        )
+    return Report(report_meta, data=df[['percentage_profit']])
+
+
 async def trade_profit_duration_distribution(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])

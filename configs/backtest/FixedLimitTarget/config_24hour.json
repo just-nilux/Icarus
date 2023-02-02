@@ -44,7 +44,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_DIA": {
@@ -54,7 +54,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_LTC": {
@@ -64,7 +64,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_XRP": {
@@ -74,7 +74,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_BTC": {
@@ -84,7 +84,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_BCH": {
@@ -94,7 +94,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_ETC": {
@@ -104,7 +104,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_03_DASH": {
@@ -114,7 +114,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_XLM": {
@@ -124,7 +124,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_DIA": {
@@ -134,7 +134,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_LTC": {
@@ -144,7 +144,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_XRP": {
@@ -154,7 +154,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_BTC": {
@@ -164,7 +164,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },        
         "FixedLimitTarget_02_BCH": {
@@ -174,7 +174,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_ETC": {
@@ -184,7 +184,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_02_DASH": {
@@ -194,7 +194,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.02,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_XLM": {
@@ -204,7 +204,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_DIA": {
@@ -214,7 +214,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_LTC": {
@@ -224,7 +224,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_XRP": {
@@ -234,7 +234,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_BTC": {
@@ -244,7 +244,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_BCH": {
@@ -254,7 +254,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_ETC": {
@@ -264,7 +264,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         },
         "FixedLimitTarget_01_DASH": {
@@ -274,7 +274,7 @@
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "exit_duration":6
+                "exit_duration":24
             }
         }
     },
@@ -292,7 +292,7 @@
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_exit_duration_6",
+    "report_folder_name": "reports_exit_duration_24",
     "report": [],
     "grid_search_reporters": {
         "grid": {
@@ -359,6 +359,33 @@
                 "collection": "hist-trades",
                 "writers": [
                     "pie_plot"
+                ]
+            },
+            {
+                "parameters": {},
+                "reporter": "trade_perc_profit",
+                "query_template": [
+                    [
+                        {"$match":{"strategy":"<strategy>"}},
+                        {
+                            "$project": {
+                                "strategy":"$strategy",
+                                "decision_time":"$decision_time",
+                                "percentage_profit":{"$divide":[ 
+                                    "$result.profit", 
+                                    {"$multiply": [
+                                            "$result.enter.price",
+                                            { "$sum": [ "$result.enter.quantity", "$result.enter.fee" ] }
+                                        ]}]
+                                    }
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "histogram"
                 ]
             },
             {
@@ -495,33 +522,6 @@
                 "writers": [
                     "joint_histogram"
                 ]
-            },
-            {
-                "parameters": {},
-                "reporter": "trade_perc_profit",
-                "query_template": [
-                    [
-                        {"$match":{"strategy":"<strategy>"}},
-                        {
-                            "$project": {
-                                "strategy":"$strategy",
-                                "decision_time":"$decision_time",
-                                "percentage_profit":{"$divide":[ 
-                                    "$result.profit", 
-                                    {"$multiply": [
-                                            "$result.enter.price",
-                                            { "$sum": [ "$result.enter.quantity", "$result.enter.fee" ] }
-                                        ]}]
-                                    }
-                            }
-                        }
-                    ]
-                ],
-                "source": "database",
-                "collection": "hist-trades",
-                "writers": [
-                    "histogram"
-                ]
             }
         ]
     },
@@ -531,7 +531,8 @@
             "quote_asset_leak":["binary"]
         },
         "indicators": {
-            "close":""
+            "close":"",
+            "aroon":{"timeperiod":14}
         },
         "patterns":[]
     }

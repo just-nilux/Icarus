@@ -332,6 +332,19 @@ class ImageWriter():
         plt.close()
         print(f'File saved: {target_path}')
 
+    def histogram(self, indice, report, **kwargs):
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
+
+        report.data['color'] = 'green'
+        report.data.loc[report.data.iloc[:,0] < 0, 'color'] = 'red'
+        ax = sns.barplot(x=report.data.index, y='percentage_profit', data=report.data, palette=report.data['color'].to_list()) # TODO CONTUINEU
+        ax.set(title=report.meta.title)
+        ax.tick_params(axis='x', rotation=90,  labelsize=5)
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
+
+
     def joint_histogram(self, indice, report, **kwargs):
         target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
 

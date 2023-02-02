@@ -4,10 +4,11 @@ from .StrategyBase import StrategyBase
 import json
 from ..utils import time_scale_to_minute
 
-class FixedLimitTarget(StrategyBase):
+class FixedLimitTargetAdaptive(StrategyBase):
 
     def __init__(self, _tag, _config, _symbol_info):
         super().__init__(_tag, _config, _symbol_info)
+        self.stop_entry_counter=0
         return
 
 
@@ -16,7 +17,10 @@ class FixedLimitTarget(StrategyBase):
 
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
-
+            if self.stop_entry_counter > 0:
+                self.stop_entry_counter -= 1
+                return None
+            
             time_dict = analysis_dict[ao_pair]
 
             enter_price = time_dict[self.min_period]['close'][-1]
@@ -66,4 +70,7 @@ class FixedLimitTarget(StrategyBase):
         return True
 
     async def on_closed(self, trade):
-        return True
+        # If the trade is a losing trade then stop the new entries for x iteration
+        if trade.result.exit.type != 'limit':
+            self.stop_entry_counter = self.config['kwargs'].get('stop_entry_counter',1)
+        return trade

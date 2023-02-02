@@ -21,7 +21,7 @@
     ],
     "broker": {
         "quote_currency": "USDT",
-         "fee_rate": 0.001
+         "fee_rate": 0
     },
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
@@ -292,7 +292,7 @@
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_exit_duration_6",
+    "report_folder_name": "reports_exit_duration_6_1.03_0fee",
     "report": [],
     "grid_search_reporters": {
         "grid": {
@@ -475,29 +475,6 @@
             },
             {
                 "parameters": {},
-                "reporter": "r_multiples",
-                "query_template": [
-                    [
-                        {"$match":{"result.exit.type":"oco", "strategy":"<strategy>"}},
-                        { "$project" : {
-                            "strategy":"<strategy>",
-                            "cause":"$result.cause",
-                            "duration":"$result.live_time",
-                            "enter_price":"$result.enter.price",
-                            "target_price":"$exit.price",
-                            "stop_limit_price":"$exit.stop_limit_price"
-                            }
-                        }
-                    ]
-                ],
-                "source": "database",
-                "collection": "hist-trades",
-                "writers": [
-                    "joint_histogram"
-                ]
-            },
-            {
-                "parameters": {},
                 "reporter": "trade_perc_profit",
                 "query_template": [
                     [
@@ -522,6 +499,29 @@
                 "writers": [
                     "histogram"
                 ]
+            },
+            {
+                "parameters": {},
+                "reporter": "r_multiples",
+                "query_template": [
+                    [
+                        {"$match":{"result.exit.type":"oco", "strategy":"<strategy>"}},
+                        { "$project" : {
+                            "strategy":"<strategy>",
+                            "cause":"$result.cause",
+                            "duration":"$result.live_time",
+                            "enter_price":"$result.enter.price",
+                            "target_price":"$exit.price",
+                            "stop_limit_price":"$exit.stop_limit_price"
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "joint_histogram"
+                ]
             }
         ]
     },
@@ -531,7 +531,8 @@
             "quote_asset_leak":["binary"]
         },
         "indicators": {
-            "close":""
+            "close":"",
+            "aroon":{"timeperiod":14}
         },
         "patterns":[]
     }

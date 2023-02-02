@@ -28,32 +28,21 @@
         "kwargs": {
             "initial_capital": 10000,
             "distribution_config": [
-                "FixedLimitTarget_03_BCH", "FixedOCOTarget_03_BCH"
+                "FixedLimitTarget_LTC"
             ],
             "max_capital_use":0.9, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget_03_BCH": {
+        "FixedLimitTarget_LTC": {
             "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
+            "pairs": ["LTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
                 "target_profit_coeff":1.03,
-                "exit_duration":6
-            }
-        },
-        "FixedOCOTarget_03_BCH": {
-            "strategy": "FixedOCOTarget",
-            "pairs": ["BCHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "max_loss_coeff":0.03,
-                "exit_duration":6
+                "exit_duration":24
             }
         }
     },
@@ -71,11 +60,11 @@
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_BCH",
+    "report_folder_name": "reports_LTC",
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": ["FixedLimitTarget_03_BCH", "FixedOCOTarget_03_BCH"]
+            "<strategy>": [ "FixedLimitTarget_LTC"]
         },
         "reporters": [
             {
