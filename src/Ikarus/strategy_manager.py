@@ -13,14 +13,14 @@ class StrategyManager():
 
         self.strategy_list = []
         self.strategy_names = []
-        for strategy_name in _config['strategy'].keys():
+        for strategy_tag, strategy_config in _config['strategy'].items():
             
-            if not hasattr(strategies,strategy_name):
-                raise Exception(f'Unknown strategy: {strategy_name}!')
+            if not hasattr(strategies,strategy_config['strategy']):
+                raise Exception(f'Unknown strategy: {strategy_config["strategy"]}!')
         
-            strategy_class = getattr(getattr(strategies, strategy_name),strategy_name)
-            self.strategy_list.append(strategy_class(_config, _symbol_info, **_config['strategy'][strategy_name].get('kwargs',{})))
-            self.strategy_names.append(strategy_name)
+            strategy_class = getattr(getattr(strategies, strategy_config["strategy"]),strategy_config["strategy"])
+            self.strategy_list.append(strategy_class(strategy_tag, _config, _symbol_info))
+            self.strategy_names.append(strategy_tag)
 
         self.mongo_cli = _mongo_cli
         pass

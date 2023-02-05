@@ -4,10 +4,11 @@ import json
 from ..utils import time_scale_to_minute
 from .. import position_sizing
 
-class FixedOCOTarget(StrategyBase):
+class FixedOCOTargetAdaptive(StrategyBase):
 
     def __init__(self, _tag, _config, _symbol_info):
         super().__init__(_tag, _config, _symbol_info)
+        self.stop_entry_counter=0
         return
 
 
@@ -16,7 +17,10 @@ class FixedOCOTarget(StrategyBase):
 
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share, **kwargs):
-
+        if self.stop_entry_counter > 0:
+            self.stop_entry_counter -= 1
+            return None
+        
         time_dict = analysis_dict[ao_pair]
 
         enter_price = time_dict[self.min_period]['close'][-1]
@@ -75,5 +79,7 @@ class FixedOCOTarget(StrategyBase):
             return False
         return True
 
-    async def on_closed(self, lto):
-        return lto
+    async def on_closed(self, trade):
+        if trade.result.cause != 'limit':
+            self.stop_entry_counter = self.config['kwargs'].get('stop_entry_counter',1)
+        return trade

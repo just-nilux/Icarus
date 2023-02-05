@@ -248,7 +248,7 @@ async def strategy_statistics(index, reporter_input):
     stat_count['win'] = (df['profit'] > 0).sum()
     stat_count['lose'] = (df['profit'] <= 0).sum()
 
-    stat_profit = {
+    stat_absolute_profit = {
         'best': df['profit'].max(),
         'worst': df['profit'].min(),
         'total': df['profit'].sum(),
@@ -256,16 +256,44 @@ async def strategy_statistics(index, reporter_input):
         'total_not_updated': df[df['is_updated']==False]['profit'].sum(),
         'average': df['profit'].mean(),
         'average_updated': df[df['is_updated']==True]['profit'].mean(),
-        'average_not_updated': df[df['is_updated']==False]['profit'].mean()  
+        'average_not_updated': df[df['is_updated']==False]['profit'].mean()
+    }
+
+    stat_percentage_profit = {
+        'best': df['percentage_profit'].max(),
+        'worst': df['percentage_profit'].min(),
+        'total': df['percentage_profit'].sum(),
+        'total_updated': df[df['is_updated']==True]['percentage_profit'].sum(),
+        'total_not_updated': df[df['is_updated']==False]['percentage_profit'].sum(),
+        'average': df['percentage_profit'].mean(),
+        'average_updated': df[df['is_updated']==True]['percentage_profit'].mean(),
+        'average_not_updated': df[df['is_updated']==False]['percentage_profit'].mean()
+    }
+
+    stat_price_change = {
+        'best': df['price_change'].max(),
+        'worst': df['price_change'].min(),
+        'total': df['price_change'].sum(),
+        'total_updated': df[df['is_updated']==True]['price_change'].sum(),
+        'total_not_updated': df[df['is_updated']==False]['price_change'].sum(),
+        'average': df['price_change'].mean(),
+        'average_updated': df[df['is_updated']==True]['price_change'].mean(),
+        'average_not_updated': df[df['is_updated']==False]['price_change'].mean()
     }
 
     day_in_ms = 1000*60*60*24
+    hour_in_ms = 1000*60*60
+    durations = df['duration']/hour_in_ms
+    durations[df['is_updated']==True].mean(),
     stat_duration = {
-        'max': df['duration'].max()/day_in_ms,
-        'min': df['duration'].min()/day_in_ms,
-        'total': df['duration'].sum()/day_in_ms,
-        'average': df['duration'].mean()/day_in_ms
+        'max': durations.max(),
+        'min': durations.min(),
+        'total': durations.sum(),
+        'average': durations.mean(),
+        'average_not_updated': durations[df['is_updated']==False].mean(),
+        'average_updated': durations[df['is_updated']==True].mean()
     }
+    # TODO: Add duration for enter and exit orders separetaly
 
     stat_rates = {
         'win': (df['profit'] > 0).sum() / len(df['profit']),
@@ -298,7 +326,9 @@ async def strategy_statistics(index, reporter_input):
     stats = {
         'strategy': df['strategy'][0],
         'count': stat_count,
-        'profit': stat_profit,
+        'absolute_profit': stat_absolute_profit,
+        'percentage_profit': stat_percentage_profit,
+        'price_change': stat_price_change,
         'duration':stat_duration,
         'rates': stat_rates,
         'risk': stat_risk,
@@ -312,7 +342,7 @@ async def strategy_statistics(index, reporter_input):
         
         for k,v in stat.items():
             if type(v) in [np.float64, float]:
-                stat[k] = round(v,2)
+                stat[k] = round(v,3)
             elif type(v) == np.int64:
                 stat[k] = int(v)
 
@@ -352,6 +382,28 @@ async def trade_cause(index, reporter_input):
     return  Report(report_meta, data=count_cause.to_dict())
 
 
+async def trade_perc_profit_duration_distribution(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+    df['duration'] = df['duration']/(60*60*1000)
+    report_meta = ReportMeta(
+        title='trade.result.percentage_profit: {}'.format(df['strategy'][0]),
+        filename='trade_result_percentage_profit_{}'.format(df['strategy'][0])
+        )
+    return Report(report_meta, data=df[['duration', 'percentage_profit']])
+
+
+async def trade_perc_profit(index, reporter_input):
+
+    df = pd.DataFrame(reporter_input[0])
+    df = df.set_index(df['decision_time'].astype('datetime64[ms]'))
+    report_meta = ReportMeta(
+        title='trade.result.percentage_profit: {}'.format(df['strategy'][0]),
+        filename='trade_result_percentage_profit_{}'.format(df['strategy'][0])
+        )
+    return Report(report_meta, data=df[['percentage_profit']])
+
+
 async def trade_profit_duration_distribution(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
@@ -367,11 +419,28 @@ async def strategy_capitals(index, reporter_input):
 
     df_base = pd.DataFrame(reporter_input[0])
     df = pd.DataFrame(df_base['data'].to_list(), index=df_base['ts'].astype('datetime64[ms]'))
-    df['Total'] = df.sum(axis=1)
+    #df['Total'] = df.sum(axis=1)
 
     report_meta = ReportMeta(
         title='Strategy Capitals',
         filename='strategy_capitals'
+        )
+    return Report(report_meta, data=df)
+
+
+async def strategy_capital_statistics(index, reporter_input):
+
+    capitals = [
+        reporter_input[0][0]['first_capitals'],
+        reporter_input[0][0]['last_capitals'],
+    ]
+    df = pd.DataFrame(capitals, index=['first','last']).T
+
+    df['percentage_profit'] = ((df['last']-df['first']) / df['first'] * 100).round(2)
+
+    report_meta = ReportMeta(
+        title='Strategy Capital Statistics',
+        filename='strategy_capital_statistics'
         )
     return Report(report_meta, data=df)
 

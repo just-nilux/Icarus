@@ -332,6 +332,19 @@ class ImageWriter():
         plt.close()
         print(f'File saved: {target_path}')
 
+    def histogram(self, indice, report, **kwargs):
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
+
+        report.data['color'] = 'green'
+        report.data.loc[report.data.iloc[:,0] < 0, 'color'] = 'red'
+        ax = sns.barplot(x=report.data.index, y='percentage_profit', data=report.data, palette=report.data['color'].to_list()) # TODO CONTUINEU
+        ax.set(title=report.meta.title)
+        ax.tick_params(axis='x', rotation=90,  labelsize=5)
+        plt.savefig(target_path)
+        plt.close()
+        print(f'File saved: {target_path}')
+
+
     def joint_histogram(self, indice, report, **kwargs):
         target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
 
@@ -523,18 +536,18 @@ class MarkdownWriter():
         pass
 
 
-    def markdown_table(self, indice, report_data, **kwargs):
+    def markdown_table(self, indice, report, **kwargs):
 
-        if type(report_data) == dict:
-            df = pd.DataFrame(data=report_data)
-        elif type(report_data) == pd.DataFrame:
-            df = report_data
+        if type(report.data) == dict:
+            df = pd.DataFrame(data=report.data)
+        elif type(report.data) == pd.DataFrame:
+            df = report.data
 
-        title = evaluate_filename(kwargs['reporter'], indice, special_char=False)
+        #title = evaluate_filename(kwargs['reporter'], indice, special_char=False)
         
-        self.md_file.write(title, color='yellow', bold_italics_code='b')
+        self.md_file.write(report.meta.title, color='yellow', bold_italics_code='b')
         self.md_file.write('\n' + df.to_markdown() + '\n\n')
-        print(f'Table created: {title}')
+        print(f'Table created: {report.meta.title}')
         pass
 
 

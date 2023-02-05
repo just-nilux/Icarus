@@ -16,9 +16,14 @@ from . import balance_manager
 import more_itertools
 from .objects import OCO, ECause, ECommand, EState, Limit, Market, trade_to_dict
 from abc import ABC, abstractmethod
+from . import binance_filters
+import os
+from collections import defaultdict
 
 logger = logging.getLogger('app')
 
+# This variable added as deus ex machina
+symbol_info = None
 
 class BrokerWrapper(ABC):
     @abstractmethod
@@ -756,6 +761,7 @@ class TestBinanceWrapper():
 
 
     async def get_all_symbol_info(self, all_pairs):
+        global symbol_info
         all_info = await self.client.get_exchange_info()
 
         selected_info = {}
@@ -763,6 +769,7 @@ class TestBinanceWrapper():
             if item['symbol'] in all_pairs:
                 selected_info[item['symbol']] = item
 
+        symbol_info =selected_info
         return selected_info
 
 
@@ -858,7 +865,6 @@ class TestBinanceWrapper():
         meta_data_pool = [('1m', 'BTCUSDT'), ('15m', 'BTCUSDT'), ('15m', 'XRPUSDT')]
         length = meta_do['time_scale']
         """
-
         tasks_klines_scales = []
         for meta_data in meta_data_pool:
             if type(session_start_time) == int:
@@ -869,11 +875,55 @@ class TestBinanceWrapper():
 
             tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(meta_data[1], meta_data[0], start_str=hist_data_start_time, end_str=session_end_time )))
         composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
-        self.downloaded_data = await self.decompose(meta_data_pool, composit_klines)
+        downloaded_data = await self.decompose(meta_data_pool, composit_klines)
         logger.debug('download ended')
 
-        # The returned dict supposed to be used by the visulize_indicators.py
-        return self.downloaded_data
+        return downloaded_data
+    
+
+    async def obtain_candlesticks(self, meta_data_pool, session_start_time, session_end_time):
+        not_found_meta_data_pool, data_dict = self.load_candlesticks(meta_data_pool, session_start_time, session_end_time)
+        
+        if not_found_meta_data_pool:
+            downloaded_data = await self.download_all_data(not_found_meta_data_pool, session_start_time, session_end_time)
+
+            # Only save the candlesticks of not_found_meta_data_pool
+            for nfmt in not_found_meta_data_pool:
+                data_dict[nfmt[1]][nfmt[0]] = downloaded_data[nfmt[1]][nfmt[0]]
+            
+            # TODO: Cover the cases where the data is not properly downloaded
+            self.save_candlesticks(not_found_meta_data_pool, downloaded_data, session_start_time, session_end_time)
+
+        self.downloaded_data = data_dict
+
+    
+    def save_candlesticks(self, meta_data_pool, downloaded_data, session_start_time, session_end_time):
+
+        filename_template = '{}-{}-{}-{}.csv'
+        for meta_data in meta_data_pool:
+            filename = filename_template.format(meta_data[1], meta_data[0], session_start_time, session_end_time)
+            downloaded_data[meta_data[1]][ meta_data[0]].to_csv(filename)
+            logger.debug(f'File saved: {filename}')
+
+
+    def load_candlesticks(self, meta_data_pool, session_start_time, session_end_time):
+        filename_template = '{}-{}-{}-{}.csv'
+        recursive_dict = lambda: defaultdict(recursive_dict)
+        data_dict = recursive_dict()
+        
+        not_found_meta_data = []
+        for meta_data in meta_data_pool:
+            filename = filename_template.format(meta_data[1], meta_data[0], session_start_time, session_end_time)
+
+            if not os.path.isfile(filename):
+                not_found_meta_data.append(meta_data)
+                logger.debug(f'File cannot be loaded: {filename}')
+                continue
+            
+            data_dict[meta_data[1]][meta_data[0]] = pd.read_csv(filename, index_col=0)
+            logger.debug(f'File loaded: {filename}')
+        
+        return not_found_meta_data, data_dict
 
 
     async def get_data_dict_download(self, meta_data_pool, ikarus_time):
@@ -1020,7 +1070,7 @@ class TestBinanceWrapper():
 
 
 async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping, df_balance, quote_currency):
-
+    global symbol_info
     # NOTE: Only get the related LTOs and ONLY update the related LTOs. Doing the same thing here is pointless.
     for i in range(len(trade_list)):
         pair = trade_list[i].pair
@@ -1052,6 +1102,7 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
                 # for the market buy orders
 
                 market_order_qty = safe_divide(trade_list[i].enter.amount, float(last_kline['open']))
+                market_order_qty = binance_filters.lot_size(market_order_qty, symbol_info[trade_list[i].pair])
                 trade_list[i].set_result_enter( last_closed_candle_open_time, 
                     price=float(last_kline['open']),
                     quantity=market_order_qty,
