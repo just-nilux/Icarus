@@ -15,7 +15,7 @@
     "balances": [
         {
             "asset": "USDT", 
-            "free": 10000, 
+            "free": 20000, 
             "locked": 0
         }
     ],
@@ -26,23 +26,72 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "initial_capital": 10000,
+            "initial_capital": 20000,
             "distribution_config": [
-                "FixedLimitTarget_LTC"
+                "FixedOCOTarget_DIA",  "FixedOCOTargetAdaptive1_DIA", "FixedOCOTargetAdaptive6_DIA", "FixedOCOTargetAdaptive12_DIA", "FixedOCOTargetAdaptive24_DIA"
             ],
             "max_capital_use":0.9, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget_LTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["LTCUSDT"],
+        "FixedOCOTarget_DIA": {
+            "strategy": "FixedOCOTarget",
+            "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
+                "target_profit_coeff":1.02,
+                "exit_duration":24,
+                "max_loss_coeff": 0.05
+            }
+        },
+        "FixedOCOTargetAdaptive1_DIA": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["DIAUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.02,
+                "exit_duration":24,
+                "stop_entry_counter":1,
+                "max_loss_coeff": 0.05
+            }
+        },
+        "FixedOCOTargetAdaptive6_DIA": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["DIAUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.02,
+                "exit_duration":24,
+                "stop_entry_counter":6,
+                "max_loss_coeff": 0.05
+            }
+        },
+        "FixedOCOTargetAdaptive12_DIA": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["DIAUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.02,
+                "exit_duration":24,
+                "stop_entry_counter":12,
+                "max_loss_coeff": 0.05
+            }
+        },
+        "FixedOCOTargetAdaptive24_DIA": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["DIAUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.02,
+                "exit_duration":24,
+                "stop_entry_counter":24,
+                "max_loss_coeff": 0.05
             }
         }
     },
@@ -60,11 +109,11 @@
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_LTC",
+    "report_folder_name": "reports_oco_adaptive_DIA_24_1.02",
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": [ "FixedLimitTarget_LTC"]
+            "<strategy>": [ "FixedOCOTarget_DIA",  "FixedOCOTargetAdaptive1_DIA", "FixedOCOTargetAdaptive6_DIA", "FixedOCOTargetAdaptive12_DIA", "FixedOCOTargetAdaptive24_DIA"]
         },
         "reporters": [
             {

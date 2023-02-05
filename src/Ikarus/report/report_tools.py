@@ -419,7 +419,7 @@ async def strategy_capitals(index, reporter_input):
 
     df_base = pd.DataFrame(reporter_input[0])
     df = pd.DataFrame(df_base['data'].to_list(), index=df_base['ts'].astype('datetime64[ms]'))
-    df['Total'] = df.sum(axis=1)
+    #df['Total'] = df.sum(axis=1)
 
     report_meta = ReportMeta(
         title='Strategy Capitals',

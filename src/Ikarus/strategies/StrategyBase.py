@@ -79,6 +79,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
             # NOTE: expire of the exit_module can be calculated after the trade entered
             is_success = await self.on_waiting_exit(trade, analysis_dict, ikarus_time=ikarus_time, strategy_capital=strategy_capital)
 
+        elif trade.status == EState.CLOSED:
+            is_success = await self.on_closed(trade)
+
         else:
             is_success = True
         return is_success

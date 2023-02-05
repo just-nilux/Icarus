@@ -15,7 +15,7 @@
     "balances": [
         {
             "asset": "USDT", 
-            "free": 40000, 
+            "free": 20000, 
             "locked": 0
         }
     ],
@@ -26,108 +26,17 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "initial_capital": 40000,
+            "initial_capital": 20000,
             "distribution_config": [
-                "FixedLimitTarget_03_XLM", "FixedLimitTarget_03_DIA", "FixedLimitTarget_03_LTC", "FixedLimitTarget_03_XRP", "FixedLimitTarget_03_BTC", "FixedLimitTarget_03_BCH", "FixedLimitTarget_03_ETC","FixedLimitTarget_03_DASH",
-                "FixedLimitTarget_02_XLM", "FixedLimitTarget_02_DIA", "FixedLimitTarget_02_LTC", "FixedLimitTarget_02_XRP", "FixedLimitTarget_02_BTC", "FixedLimitTarget_02_BCH", "FixedLimitTarget_02_ETC","FixedLimitTarget_02_DASH",
-                "FixedLimitTarget_01_XLM", "FixedLimitTarget_01_DIA", "FixedLimitTarget_01_LTC", "FixedLimitTarget_01_XRP", "FixedLimitTarget_01_BTC", "FixedLimitTarget_01_BCH", "FixedLimitTarget_01_ETC","FixedLimitTarget_01_DASH"
+                "FixedLimitTarget_DIA_24_02", "FixedLimitTarget_LTC_24_03", "FixedLimitTargetAdaptive_DIA_24_12_02",  "FixedLimitTargetAdaptive_LTC_24_24_03",
+                "FixedOCOTarget_LTC_24_03", "FixedOCOTarget_DIA_24_03", "FixedOCOTargetAdaptive_LTC_24_12_03",  "FixedOCOTargetAdaptive_DIA_24_12_03"
             ],
             "max_capital_use":0.9, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget_03_XLM": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XLMUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_DIA": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DIAUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_LTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["LTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_XRP": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_BTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_BCH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_ETC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["ETCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_03_DASH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DASHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.03,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_02_XLM": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XLMUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_02_DIA": {
+        "FixedLimitTarget_DIA_24_02": {
             "strategy": "FixedLimitTarget",
             "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
@@ -137,144 +46,82 @@
                 "exit_duration":24
             }
         },
-        "FixedLimitTarget_02_LTC": {
+        "FixedLimitTarget_LTC_24_03": {
             "strategy": "FixedLimitTarget",
             "pairs": ["LTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.02,
+                "target_profit_coeff":1.03,
                 "exit_duration":24
             }
         },
-        "FixedLimitTarget_02_XRP": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_02_BTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BTCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":24
-            }
-        },        
-        "FixedLimitTarget_02_BCH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_02_ETC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["ETCUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_02_DASH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DASHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.02,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_01_XLM": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XLMUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_01_DIA": {
-            "strategy": "FixedLimitTarget",
+        "FixedLimitTargetAdaptive_DIA_24_12_02": {
+            "strategy": "FixedLimitTargetAdaptive",
             "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
+                "target_profit_coeff":1.02,
+                "exit_duration":24,
+                "stop_entry_counter":12
             }
         },
-        "FixedLimitTarget_01_LTC": {
-            "strategy": "FixedLimitTarget",
+        "FixedLimitTargetAdaptive_LTC_24_24_03": {
+            "strategy": "FixedLimitTargetAdaptive",
             "pairs": ["LTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "stop_entry_counter":24
             }
         },
-        "FixedLimitTarget_01_XRP": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["XRPUSDT"],
+        "FixedOCOTarget_LTC_24_03": {
+            "strategy": "FixedOCOTarget",
+            "pairs": ["LTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "max_loss_coeff": 0.05
             }
         },
-        "FixedLimitTarget_01_BTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BTCUSDT"],
+        "FixedOCOTarget_DIA_24_03": {
+            "strategy": "FixedOCOTarget",
+            "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "max_loss_coeff": 0.05
             }
         },
-        "FixedLimitTarget_01_BCH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
+        "FixedOCOTargetAdaptive_LTC_24_12_03": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["LTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "stop_entry_counter":12,
+                "max_loss_coeff": 0.05
             }
         },
-        "FixedLimitTarget_01_ETC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["ETCUSDT"],
+        "FixedOCOTargetAdaptive_DIA_24_12_03": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
-            }
-        },
-        "FixedLimitTarget_01_DASH": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["DASHUSDT"],
-            "time_scales": ["1h"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "exit_duration":24
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "stop_entry_counter":12,
+                "max_loss_coeff": 0.05
             }
         }
     },
@@ -285,22 +132,21 @@
         "1h": 3
     },
     "backtest":{
-        "start_time": "2022-8-20 00:00:00",
-        "end_time": "2022-11-24 00:00:00",
+        "start_time": "2022-1-1 00:00:00",
+        "end_time": "2023-1-1 00:00:00",
         "online": true,
         "breakpoints": {
             "1668927600000":""
         }
     },
-    "report_folder_name": "reports_exit_duration_24",
+    "report_folder_name": "reports_2022",
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": [
-                "FixedLimitTarget_03_XLM", "FixedLimitTarget_03_DIA", "FixedLimitTarget_03_LTC", "FixedLimitTarget_03_XRP", "FixedLimitTarget_03_BTC", "FixedLimitTarget_03_BCH", "FixedLimitTarget_03_ETC","FixedLimitTarget_03_DASH",
-                "FixedLimitTarget_02_XLM", "FixedLimitTarget_02_DIA", "FixedLimitTarget_02_LTC", "FixedLimitTarget_02_XRP", "FixedLimitTarget_02_BTC", "FixedLimitTarget_02_BCH", "FixedLimitTarget_02_ETC","FixedLimitTarget_02_DASH",
-                "FixedLimitTarget_01_XLM", "FixedLimitTarget_01_DIA", "FixedLimitTarget_01_LTC", "FixedLimitTarget_01_XRP", "FixedLimitTarget_01_BTC", "FixedLimitTarget_01_BCH", "FixedLimitTarget_01_ETC","FixedLimitTarget_01_DASH"
-            ]
+            "<strategy>": [ 
+                "FixedLimitTarget_DIA_24_02", "FixedLimitTarget_LTC_24_03", "FixedLimitTargetAdaptive_DIA_24_12_02",  "FixedLimitTargetAdaptive_LTC_24_24_03",
+                "FixedOCOTarget_LTC_24_03", "FixedOCOTarget_DIA_24_03", "FixedOCOTargetAdaptive_LTC_24_12_03",  "FixedOCOTargetAdaptive_DIA_24_12_03"
+             ]
         },
         "reporters": [
             {
@@ -363,6 +209,33 @@
             },
             {
                 "parameters": {},
+                "reporter": "trade_perc_profit_duration_distribution",
+                "query_template": [
+                    [
+                        {"$match":{"strategy":"<strategy>"}},
+                        {
+                            "$project": {
+                                "strategy":"$strategy",
+                                "duration":"$result.live_time",
+                                "percentage_profit":{"$divide":[ 
+                                    "$result.profit", 
+                                    {"$multiply": [
+                                            "$result.enter.price",
+                                            { "$sum": [ "$result.enter.quantity", "$result.enter.fee" ] }
+                                        ]}]
+                                    }
+                            }
+                        }
+                    ]
+                ],
+                "source": "database",
+                "collection": "hist-trades",
+                "writers": [
+                    "joint_histogram"
+                ]
+            },
+            {
+                "parameters": {},
                 "reporter": "trade_perc_profit",
                 "query_template": [
                     [
@@ -386,27 +259,6 @@
                 "collection": "hist-trades",
                 "writers": [
                     "histogram"
-                ]
-            },
-            {
-                "parameters": {},
-                "reporter": "trade_profit_duration_distribution",
-                "query_template": [
-                    [
-                        {"$match":{"strategy":"<strategy>"}},
-                        {
-                            "$project": {
-                                "strategy":"$strategy",
-                                "profit": "$result.profit",
-                                "duration":"$result.live_time"
-                            }
-                        }
-                    ]
-                ],
-                "source": "database",
-                "collection": "hist-trades",
-                "writers": [
-                    "joint_histogram"
                 ]
             },
             {
