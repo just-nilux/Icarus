@@ -96,10 +96,9 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     new_trade_list = [i for i in new_trade_list if i is not None]
 
     if len(new_trade_list):
-        # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
+        # Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades", [trade_to_dict(new_trade) for new_trade in new_trade_list])
 
-    # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
     obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
@@ -121,9 +120,6 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
 
-    
-    if observation_obj['binary'] == 0:
-        x=2
     obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
 
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
@@ -145,7 +141,7 @@ async def main():
     client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
                                       api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
     bwrapper = TestBinanceWrapper(client, config)
-    all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
+    all_pairs = [strategy['pairs'] for strategy in config['strategy'].values()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
@@ -204,9 +200,6 @@ if __name__ == '__main__':
     
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
-
-    if len(sys.argv) >=3:
-        config['credential_file'] = str(sys.argv[2])
 
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)

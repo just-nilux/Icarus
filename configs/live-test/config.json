@@ -1,0 +1,86 @@
+{
+    "tag": "bot",
+    "log":{
+        "level": "DEBUG",
+        "file": "log/test-ikarus-app.log",
+        "clear": true
+    },
+    "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
+    "mongodb":{
+        "database": "live-test",
+        "host": "localhost",
+        "port": 27017,
+        "clean": false
+    },
+    "notification":{
+        "telegram": {
+            "hto": true,
+            "lto": true,
+            "app": true,
+            "error": true,
+            "daily": true,
+            "stat": true,
+            "market": false
+        },
+        "mail": false
+    },
+    "broker": {
+        "quote_currency": "USDT",
+        "fee_rate": 0.001
+    },
+    "strategy_allocation":{
+        "type": "DiscreteStrategyAllocator",
+        "kwargs": {
+            "initial_capital": 10000,
+            "distribution_config": [
+                "FixedLimitTarget_03_BTC", "FixedOCOTarget_03_BTC"
+            ],
+            "max_capital_use":0.9, 
+            "stop_capital":null
+        }
+    },
+    "strategy": {
+        "FixedLimitTarget_03_BTC": {
+            "strategy": "FixedLimitTarget",
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1m"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.03,
+                "exit_duration":6
+            }
+        },
+        "FixedOCOTarget_03_BTC": {
+            "strategy": "FixedOCOTarget",
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1m"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.03,
+                "max_loss_coeff":0.03,
+                "exit_duration":6
+            }
+        }
+    },
+    "analysis": {
+        "close":{}
+    },
+    "time_scales": {
+        "1m": 3,
+        "1h": 3
+    },
+    "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters":{},
+    "visualization":{
+        "observers":{
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
+        },
+        "indicators": {
+            "close":"",
+            "aroon":{"timeperiod":14}
+        },
+        "patterns":[]
+    }
+}

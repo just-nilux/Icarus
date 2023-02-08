@@ -13,10 +13,10 @@ class EMail():
 
 class TelegramBot():
 
-    def __init__(self, _token, _chatId, _telegram_config):
-        self.updater = Updater(_token)
-        self.chatId = _chatId
-        self.telegram_config = _telegram_config
+    def __init__(self, token, chat_id, telegram_config):
+        self.updater = Updater(token)
+        self.chatId = chat_id
+        self.telegram_config = telegram_config
 
         # Start the Bot
         #self.updater.start_polling()
