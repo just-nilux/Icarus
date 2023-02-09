@@ -31,7 +31,6 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "initial_capital": 10000,
             "distribution_config": [
                 "FixedLimitTarget_03_BTC", "FixedOCOTarget_03_BTC"
             ],
@@ -52,7 +51,7 @@
         },
         "FixedOCOTarget_03_BTC": {
             "strategy": "FixedOCOTarget",
-            "pairs": ["BTCUSDT"],
+            "pairs": ["ETHUSDT"],
             "time_scales": ["1m"],
             "max_live_trade": 1,
             "kwargs":{

@@ -3,7 +3,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus.broker import TestBinanceWrapper, sync_trades_of_backtest
+from Ikarus.brokers.backtest_wrapper import BacktestWrapper, sync_trades_of_backtest
 from Ikarus import strategy_manager, analyzers, mongo_utils, trade_statistics
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
@@ -138,9 +138,8 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 async def main():
 
     # Create a Async Binance client and receive initial information
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
-                                      api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
-    bwrapper = TestBinanceWrapper(client, config)
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = BacktestWrapper(client, config)
     all_pairs = [strategy['pairs'] for strategy in config['strategy'].values()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
@@ -160,7 +159,7 @@ async def main():
     if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration
-    TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
+    BacktestWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
     initial_observer = Observer(EObserverType.BALANCE, None, config['balances']).to_dict()

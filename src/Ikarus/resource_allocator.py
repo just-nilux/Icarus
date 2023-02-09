@@ -20,7 +20,7 @@ class DiscreteStrategyAllocator():
     },
     '''
 
-    def __init__(self, initial_capital, distribution_config, max_capital_use=1, stop_capital=None) -> None:
+    def __init__(self, distribution_config, initial_capital=None, max_capital_use=1, stop_capital=None) -> None:
 
         # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
         self.max_capital_use = max_capital_use
@@ -34,6 +34,11 @@ class DiscreteStrategyAllocator():
         elif type(distribution_config) == dict:
             self.distribution_config = distribution_config
 
+        if initial_capital != None:
+            self.set_capital(initial_capital)
+
+
+    def set_capital(self, initial_capital):
         self.strategy_capitals = {key: safe_multiply(value,initial_capital) for key, value in self.distribution_config.items()}
         self.distribution_status = self.distribute()
 
@@ -47,6 +52,10 @@ class DiscreteStrategyAllocator():
 
 
     def allocate(self, df_balance, live_trades):
+
+        if not hasattr(self,'strategy_capitals'):
+            # NOTE: Temporary solution
+            self.set_capital(df_balance.loc['USDT','free'])
 
         # Check if a trade is closed
         #   If so, apply the profit amount to the self.distribution_status['strategy1']
