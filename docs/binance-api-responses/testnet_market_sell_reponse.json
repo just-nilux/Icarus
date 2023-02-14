@@ -1,0 +1,87 @@
+{
+    "symbol": "BTCUSDT",
+    "orderId": 5831609,
+    "orderListId": -1,
+    "clientOrderId": "0RVHd45JcPNGwqrwkC3MOl",
+    "transactTime": 1676413588271,
+    "price": "0.00000000",
+    "origQty": "0.10000000",
+    "executedQty": "0.10000000",
+    "cummulativeQuoteQty": "2220.43608501",
+    "status": "FILLED",
+    "timeInForce": "GTC",
+    "type": "MARKET",
+    "side": "SELL",
+    "workingTime": 1676413588271,
+    "fills": [
+        {
+            "price": "22204.40000000",
+            "qty": "0.08737100",
+            "commission": "0.00000000",
+            "commissionAsset": "USDT",
+            "tradeId": 2037580
+        },
+        {
+            "price": "22204.09000000",
+            "qty": "0.01262900",
+            "commission": "0.00000000",
+            "commissionAsset": "USDT",
+            "tradeId": 2037581
+        }
+    ],
+    "selfTradePreventionMode": "NONE"
+}
+
+{
+    "symbol": "BTCUSDT",
+    "orderId": 5834806,
+    "orderListId": -1,
+    "clientOrderId": "ujmTdc6XXpLPxrGsHPPXZn",
+    "transactTime": 1676414173521,
+    "price": "0.00000000",
+    "origQty": "0.10000000",
+    "executedQty": "0.10000000",
+    "cummulativeQuoteQty": "2220.05800000",
+    "status": "FILLED",
+    "timeInForce": "GTC",
+    "type": "MARKET",
+    "side": "SELL",
+    "workingTime": 1676414173521,
+    "fills": [
+        {
+            "price": "22200.58000000",
+            "qty": "0.10000000",
+            "commission": "0.00000000",
+            "commissionAsset": "USDT",
+            "tradeId": 2038431
+        }
+    ],
+    "selfTradePreventionMode": "NONE"
+}
+
+{
+    "symbol": "BTCUSDT",
+    "orderId": 5847146,
+    "orderListId": -1,
+    "clientOrderId": "lO8Rw4RBSC24BC600Iguxf",
+    "transactTime": 1676416304161,
+    "price": "0.00000000",
+    "origQty": "0.01000000",
+    "executedQty": "0.01000000",
+    "cummulativeQuoteQty": "222.50740000",
+    "status": "FILLED",
+    "timeInForce": "GTC",
+    "type": "MARKET",
+    "side": "SELL",
+    "workingTime": 1676416304161,
+    "fills": [
+        {
+            "price": "22250.74000000",
+            "qty": "0.01000000",
+            "commission": "0.00000000",
+            "commissionAsset": "USDT",
+            "tradeId": 2041759
+        }
+    ],
+    "selfTradePreventionMode": "NONE"
+}

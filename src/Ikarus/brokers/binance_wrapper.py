@@ -5,13 +5,15 @@ import pandas as pd
 import logging
 import json
 import bson
-import copy
+import sys
 from ..utils import time_scale_to_second, get_min_scale, \
     safe_multiply, safe_divide, round_to_period
 import more_itertools
 from .. import binance_filters
-from ..objects import OCO, ECause, ECommand, EState, Limit, Market, trade_to_dict
+from ..objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
+from ..utils import setup_logger
 from dataclasses import asdict
+from binance import AsyncClient
 
 logger = logging.getLogger('app')
 
@@ -92,7 +94,7 @@ class BinanceWrapper():
         return selected_info
 
 
-    async def get_current_balance(self):
+    async def get_current_balance(self) -> pd.DataFrame:
 
         df_balance = await self.get_info()
         return df_balance
@@ -177,32 +179,32 @@ class BinanceWrapper():
         return data_dict
 
 
-    async def get_trade_orders(self, lto_list):
-
-        logger.debug('get_lto_orders started')
+    async def get_trade_orders(self, trades):
+        
+        if len(trades) == 0:
+            return {}
 
         # Check the status of LTOs:
         coroutines = []
-        for lto in lto_list:
-            if lto['status'] in [STAT_OPEN_ENTER, STAT_ENTER_EXP]:
-                coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['enter'][TYPE_LIMIT]['orderId']))
+        for trade in trades:
+            if trade.status in EState.OPEN_ENTER:
+                coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.enter.orderId))
 
-            elif lto['status'] in [STAT_OPEN_EXIT, STAT_EXIT_EXP]:
-                if self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_LIMIT:
-                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_LIMIT]['orderId']))
-                elif self.config['strategy'][lto['strategy']]['exit']['type'] == TYPE_OCO:
-                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['orderId']))
-                    coroutines.append(self.client.get_order(symbol=lto['pair'], orderId=lto['exit'][TYPE_OCO]['stopLimit_orderId']))
+            elif trade.status in EState.OPEN_EXIT:
+                coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.orderId))
+                    
+                if type(trade.exit) == OCO:
+                    coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.stop_limit_orderId))
             else: pass
 
-        lto_orders_dict = {}
-        if len(coroutines):
-            for order in list(await asyncio.gather(*coroutines)):
-                lto_orders_dict[order['orderId']] = order
+        if len(coroutines) == 0:
+            return {}
         
-        logger.debug('get_lto_orders started')
+        orders = {}
+        for order in list(await asyncio.gather(*coroutines)):
+            orders[order['orderId']] = order
 
-        return lto_orders_dict
+        return orders
 
 
     async def _execute_oco_sell(self, lto):
@@ -308,7 +310,7 @@ class BinanceWrapper():
             return True
 
 
-    async def _execute_market_buy(self, trade):
+    async def _execute_market_buy(self, trade: Trade):
         try:
             logger.debug(asdict(trade.enter))
             response = await self.client.order_market_buy(
@@ -322,79 +324,74 @@ class BinanceWrapper():
 
         else:
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
-            lto[PHASE_ENTER][TYPE_MARKET]['orderId'] = response['orderId']
+            trade.enter.orderId = response['orderId']
+            trade.status = EState.OPEN_ENTER
 
-            lto['status'] = STAT_WAITING_EXIT
-            lto['history'].append(lto['status'])
+            if response['status'] != ORDER_STATUS_FILLED:
+                return True
             
-            if response['executedQty'] != response['origQty']:
-                # TODO: Send an Error msg
-                pass
             avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in response['fills']]), response['executedQty'])
         
-            strategy_cycle_period = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+            strategy_cycle_period = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
             strategy_cycle_period_in_sec = time_scale_to_second(strategy_cycle_period)
             time_value = int(response["transactTime"]/1000)
 
             # Get the start time of the current candle
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
-            lto['result'][PHASE_ENTER]['type'] = TYPE_MARKET
-            lto['result'][PHASE_ENTER]['time'] = execution_time*1000
-            lto['result'][PHASE_ENTER]['price'] = avg_price
-            lto['result'][PHASE_ENTER]['quantity'] = float(response["executedQty"])
-            lto['result'][PHASE_ENTER]['amount'] = float(lto['result'][PHASE_ENTER]['price'] * lto['result'][PHASE_ENTER]['quantity'])
-            lto['result'][PHASE_ENTER]['fee'] = calculate_fee(lto['result'][PHASE_ENTER]['amount'], TestBinanceWrapper.fee_rate)   # TODO: Obtain the comission from the order
-            return True
+            base_cur = trade.pair.replace(self.quote_currency,'')
+            fee_sum = 0
+            for fill in response['fills']:
+                if fill['commissionAsset'] == base_cur:
+                    fee_sum += float(fill['commission'])
 
-    async def _execute_market_sell(self, lto):
+            trade.set_result_enter( execution_time*1000, 
+                price=avg_price,
+                quantity=float(response["executedQty"]),
+                fee=fee_sum)
+            
+        return True
+
+    async def _execute_market_sell(self, trade: Trade):
         try:
+            logger.debug(asdict(trade.exit))
             response = await self.client.order_market_sell(
-                symbol=lto['pair'],
-                quantity=lto[PHASE_EXIT][TYPE_MARKET]['quantity'])
+                symbol=trade.pair,
+                quantity=trade.exit.quantity)
             logger.debug(json.dumps(response))
-            logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
 
         except Exception as e:
-            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            logger.debug(json.dumps(lto[PHASE_EXIT][TYPE_MARKET]))
+            logger.error(f"{e}")
             return False
 
         else:
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
-            lto[PHASE_EXIT][TYPE_MARKET]['orderId'] = response['orderId']
+            trade.exit.orderId = response['orderId']
+            trade.status = EState.OPEN_EXIT
 
-            lto['status'] = STAT_CLOSED
-            lto['history'].append(lto['status'])
-            lto['result']['cause'] = STAT_CLOSED
-
-            if response['executedQty'] != response['origQty']:
-                # TODO: Send an Error msg
-                pass
+            if response['status'] != ORDER_STATUS_FILLED:
+                return True
             
             avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in response['fills']]), response['executedQty'])
         
-            strategy_cycle_period = await get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][lto['strategy']]['time_scales'])
+            strategy_cycle_period = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
             strategy_cycle_period_in_sec = time_scale_to_second(strategy_cycle_period)
             time_value = int(response["transactTime"]/1000)
 
             # Get the start time of the current candle
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
-            lto['result'][PHASE_EXIT]['type'] = TYPE_MARKET
-            lto['result'][PHASE_EXIT]['time'] = execution_time*1000
-            lto['result'][PHASE_EXIT]['price'] = avg_price
-            lto['result'][PHASE_EXIT]['quantity'] = float(response["executedQty"])
-            lto['result'][PHASE_EXIT]['amount'] = float(lto['result'][PHASE_EXIT]['price'] * lto['result'][PHASE_EXIT]['quantity'])
-            lto['result'][PHASE_EXIT]['fee'] = calculate_fee(lto['result'][PHASE_EXIT]['amount'], TestBinanceWrapper.fee_rate)
+            fee_sum = 0
+            for fill in response['fills']:
+                if fill['commissionAsset'] == self.quote_currency:
+                    fee_sum += float(fill['commission'])
 
-            lto['result']['profit'] = lto['result'][PHASE_EXIT]['amount'] \
-                - lto['result'][PHASE_ENTER]['amount'] \
-                - lto['result'][PHASE_ENTER]['fee'] \
-                - lto['result'][PHASE_EXIT]['fee']
-            lto['result']['liveTime'] = lto['result'][PHASE_EXIT]['time'] - lto['result'][PHASE_ENTER]['time']
-
-            self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response["orderId"], EVENT_FILLED])
+            trade.set_result_exit( execution_time*1000, 
+                price=avg_price,
+                quantity=float(response["executedQty"]),
+                fee=fee_sum,
+                cause=ECause.MARKET)
+            logger.debug(asdict(trade.result.exit))
 
             return True
 
@@ -515,7 +512,35 @@ class BinanceWrapper():
         await self._execute_nto(new_trades)
 
 
-async def sync_trades_with_orders(trade_list, data_dict, strategy_period_mapping, orders_dict):
+async def sync_trades_with_orders(trades, data_dict, strategy_period_mapping, order_mapping):
+
+    for i in range(len(trades)):
+
+        if trades[i].status == EState.WAITING_ENTER:
+            # Do nothing
+            pass
+        elif trades[i].status == EState.OPEN_ENTER:
+            # Check order
+            # Check Expired
+            pass
+        elif trades[i].status == EState.ENTER_EXP:
+            # Do nothing
+            pass
+        elif trades[i].status == EState.WAITING_EXIT:
+            # Do nothing
+            pass
+        elif trades[i].status == EState.OPEN_EXIT:
+            # Check order
+            # Check Expired
+            pass  
+        elif trades[i].status == EState.EXIT_EXP:
+            pass
+        elif trades[i].status == EState.CLOSED:
+            # Do nothing
+            pass
+
+
+async def sync_trades_with_orders_old(trades, data_dict, strategy_period_mapping, order_mapping):
 
 
     # NOTE: In broker, an OCO order actually 2 different orders. The solution might be:
@@ -525,35 +550,30 @@ async def sync_trades_with_orders(trade_list, data_dict, strategy_period_mapping
     #       - If the limit_maker İS CANCELED they bot oco orders canceld and this is an external touch
     #       : Keep the limit_maker as the 'tradeid' of the lto and keep the oco_stoploss in that lto. If needed reach it.
 
-    # NOTE: Each lto with enter/exit type TYPE_LIMIT has 1 order in orders_dict. However, each OCO exit has 2 orders in orders dict.
-    #       len(orders_dict) >= len(lto_dict)
+    # NOTE: OCO type orders have 2 orderId
 
-    for i in range(len(trade_list)):
+    for i in range(len(trades)):
 
-        if trade_list[i].status == EState.WAITING_EXIT:
+        if trades[i].status == EState.WAITING_EXIT:
             # NOTE: If the condition is true, then there is no active order for that LTO, so the statement: orders_dict[orderId]
             #       will cause exception since there is no orderId
             continue
 
-        pair = trade_list[i].pair
+        pair = trades[i].pair
 
         #scale = list(data_dict[pair].keys())[0]
         #last_closed_candle_open_time = bson.Int64(data_dict[pair][scale].index[-1])  # current_candle open_time
         # NOTE: last_closed_candle_open_time is used because for the anything that happens: it happend in the last closed kline
 
-        strategy_min_scale = strategy_period_mapping[lto_list[i]['strategy']]
+        strategy_min_scale = strategy_period_mapping[trades[i].strategy]
         last_kline = data_dict[pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
 
-        phase_lto = get_lto_phase(lto_list[i])
-        type = config['strategy'][lto_list[i]['strategy']][phase_lto]['type']
         orderId = lto_list[i][phase_lto][type]['orderId'] # Get the orderId of the exit module
 
-        # BUG: If the lto has market enter order or simply the exit order execution failed, then the status will remain STAT_WAITING_EXIT.
-        #       In this case the phase become the PHASE_EXIT and the order ID is searched for the exit order which does not exist yet
         if orders_dict[orderId]['status'] == 'CANCELED':
             logger.warning(f'LTO: "{lto_list[i]["_id"]}": canceled at the phase {phase_lto}. Order ID: {orderId}. Closing the LTO')
-            telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], phase_lto, orderId, 'manually canceled'])
+            #telbot.send_constructed_msg('lto', *[lto_list[i]['_id'], lto_list[i]['strategy'], lto_list[i]['pair'], phase_lto, orderId, 'manually canceled'])
 
             # NOTE: In case of Manual Interventions, close the LTO without any change
             lto_list[i]['status'] = STAT_CLOSED
@@ -700,3 +720,65 @@ async def sync_trades_with_orders(trade_list, data_dict, strategy_period_mapping
 
     return trade_list
 
+
+async def test_order_execution():
+    
+    client = await AsyncClient.create(**cred_info['Binance']['Test'])
+    broker_client = BinanceWrapper(client, config, None)
+    df = await broker_client.get_current_balance()
+    logger.debug(df.to_dict())
+
+    await test_market_enter_market_exit(broker_client)
+
+
+
+    #broker_client._execute_limit_buy()
+    #broker_client._execute_limit_sell()
+    #broker_client._execute_oco_sell()
+    pass
+
+async def test_market_enter_market_exit(broker_client: BinanceWrapper):
+    trade = Trade(1557705600000, 'FixedLimitTarget_03_BTC', 'BTCBUSD', EState.WAITING_ENTER, 
+        enter=Market(amount=100, price=20000))
+    await broker_client._execute_market_buy(trade)
+
+    trade = Trade(1557705600000, 'FixedLimitTarget_03_BTC', 'BTCUSDT', EState.WAITING_EXIT, 
+        exit=Market(quantity=0.01, price=30000))
+    result_enter = Result(price=30000, quantity=0.01, fee=0)
+    trade.result = TradeResult(enter=result_enter)
+    await broker_client._execute_market_sell(trade)
+
+
+def test_market_enter_limit_exit():
+    pass
+
+
+def test_market_enter_oco_exit():
+    pass
+
+
+def test_limit_enter_market_exit():
+    pass
+
+
+def test_limit_enter_limit_exit():
+    pass
+
+
+def test_limit_enter_oco_exit():
+    pass
+
+
+if __name__ == '__main__':
+
+    f = open(str(sys.argv[1]),'r')
+    config = json.load(f)
+
+    with open(config['credential_file'], 'r') as cred_file:
+        cred_info = json.load(cred_file)
+
+    logger = logging.getLogger('app')
+    setup_logger(logger, config['log'])
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(test_order_execution())

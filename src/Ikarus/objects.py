@@ -263,13 +263,19 @@ class Trade():
     def stash_exit(self): # Stash the exit order when it will about to be updated
         self.order_stash.append(copy.deepcopy(self.exit))
 
-    def set_result_enter(self, time, quantity=None, price=None, fee_rate=0):
+    def set_result_enter(self, time, quantity=None, price=None, fee_rate=0, fee=None, orderId=None):
         '''
             Result modules (enter or exit) contains 
             - The paid fee for the order execution
             - The total value(amount) of the received asset in the quote currency after the fee
         '''
         self.result.enter = Result()
+        
+        if orderId:
+            self.result.enter.orderId = orderId
+        else:
+            self.result.enter.orderId = self.enter.orderId
+
         if quantity: 
             self.result.enter.quantity = quantity
         else:
@@ -285,13 +291,22 @@ class Trade():
         self.result.enter.time = time
 
         # Evaluate the fee on the quantity and the amount after fee
-        self.result.enter.fee = safe_multiply(self.result.enter.quantity, fee_rate)
+        if fee == None:
+            self.result.enter.fee = safe_multiply(self.result.enter.quantity, fee_rate)
+        else:
+            self.result.enter.fee = fee
         self.result.enter.quantity = safe_substract(self.result.enter.quantity, self.result.enter.fee)
         self.result.enter.amount = safe_multiply(self.result.enter.quantity, self.result.enter.price)
         
 
-    def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, status=EState.CLOSED, cause=ECause.NONE):
+    def set_result_exit(self, time, quantity=None, price=None, fee_rate=None, fee=None, status=EState.CLOSED, cause=ECause.NONE, orderId=None):
         self.result.exit = Result()
+
+        if orderId:
+            self.result.exit.orderId = orderId
+        else:
+            self.result.exit.orderId = self.exit.orderId
+
         if quantity: 
             self.result.exit.quantity = quantity
         else:
@@ -309,7 +324,13 @@ class Trade():
 
         # Evaluate the fee on the quantity and the amount after fee
         self.result.exit.amount = safe_multiply(self.result.exit.price, self.result.exit.quantity)
-        self.result.exit.fee = safe_multiply(self.result.exit.amount, fee_rate)
+        
+        # Evaluate the fee on the amount
+        if fee == None:
+            self.result.exit.fee = safe_multiply(self.result.exit.amount, fee_rate)
+        else:
+            self.result.exit.fee = fee
+
         self.result.exit.amount = safe_substract(self.result.exit.amount, self.result.exit.fee)
 
         # self.result.profit indicates the effect of this trade to the capital

@@ -104,11 +104,13 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
     live_trade_dicts = await mongocli.do_aggregate('live-trades',[{ '$match': { 'strategy': {'$in': list(strategy_period_mapping.keys()) }} }])
     live_trades = [trade_from_dict(trade_dict) for trade_dict in live_trade_dicts]
 
-    df_balance, data_dict, orders = await asyncio.gather(*[
+    df_balance, data_dict = await asyncio.gather(*[
         broker_client.get_current_balance(),
-        broker_client.get_data_dict(meta_data_pool, ikarus_time),
-        broker_client.get_trade_orders(live_trades)]
+        broker_client.get_data_dict(meta_data_pool, ikarus_time)
+        ]
     )
+
+    orders = await broker_client.get_trade_orders(live_trades)
 
     live_trades, analysis_dict = await asyncio.gather(*[
         sync_trades_with_orders(live_trades, data_dict, strategy_period_mapping, orders),
@@ -137,10 +139,9 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
         #nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
         await broker_client.execute_decision(new_trades, live_trades)
 
-    new_trade_list = [i for i in new_trade_list if i is not None]
+    new_trades = [i for i in new_trades if i is not None]
 
     if len(new_trades):
-        # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades", [trade_to_dict(trade) for trade in new_trades])
 
     await mongo_utils.update_live_trades(mongocli, live_trades)
@@ -155,13 +156,13 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
 
     observation_obj = {}
     observation_obj['free'] = df_balance.loc[config['broker']['quote_currency'],'free']
-    observation_obj['in_trade'] = eval_total_capital_in_lto(live_trades+new_trade_list)
+    observation_obj['in_trade'] = eval_total_capital_in_lto(live_trades+new_trades)
     observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
     obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
 
     observation_obj = {}
     free = df_balance.loc[config['broker']['quote_currency'],'free']
-    in_trade = eval_total_capital_in_lto(live_trades+new_trade_list)
+    in_trade = eval_total_capital_in_lto(live_trades+new_trades)
     observation_obj['total'] = safe_sum(free, in_trade)
     observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['max_capital_use']))
     observation_obj['real_free'] = free
