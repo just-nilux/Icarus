@@ -207,7 +207,7 @@ class BinanceWrapper():
         return orders
 
 
-    async def _execute_oco_sell(self, lto):
+    async def _execute_oco_sell(self, trade: Trade):
         try:
             response = await self.client.create_oco_order(
                 symbol=lto['pair'],
@@ -238,85 +238,143 @@ class BinanceWrapper():
             return True
 
 
-    async def _execute_limit_sell(self, lto):
+    async def _execute_limit_sell(self, trade: Trade):
         try:
+            logger.debug(f'trade.exit: {asdict(trade.exit)}')
+            logger.debug(f'trade.exit.price: %.{self.pricePrecision}f' % trade.exit.price)
             response = await self.client.order_limit_sell(
-                symbol=lto['pair'],
-                quantity=lto['exit'][TYPE_LIMIT]['quantity'],
-                price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_LIMIT]['price'])
+                symbol=trade.pair,
+                quantity=trade.exit.quantity,
+                price=f'%.{self.pricePrecision}f' % trade.exit.price)
+            logger.debug(json.dumps(response, indent=4))
 
         except Exception as e:
-            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            # TODO: Notification: ERROR
-            return False
-
-        else:
-            logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
-            lto['exit'][TYPE_LIMIT]['orderId'] = response['orderId']
-
-            lto['status'] = STAT_OPEN_EXIT
-            lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response["orderId"], EVENT_PLACED])
-            return True
-
-
-    async def _execute_limit_buy(self, lto):
-        try:
-            response = await self.client.order_limit_buy(
-                symbol=lto['pair'],
-                quantity=lto[PHASE_ENTER][TYPE_LIMIT]['quantity'],
-                price=f'%.{self.pricePrecision}f' % lto[PHASE_ENTER][TYPE_LIMIT]['price'])
-
-        except Exception as e:
-            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            logger.debug(json.dumps(lto[PHASE_ENTER][TYPE_LIMIT]))
+            logger.error(f"{e}")
             return False
 
         else:
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
-            lto[PHASE_ENTER][TYPE_LIMIT]['orderId'] = response['orderId']
+            trade.exit.orderId = response['orderId']
+            trade.status = EState.OPEN_EXIT
 
-            lto['status'] = STAT_OPEN_ENTER
-            lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('lto', *['_id', lto['strategy'], lto['pair'], PHASE_ENTER, response["orderId"], EVENT_PLACED])
+            if response['status'] != ORDER_STATUS_FILLED:
+                return True
+            
+            avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in response['fills']]), response['executedQty'])
+        
+            strategy_cycle_period = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
+            strategy_cycle_period_in_sec = time_scale_to_second(strategy_cycle_period)
+            time_value = int(response["transactTime"]/1000)
+
+            # Get the start time of the current candle
+            execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
+            fee_sum = 0
+            for fill in response['fills']:
+                if fill['commissionAsset'] == self.quote_currency:
+                    fee_sum += float(fill['commission'])
+
+            trade.set_result_exit( execution_time*1000, 
+                price=avg_price,
+                quantity=float(response["executedQty"]),
+                fee=fee_sum,
+                cause=ECause.MARKET)
+            logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
+
             return True
 
 
-    async def _execute_cancel(self, lto):
-        # NOTE: Since cancel can be called to end the life of LTO if the phase is enter and to update if
-        #       the phase is exit, status change should not be here        
+    async def _execute_limit_buy(self, trade: Trade):
         try:
-            phase = get_lto_phase(lto)
-            type = more_itertools.one(lto[phase].keys())
-            response = await self.client.cancel_order(
-                symbol=lto['pair'],
-                orderId=lto[phase][type]['orderId'])
+            logger.debug(f'trade.enter: {asdict(trade.enter)}')
+            logger.debug(f'trade.enter.price: %.{self.pricePrecision}f' % trade.enter.price)
+            response = await self.client.order_limit_buy(
+                symbol=trade.pair,
+                quantity=trade.enter.quantity,
+                price=f'%.{self.pricePrecision}f' % trade.enter.price)
+            logger.debug(json.dumps(response, indent=4))
 
         except Exception as e:
-            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            # TODO: Notification: ERROR
+            logger.error(f"{e}")
             return False
 
         else:
-            if phase == PHASE_EXIT and type == TYPE_OCO:
+            logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
+            trade.enter.orderId = response['orderId']
+            trade.status = EState.OPEN_ENTER
+        
+            if response['status'] != ORDER_STATUS_FILLED:
+                return True
+            
+            avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in response['fills']]), response['executedQty'])
+        
+            strategy_cycle_period = get_min_scale(self.config['time_scales'].keys(), self.config['strategy'][trade.strategy]['time_scales'])
+            strategy_cycle_period_in_sec = time_scale_to_second(strategy_cycle_period)
+            time_value = int(response["transactTime"]/1000)
+
+            # Get the start time of the current candle
+            execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
+            base_cur = trade.pair.replace(self.quote_currency,'')
+            fee_sum = 0
+            for fill in response['fills']:
+                if fill['commissionAsset'] == base_cur:
+                    fee_sum += float(fill['commission'])
+
+            trade.set_result_enter( execution_time*1000, 
+                price=avg_price,
+                quantity=float(response["executedQty"]),
+                fee=fee_sum)
+            
+            logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
+        return True
+
+
+    async def _execute_cancel(self, trade: Trade):
+        
+        try:
+            # Obtain which order to cancel
+            if trade.status in [EState.OPEN_ENTER]:
+                orderId_to_cancel = trade.enter.orderId
+                logger.debug(f'trade.enter: {asdict(trade.enter)}')
+
+            elif trade.status in [EState.OPEN_EXIT]:
+                orderId_to_cancel = trade.exit.orderId
+                logger.debug(f'trade.exit: {asdict(trade.exit)}')
+                if type(trade.exit) == OCO:
+                    #stop_limit_orderId = trade.exit.stop_limit_orderId
+                    pass
+            else:
+                raise Exception(f'Unexpected trade.status: {trade.status}')
+            logger.debug(f'Evaluated orderId to cancel: {orderId_to_cancel}')
+
+            response = await self.client.cancel_order(
+                symbol=trade.pair,
+                orderId=orderId_to_cancel)
+            logger.debug(json.dumps(response, indent=4))
+
+        except Exception as e:
+            logger.error(f"{e}")
+            return False
+
+        else:
+            if response["side"] == SIDE_SELL and response['type'] == ORDER_TYPE_LIMIT_MAKER:
                 response_stoploss, response_limit_maker = response['orderReports'][0], response['orderReports'][1]
-                logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
-                logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
-                self.telbot.send_constructed_msg('lto', *[lto['_id'], phase, response_limit_maker["orderId"], 'canceled'])
+                logger.info(f'LTO "{trade._id}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
+                logger.info(f'LTO "{trade._id}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
 
             else:
-                logger.info(f'LTO "{lto["_id"]}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
-                self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], phase, response["orderId"], 'canceled'])
+                logger.info(f'LTO "{trade._id}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
             return True
 
 
     async def _execute_market_buy(self, trade: Trade):
         try:
-            logger.debug(asdict(trade.enter))
+            logger.debug(f'trade.enter: {asdict(trade.enter)}')
             response = await self.client.order_market_buy(
                 symbol=trade.pair,
                 quantity=trade.enter.quantity)
-            logger.debug(json.dumps(response))
+            logger.debug(json.dumps(response, indent=4))
 
         except Exception as e:
             logger.error(f"{e}")
@@ -350,15 +408,16 @@ class BinanceWrapper():
                 quantity=float(response["executedQty"]),
                 fee=fee_sum)
             
+            logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
         return True
 
     async def _execute_market_sell(self, trade: Trade):
         try:
-            logger.debug(asdict(trade.exit))
+            logger.debug(f'trade.exit: {asdict(trade.exit)}')
             response = await self.client.order_market_sell(
                 symbol=trade.pair,
                 quantity=trade.exit.quantity)
-            logger.debug(json.dumps(response))
+            logger.debug(json.dumps(response, indent=4))
 
         except Exception as e:
             logger.error(f"{e}")
@@ -391,7 +450,7 @@ class BinanceWrapper():
                 quantity=float(response["executedQty"]),
                 fee=fee_sum,
                 cause=ECause.MARKET)
-            logger.debug(asdict(trade.result.exit))
+            logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
 
             return True
 
@@ -726,47 +785,94 @@ async def test_order_execution():
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
     broker_client = BinanceWrapper(client, config, None)
     df = await broker_client.get_current_balance()
-    logger.debug(df.to_dict())
+    logger.info(f'balance: \n{df.to_string()}')
+    trade = await test_market_buy(broker_client)
 
-    await test_market_enter_market_exit(broker_client)
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
+    trade = await test_market_sell(broker_client)
 
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
+    trade = await test_limit_buy(broker_client)
+    trade = await test_order_cancel(broker_client, trade)
 
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
+    trade = await test_limit_sell(broker_client)
+    trade = await test_order_cancel(broker_client, trade)
 
-    #broker_client._execute_limit_buy()
-    #broker_client._execute_limit_sell()
-    #broker_client._execute_oco_sell()
     pass
 
-async def test_market_enter_market_exit(broker_client: BinanceWrapper):
-    trade = Trade(1557705600000, 'FixedLimitTarget_03_BTC', 'BTCBUSD', EState.WAITING_ENTER, 
+
+async def test_market_buy(broker_client: BinanceWrapper):
+    strategy_name = list(broker_client.config['strategy'].keys())[0]
+    trade = Trade(1557705600000, strategy_name, 'BTCUSDT', EState.WAITING_ENTER, 
         enter=Market(amount=100, price=20000))
-    await broker_client._execute_market_buy(trade)
+    trade.result = TradeResult()
+    exec_status = await broker_client._execute_market_buy(trade)
+    assert exec_status == True
 
-    trade = Trade(1557705600000, 'FixedLimitTarget_03_BTC', 'BTCUSDT', EState.WAITING_EXIT, 
-        exit=Market(quantity=0.01, price=30000))
-    result_enter = Result(price=30000, quantity=0.01, fee=0)
+    orders = await broker_client.get_trade_orders([trade])
+    if len(orders):
+        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
+    
+    return trade
+
+
+async def test_market_sell(broker_client: BinanceWrapper):
+    strategy_name = list(broker_client.config['strategy'].keys())[0]
+    trade = Trade(1557705600000, strategy_name, 'BTCUSDT', EState.WAITING_EXIT, 
+        exit=Market(amount=100, price=20000))
+    result_enter = Result(price=30000, amount=100, fee=0)
     trade.result = TradeResult(enter=result_enter)
-    await broker_client._execute_market_sell(trade)
+    exec_status = await broker_client._execute_market_sell(trade)
+    assert exec_status == True
+
+    orders = await broker_client.get_trade_orders([trade])
+    if len(orders):
+        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
+    
+    return trade
 
 
-def test_market_enter_limit_exit():
-    pass
+
+async def test_limit_buy(broker_client: BinanceWrapper):
+    strategy_name = list(broker_client.config['strategy'].keys())[0]
+    trade = Trade(1557705600000, strategy_name, 'BTCUSDT', EState.WAITING_ENTER, 
+        enter=Limit(amount=100, price=10000))
+    trade.result = TradeResult()
+    exec_status = await broker_client._execute_limit_buy(trade)
+    assert exec_status == True
+
+    orders = await broker_client.get_trade_orders([trade])
+    if len(orders):
+        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
+    
+    return trade
 
 
-def test_market_enter_oco_exit():
-    pass
+async def test_limit_sell(broker_client: BinanceWrapper):
+    strategy_name = list(broker_client.config['strategy'].keys())[0]
+    trade = Trade(1557705600000, strategy_name, 'BTCUSDT', EState.WAITING_EXIT, 
+        exit=Limit(quantity=0.01, price=30000))
+    result_enter = Result(price=10000, amount=100, fee=0)
+    trade.result = TradeResult(enter=result_enter)
+    exec_status = await broker_client._execute_limit_sell(trade)
+    assert exec_status == True
+
+    orders = await broker_client.get_trade_orders([trade])
+    if len(orders):
+        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
+    
+    return trade
 
 
-def test_limit_enter_market_exit():
-    pass
-
-
-def test_limit_enter_limit_exit():
-    pass
-
-
-def test_limit_enter_oco_exit():
-    pass
+async def test_order_cancel(broker_client: BinanceWrapper, trade: Trade):
+    
+    exec_status = await broker_client._execute_cancel(trade)
+    assert exec_status == True
+    return trade
 
 
 if __name__ == '__main__':
