@@ -201,7 +201,8 @@ class BinanceWrapper():
             return {}
         
         orders = {}
-        for order in list(await asyncio.gather(*coroutines)):
+        order_results = list(await asyncio.gather(*coroutines))
+        for order in order_results:
             orders[order['orderId']] = order
 
         return orders
@@ -209,31 +210,31 @@ class BinanceWrapper():
 
     async def _execute_oco_sell(self, trade: Trade):
         try:
-            response = await self.client.create_oco_order(
-                symbol=lto['pair'],
-                side=SIDE_SELL,
-                quantity=lto['exit'][TYPE_OCO]['quantity'],
-                price=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['limitPrice'],
-                stopPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopPrice'],
-                stopLimitPrice=f'%.{self.pricePrecision}f' % lto['exit'][TYPE_OCO]['stopLimitPrice'],
+            logger.debug(f'trade.exit: {asdict(trade.exit)}')
+            response = await self.client.order_oco_sell(
+                symbol=trade.pair,
+                quantity=trade.exit.quantity,
+                price=f'%.{self.pricePrecision}f' % trade.exit.price,
+                stopPrice=f'%.{self.pricePrecision}f' % trade.exit.stop_price,
+                stopLimitPrice=f'%.{self.pricePrecision}f' % trade.exit.stop_limit_price,
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC)
+            logger.debug(json.dumps(response, indent=4))
 
         except Exception as e:
-            logger.error(f"{lto['strategy']} - {lto['pair']}: {e}")
-            # TODO: Notification: ERROR
+            logger.error(f"{e}")
             return False
 
         else:
             response_stoploss, response_limit_maker = response["orderReports"][0], response["orderReports"][1]
-            logger.info(f'LTO "{lto["_id"]}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order placed: {response_limit_maker["orderId"]}')
-            logger.info(f'LTO "{lto["_id"]}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order placed: {response_stoploss["orderId"]}')
+            logger.info(f'LTO "{trade._id}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order placed: {response_limit_maker["orderId"]}')
+            logger.info(f'LTO "{trade._id}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order placed: {response_stoploss["orderId"]}')
 
-            lto['exit'][TYPE_OCO]['orderId'] = response_limit_maker['orderId']
-            lto['exit'][TYPE_OCO]['stopLimit_orderId'] = response_stoploss['orderId']
+            trade.exit.orderId = response_limit_maker['orderId']
+            trade.exit.stop_limit_orderId = response_stoploss['orderId']
+            trade.status = EState.OPEN_EXIT
 
-            lto['status'] = STAT_OPEN_EXIT
-            lto['history'].append(lto['status'])
-            self.telbot.send_constructed_msg('lto', *[lto['_id'], lto['strategy'], lto['pair'], 'exit', response_limit_maker["orderId"], EVENT_PLACED])
+            if ORDER_STATUS_FILLED not in [response_stoploss['status'], response_limit_maker['status']]:
+                return True
 
             return True
 
@@ -358,10 +359,15 @@ class BinanceWrapper():
             return False
 
         else:
-            if response["side"] == SIDE_SELL and response['type'] == ORDER_TYPE_LIMIT_MAKER:
+            # Delete the orderIds from the exit orders
+            if response.get('contingencyType', '') == 'OCO':
                 response_stoploss, response_limit_maker = response['orderReports'][0], response['orderReports'][1]
-                logger.info(f'LTO "{trade._id}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
-                logger.info(f'LTO "{trade._id}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
+
+                if response_stoploss['status'] == ORDER_STATUS_CANCELED:
+                    logger.info(f'LTO "{trade._id}": "{response_stoploss["side"]}" "{response_stoploss["type"]}" order canceled: {response_stoploss["orderId"]}')
+                
+                if response_limit_maker['status'] == ORDER_STATUS_CANCELED:
+                    logger.info(f'LTO "{trade._id}": "{response_limit_maker["side"]}" "{response_limit_maker["type"]}" order canceled: {response_limit_maker["orderId"]}')
 
             else:
                 logger.info(f'LTO "{trade._id}": "{response["side"]}" "{response["type"]}" order canceled: {response["orderId"]}')
@@ -795,12 +801,26 @@ async def test_order_execution():
     df = await broker_client.get_current_balance()
     logger.debug(f'balance: \n{df.to_string()}')
     trade = await test_limit_buy(broker_client)
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
     trade = await test_order_cancel(broker_client, trade)
 
     df = await broker_client.get_current_balance()
     logger.debug(f'balance: \n{df.to_string()}')
     trade = await test_limit_sell(broker_client)
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
     trade = await test_order_cancel(broker_client, trade)
+
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
+    trade = await test_oco_sell(broker_client)
+    df = await broker_client.get_current_balance()
+    logger.debug(f'balance: \n{df.to_string()}')
+    trade = await test_order_cancel(broker_client, trade)
+
+    # TODO: Instant fill limit order test
+    # TODO: Instant fill oco order test
 
     pass
 
@@ -866,6 +886,34 @@ async def test_limit_sell(broker_client: BinanceWrapper):
         logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
     
     return trade
+
+
+async def test_oco_sell(broker_client: BinanceWrapper):
+    strategy_name = list(broker_client.config['strategy'].keys())[0]
+
+    exit_order = OCO(
+        price=30000,
+        quantity=0.005,
+        stop_price=15001,
+        stop_limit_price=15000
+    )
+
+    trade = Trade(1557705600000, strategy_name, 'BTCUSDT', EState.WAITING_EXIT, 
+        exit=exit_order)
+    result_enter = Result(price=10000, amount=100, fee=0)
+    trade.result = TradeResult(enter=result_enter)
+    exec_status = await broker_client._execute_oco_sell(trade)
+    assert exec_status == True
+
+    orders = await broker_client.get_trade_orders([trade])
+    if not len(orders):
+        return trade
+
+    for order in orders.values():
+        logger.debug('order:\n'+json.dumps(order, indent=4))
+    
+    return trade
+    
 
 
 async def test_order_cancel(broker_client: BinanceWrapper, trade: Trade):
