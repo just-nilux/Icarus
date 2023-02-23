@@ -237,6 +237,8 @@ class BinanceWrapper():
             if ORDER_STATUS_FILLED not in [response_stoploss['status'], response_limit_maker['status']]:
                 return True
 
+            logger.warning('OCO order instantly filled but instant parsing mechanism is not implemented yet!')
+
             return True
 
 
@@ -787,17 +789,23 @@ async def sync_trades_with_orders_old(trades, data_dict, strategy_period_mapping
     return trade_list
 
 
-async def test_order_execution():
-    
+async def demo():
+    if __name__ != '__main__':
+        raise Exception('This function is only implemented for test purposes')
+
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
     broker_client = BinanceWrapper(client, config, None)
-
 
     symbol_info = await broker_client.get_all_symbol_info(['BTCUSDT'])
     await test_limit_buy_instant_fill(broker_client, symbol_info)
     await test_limit_sell_instant_fill(broker_client, symbol_info)
-    #await test_oco_sell_instant_fill(broker_client, symbol_info)
-    #await test_oco_sell_instant_stoploss_fill(broker_client, symbol_info)
+
+    # NOTE: It is not possible to do instant fill for oco orders because of:
+    # APIError(code=-2010): The relationship of the prices for the orders is not correct.
+    #
+    # Price Restrictions:
+    # SELL: Limit Price > Last Price > Stop Price
+    # BUY: Limit Price < Last Price < Stop Price
 
     orders = await client.get_open_orders(symbol='BTCUSDT')
     logger.debug(f'client.get_open_orders: \n{orders}')
@@ -845,7 +853,6 @@ async def test_order_execution():
     logger.debug(f'balance: \n{df.to_string()}')
     trade = await test_order_cancel(broker_client, trade)
 
-    # TODO: Instant fill limit order test
     # TODO: Instant fill oco order test
 
     pass
@@ -1042,14 +1049,6 @@ async def test_oco_sell_instant_fill_limit_maker(broker_client: BinanceWrapper, 
     return trade
 
 
-async def test_oco_sell_instant_fill_stop_loss(broker_client: BinanceWrapper, symbol_info: dict):
-    # TODO:
-    # 1. Get current price
-    # 2. Put limit order that is lower than current price
-    # 3. Then check the execution
-    return 
-
-
 if __name__ == '__main__':
 
     f = open(str(sys.argv[1]),'r')
@@ -1062,4 +1061,4 @@ if __name__ == '__main__':
     setup_logger(logger, config['log'])
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_order_execution())
+    loop.run_until_complete(demo())
