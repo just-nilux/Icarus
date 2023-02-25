@@ -30,7 +30,7 @@
             "distribution_config": [
                 "FixedLimitTarget_03_BCH", "FixedOCOTarget_03_BCH"
             ],
-            "max_capital_use":0.9, 
+            "capital_coeff":0.9, 
             "stop_capital":null
         }
     },

@@ -31,7 +31,7 @@
                 "FixedLimitTarget_DIA_24_02", "FixedLimitTarget_LTC_24_03", "FixedLimitTargetAdaptive_DIA_24_12_02",  "FixedLimitTargetAdaptive_LTC_24_24_03",
                 "FixedOCOTarget_LTC_24_03", "FixedOCOTarget_DIA_24_03", "FixedOCOTargetAdaptive_LTC_24_12_03",  "FixedOCOTargetAdaptive_DIA_24_12_03"
             ],
-            "max_capital_use":0.9, 
+            "capital_coeff":0.9, 
             "stop_capital":null
         }
     },

@@ -2,7 +2,7 @@
     "tag": "bot",
     "log":{
         "level": "DEBUG",
-        "file": "log/test-ikarus-app.log",
+        "file": "log/icarus.log",
         "clear": true
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
@@ -10,7 +10,7 @@
         "database": "live-test",
         "host": "localhost",
         "port": 27017,
-        "clean": false
+        "clean": true
     },
     "notification":{
         "telegram": {
@@ -34,8 +34,9 @@
             "distribution_config": [
                 "FixedLimitTarget_03_BTC", "FixedOCOTarget_03_BTC"
             ],
-            "max_capital_use":0.9, 
-            "stop_capital":null
+            "capital_coeff":0.9, 
+            "stop_capital":null,
+            "capital_limit": 50
         }
     },
     "strategy": {

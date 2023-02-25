@@ -69,7 +69,7 @@
             "module": "src.Ikarus.report.generate_report",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config.json"
+                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config_LTC_24.json"
             ]
         },
         {
@@ -154,17 +154,40 @@
             "program": "src/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config.json"
+                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config_adaptive_LTC.json"
             ]
         },
         {
             "name": "live-trade",
             "type": "python",
             "request": "launch",
-            "program": ".\\live-trade.py",
+            "program": "src/live-trade.py",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\live\\config.json"
+                "${workspaceFolder}/configs/live-test/config.json"
+            ]
+        },
+        {
+            "name": "binance_wrapper_demo",
+            "type": "python",
+            "request": "launch",
+            "module": "src.Ikarus.scripts.binance_wrapper_demo",
+            "console": "integratedTerminal",
+            "args": [
+                "${workspaceFolder}/configs/live-test/config.json"
+            ]
+        },
+        {
+            "name": "binance_wrapper_cli",
+            "type": "python",
+            "request": "launch",
+            "module": "src.Ikarus.scripts.binance_wrapper_cli",
+            "console": "integratedTerminal",
+            "args": [
+                "--config",
+                "${workspaceFolder}/configs/live-test/config.json",
+                "--command",
+                "get_current_balance",
             ]
         }
     ]

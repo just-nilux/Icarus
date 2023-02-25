@@ -32,7 +32,7 @@
                 "FixedLimitTarget_02_XLM", "FixedLimitTarget_02_DIA", "FixedLimitTarget_02_LTC", "FixedLimitTarget_02_XRP", "FixedLimitTarget_02_BTC", "FixedLimitTarget_02_BCH", "FixedLimitTarget_02_ETC","FixedLimitTarget_02_DASH",
                 "FixedLimitTarget_01_XLM", "FixedLimitTarget_01_DIA", "FixedLimitTarget_01_LTC", "FixedLimitTarget_01_XRP", "FixedLimitTarget_01_BTC", "FixedLimitTarget_01_BCH", "FixedLimitTarget_01_ETC","FixedLimitTarget_01_DASH"
             ],
-            "max_capital_use":0.9, 
+            "capital_coeff":0.9, 
             "stop_capital":null
         }
     },
