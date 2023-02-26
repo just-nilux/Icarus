@@ -10,7 +10,7 @@ class test_StrategyAllocator(unittest.TestCase):
         distribution_config = {
             "initial_capital": 10000,
             "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":1, 
+            "capital_coeff":1, 
             "stop_capital":None
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
@@ -24,7 +24,7 @@ class test_StrategyAllocator(unittest.TestCase):
         distribution_config = {
             "initial_capital": 10000,
             "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":0.95, 
+            "capital_coeff":0.95, 
             "stop_capital":None
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
@@ -38,7 +38,7 @@ class test_StrategyAllocator(unittest.TestCase):
         distribution_config = {
             "initial_capital": 1000,
             "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":1, 
+            "capital_coeff":1, 
             "stop_capital":1000
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
@@ -51,7 +51,7 @@ class test_StrategyAllocator(unittest.TestCase):
         distribution_config = {
             "initial_capital": 1000,
             "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":0.95, 
+            "capital_coeff":0.95, 
             "stop_capital":None
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(
@@ -72,7 +72,7 @@ class test_StrategyAllocator(unittest.TestCase):
         distribution_config = {
             "initial_capital": 1000,
             "distribution_config": {"FixedLimitTarget":0.25, "FixedOCOTarget":0.75},
-            "max_capital_use":0.95, 
+            "capital_coeff":0.95, 
             "stop_capital":None
         }
         discrete_allocator = resource_allocator.DiscreteStrategyAllocator(

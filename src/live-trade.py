@@ -15,6 +15,7 @@ import sys
 import bson
 import itertools
 from Ikarus import resource_allocator
+from Ikarus.resource_allocator import DiscreteStrategyAllocator
 
 # Global Variables
 FLAG_SYSTEM_STATUS = True
@@ -32,59 +33,7 @@ async def run_at(dt, coro):
     return await coro
 
 
-async def write_updated_ltos_to_db(lto_list):
-    '''
-    Consider the fact that if one of the lto execution does not work such as 'waiting_exit' execution or 
-    'update' action due to 'exit_expire' which was 'open_exit' previously,
-    '''
-    for lto in lto_list:
-
-        # NOTE: Check for status change is removed since some internal changes might have been performed on status and needs to be reflected to history
-        # If the status is closed then, it should be inserted to [hist-trades] and deleted from the [live-trades]
-        if lto['status'] == STAT_CLOSED:
-            # This if statement combines the "update the [live-trades]" and "delete the closed [live-trades]"
-            result_insert = await mongocli.do_insert_one("hist-trades",lto)
-            result_remove = await mongocli.do_delete_many("live-trades",{"_id":lto['_id']}) # "do_delete_many" does not hurt, since the _id is unique
-
-            if lto['result']['cause'] == STAT_CLOSED:
-                hto_stat = await stats.eval_hto_stat(lto)
-                telbot.send_constructed_msg('hto', *hto_stat)
-
-        # NOTE: Manual trade option is omitted, needs to be added
-        elif lto['status'] in [ STAT_OPEN_EXIT, STAT_WAITING_EXIT, STAT_EXIT_EXP]:
-            '''
-            STAT_OPEN_EXIT:     Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec succesful,
-            STAT_WAITING_EXIT:  Enter phase might be just filled and STAT_WAITING_EXIT may turn to STAT_OPEN_EXIT if the exec unsuccesful,
-            STAT_EXIT_EXP:      Exit_expired occured and 'update' or 'market_exit' actions are not succesfully executed
-            '''
-            result_update = await mongocli.do_update( 
-                "live-trades",
-                {'_id': lto['_id']},
-                {'$set': {'status': 
-                        lto['status'],
-                        'exit':lto['exit'],
-                        'result.enter':lto['result']['enter'],
-                        'history':lto['history'],
-                        'update_history':lto['update_history'],
-                    }})
-                
-        elif lto['status'] == STAT_OPEN_ENTER:
-            # - STAT_OPEN_ENTER might be expired and postponed with some additional changes in 'enter' item (changes in enter and history)
-            result_update = await mongocli.do_update( 
-                "live-trades",
-                {'_id': lto['_id']},
-                {'$set': {'status': lto['status'], 'enter':lto['enter'], 'history':lto['history'] }})
-
-        # NOTE: These two below are not applicable
-        elif lto['status'] == STAT_PART_CLOSED_ENTER:
-            pass
-        elif lto['status'] == STAT_PART_CLOSED_EXIT:
-            pass
-        else:
-            pass
-
-
-async def application(strategy_list, strategy_res_allocator, broker_client, ikarus_time):
+async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAllocator, broker_client, ikarus_time):
     logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
     
     meta_data_pool = []
@@ -109,10 +58,11 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
         broker_client.get_data_dict(meta_data_pool, ikarus_time)
         ]
     )
+    logger.info(f'Current Balance: \n{df_balance.to_string()}')
 
     orders = await broker_client.get_trade_orders(live_trades)
 
-    live_trades, analysis_dict = await asyncio.gather(*[
+    _, analysis_dict = await asyncio.gather(*[
         sync_trades_with_orders(live_trades, data_dict, strategy_period_mapping, orders),
         analyzer.analyze(data_dict)]
     )
@@ -137,7 +87,7 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
 
     if len(new_trades) or len(live_trades):
         #nto_list, lto_list = await asyncio.create_task(bwrapper.execute_decision(nto_list, lto_list))
-        await broker_client.execute_decision(new_trades, live_trades)
+        await broker_client.execute_decision(new_trades+live_trades)
 
     new_trades = [i for i in new_trades if i is not None]
 
@@ -148,7 +98,8 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
 
 
     df_balance = await broker_client.get_current_balance()
-
+    logger.debug(f'Current Balance after execution: \n{df_balance.to_string()}')
+    
     obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
@@ -160,20 +111,23 @@ async def application(strategy_list, strategy_res_allocator, broker_client, ikar
     observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
     obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
 
+    '''
+    # NOTE: capital_limit is not integrated to this leak evaluation 
     observation_obj = {}
     free = df_balance.loc[config['broker']['quote_currency'],'free']
-    in_trade = eval_total_capital_in_lto(live_trades+new_trades)
+    in_trade = eval_total_capital_in_lto(live_trade_list+new_trade_list)
     observation_obj['total'] = safe_sum(free, in_trade)
-    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['max_capital_use']))
+    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['capital_coeff']))
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
 
     obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
+    '''
 
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
         obs_quote_asset,
-        obs_quote_asset_leak,
+        #obs_quote_asset_leak,
         obs_balance,
         obs_strategy_capitals
     ]
@@ -244,10 +198,10 @@ async def main():
 
         except Exception as e:
             logger.error(str(e))
-            telbot.send_constructed_msg('error', str(e))
+            #telbot.send_constructed_msg('error', str(e))
             
             
-    await client.close_connection()
+    await broker_client.close_connection()
 
 if __name__ == "__main__":
     

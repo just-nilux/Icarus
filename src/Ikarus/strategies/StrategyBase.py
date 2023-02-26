@@ -5,10 +5,12 @@ from sqlalchemy import false
 import bson
 import abc
 import itertools
-from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder
+from ..objects import EState, EOrderType, ECommand, EnhancedJSONEncoder, Trade
 from ..utils import safe_sum, round_step_downward, truncate, safe_multiply, safe_substract, safe_divide
 from .. import binance_filters as filters
 from .. import position_sizing
+from dataclasses import asdict
+from datetime import datetime
 
 logger = logging.getLogger('app')
 
@@ -31,7 +33,11 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    async def run_logic(self, analysis_dict, trade_list, ikarus_time, strategy_capital):
+    async def run_logic(self, analysis_dict: dict, trade_list: 'list[Trade]', ikarus_time, strategy_capital):
+        '''
+            This function updates the trades in trade_list but does no return it
+            This function only return new trades
+        '''
         # Preliminary condition: all of the config['pairs'] exist in analysis_dict
         if not set(self.config['pairs']).issubset(analysis_dict.keys()):
             logger.warn(f"Configured pair \"{self.config['pairs']}\" does not exist in analysis_dict. Skipping {self.name}.run")
@@ -43,7 +49,7 @@ class StrategyBase(metaclass=abc.ABCMeta):
             if not await StrategyBase.handle_lto_logic(self, analysis_dict, trade_list[lto_idx], ikarus_time, strategy_capital):
                 logger.warn(f"Function failed: 'handle_lto_logic'. Trade info: '{trade_list[lto_idx]._id}', '{trade_list[lto_idx].strategy}'")
 
-        trade_objects = []
+        new_trades = []
         position_sizes = position_sizing.evaluate_size(self.config['pairs'], self.max_live_trade, strategy_capital, trade_list)
 
         for pair, cap in position_sizes.items():
@@ -55,13 +61,17 @@ class StrategyBase(metaclass=abc.ABCMeta):
                 if not StrategyBase.apply_exchange_filters(trade.enter, self.symbol_info[pair]): 
                     continue
 
-                trade_objects.append(trade)            
+                new_trades.append(trade)
+                logger.info('New trade created: {}'.format(asdict(trade)))
 
-        return trade_objects
+                if hasattr(trade.enter, 'expire'):
+                    logger.debug('Expire date: {}'.format(datetime.fromtimestamp(trade.enter.expire)))
+
+        return new_trades
 
 
     @staticmethod
-    async def handle_lto_logic(self, analysis_dict, trade, ikarus_time, strategy_capital):
+    async def handle_lto_logic(self, analysis_dict, trade: Trade, ikarus_time, strategy_capital):
 
         """
         This function decides what to do for the LTOs based on their 'status'

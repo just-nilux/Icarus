@@ -21,7 +21,7 @@ class DiscreteStrategyAllocator():
     },
     '''
 
-    def __init__(self, distribution_config, initial_capital=None, capital_coeff=1, stop_capital=None, capital_limit=0) -> None:
+    def __init__(self, distribution_config, initial_capital=None, capital_coeff=1, stop_capital=None, capital_limit=None) -> None:
 
         # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
         self.capital_coeff = capital_coeff
@@ -54,7 +54,7 @@ class DiscreteStrategyAllocator():
         for key, value in self.strategy_capitals.items():
             strategy_cap = safe_multiply(value,self.capital_coeff)
 
-            if self.capital_limit > strategy_cap:
+            if self.capital_limit != None and strategy_cap > self.capital_limit:
                 strategy_cap = self.capital_limit
         
             distribution[key] = strategy_cap

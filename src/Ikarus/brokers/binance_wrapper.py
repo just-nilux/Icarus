@@ -159,39 +159,6 @@ class BinanceWrapper():
         return do_dict
 
 
-    async def get_data_dict_old(self, pairs, time_df):
-        """
-        This functions returns the historical kline values in the data_dict format.
-
-        Args:
-            pairs (list): [description]
-            time_df (pd.DataFrame): [description]
-
-        Returns:
-            dict: [description]
-        """
-        tasks_klines_scales = []
-        for pair in pairs:
-            for index, row in time_df.iterrows():
-                tasks_klines_scales.append(asyncio.create_task(self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))))
-
-        #composit_klines = await self.client.get_historical_klines(pair, row["scale"], start_str="{} ago UTC".format(row["length_str"]))
-        composit_klines = list(await asyncio.gather(*tasks_klines_scales, return_exceptions=True))
-
-        data_dict = await self.decompose(pairs, time_df, composit_klines)
-
-        # NOTE: Keep in mind that the last row is the current candle that has not been completed
-        return data_dict
-
-
-    async def get_open_orders(self, pair):
-        return await self.client.get_open_orders(symbol=pair)
-
-
-    async def get_all_orders(self, pair):
-        return await self.client.get_all_orders(symbol=pair)
-
-
     async def get_trade_orders(self, trades):
         
         if len(trades) == 0:
@@ -219,6 +186,14 @@ class BinanceWrapper():
             orders[order['orderId']] = order
 
         return orders
+
+
+    async def cancel_all_open_orders(self, pairs: 'list[str]'):
+        # TODO
+        for pair in pairs:
+            orders = await self.client.get_open_orders(symbol=pair)
+
+        return
 
 
     async def _execute_oco_sell(self, trade: Trade):
@@ -350,11 +325,11 @@ class BinanceWrapper():
         
         try:
             # Obtain which order to cancel
-            if trade.status in [EState.OPEN_ENTER]:
+            if trade.status in [EState.OPEN_ENTER, EState.ENTER_EXP]:
                 orderId_to_cancel = trade.enter.orderId
                 logger.debug(f'trade.enter: {asdict(trade.enter)}')
 
-            elif trade.status in [EState.OPEN_EXIT]:
+            elif trade.status in [EState.OPEN_EXIT, EState.EXIT_EXP]:
                 orderId_to_cancel = trade.exit.orderId
                 logger.debug(f'trade.exit: {asdict(trade.exit)}')
                 if type(trade.exit) == OCO:

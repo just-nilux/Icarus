@@ -67,10 +67,10 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     # Total usable qc
-    total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['strategy_allocation']['kwargs']['max_capital_use'])
+    #total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['strategy_allocation']['kwargs']['max_capital_use'])
     
-    total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
-    logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
+    #total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
+    #logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
     strategy_resources = strategy_res_allocator.allocate(df_balance, live_trade_list)
 
@@ -112,20 +112,24 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
     obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
 
+    '''
+    # NOTE: capital_limit is not integrated to this leak evaluation 
     observation_obj = {}
     free = df_balance.loc[config['broker']['quote_currency'],'free']
     in_trade = eval_total_capital_in_lto(live_trade_list+new_trade_list)
     observation_obj['total'] = safe_sum(free, in_trade)
-    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['max_capital_use']))
+    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['capital_coeff']))
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
 
     obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
+    '''
+
 
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
         obs_quote_asset,
-        obs_quote_asset_leak,
+        #obs_quote_asset_leak,
         obs_balance,
         obs_strategy_capitals
     ]

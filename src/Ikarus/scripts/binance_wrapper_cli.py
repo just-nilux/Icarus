@@ -1,4 +1,10 @@
-from ..exceptions import NotImplementedException
+
+'''
+    '--command' 'get_current_balance'
+    '--command' 'get_open_orders' '--kwargs' "{'symbol':'BTCUSDT'}"
+    '--command' 'cancel_order' '--kwargs' "{'symbol':'BTCUSDT','orderId':'12638415'}"
+'''
+
 from binance.enums import *
 import asyncio
 import pandas as pd
@@ -17,6 +23,7 @@ from binance import AsyncClient
 from ..strategies.StrategyBase import StrategyBase
 from ..brokers.binance_wrapper import BinanceWrapper
 import argparse
+import ast
 
 async def run_command(args):
 
@@ -28,9 +35,19 @@ async def run_command(args):
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
     broker_client = BinanceWrapper(client, config, None)
 
-    if hasattr(broker_client, args.command):
-        result = await getattr(broker_client, args.command)(args.args)
-    print(result)
+    command_args = ast.literal_eval(args.args)
+    command_kwargs = ast.literal_eval(args.kwargs)
+    try:
+        if hasattr(broker_client, args.command):
+            result = await getattr(broker_client, args.command)(*command_args, **command_kwargs)
+            print(result)
+        elif hasattr(client, args.command):
+            result = await getattr(client, args.command)(*command_args, **command_kwargs)
+            print(result)
+        else:
+            print('No such command as {}'.format(args.command))
+    except Exception as e:
+        print(e)
     
     await broker_client.close_connection()
 
@@ -40,7 +57,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--config', help='config file')
     parser.add_argument('--command', help='binance api call')
-    parser.add_argument('--args', required=False, help='args for the api call')
+    parser.add_argument('--args', default='[]', required=False, help='args for the api call')
+    parser.add_argument('--kwargs', default='{}', required=False, help='args for the api call')
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()

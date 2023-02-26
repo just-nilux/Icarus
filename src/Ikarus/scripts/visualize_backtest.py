@@ -1,6 +1,8 @@
 import asyncio
+
+from ..brokers import backtest_wrapper
 from ..objects import ECause, EState
-from .. import broker, mongo_utils
+from .. import mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
  
@@ -52,9 +54,8 @@ async def visualize_dashboard(bwrapper, mongocli, config):
 async def main():
 
     if config['backtest']['online']:
-        client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
-                                        api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-        bwrapper = broker.TestBinanceWrapper(client, config)
+        client = await AsyncClient.create(**cred_info['Binance']['Production'])
+        bwrapper = backtest_wrapper.BacktestWrapper(client, config)
 
         config['mongodb']['clean'] = False
         mongo_client = mongo_utils.MongoClient(**config['mongodb'])
