@@ -330,10 +330,11 @@ class BinanceWrapper():
                 logger.debug(f'trade.enter: {asdict(trade.enter)}')
 
             elif trade.status in [EState.OPEN_EXIT, EState.EXIT_EXP]:
-                orderId_to_cancel = trade.exit.orderId
+                orderId_to_cancel = trade.order_stash[-1].orderId
                 logger.debug(f'trade.exit: {asdict(trade.exit)}')
                 if type(trade.exit) == OCO:
-                    #stop_limit_orderId = trade.exit.stop_limit_orderId
+                    stop_limit_orderId = trade.order_stash[-1].stop_limit_orderId
+                    logger.debug(f'Evaluated stop_limit_orderId that will be canceled: {stop_limit_orderId}')
                     pass
             else:
                 raise Exception(f'Unexpected trade.status: {trade.status}')

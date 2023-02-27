@@ -17,23 +17,23 @@ class FixedLimitTarget(StrategyBase):
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
 
-            time_dict = analysis_dict[ao_pair]
+        time_dict = analysis_dict[ao_pair]
 
-            enter_price = time_dict[self.min_period]['close'][-1]
-            enter_ref_amount=pairwise_alloc_share
+        enter_price = time_dict[self.min_period]['close'][-1]
+        enter_ref_amount=pairwise_alloc_share
 
-            enter_order = Market(amount=enter_ref_amount, price=enter_price)
+        enter_order = Market(amount=enter_ref_amount, price=enter_price)
 
-            # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
-            trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
-            trade.set_enter(enter_order)
-            result = TradeResult()
-            trade.result = result
+        # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
+        trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
+        trade.set_enter(enter_order)
+        result = TradeResult()
+        trade.result = result
 
-            return trade
+        return trade
 
 
-    async def on_update(self, trade, ikarus_time, **kwargs):
+    async def on_update(self, trade: Trade, ikarus_time, **kwargs):
         # NOTE: Things to change: price, limitPrice, stopLimitPrice, expire date
         trade.command = ECommand.UPDATE
         trade.stash_exit()
