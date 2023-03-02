@@ -507,6 +507,7 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
             # Check order
             order = order_mapping[trade.enter.orderId]
             if order['status'] == ORDER_STATUS_FILLED:
+                logger.debug(json.dumps(order, indent=4))
                 avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in order['fills']]), order['executedQty'])
                 
                 fee_sum = 0
@@ -526,30 +527,36 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
             order = order_mapping[trade.exit.orderId]
 
             if order['status'] == ORDER_STATUS_FILLED:
+                logger.debug(json.dumps(order, indent=4))
 
-                avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in order['fills']]), order['executedQty'])
-                
+                #avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in order['fills']]), order['executedQty'])
                 fee_sum = 0
-                for fill in order['fills']:
-                    if fill['commissionAsset'] == base_cur:
-                        fee_sum += float(fill['commission'])
-                                    
-                trade.set_result_enter(int(order['transactTime']),
-                    price=avg_price,
+                #for fill in order['fills']:
+                #    if fill['commissionAsset'] == base_cur:
+                #        fee_sum += float(fill['commission'])
+
+                strategy_cycle_period_in_sec = time_scale_to_second(strategy_min_scale)
+                time_value = int(order['updateTime']/1000)
+                # Get the start time of the current candle
+                execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
+                trade.set_result_exit(execution_time, #int(order['transactTime']),
+                    price=float(order['price']),
                     quantity=float(order['executedQty']),
                     fee=fee_sum,
                     cause=ECause.LIMIT)
                 
             elif order['status'] == ORDER_STATUS_EXPIRED:
+                logger.debug(json.dumps(order, indent=4))
                 # NOTE: Here is OCO order
-                stop_limit_order = order_mapping[trade.exit.stopLimit_orderId]
+                stop_limit_order = order_mapping[trade.exit.stop_limit_orderId]
                 avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in stop_limit_order['fills']]), stop_limit_order['executedQty'])
                 fee_sum = 0
                 for fill in order['fills']:
                     if fill['commissionAsset'] == base_cur:
                         fee_sum += float(fill['commission'])
 
-                trade.set_result_enter(int(stop_limit_order['transactTime']),
+                trade.set_result_exit(int(stop_limit_order['transactTime']), # transactTime or updateTime
                     price=avg_price,
                     quantity=float(stop_limit_order['executedQty']),
                     fee=fee_sum,
