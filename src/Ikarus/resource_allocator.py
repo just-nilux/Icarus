@@ -14,18 +14,20 @@ class DiscreteStrategyAllocator():
         "kwargs": {
             "initial_capital": 20000,
             "distribution_config": ["FixedLimitTarget_03", "FixedLimitTarget_02", "FixedLimitTarget_01"],
-            "max_capital_use":0.9, 
-            "stop_capital":null
+            "capital_coeff":0.9, 
+            "stop_capital":null,
+            "capital_limit": 50
         }
     },
     '''
 
-    def __init__(self, initial_capital, distribution_config, max_capital_use=1, stop_capital=None) -> None:
+    def __init__(self, distribution_config, initial_capital=None, capital_coeff=1, stop_capital=None, capital_limit=None) -> None:
 
         # In case of discrete allocation, max_capital_use ratio is used for inital allocation afterwards it is not used
-        self.max_capital_use = max_capital_use
+        self.capital_coeff = capital_coeff
         self.stop_capital = stop_capital
         self.distribution_status = None
+        self.capital_limit = capital_limit
         
         if type(distribution_config) == list:
             cap_per_strategy = safe_divide(1,len(distribution_config))
@@ -34,6 +36,11 @@ class DiscreteStrategyAllocator():
         elif type(distribution_config) == dict:
             self.distribution_config = distribution_config
 
+        if initial_capital != None:
+            self.set_capital(initial_capital)
+
+
+    def set_capital(self, initial_capital) -> dict:
         self.strategy_capitals = {key: safe_multiply(value,initial_capital) for key, value in self.distribution_config.items()}
         self.distribution_status = self.distribute()
 
@@ -42,11 +49,24 @@ class DiscreteStrategyAllocator():
         self.distribution_config = config
 
 
-    def distribute(self):
-        return {key: safe_multiply(value,self.max_capital_use) for key, value in self.strategy_capitals.items()}
+    def distribute(self) -> dict:
+        distribution = {}
+        for key, value in self.strategy_capitals.items():
+            strategy_cap = safe_multiply(value,self.capital_coeff)
+
+            if self.capital_limit != None and strategy_cap > self.capital_limit:
+                strategy_cap = self.capital_limit
+        
+            distribution[key] = strategy_cap
+
+        return distribution
 
 
-    def allocate(self, df_balance, live_trades):
+    def allocate(self, df_balance, live_trades) -> dict:
+
+        if not hasattr(self,'strategy_capitals'):
+            # NOTE: Temporary solution
+            self.set_capital(df_balance.loc['USDT','free'])
 
         # Check if a trade is closed
         #   If so, apply the profit amount to the self.distribution_status['strategy1']
@@ -64,7 +84,7 @@ class DiscreteStrategyAllocator():
         if self.stop_capital:
             if total_capital <= self.stop_capital:
                 return {key: 0 for key in self.distribution_config.keys()}
-        # Apply max_capital_use by restricting the in_use amount if specified
+        # Apply max_capital_use_coeff by restricting the in_use amount if specified
 
         self.distribution_status = self.distribute()
         return self.distribution_status

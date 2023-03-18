@@ -3,7 +3,7 @@ import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus.broker import TestBinanceWrapper, sync_trades_of_backtest
+from Ikarus.brokers.backtest_wrapper import BacktestWrapper, sync_trades_of_backtest
 from Ikarus import strategy_manager, analyzers, mongo_utils, trade_statistics
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
@@ -67,10 +67,10 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 
     # NOTE: Group the LTOs: It is only required here since only each strategy may know what todo with its own LTOs
     # Total usable qc
-    total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['strategy_allocation']['kwargs']['max_capital_use'])
+    #total_qc = eval_total_capital(df_balance, live_trade_list, config['broker']['quote_currency'], config['strategy_allocation']['kwargs']['max_capital_use'])
     
-    total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
-    logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
+    #total_qc_in_lto = eval_total_capital_in_lto(live_trade_list) # Total used qc in lto
+    #logger.info(f'Total QC: {total_qc}, Total amount of LTO: {total_qc_in_lto}')
 
     strategy_resources = strategy_res_allocator.allocate(df_balance, live_trade_list)
 
@@ -96,10 +96,9 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     new_trade_list = [i for i in new_trade_list if i is not None]
 
     if len(new_trade_list):
-        # 3.1: Write trade_dict to [live-trades] (assume it is executed successfully)
+        # Write trade_dict to [live-trades] (assume it is executed successfully)
         result = await mongocli.do_insert_many("live-trades", [trade_to_dict(new_trade) for new_trade in new_trade_list])
 
-    # 3.2: Write the LTOs and NTOs to [live-trades] and [hist-trades]
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
     obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
@@ -113,23 +112,24 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
     obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
 
+    '''
+    # NOTE: capital_limit is not integrated to this leak evaluation 
     observation_obj = {}
     free = df_balance.loc[config['broker']['quote_currency'],'free']
     in_trade = eval_total_capital_in_lto(live_trade_list+new_trade_list)
     observation_obj['total'] = safe_sum(free, in_trade)
-    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['max_capital_use']))
+    observation_obj['ideal_free'] = safe_multiply(observation_obj['total'], safe_substract(1, config['strategy_allocation']['kwargs']['capital_coeff']))
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
 
-    
-    if observation_obj['binary'] == 0:
-        x=2
     obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
+    '''
+
 
     # TODO: NEXT: Observer configuration needs to be implemented just like analyzers
     observer_list = [
         obs_quote_asset,
-        obs_quote_asset_leak,
+        #obs_quote_asset_leak,
         obs_balance,
         obs_strategy_capitals
     ]
@@ -142,10 +142,9 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 async def main():
 
     # Create a Async Binance client and receive initial information
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Production']['PUBLIC-KEY'],
-                                      api_secret=cred_info['Binance']['Production']['SECRET-KEY'])
-    bwrapper = TestBinanceWrapper(client, config)
-    all_pairs = [strategy['pairs'] for name, strategy in config['strategy'].items()]
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = BacktestWrapper(client, config)
+    all_pairs = [strategy['pairs'] for strategy in config['strategy'].values()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await bwrapper.get_all_symbol_info(all_pairs)
 
@@ -164,7 +163,7 @@ async def main():
     if ikarus_cycle_period == '': raise ValueError('No ikarus_cycle_period specified')
 
     # Init the df_tickers to not to call binance API in each iteration
-    TestBinanceWrapper.df_tickers = await bwrapper.get_all_tickers()
+    BacktestWrapper.df_tickers = await bwrapper.get_all_tickers()
 
     # Initiate the cash in the [observer]
     initial_observer = Observer(EObserverType.BALANCE, None, config['balances']).to_dict()
@@ -204,9 +203,6 @@ if __name__ == '__main__':
     
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
-
-    if len(sys.argv) >=3:
-        config['credential_file'] = str(sys.argv[2])
 
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)

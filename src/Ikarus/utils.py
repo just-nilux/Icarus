@@ -141,7 +141,7 @@ def round_to_period(current_time, period_min, direction='floor', offset=0):
 
 
 def setup_logger(logger, log_config):
-    if log_config.get('clear',False):
+    if log_config.get('clear',False) and os.path.isfile(log_config['file']) :
         os.remove(log_config['file'])
 
     logger = logging.getLogger('app')
@@ -150,7 +150,7 @@ def setup_logger(logger, log_config):
     rfh = TimedRotatingFileHandler(filename=log_config['file'],
                                    when='H',
                                    interval=1,
-                                   backupCount=5)
+                                   backupCount=12)
 
     rfh.setLevel(log_config['level'])
 

@@ -30,7 +30,7 @@
             "distribution_config": [
                 "FixedOCOTarget_DIA",  "FixedOCOTargetAdaptive1_DIA", "FixedOCOTargetAdaptive6_DIA", "FixedOCOTargetAdaptive12_DIA", "FixedOCOTargetAdaptive24_DIA"
             ],
-            "max_capital_use":0.9, 
+            "capital_coeff":0.9, 
             "stop_capital":null
         }
     },
