@@ -1,7 +1,7 @@
 from numpy import average
-from .safe_operators import safe_divide, safe_sum, safe_substract
-from .objects import ECause
-from . import mongo_utils
+from safe_operators import safe_divide, safe_sum, safe_substract
+from objects import ECause
+import mongo_utils
 import json
 import sys
 import os

@@ -1,14 +1,14 @@
-from ...objects import Market, Trade, ECommand, TradeResult
-from ..StrategyBase import StrategyBase
+from objects import Market, Trade, ECommand, TradeResult
+from strategies.StrategyBase import StrategyBase
 
 class RSI(StrategyBase):
 
-    def __init__(self, _config, _symbol_info, **kwargs):
+    def __init__(self, _tag, _config, _symbol_info):
 
-        self.lower_limit = kwargs.get('lower_limit', 30)
-        self.upper_limit = kwargs.get('upper_limit', 70)
+        self.lower_limit = 30#kwargs.get('lower_limit', 30)
+        self.upper_limit = 70#kwargs.get('upper_limit', 70)
         
-        super().__init__("RSI", _config, _symbol_info)
+        super().__init__(_tag, _config, _symbol_info)
         return
 
 

@@ -27,11 +27,13 @@
     },
     "strategy": {
         "TestLimitUpdate": {
+            "strategy": "TestLimitUpdate",
             "pairs": ["XRPUSDT", "BTCUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3
         },
         "TestMarketMarket": {
+            "strategy": "TestMarketMarket",
             "pairs": ["XRPUSDT", "ETHUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3

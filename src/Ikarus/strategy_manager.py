@@ -1,7 +1,6 @@
 import logging
 from binance.helpers import round_step_size
-from . import strategies
-from . import resource_allocator
+import strategies
 # TODO: Make the StrategyManager static and use it so
 
 logger = logging.getLogger('app')

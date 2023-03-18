@@ -1,13 +1,13 @@
 import statistics as st
-from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult, Market
-from .StrategyBase import StrategyBase
+from objects import ECause, Result, Trade, Limit, ECommand, TradeResult, Market
+from strategies.StrategyBase import StrategyBase
 import json
-from ..utils import time_scale_to_minute
+from utils import time_scale_to_minute
 
 class TestLimitMarket(StrategyBase):
 
-    def __init__(self, _config, _symbol_info={}):
-        super().__init__("TestLimitMarket", _config, _symbol_info)
+    def __init__(self, _tag, _config, _symbol_info):
+        super().__init__(_tag, _config, _symbol_info)
         return
 
 

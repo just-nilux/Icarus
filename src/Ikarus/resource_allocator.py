@@ -1,8 +1,8 @@
 import math
 import logging
 from abc import ABC, abstractmethod
-from .objects import EState
-from .utils import safe_multiply, safe_sum, safe_divide
+from objects import EState
+from utils import safe_multiply, safe_sum, safe_divide
 
 
 class DiscreteStrategyAllocator():

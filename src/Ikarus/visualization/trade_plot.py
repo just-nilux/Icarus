@@ -1,5 +1,5 @@
 import finplot as fplt
-from ..objects import OCO, ECause, Limit, Market
+from objects import OCO, ECause, Limit, Market
 
 
 def plot_rectangle_frame(h1,h2,v1,v2):

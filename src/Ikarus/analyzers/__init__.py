@@ -1,9 +1,9 @@
 import asyncio
-from .talib_indicators import TALibIndicators
-from .indicators import Indicators
-from .market_classification import MarketClassification
-from .patterns import Patterns
-from .support_resistance import SupportResistance
+from analyzers.talib_indicators import TALibIndicators
+from analyzers.indicators import Indicators
+from analyzers.market_classification import MarketClassification
+from analyzers.patterns import Patterns
+from analyzers.support_resistance import SupportResistance
 
 
 class Analyzer(Indicators, TALibIndicators, Patterns, SupportResistance, MarketClassification):

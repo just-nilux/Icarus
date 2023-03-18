@@ -28,16 +28,16 @@
         "kwargs": {
             "initial_capital": 10000,
             "distribution_config": [
-                "FixedLimitTarget_03_BCH", "FixedOCOTarget_03_BCH"
+                "FixedLimitTarget_03_BTC", "FixedOCOTarget_03_BTC"
             ],
             "capital_coeff":0.9, 
             "stop_capital":null
         }
     },
     "strategy": {
-        "FixedLimitTarget_03_BCH": {
+        "FixedLimitTarget_03_BTC": {
             "strategy": "FixedLimitTarget",
-            "pairs": ["BCHUSDT"],
+            "pairs": ["BTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
@@ -45,9 +45,9 @@
                 "exit_duration":6
             }
         },
-        "FixedOCOTarget_03_BCH": {
+        "FixedOCOTarget_03_BTC": {
             "strategy": "FixedOCOTarget",
-            "pairs": ["BCHUSDT"],
+            "pairs": ["BTCUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{

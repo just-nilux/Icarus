@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass, field
 import math
 from sklearn.cluster import KMeans, DBSCAN, MeanShift, OPTICS, Birch
 import numpy as np
-from ..utils import minute_to_time_scale
+from utils import minute_to_time_scale
 import asyncio
 import itertools
 

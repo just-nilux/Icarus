@@ -1,10 +1,10 @@
-from ...objects import Market, Trade, ECommand, TradeResult
-from ..StrategyBase import StrategyBase
+from objects import Market, Trade, ECommand, TradeResult
+from strategies.StrategyBase import StrategyBase
 
 class Aroon(StrategyBase):
 
-    def __init__(self, _config, _symbol_info, **kwargs):
-        super().__init__("Aroon", _config, _symbol_info)
+    def __init__(self, _tag, _config, _symbol_info):
+        super().__init__(_tag, _config, _symbol_info)
         return
 
 

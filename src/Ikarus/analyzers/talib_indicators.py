@@ -1,5 +1,5 @@
 import talib as ta
-from ..exceptions import NotImplementedException
+from exceptions import NotImplementedException
 import numpy as np
 
     

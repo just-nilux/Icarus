@@ -1,8 +1,7 @@
-from ..exceptions import NotImplementedException
+from exceptions import NotImplementedException
 from asyncio.tasks import gather
 from binance.exceptions import BinanceAPIException
 from binance.enums import *
-from .. import notifications
 import asyncio
 import pandas as pd
 import logging
@@ -10,13 +9,13 @@ import json
 import bson
 import time
 import copy
-from ..utils import time_scale_to_second, get_min_scale, time_scale_to_milisecond, \
+from utils import time_scale_to_second, get_min_scale, time_scale_to_milisecond, \
     safe_multiply, safe_divide, round_to_period
-from .. import balance_manager
+import balance_manager
 import more_itertools
-from ..objects import OCO, ECause, ECommand, EState, Limit, Market, trade_to_dict
+from objects import OCO, ECause, ECommand, EState, Limit, Market, trade_to_dict
 from abc import ABC, abstractmethod
-from .. import binance_filters
+import binance_filters
 import os
 from collections import defaultdict
 
@@ -39,7 +38,7 @@ class BacktestWrapper():
         logger.info('creating an instance of {}'.format(__name__))
 
         # Set reference currencies
-        self.quote_currency = _config['broker'].get('fee_rate','USDT')
+        self.quote_currency = _config['broker'].get('quote_currency','USDT')
         BacktestWrapper.fee_rate = _config['broker'].get('fee_rate',0)
 
         # TestBinanceWrapper: get df_tickers once

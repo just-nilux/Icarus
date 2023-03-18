@@ -1,11 +1,10 @@
-from .exceptions import NotImplementedException
+from exceptions import NotImplementedException
 from pymongo import MongoClient, DESCENDING
 import logging
 import asyncio
 import motor.motor_asyncio
-from .objects import EState, ECause, trade_from_dict
+from objects import EState, ECause, trade_from_dict
 from dataclasses import asdict
-from . import trade_statistics
 
 logger = logging.getLogger('app')
 

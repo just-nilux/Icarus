@@ -1,5 +1,5 @@
 
-from .utils import safe_multiply, round_step_downward
+from utils import safe_multiply, round_step_downward
 
 def min_notional(price, quantity, symbol_info):
     if symbol_info['filters'][2]['filterType'] == 'MIN_NOTIONAL':

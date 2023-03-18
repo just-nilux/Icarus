@@ -3,7 +3,7 @@ import sys
 import os
 import asyncio
 from binance import AsyncClient
-from .. import broker
+from brokers import binance_wrapper
 import datetime
 from itertools import chain
 import itertools
@@ -21,7 +21,7 @@ async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                     api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = broker.TestBinanceWrapper(client, config)
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
     start_time = datetime.datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
     start_timestamp = int(datetime.datetime.timestamp(start_time))*1000
     end_time = datetime.datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")

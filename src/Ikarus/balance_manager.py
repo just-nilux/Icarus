@@ -1,5 +1,5 @@
-from .utils import safe_substract, safe_sum
-from .strategies.StrategyBase import StrategyBase
+from utils import safe_substract, safe_sum
+from strategies.StrategyBase import StrategyBase
 
 
 def buy(df_balance, quote_cur, base_cur, trade):

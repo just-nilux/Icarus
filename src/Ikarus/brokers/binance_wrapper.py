@@ -1,4 +1,4 @@
-from ..exceptions import NotImplementedException
+from exceptions import NotImplementedException
 from binance.enums import *
 import asyncio
 import pandas as pd
@@ -6,12 +6,12 @@ import logging
 import json
 import bson
 import sys
-from ..utils import time_scale_to_second, get_min_scale, \
+from utils import time_scale_to_second, get_min_scale, \
     safe_multiply, safe_divide, round_to_period
 import more_itertools
-from .. import binance_filters
-from ..objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
-from ..utils import setup_logger
+import binance_filters
+from objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
+from utils import setup_logger
 from dataclasses import asdict
 from binance import AsyncClient
 from ..strategies.StrategyBase import StrategyBase

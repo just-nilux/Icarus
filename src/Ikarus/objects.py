@@ -11,7 +11,7 @@ import numpy as np
 import copy
 import bson
 from enum import Enum
-from .safe_operators import safe_divide, safe_multiply, safe_substract, safe_sum
+from safe_operators import safe_divide, safe_multiply, safe_substract, safe_sum
 
 def trade_list_to_json(trade_list):
     return [json.dumps(trade, cls=EnhancedJSONEncoder) for trade in trade_list]

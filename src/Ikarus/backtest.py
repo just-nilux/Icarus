@@ -1,18 +1,17 @@
-from Ikarus.objects import *
+from objects import *
 import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus.brokers.backtest_wrapper import BacktestWrapper, sync_trades_of_backtest
-from Ikarus import strategy_manager, analyzers, mongo_utils, trade_statistics
-from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
+from brokers.backtest_wrapper import BacktestWrapper, sync_trades_of_backtest
+import strategy_manager, analyzers, mongo_utils
+from utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
 import logging
 import sys
-import bson
 from itertools import chain
 import itertools
-from Ikarus import resource_allocator
+import resource_allocator
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))

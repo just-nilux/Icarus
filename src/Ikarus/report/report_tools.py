@@ -1,8 +1,8 @@
 from statistics import mean, stdev
 import numpy as np
 import pandas as pd
-from ..utils import time_scale_to_minute
-from ..objects import ECause, EState, Report, ReportMeta
+from utils import time_scale_to_minute
+from objects import ECause, EState, Report, ReportMeta
 from ..safe_operators import safe_divide, safe_sum, safe_substract
 import copy
 import asyncio

@@ -1,8 +1,7 @@
-import statistics as st
-from ..objects import ECause, Result, Trade, Limit, ECommand, TradeResult, Market
-from .StrategyBase import StrategyBase
+from objects import ECause, Result, Trade, Limit, ECommand, TradeResult, Market
+from strategies.StrategyBase import StrategyBase
 import json
-from ..utils import time_scale_to_minute
+from utils import time_scale_to_minute
 
 class FixedLimitTarget(StrategyBase):
 

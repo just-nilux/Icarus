@@ -6,7 +6,7 @@ from telegram.ext.filters import Filters
 import json
 import sys
 import time
-from ..objects import Trade, Limit, EState, ECommand, ECause, TradeResult, trade_to_dict
+from objects import Trade, Limit, EState, ECommand, ECause, TradeResult, trade_to_dict
 from dataclasses import asdict
 import pandas as pd
 

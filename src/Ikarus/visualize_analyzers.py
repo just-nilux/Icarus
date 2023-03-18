@@ -4,16 +4,15 @@ import json
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QWidget
 from pyqtgraph import QtGui
 import pyqtgraph as pg
-from time import time as now, sleep
 import sys
 import asyncio
 from binance import AsyncClient
-from ..brokers import backtest_wrapper
+from brokers import backtest_wrapper
 import datetime
 from itertools import chain
 import itertools
-from ..analyzers import Analyzer
-from . import indicator_plot
+from analyzers import Analyzer
+from visualization import indicator_plot
 from functools import partial
 
 def change_asset(*args, **kwargs):

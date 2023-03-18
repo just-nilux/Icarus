@@ -1,12 +1,12 @@
-from ..objects import ECause, Market, Result, Trade, ECommand, TradeResult
-from .StrategyBase import StrategyBase
+from objects import ECause, Market, Result, Trade, ECommand, TradeResult
+from strategies.StrategyBase import StrategyBase
 import json
-from ..utils import time_scale_to_minute
+from utils import time_scale_to_minute
 
 class TestMarketMarket(StrategyBase):
 
-    def __init__(self, _config, _symbol_info={}):
-        super().__init__("TestMarketMarket", _config, _symbol_info)
+    def __init__(self, _tag, _config, _symbol_info):
+        super().__init__(_tag, _config, _symbol_info)
         return
 
 

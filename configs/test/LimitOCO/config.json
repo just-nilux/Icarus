@@ -28,6 +28,7 @@
     },
     "strategy": {
         "TestLimitOCO": {
+            "strategy": "TestLimitOCO",
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3

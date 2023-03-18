@@ -26,6 +26,7 @@
     },
     "strategy": {
         "TestLimitLimit": {
+            "strategy": "TestLimitLimit",
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3

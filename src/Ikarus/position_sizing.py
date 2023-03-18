@@ -1,5 +1,5 @@
-from .objects import EState
-from .utils import safe_sum, safe_divide, safe_multiply, safe_substract
+from objects import EState
+from utils import safe_sum, safe_divide, safe_multiply, safe_substract
 
 
 def distribute(free_trade_slot, free_capital, free_pairs):

@@ -3,12 +3,12 @@ import sys
 import os
 import asyncio
 from binance import AsyncClient
-from .. import broker
+from ..brokers import binance_wrapper
 import datetime
 import itertools
 from ..analyzers import Analyzer
-from .. import mongo_utils
-from .. import utils
+import mongo_utils
+import utils
 from . import report_tools
 from .report_writer import ReportWriter
 import ast
@@ -118,7 +118,7 @@ async def main():
 
     client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
                                     api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = broker.TestBinanceWrapper(client, config)
+    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
 
     # Dont delete the DB since it is source to read data as well.
     config['mongodb']['clean'] = False
