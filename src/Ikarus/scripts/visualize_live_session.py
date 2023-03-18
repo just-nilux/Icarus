@@ -1,15 +1,18 @@
 import asyncio
-from ..objects import EState
+
+from ..brokers import backtest_wrapper
+from ..objects import EState, ECause
 from pymongo import ASCENDING, DESCENDING
-from .. import broker, mongo_utils
+from .. import mongo_utils
 #from scripts import finplot_wrapper as fplot
 from . import finplot_wrapper as fplot
-from ..utils import get_closed_hto, get_enter_expire_hto, get_exit_expire_hto, get_pair_min_period_mapping
+from ..utils import get_pair_min_period_mapping
 from binance import AsyncClient
 import pandas as pd
 import json
 import sys
 from datetime import datetime, timezone
+from itertools import chain
 
 async def visualize_online(bwrapper, mongocli, config):
 
@@ -53,53 +56,51 @@ async def visualize_online(bwrapper, mongocli, config):
     pass
 
 
-async def visualize_dashboard(bwrapper, mongocli, config):
+async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongocli, config):
 
-    start_obs = await mongocli.get_n_docs('observer', {'type':'qc'}, order=ASCENDING) # pymongo.ASCENDING
-    end_obs = await mongocli.get_n_docs('observer', {'type':'qc'}, order=DESCENDING) # pymongo.ASCENDING
+    start_obs = await mongocli.get_n_docs('observer', {'type':'quote_asset'}, order=ASCENDING) # pymongo.ASCENDING
+    end_obs = await mongocli.get_n_docs('observer', {'type':'quote_asset'}, order=DESCENDING) # pymongo.ASCENDING
 
     pair_scale_mapping = await get_pair_min_period_mapping(config)
 
-    df_list, dashboard_data_pack = [], {}
+    dashboard_data_pack = {}
     for pair,scale in pair_scale_mapping.items(): 
-        df_list.append(bwrapper.get_historical_klines(int(start_obs[0]['timestamp']), int(end_obs[0]['timestamp']), pair, scale))
         dashboard_data_pack[pair]={}
     
-    df_pair_list = await asyncio.gather(*df_list)
+    meta_data_pool = [(v,k) for k,v in pair_scale_mapping.items()]
+    await bwrapper.obtain_candlesticks(meta_data_pool, int(start_obs[0]['ts']), int(end_obs[0]['ts']))
+
+    df_pair_list = [bwrapper.downloaded_data[pair][value] for pair, value in pair_scale_mapping.items()]
 
     # Get trade objects
     for idx, item in enumerate(pair_scale_mapping.items()):
-        # TODO: Optimize and clean the code: e.g. assign call outputs directly to the dataframes
-        df_enter_expire = await get_enter_expire_hto(mongocli,{'result.cause':EState.ENTER_EXP, 'pair':item[0]})
-        df_exit_expire = await get_exit_expire_hto(config, mongocli, {'result.cause':EState.EXIT_EXP, 'pair':item[0]})
-        df_closed = await get_closed_hto(config, mongocli, {'result.cause':EState.CLOSED, 'pair':item[0]})
+        canceled = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':ECause.ENTER_EXP, 'pair':item[0]})
+        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.MARKET, ECause.STOP_LIMIT, ECause.LIMIT]}, 'pair':item[0]})
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
-        dashboard_data_pack[item[0]]['df_enter_expire'] = df_enter_expire
-        dashboard_data_pack[item[0]]['df_exit_expire'] = df_exit_expire
-        dashboard_data_pack[item[0]]['df_closed'] = df_closed
+        dashboard_data_pack[item[0]]['canceled'] = canceled
+        dashboard_data_pack[item[0]]['closed'] = closed
 
-    # Get trade objects
-    qc_list = list(await mongocli.do_find('observer',{'type':'qc'}))
-    # TODO: NEXT: Fix the logic by looking at visualize_test_sessions.py
-    df = pd.DataFrame([item['qc'] for item in qc_list], index=[item['timestamp'] for item in qc_list])
-    dashboard_data_pack['qc'] = df
-    fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, title=f'Visualizing Time Frame:')
+    # Get observer objects
+    for obs_type, obs_list in config['visualization']['observers'].items():
+        df_observers = pd.DataFrame(list(await mongocli.do_find('observer',{'type':obs_type})))
+        df_obs_data = pd.DataFrame(df_observers['data'].to_list())
+        df_obs_data.set_index(df_observers['ts'])
+        df_obs_data = df_obs_data[obs_list]
+        dashboard_data_pack[obs_type] = df_obs_data
+
+    fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, 
+                             title=f"Visualizing Time Frame: {str(datetime.fromtimestamp(int(start_obs[0]['ts']/1000)))} - {str(datetime.fromtimestamp(int(end_obs[0]['ts']/1000)))}")
 
 
 async def main():
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = backtest_wrapper.BacktestWrapper(client, config)
 
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
-                                    api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = broker.TestBinanceWrapper(client, config)
-    mongocli = mongo_utils.MongoClient(config['mongodb']['host'], 
-        config['mongodb']['port'], 
-        config['tag'],
-        clean=False)
-
-    #await visualize_online(bwrapper, mongocli, config)
-    await visualize_dashboard(bwrapper, mongocli, config)
-    await bwrapper.client.close_connection()
+    config['mongodb']['clean'] = False
+    mongo_client = mongo_utils.MongoClient(**config['mongodb'])
+    await visualize_dashboard(bwrapper, mongo_client, config)
+    #await bwrapper.client.close_connection()
 
 
 if __name__ == '__main__':

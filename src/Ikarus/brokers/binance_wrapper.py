@@ -15,25 +15,25 @@ from ..utils import setup_logger
 from dataclasses import asdict
 from binance import AsyncClient
 from ..strategies.StrategyBase import StrategyBase
-
+from ..connectivity.telegram_wrapper import TelegramBot
 logger = logging.getLogger('app')
 
 # This variable added as deus ex machina
 symbol_info = None
+
 
 class BinanceWrapper():
 
     kline_column_names = ["open_time", "open", "high", "low", "close", "volume", "close_time","quote_asset_volume", 
                         "num_of_trades", "taker_buy_base_ast_vol", "taker_buy_quote_ast_vol", "ignore"]
 
-    def __init__(self, _client: AsyncClient, _config: dict, _telbot):
+    def __init__(self, _client: AsyncClient, _config: dict):
         # TODO: Think about the binance.exceptions.BinanceAPIException: APIError(code=-1021): Timestamp for this request was 1000ms ahead of the server's time.
         #       The alternative slution (the wrapper for the binane client can be added to here):
         #       https://github.com/sammchardy/python-binance/issues/249
 
         self.client = _client
         self.config = _config
-        self.telbot = _telbot
 
         # Set reference currencies
         self.quote_currency = _config['broker']['quote_currency']
@@ -265,7 +265,7 @@ class BinanceWrapper():
                 if fill['commissionAsset'] == self.quote_currency:
                     fee_sum += float(fill['commission'])
 
-            trade.set_result_exit( execution_time*1000, 
+            trade.set_result_exit( execution_time, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
                 fee=fee_sum,
@@ -404,7 +404,7 @@ class BinanceWrapper():
                 price=avg_price,
                 quantity=float(response["executedQty"]),
                 fee=fee_sum)
-            
+            TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter))
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
         return True
 
@@ -443,7 +443,7 @@ class BinanceWrapper():
                 if fill['commissionAsset'] == self.quote_currency:
                     fee_sum += float(fill['commission'])
 
-            trade.set_result_exit( execution_time*1000, 
+            trade.set_result_exit( execution_time, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
                 fee=fee_sum,
@@ -519,6 +519,7 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
                     price=avg_price,
                     quantity=float(order['executedQty']),
                     fee=fee_sum)
+                TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter))
                 
             elif hasattr(trade.enter, 'expire') and trade.enter.expire <= last_closed_candle_open_time:
                 trade.status = EState.ENTER_EXP
@@ -545,22 +546,28 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
                     quantity=float(order['executedQty']),
                     fee=fee_sum,
                     cause=ECause.LIMIT)
+                TelegramBot.send_formatted_message('trade_closed', asdict(trade.result))
+
                 
             elif order['status'] == ORDER_STATUS_EXPIRED:
-                logger.debug(json.dumps(order, indent=4))
                 # NOTE: Here is OCO order
                 stop_limit_order = order_mapping[trade.exit.stop_limit_orderId]
-                avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in stop_limit_order['fills']]), stop_limit_order['executedQty'])
-                fee_sum = 0
-                for fill in order['fills']:
-                    if fill['commissionAsset'] == base_cur:
-                        fee_sum += float(fill['commission'])
+                logger.debug(json.dumps(order, indent=4))
+                logger.debug(json.dumps(stop_limit_order, indent=4))
 
-                trade.set_result_exit(int(stop_limit_order['transactTime']), # transactTime or updateTime
-                    price=avg_price,
+                fee_sum = 0
+                strategy_cycle_period_in_sec = time_scale_to_second(strategy_min_scale)
+                time_value = int(order['updateTime']/1000)
+                # Get the start time of the current candle
+                execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
+                trade.set_result_exit(execution_time,
+                    price=float(stop_limit_order['price']),
                     quantity=float(stop_limit_order['executedQty']),
                     fee=fee_sum,
                     cause=ECause.STOP_LIMIT)
+                TelegramBot.send_formatted_message('trade_closed', asdict(trade.result))
+
                 
             elif hasattr(trade.exit, 'expire') and trade.exit.expire <= last_closed_candle_open_time:
                 trade.status = EState.EXIT_EXP

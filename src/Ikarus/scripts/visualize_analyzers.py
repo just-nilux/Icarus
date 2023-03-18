@@ -8,7 +8,7 @@ from time import time as now, sleep
 import sys
 import asyncio
 from binance import AsyncClient
-from .. import broker
+from ..brokers import backtest_wrapper
 import datetime
 from itertools import chain
 import itertools
@@ -191,7 +191,7 @@ def analysis_dashboard(pair_pool, time_scale_pool, indicator_pool, title='Buy/Se
     fplt.show()
 
 
-async def visualize_dashboard(bwrapper, config):
+async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, config):
 
     start_time = datetime.datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
     start_timestamp = int(datetime.datetime.timestamp(start_time))*1000
@@ -231,9 +231,9 @@ async def visualize_dashboard(bwrapper, config):
 
 async def main():
 
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
-                                    api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = broker.TestBinanceWrapper(client, config)
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = backtest_wrapper.BacktestWrapper(client, config)
+
     await visualize_dashboard(bwrapper, config)
 
 
@@ -242,6 +242,9 @@ if __name__ == '__main__':
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
     
+    if len(sys.argv) >=3:
+        config['credential_file'] = str(sys.argv[2])
+
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
     

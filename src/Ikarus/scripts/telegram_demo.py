@@ -125,10 +125,12 @@ if __name__ == '__main__':
 
     # Send a raw message
     TelegramBot.send_raw_message("This is a raw message")
-
-    send_trade()
+    time.sleep(1)
+    #send_trade()
     send_trade_order()
+    time.sleep(1)
     send_trade_result()
+    time.sleep(1)
     send_balance()
 
     # Send a help message
@@ -140,7 +142,7 @@ if __name__ == '__main__':
 
 
 
-    commandss = [cmd_handler.command[0] for cmd_handler in TelegramBot.updater.dispatcher.handlers[0] if type(cmd_handler) == CommandHandler]
+    #commandss = [cmd_handler.command[0] for cmd_handler in TelegramBot.updater.dispatcher.handlers[0] if type(cmd_handler) == CommandHandler]
     TelegramBot.updater.start_polling()
 
     counter = 0

@@ -1,21 +1,22 @@
 from Ikarus.objects import *
-from Ikarus.strategies.StrategyBase import StrategyBase
 import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
 from Ikarus.brokers.binance_wrapper import BinanceWrapper, sync_trades_with_orders
-from Ikarus import strategy_manager, analyzers, mongo_utils, notifications
+from Ikarus import strategy_manager, analyzers, mongo_utils
 from Ikarus.exceptions import SysStatDownException
 from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
 import logging
-from logging.handlers import TimedRotatingFileHandler
 import sys
-import bson
 import itertools
 from Ikarus import resource_allocator
 from Ikarus.resource_allocator import DiscreteStrategyAllocator
+
+from Ikarus.connectivity.telegram_wrapper import TelegramBot
+from Ikarus.connectivity.trading import init_telegram_bot, start_telegram_bot, enable_broker_interface
+
 
 # Global Variables
 FLAG_SYSTEM_STATUS = True
@@ -99,7 +100,7 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
 
     df_balance = await broker_client.get_current_balance()
     logger.debug(f'Current Balance after execution: \n{df_balance.to_string()}')
-    
+
     obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
@@ -134,12 +135,12 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
     #observer_objs = list(await asyncio.gather(*observer_list))
     await mongocli.do_insert_many("observer", observer_list)
 
-
 async def main():
-
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
-    broker_client = BinanceWrapper(client, config, telbot)
-
+    broker_client = BinanceWrapper(client, config)
+    enable_broker_interface(BinanceWrapper, client, config)
+    start_telegram_bot()
+    print(await broker_client.get_current_balance())
     all_pairs = [strategy['pairs'] for strategy in config['strategy'].values()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await broker_client.get_all_symbol_info(all_pairs)
@@ -188,12 +189,12 @@ async def main():
             '''
         except SysStatDownException as e:
             logger.error(str(e))
-            telbot.send_constructed_msg('error', str(e))
+            TelegramBot.send_formatted_message('error', [str(e)])
             await asyncio.sleep(60)
 
         except asyncio.TimeoutError as e:
             logger.error(str(e))
-            telbot.send_constructed_msg('error', str(e))
+            TelegramBot.send_formatted_message('error', [str(e)])
             await asyncio.sleep(60)
 
         except Exception as e:
@@ -202,6 +203,22 @@ async def main():
             
             
     await broker_client.close_connection()
+
+def aexec(func):
+    global loop
+    def wrapper(update, context):
+        
+        asyncio.set_event_loop(loop)
+        #loop.run_until_complete(func(update, context))
+        #loop.close()
+        asyncio.run(func(update, context))
+    return wrapper
+
+@aexec
+async def dummy_func(update, context):
+    global broker_client
+    print("dummy_func")
+    await broker_client.get_current_balance()
 
 if __name__ == "__main__":
     
@@ -212,11 +229,13 @@ if __name__ == "__main__":
         cred_info = json.load(cred_file)
 
     logger = logging.getLogger('app')
-    telbot = notifications.TelegramBot(**cred_info['Telegram'], telegram_config=config['notification']['telegram'])
     mongocli = mongo_utils.MongoClient(**config['mongodb'])
 
     # Initialize and configure objects
     setup_logger(logger, config['log'])
+
+    # Initialize telegram bot
+    init_telegram_bot(cred_info['Telegram']['token'], cred_info['Telegram']['chat_id'])
 
     # Setup initial objects
     analyzer = analyzers.Analyzer(config)

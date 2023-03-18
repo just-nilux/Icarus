@@ -53,13 +53,12 @@ async def visualize_dashboard(bwrapper, mongocli, config):
 
 async def main():
 
-    if config['backtest']['online']:
-        client = await AsyncClient.create(**cred_info['Binance']['Production'])
-        bwrapper = backtest_wrapper.BacktestWrapper(client, config)
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = backtest_wrapper.BacktestWrapper(client, config)
 
-        config['mongodb']['clean'] = False
-        mongo_client = mongo_utils.MongoClient(**config['mongodb'])
-        await visualize_dashboard(bwrapper, mongo_client, config)
+    config['mongodb']['clean'] = False
+    mongo_client = mongo_utils.MongoClient(**config['mongodb'])
+    await visualize_dashboard(bwrapper, mongo_client, config)
 
 
 if __name__ == '__main__':

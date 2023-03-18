@@ -39,8 +39,8 @@ class BacktestWrapper():
         logger.info('creating an instance of {}'.format(__name__))
 
         # Set reference currencies
-        self.quote_currency = _config['broker']['quote_currency']
-        BacktestWrapper.fee_rate = _config['broker']['fee_rate']
+        self.quote_currency = _config['broker'].get('fee_rate','USDT')
+        BacktestWrapper.fee_rate = _config['broker'].get('fee_rate',0)
 
         # TestBinanceWrapper: get df_tickers once
         pass

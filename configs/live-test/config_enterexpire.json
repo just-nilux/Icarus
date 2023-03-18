@@ -3,14 +3,14 @@
     "log":{
         "level": "DEBUG",
         "file": "log/icarus.log",
-        "clear": false
+        "clear": true
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
         "database": "live-test",
         "host": "localhost",
         "port": 27017,
-        "clean": false
+        "clean": true
     },
     "notification":{
         "telegram": {
@@ -25,49 +25,33 @@
         "mail": false
     },
     "broker": {
-        "quote_currency": "USDT"
+        "quote_currency": "USDT",
+        "fee_rate": 0.001
     },
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
             "distribution_config": [
-                "FixedLimitTarget_03_LTC", "FixedOCOTarget_03_XRP"
+                "TestEnterExpire"
             ],
             "capital_coeff":0.9, 
             "stop_capital":null,
-            "capital_limit": 150
+            "capital_limit": 50
         }
     },
     "strategy": {
-        "FixedLimitTarget_03_LTC": {
-            "strategy": "FixedLimitTarget",
-            "pairs": ["LTCUSDT", "BNBUSDT"],
-            "time_scales": ["15m"],
-            "max_live_trade": 1,
-            "kwargs":{
-                "target_profit_coeff":1.0025,
-                "exit_duration":16
-            }
-        },
-        "FixedOCOTarget_03_XRP": {
-            "strategy": "FixedOCOTarget",
-            "pairs": ["XRPUSDT", "TRXUSDT", "LTCUSDT"],
-            "time_scales": ["15m"],
-            "max_live_trade": 3,
-            "kwargs":{
-                "target_profit_coeff":1.01,
-                "max_loss_coeff":0.0025,
-                "exit_duration":16
-            }
+        "TestEnterExpire": {
+            "strategy": "TestEnterExpire",
+            "pairs": ["BTCUSDT"],
+            "time_scales": ["1m"],
+            "max_live_trade": 1
         }
     },
     "analysis": {
-        "close":{},
-        "aroon":{}
+        "close":{}
     },
     "time_scales": {
         "1m": 3,
-        "15m": 3,
         "1h": 3
     },
     "report_folder_name": "reports",
@@ -75,10 +59,12 @@
     "grid_search_reporters":{},
     "visualization":{
         "observers":{
-            "quote_asset":["free", "total", "in_trade"]
+            "quote_asset":["free", "total", "in_trade"],
+            "quote_asset_leak":["binary"]
         },
         "indicators": {
-            "close":{}
+            "close":"",
+            "aroon":{"timeperiod":14}
         },
         "patterns":[]
     }
