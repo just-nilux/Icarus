@@ -17,6 +17,8 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 import seaborn as sns
 import mplfinance as mpf
 
+from objects import Report
+
 def get_reporter_name(indice):
     
     if type(indice[0]) == str:
@@ -68,7 +70,7 @@ def evaluate_figsize(shape):
 
     return x, y
 
-def evaluate_filename(reporter, indice, special_char=True):
+def evaluate_filename(indice, reporter=None, special_char=True):
 
     # Check if there are multiple symbols or timeframes
     symbol = indice[0][0]
@@ -84,8 +86,11 @@ def evaluate_filename(reporter, indice, special_char=True):
 
             if ind[1] != timeframe:
                 analyzer = '<analyzer>'
-                
-    filename = '{}_{}_{}_{}'.format(reporter, symbol, timeframe, analyzer)
+    
+    if reporter == None:
+        filename = '{}_{}_{}'.format(symbol, timeframe, analyzer)
+    else:
+        filename = '{}_{}_{}_{}'.format(reporter, symbol, timeframe, analyzer)
 
     if not special_char:
         return filename.replace('<', '').replace('>', '')
@@ -151,7 +156,7 @@ class ImageWriter():
 
 
     def box_plot(self, indice, report_dict, **kwargs):
-        filename = evaluate_filename(kwargs['reporter'], indice)
+        filename = evaluate_filename(indice, kwargs['reporter'])
         target_path = evaluate_target_path(self.report_folder,filename)
 
         fig, ax = plt.subplots()
@@ -213,13 +218,15 @@ class ImageWriter():
         pass
 
     def heatmap_plot(self, indice, report_data, **kwargs):
-        filename = evaluate_filename(kwargs['reporter'], indice)
+        filename = evaluate_filename(indice, kwargs['reporter'])
         target_path = evaluate_target_path(self.report_folder,filename)
 
         if type(report_data) == dict:
             df = pd.DataFrame(data=report_data)
         elif type(report_data) == pd.DataFrame:
             df = report_data
+        elif type(report_data) == Report:
+            df = report_data.data
 
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
         fig, ax = plt.subplots(figsize=evaluate_figsize(df.shape))
@@ -263,7 +270,7 @@ class ImageWriter():
 
 
     def heatmap_multiplot(self, indice, report_data, **kwargs):
-        filename = evaluate_filename(kwargs['reporter'], indice)
+        filename = evaluate_filename(indice, kwargs['reporter'])
         target_path = evaluate_target_path(self.report_folder,filename)
 
         sub_matrices = []
@@ -497,6 +504,9 @@ class MarkdownWriter():
 
         # Add strategy statistics
         filepaths = [file for file in glob.glob(f'{self.report_folder}/strategy_*.json')]
+        if filepaths == []:
+            return
+        
         self.md_file.new_header(2, 'Strategies')
 
         strategy_stat = []

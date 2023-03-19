@@ -1,13 +1,13 @@
 from statistics import mean, stdev
 import numpy as np
 import pandas as pd
-from utils import time_scale_to_minute
 from objects import ECause, EState, Report, ReportMeta
-from ..safe_operators import safe_divide, safe_sum, safe_substract
+from safe_operators import safe_divide, safe_substract
 import copy
 import asyncio
 from dataclasses import asdict
 import itertools
+from report.report_writer import evaluate_filename
 
 accuracy_conditions_for_ppc = {
     'downtrend': lambda a,count : (np.array(a) < -1 ).sum() / count * 100,
@@ -48,7 +48,13 @@ async def perc_pos_change_stats(indices, analysis):
         ])
     df_th = pd.DataFrame(table, columns=['pos_change','neg_change'], index=list(map(lambda x: str(x).replace('.','_'), pos_change_thresholds)))
     #statistic_dict['threshold_table'] = df_th.to_dict()
-    return df_th.T.to_dict()
+
+    filename = evaluate_filename(indice=indices)
+    report_meta = ReportMeta(
+        title=filename,
+        filename=filename
+        )
+    return Report(meta=report_meta, data=df_th.T)
 
 
 async def correlation_matrix(indices, analysis):

@@ -7,23 +7,13 @@
 
 from binance.enums import *
 import asyncio
-import pandas as pd
-import logging
 import json
-import bson
-import sys
-from utils import time_scale_to_second, get_min_scale, \
-    safe_multiply, safe_divide, round_to_period
-import more_itertools
-import binance_filters
-from objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
-from utils import setup_logger
-from dataclasses import asdict
 from binance import AsyncClient
-from ..strategies.StrategyBase import StrategyBase
-from ..brokers.binance_wrapper import BinanceWrapper
+from brokers.binance_wrapper import BinanceWrapper
 import argparse
 import ast
+import logging
+from utils import setup_logger
 
 async def run_command(args):
 
@@ -33,7 +23,7 @@ async def run_command(args):
         cred_info = json.load(cred_file)
 
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
-    broker_client = BinanceWrapper(client, config, None)
+    broker_client = BinanceWrapper(client, config)
 
     command_args = ast.literal_eval(args.args)
     command_kwargs = ast.literal_eval(args.kwargs)
@@ -53,6 +43,15 @@ async def run_command(args):
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger('binance_wrapper_cli')
+    log_config = {
+        "level": "DEBUG",
+        "file": "log/binance_wrapper_cli.log",
+        "clear": True
+    }
+    # Initialize and configure objects
+    setup_logger(logger, log_config)
+
     # python -m src.Ikarus.scripts.binance_wrapper_cli '--config' 'C:\Users\bilko\PycharmProjects\trade-bot/configs/live-test/config.json' '--command' 'get_all_orders' '--args' 'BTCUSDT'
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--config', help='config file')

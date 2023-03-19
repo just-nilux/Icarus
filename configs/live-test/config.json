@@ -56,7 +56,7 @@
             "max_live_trade": 3,
             "kwargs":{
                 "target_profit_coeff":1.01,
-                "max_loss_coeff":0.0025,
+                "max_loss_coeff":0.005,
                 "exit_duration":16
             }
         }

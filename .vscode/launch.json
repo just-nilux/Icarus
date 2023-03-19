@@ -26,94 +26,37 @@
             ]
         },
         {
-            "name": "objects",
-            "type": "python",
-            "request": "launch",
-            "module": "Ikarus.objects",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/src"
-        },
-        {
-            "name": "Strategy",
-            "type": "python",
-            "request": "launch",
-            "module": "Ikarus.strategies.ObjectStrategy",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/src"
-        },
-        {
-            "name": "notification",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": [
-                ".\\configs\\live\\config.json"
-            ]
-        },
-        {
             "name": "trade_statistics",
             "type": "python",
             "request": "launch",
-            "module": "Ikarus.trade_statistics",
+            "program": "src/Ikarus/trade_statistics.py",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/src",
             "args": [
-                "..\\configs\\test\\LimitLimit\\config.json"
+                "${workspaceFolder}/configs/test/LimitLimit/config.json"
             ]
         },
         {
             "name": "generate_report",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.report.generate_report",
+            "program": "src/Ikarus/generate_report.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config_LTC_24.json"
-            ]
-        },
-        {
-            "name": "custom_script",
-            "type": "python",
-            "request": "launch",
-            "module": "src.Ikarus.report.custom_script",
-            "console": "integratedTerminal",
-            "args": [
-                "${workspaceFolder}/configs/research/aroon_classifies_market/config.json"
-            ]
-        },
-        {
-            "name": "grid_search_analyzers",
-            "type": "python",
-            "request": "launch",
-            "module": "src.Ikarus.report.grid_search_analyzers",
-            "console": "integratedTerminal",
-            "args": [
-                "${workspaceFolder}/configs/research/aroon_classifies_market/grid_search_reporters_config.json"
-            ]
-        },
-        {
-            "name": "grid_search_reporters",
-            "type": "python",
-            "request": "launch",
-            "module": "src.Ikarus.report.grid_search_reporters",
-            "console": "integratedTerminal",
-            "args": [
-                "${workspaceFolder}/configs/research/aroon_classifies_market/config.json"
+                "${workspaceFolder}/configs/research/daily_steady_profit/config.json"
             ]
         },
         {
             "name": "mongo_utils",
             "type": "python",
             "request": "launch",
-            "program": ".\\Ikarus\\mongo_utils.py",
+            "program": "src/Ikarus/mongo_utils.py",
             "console": "integratedTerminal"
         },
         {
             "name": "visualize_analyzers",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.scripts.visualize_analyzers",
+            "program": "src/Ikarus/visualize_analyzers",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/research/support-resistance/config.json"
@@ -123,38 +66,30 @@
             "name": "visualize_backtest",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.scripts.visualize_backtest",
+            "program": "src/Ikarus/visualize_backtest",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config.json",
-                "${workspaceFolder}/test_credentials.json"
+                "${workspaceFolder}/configs/live-test/config.json"
             ]
         },
         {
             "name": "visualize_live_session",
             "type": "python",
             "request": "launch",
-            "module": "Ikarus.scripts.visualize_live_session",
+            "program": "src/Ikarus/visualize_live_session",
             "console": "integratedTerminal",
             "args": [
-                ".\\configs\\live\\config.json"
+                "${workspaceFolder}/configs/live-test/config.json"
             ]
-        },
-        {
-            "name": "utils",
-            "type": "python",
-            "request": "launch",
-            "module": "src.Ikarus.utils",
-            "console": "integratedTerminal",
         },
         {
             "name": "backtest",
             "type": "python",
             "request": "launch",
-            "program": "src/backtest.py",
+            "program": "src/Ikarus/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/backtest/FixedLimitTarget/config_adaptive_LTC.json"
+                "${workspaceFolder}/configs/test/EnterExpire/config.json"
             ]
         },
         {
@@ -181,13 +116,13 @@
             "name": "binance_wrapper_cli",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.scripts.binance_wrapper_cli",
+            "program": "src/Ikarus/binance_wrapper_cli.py",
             "console": "integratedTerminal",
             "args": [
                 "--config",
                 "${workspaceFolder}/configs/live-test/config.json",
                 "--command",
-                "get_current_balance",
+                "cancel_all_open_orders"
             ]
         }
     ]

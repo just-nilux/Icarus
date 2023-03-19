@@ -8,14 +8,14 @@ import bson
 import sys
 from utils import time_scale_to_second, get_min_scale, \
     safe_multiply, safe_divide, round_to_period
-import more_itertools
-import binance_filters
 from objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
 from utils import setup_logger
 from dataclasses import asdict
 from binance import AsyncClient
-from ..strategies.StrategyBase import StrategyBase
-from ..connectivity.telegram_wrapper import TelegramBot
+from connectivity.telegram_wrapper import TelegramBot
+import itertools
+
+
 logger = logging.getLogger('app')
 
 # This variable added as deus ex machina
@@ -188,12 +188,32 @@ class BinanceWrapper():
         return orders
 
 
-    async def cancel_all_open_orders(self, pairs: 'list[str]'):
-        # TODO
-        for pair in pairs:
-            orders = await self.client.get_open_orders(symbol=pair)
+    async def cancel_all_open_orders(self):
 
-        return
+        # Get current balance
+        df = await self.get_current_balance()
+
+        # Obtain the symbols that has locked asset
+        assets = list(df[df['locked'] != 0].index)
+        symbols = list(map(lambda a: a+'USDT', assets))
+
+        # Iterate over the symbols and get alive orders, extract orderIds
+        coroutines = []
+        for symbol in symbols:
+            coroutines.append(self.client.get_open_orders(symbol=symbol))
+
+        orders = await asyncio.gather(*coroutines)
+        orders = list(itertools.chain(*orders))
+
+        # Cancel orders
+        for order in orders:
+            try:
+                response = await self.client.cancel_order(
+                    symbol=order['symbol'],
+                    orderId=order['orderId'])
+                logger.info(f'Order canceled: {response}')
+            except Exception as e:
+                logger.error(f'Order could not be canceled: {e}\n{order}')
 
 
     async def _execute_oco_sell(self, trade: Trade):

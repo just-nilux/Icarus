@@ -73,7 +73,6 @@
                 "indice_template": ["<pair>", "<timeframe>", "<analyzer>"],
                 "source": "analyzer",
                 "writers": [
-                    "database",
                     "markdown_table",
                     "heatmap_plot"
                 ]

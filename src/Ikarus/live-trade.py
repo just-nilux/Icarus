@@ -1,21 +1,21 @@
-from Ikarus.objects import *
+from objects import *
 import asyncio
 from binance import AsyncClient
 from datetime import datetime
 import json
-from Ikarus.brokers.binance_wrapper import BinanceWrapper, sync_trades_with_orders
-from Ikarus import strategy_manager, analyzers, mongo_utils
-from Ikarus.exceptions import SysStatDownException
-from Ikarus.utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
+from brokers.binance_wrapper import BinanceWrapper, sync_trades_with_orders
+import strategy_manager, analyzers, mongo_utils
+from exceptions import SysStatDownException
+from utils import time_scale_to_second, get_min_scale, round_to_period, eval_total_capital, \
     eval_total_capital_in_lto, setup_logger
 import logging
 import sys
 import itertools
-from Ikarus import resource_allocator
-from Ikarus.resource_allocator import DiscreteStrategyAllocator
+import resource_allocator
+from resource_allocator import DiscreteStrategyAllocator
 
-from Ikarus.connectivity.telegram_wrapper import TelegramBot
-from Ikarus.connectivity.trading import init_telegram_bot, start_telegram_bot, enable_broker_interface
+from connectivity.telegram_wrapper import TelegramBot
+from connectivity.trading import init_telegram_bot, start_telegram_bot, enable_broker_interface
 
 
 # Global Variables

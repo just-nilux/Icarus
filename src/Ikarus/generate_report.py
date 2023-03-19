@@ -3,14 +3,14 @@ import sys
 import os
 import asyncio
 from binance import AsyncClient
-from ..brokers import binance_wrapper
+from brokers import backtest_wrapper
 import datetime
 import itertools
-from ..analyzers import Analyzer
+from analyzers import Analyzer
 import mongo_utils
 import utils
-from . import report_tools
-from .report_writer import ReportWriter
+from report import report_tools
+from report.report_writer import ReportWriter
 import ast
 from copy import deepcopy
 
@@ -116,9 +116,8 @@ def grid_search():
 
 async def main():
 
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
-                                    api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = backtest_wrapper.BacktestWrapper(client, config)
 
     # Dont delete the DB since it is source to read data as well.
     config['mongodb']['clean'] = False
@@ -156,7 +155,7 @@ async def main():
         if source == 'database':
             reporter_inputs.append(
                 await mongo_utils.do_aggregate_multi_query(mongo_client, 
-                    report_config.get('collection', report_config), 
+                    report_config['collection'], 
                     report_config['queries'])
             )
 
@@ -179,8 +178,8 @@ async def main():
     report_writer = ReportWriter(report_folder, mongo_client)
     report_writer_coroutines = []
     for report_config, report in zip(config['report'], report_tool_results):
-        if report == None:
-            continue
+        #if report == None:
+        #    continue
         
         for writer_type in report_config.get('writers', []): #shitcode
             if not hasattr(report_writer, writer_type):
