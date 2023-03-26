@@ -1,7 +1,7 @@
-from ..connectivity.telegram_wrapper import TelegramBot, TelegramMessageFormat, unknown_command, unknown_text
-from telegram.ext.commandhandler import CommandHandler
-from telegram.ext.messagehandler import MessageHandler
-from telegram.ext.filters import Filters
+from connectivity.telegram_wrapper import TelegramBot, TelegramMessageFormat, unknown_command, unknown_text
+from telegram.ext import CommandHandler
+from telegram.ext import MessageHandler
+from telegram.ext import filters
 
 import json
 import sys
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     TelegramBot.add_handler(CommandHandler('kill', TelegramBot.kill), description="Killing the bot...")
     TelegramBot.add_handler(CommandHandler('help', TelegramBot.help), description="Print help message")
     TelegramBot.add_handler(CommandHandler('ping', TelegramBot.pong), description="Ping the bot")
-    TelegramBot.add_handler(MessageHandler(Filters.command, unknown_command))
+    TelegramBot.add_handler(MessageHandler(filters.TEXT, unknown_command))
     #TelegramBot.add_handler(MessageHandler(Filters.text(['hello','hi','hey']), unknown_text))
 
     # Send a raw message

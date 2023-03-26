@@ -1,7 +1,6 @@
 import json
 import logging
 from binance.helpers import round_step_size
-from sqlalchemy import false
 import bson
 import abc
 import itertools

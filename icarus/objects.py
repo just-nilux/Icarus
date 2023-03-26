@@ -4,7 +4,6 @@ Observers are the configurable read-only units. They simply collect data at the 
 from dataclasses import dataclass, field, asdict
 import dataclasses
 import string
-from multipledispatch import dispatch
 from json import JSONEncoder
 import json
 import numpy as np

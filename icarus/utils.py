@@ -140,8 +140,14 @@ def round_to_period(current_time, period_min, direction='floor', offset=0):
 
 
 def setup_logger(logger, log_config):
-    if log_config.get('clear',False) and os.path.isfile(log_config['file']) :
-        os.remove(log_config['file'])
+
+    log_dir = os.path.dirname(log_config['file'])
+    if os.path.isdir(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    else:
+        if log_config.get('clear',False) and os.path.isfile(log_config['file']) :
+            os.remove(log_config['file'])
 
     logger = logging.getLogger('app')
     logger.setLevel(logging.DEBUG)

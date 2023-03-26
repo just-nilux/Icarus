@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # Initialize and configure objects
     setup_logger(logger, log_config)
 
-    # python -m src.Ikarus.scripts.binance_wrapper_cli '--config' 'C:\Users\bilko\PycharmProjects\trade-bot/configs/live-test/config.json' '--command' 'get_all_orders' '--args' 'BTCUSDT'
+    # python -m icarus.scripts.binance_wrapper_cli '--config' 'C:\Users\bilko\PycharmProjects\trade-bot/configs/live-test/config.json' '--command' 'get_all_orders' '--args' 'BTCUSDT'
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--config', help='config file')
     parser.add_argument('--command', help='binance api call')
