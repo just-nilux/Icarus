@@ -142,7 +142,7 @@ def round_to_period(current_time, period_min, direction='floor', offset=0):
 def setup_logger(logger, log_config):
 
     log_dir = os.path.dirname(log_config['file'])
-    if os.path.isdir(log_dir):
+    if not os.path.isdir(log_dir):
         os.makedirs(log_dir, exist_ok=True)
 
     else:
