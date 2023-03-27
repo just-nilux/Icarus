@@ -1,5 +1,5 @@
 import unittest
-from src.Ikarus.objects import *
+from icarus.objects import *
 
 
 class test_order_from_dict(unittest.TestCase):

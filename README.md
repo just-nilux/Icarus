@@ -10,10 +10,23 @@ Icarus is an all-in-one cryptocurrency trading bot for Binance. It enables you t
 
 ## Table of content
 
+- [Installation](#installation)
 - [Capabilities](#capabilities)
 - [Backtest](#backtest)
 - [Live Trade](#live-trade)
 
+## Installation
+```
+git clone https://github.com/bilkosem/Icarus.git
+cd Icarus
+sudo ./install.sh
+```
+Install mongodb from official website: https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/, then
+```
+sudo chown -R mongodb:mongodb /var/lib/mongodb
+sudo chown mongodb:mongodb /tmp/mongodb-27017.sock
+sudo service mongod restart
+```
 ## Capabilities
 - Easy switching between backtest and live trading
 - Support for market, limit and oco orders

@@ -20,7 +20,7 @@
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
-            "module": "src.Ikarus.scripts.get_most_traded_pairs",
+            "module": "icarus.scripts.get_most_traded_pairs",
             "args": [
                 "${workspaceFolder}/configs/research/daily_steady_profit/config_get_most_traded_pairs.json"
             ]
@@ -29,7 +29,7 @@
             "name": "trade_statistics",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/trade_statistics.py",
+            "program": "icarus/trade_statistics.py",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/test/LimitLimit/config.json"
@@ -39,7 +39,7 @@
             "name": "generate_report",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/generate_report.py",
+            "program": "icarus/generate_report.py",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/research/daily_steady_profit/config.json"
@@ -49,14 +49,14 @@
             "name": "mongo_utils",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/mongo_utils.py",
+            "program": "icarus/mongo_utils.py",
             "console": "integratedTerminal"
         },
         {
             "name": "visualize_analyzers",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/visualize_analyzers",
+            "program": "icarus/visualize_analyzers",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/research/support-resistance/config.json"
@@ -66,7 +66,7 @@
             "name": "visualize_backtest",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/visualize_backtest",
+            "program": "icarus/visualize_backtest",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/live-test/config.json"
@@ -76,7 +76,7 @@
             "name": "visualize_live_session",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/visualize_live_session",
+            "program": "icarus/visualize_live_session",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/live-test/config.json"
@@ -86,7 +86,7 @@
             "name": "backtest",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/backtest.py",
+            "program": "icarus/backtest.py",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/test/EnterExpire/config.json"
@@ -106,7 +106,7 @@
             "name": "binance_wrapper_demo",
             "type": "python",
             "request": "launch",
-            "module": "src.Ikarus.scripts.binance_wrapper_demo",
+            "module": "icarus.scripts.binance_wrapper_demo",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/live-test/config.json"
@@ -116,13 +116,23 @@
             "name": "binance_wrapper_cli",
             "type": "python",
             "request": "launch",
-            "program": "src/Ikarus/binance_wrapper_cli.py",
+            "program": "icarus/binance_wrapper_cli.py",
             "console": "integratedTerminal",
             "args": [
                 "--config",
                 "${workspaceFolder}/configs/live-test/config.json",
                 "--command",
                 "cancel_all_open_orders"
+            ]
+        },
+        {
+            "name": "telegram_wrapper",
+            "type": "python",
+            "request": "launch",
+            "program": "icarus/connectivity/telegram_wrapper.py",
+            "console": "integratedTerminal",
+            "args": [
+                "test_credentials.json"
             ]
         }
     ]

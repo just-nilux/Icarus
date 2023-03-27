@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
-from src.Ikarus import position_sizing
-from src.Ikarus.objects import *
+from icarus import position_sizing
+from icarus.objects import *
 
 
 class test_evaluate_size(unittest.TestCase):
