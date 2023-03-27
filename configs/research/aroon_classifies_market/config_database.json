@@ -3,6 +3,7 @@
     "log-level": "DEBUG",
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb": {
+        "database": "result",
         "host": "localhost",
         "port": 27017,
         "clean": false

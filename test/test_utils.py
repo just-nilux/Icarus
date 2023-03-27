@@ -1,5 +1,5 @@
 import unittest
-from src.Ikarus.utils import *
+from icarus.utils import *
 
 class test_minute_to_time_scale(unittest.TestCase):
     def test_exact_minute(self):

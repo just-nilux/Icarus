@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
-from src.Ikarus import resource_allocator
-from src.Ikarus.objects import *
+from icarus import resource_allocator
+from icarus.objects import *
 
 class test_StrategyAllocator(unittest.TestCase):
 

@@ -1,0 +1,53 @@
+{
+    "Generation Date": "25/07/2022 20:00:31",
+    "Start Time": "2019-05-12 12:15:00",
+    "End Time": "2020-06-19 13:00:00",
+    "Total Time in Day": 402.0,
+    "Balance": {
+        "Start Balance": 10000.0,
+        "End Balance": 14844.87,
+        "Absolute Profit": 4844.87,
+        "Percentage Profit": 48.45,
+        "Paid Fee": 63.6272582
+    },
+    "Strategies": {
+        "RSI": {
+            "Pairs": [
+                "XRPUSDT"
+            ],
+            "Live": 0,
+            "Closed": 3,
+            "Closed OCO Stop Limit": 0,
+            "Enter Expired": 0,
+            "Closed Profit": 4874.24439648,
+            "Win Count": 2,
+            "Lose Count": 1,
+            "Min Lifetime": 48.0,
+            "Max Lifetime": 73.0,
+            "Average Lifetime": 62.33,
+            "Daily Trade Create Rate": 0.01,
+            "Trade Enter Rate": 1.0,
+            "Win Rate": 0.67,
+            "Average Profit": 1624.75
+        },
+        "Total": {
+            "Pairs": [
+                "XRPUSDT"
+            ],
+            "Live": 0,
+            "Closed": 3,
+            "Closed OCO Stop Limit": 0,
+            "Enter Expired": 0,
+            "Closed Profit": 4874.24439648,
+            "Win Count": 2,
+            "Lose Count": 1,
+            "Min Lifetime": 48.0,
+            "Max Lifetime": 73.0,
+            "Average Lifetime": 62.33,
+            "Daily Trade Create Rate": 0.01,
+            "Trade Enter Rate": 1.0,
+            "Win Rate": 0.67,
+            "Average Profit": 1624.75
+        }
+    }
+}

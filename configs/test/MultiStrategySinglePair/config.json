@@ -27,11 +27,13 @@
     },
     "strategy": {
         "TestLimitUpdate": {
+            "strategy": "TestLimitUpdate",
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3
         },
         "TestMarketMarket": {
+            "strategy": "TestMarketMarket",
             "pairs": ["XRPUSDT"],
             "time_scales": ["1d"],
             "max_lto": 3
