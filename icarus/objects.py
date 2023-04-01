@@ -11,6 +11,7 @@ import copy
 import bson
 from enum import Enum
 from safe_operators import safe_divide, safe_multiply, safe_substract, safe_sum
+import uuid
 
 def trade_list_to_json(trade_list):
     return [json.dumps(trade, cls=EnhancedJSONEncoder) for trade in trade_list]
@@ -243,6 +244,10 @@ class Trade():
     command: ECommand = ECommand.NONE
     order_stash: list = field(default_factory=list)
     _id: str = None
+
+    def __post_init__(self):
+        if self._id == None:
+            self._id = str(uuid.uuid4())
 
     def set_enter(self,enter_order):
         self.enter=enter_order

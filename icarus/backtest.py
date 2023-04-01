@@ -24,16 +24,17 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         print()
 
 
-async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_time):
+async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_time_sec):
+    ikarus_time_ms = ikarus_time_sec * 1000 # Convert to ms
 
-    if str(ikarus_time*1000) in config['backtest'].get('breakpoints',{}).keys():
-        logger.debug(f"Stopped at breakpoint \"{config['backtest']['breakpoints'][str(ikarus_time*1000)]}\": {ikarus_time}")
+    if str(ikarus_time_ms) in config['backtest'].get('breakpoints',{}).keys():
+        logger.debug(f"Stopped at breakpoint \"{config['backtest']['breakpoints'][str(ikarus_time_ms)]}\": {ikarus_time_sec}")
 
     
     # The close time of the last_kline + 1ms, corresponds to the open_time of the future kline which is actually the kline we are in. 
     # If the execution takes 2 second, then the order execution and the updates will be done
     # 2 second after the new kline started. But the analysis will be done based on the last closed kline
-    logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
+    logger.info(f'Ikarus Time in sec: [{ikarus_time_sec}]') # UTC
 
     # TODO: give index paramter to retrieve a single object instead of a list
     info = await mongocli.get_n_docs('observer', {'type':EObserverType.BALANCE}) # Default is the last doc
@@ -45,15 +46,15 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
-        if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
+        if ikarus_time_sec % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
             active_strategies.append(strategy_obj) # Create a copy of each strategy object
 
-    ikarus_time = ikarus_time * 1000 # Convert to ms
+
     meta_data_pool = set(chain(*meta_data_pool))
 
-    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict_download(meta_data_pool, ikarus_time)
+    tasks_pre_calc = bwrapper.get_current_balance(info[0]), bwrapper.get_data_dict_download(meta_data_pool, ikarus_time_ms)
     df_balance, data_dict = await asyncio.gather(*tasks_pre_calc)
 
     # NOTE: Query to get all of the LTOs that has a strategy property that is contained in 'active_strategies'
@@ -82,7 +83,7 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
         strategy_tasks.append(asyncio.create_task(active_strategy.run(
             analysis_dict, 
             grouped_ltos.get(active_strategy.name, []), 
-            ikarus_time, 
+            ikarus_time_sec, 
             strategy_resources[active_strategy.name])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
@@ -100,16 +101,16 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
 
     await mongo_utils.update_live_trades(mongocli, live_trade_list)
 
-    obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
+    obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time_sec, data=strategy_res_allocator.strategy_capitals).to_dict()
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
-    obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()
+    obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time_sec, data=observer_item).to_dict()
 
     observation_obj = {}
     observation_obj['free'] = df_balance.loc[config['broker']['quote_currency'],'free']
     observation_obj['in_trade'] = eval_total_capital_in_lto(live_trade_list+new_trade_list)
     observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
-    obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
+    obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time_sec, data=observation_obj).to_dict()
 
     '''
     # NOTE: capital_limit is not integrated to this leak evaluation 
@@ -121,7 +122,7 @@ async def application(strategy_list, strategy_res_allocator, bwrapper, ikarus_ti
     observation_obj['real_free'] = free
     observation_obj['binary'] = int(observation_obj['ideal_free'] < observation_obj['real_free'])
 
-    obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time, data=observation_obj).to_dict()
+    obs_quote_asset_leak = Observer('quote_asset_leak', ts=ikarus_time_ms, data=observation_obj).to_dict()
     '''
 
 

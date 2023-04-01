@@ -11,8 +11,8 @@ class TestMarketLimit(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc)
+    async def run(self, analysis_dict, lto_list, ikarus_time, strategy_capital):
+        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, strategy_capital)
 
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):

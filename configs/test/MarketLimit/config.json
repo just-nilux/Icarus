@@ -22,6 +22,18 @@
         "quote_currency": "USDT",
          "fee_rate": 0
     },
+    "strategy_allocation":{
+        "type": "DiscreteStrategyAllocator",
+        "kwargs": {
+            "initial_capital": 10000,
+            "distribution_config": [
+                "TestMarketLimit"
+            ],
+            "capital_coeff":0.9, 
+            "stop_capital":null,
+            "capital_limit": 150
+        }
+    },
     "risk_management":{
         "max_capital_use_ratio": 0.95
     },

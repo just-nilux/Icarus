@@ -120,7 +120,9 @@ class StrategyBase(metaclass=abc.ABCMeta):
 
 
     @staticmethod
-    def _eval_future_candle_time(start_time, count, minute): return bson.Int64(start_time + count*minute*60*1000)
+    def _eval_future_candle_time(start_time, count, minute): # In milisecond
+        #return bson.Int64(start_time + count*minute*60*1000)
+        return int(start_time + count*minute*60)
 
 
     @staticmethod

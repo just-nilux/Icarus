@@ -1,12 +1,13 @@
 {
     "tag": "test-bot",
     "log":{
-        "level": "INFO",
+        "level": "DEBUG",
         "file": "log/test-ikarus-app.log",
         "clear": true
     },
     "credential_file": "C:\\Users\\bilko\\PycharmProjects\\trade-bot\\test_credentials.json",
     "mongodb":{
+        "database": "test-bot",
         "host": "localhost",
         "port": 27017,
         "clean": true
@@ -21,6 +22,18 @@
     "broker": {
         "quote_currency": "USDT",
          "fee_rate": 0.001
+    },
+    "strategy_allocation":{
+        "type": "DiscreteStrategyAllocator",
+        "kwargs": {
+            "initial_capital": 10000,
+            "distribution_config": [
+                "TestLimitLimit"
+            ],
+            "capital_coeff":0.9, 
+            "stop_capital":null,
+            "capital_limit": 150
+        }
     },
     "risk_management":{
         "max_capital_use_ratio": 0.95
@@ -60,8 +73,7 @@
     },
     "visualization":{
         "observers":{
-            "quote_asset":["free", "total", "in_trade"],
-            "quote_asset_leak":["binary"]
+            "quote_asset":["free", "total", "in_trade"]
         },
         "indicators":{
             "market_classifier": {"source":"fractal_aroon"},

@@ -11,8 +11,8 @@ class TestLimitMarket(StrategyBase):
         return
 
 
-    async def run(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc):
-        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, total_qc, free_qc)
+    async def run(self, analysis_dict, lto_list, ikarus_time, strategy_capital):
+        return await super().run_logic(self, analysis_dict, lto_list, ikarus_time, strategy_capital)
 
 
     async def make_decision(self, analysis_dict, ao_pair, ikarus_time, pairwise_alloc_share):
@@ -31,7 +31,7 @@ class TestLimitMarket(StrategyBase):
 
 
             # Set decision_time to timestamp which is the open time of the current kline (newly started not closed kline)
-            trade = Trade(int(ikarus_time), self.name, ao_pair, command=ECommand.EXEC_ENTER)
+            trade = Trade(ikarus_time, self.name, ao_pair, command=ECommand.EXEC_ENTER)
             trade.set_enter(enter_limit_order)
             result = TradeResult()
             trade.result = result

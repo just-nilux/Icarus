@@ -153,9 +153,9 @@ def setup_logger(logger, log_config):
     logger.setLevel(logging.DEBUG)
 
     rfh = TimedRotatingFileHandler(filename=log_config['file'],
-                                   when='H',
+                                   when='D',
                                    interval=1,
-                                   backupCount=12)
+                                   backupCount=30)
 
     rfh.setLevel(log_config['level'])
 

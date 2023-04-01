@@ -418,7 +418,8 @@ async def sync_trades_of_backtest(trade_list, data_dict, strategy_period_mapping
 
         strategy_min_scale = strategy_period_mapping[trade_list[i].strategy]
         last_kline = data_dict[pair][strategy_min_scale].tail(1)
-        last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
+        #last_closed_candle_open_time = bson.Int64(last_kline.index.values[0])
+        last_closed_candle_open_time = int(last_kline.index.values[0]/1000)
         base_cur = pair.replace(quote_currency,'')
 
         if trade_list[i].status == EState.OPEN_ENTER:
