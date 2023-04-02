@@ -1,5 +1,5 @@
 import asyncio
-
+from sshtunnel import SSHTunnelForwarder
 from brokers import backtest_wrapper
 from objects import EState, ECause
 from pymongo import ASCENDING, DESCENDING
@@ -66,6 +66,20 @@ if __name__ == '__main__':
     config = json.load(f)
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
-    
+        
+    if 'ssh_tunnel' in config:
+        #tunnel_server = SSHTunnelForwarder(**config['ssh_tunnel'])
+        tunnel_server = SSHTunnelForwarder(
+            tuple(config['ssh_tunnel']['ssh_address_or_host']),
+            ssh_username=config['ssh_tunnel']['ssh_username'],
+            ssh_pkey=config['ssh_tunnel']['ssh_pkey'],
+            remote_bind_address=tuple(config['ssh_tunnel']['remote_bind_address']),
+            local_bind_address=tuple(config['ssh_tunnel']['local_bind_address'])
+        )
+        tunnel_server.start()
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
+
+    if 'ssh_tunnel' in config:
+        tunnel_server.stop()

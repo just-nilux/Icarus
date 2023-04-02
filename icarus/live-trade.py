@@ -34,20 +34,21 @@ async def run_at(dt, coro):
     return await coro
 
 
-async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAllocator, broker_client, ikarus_time):
-    logger.info(f'Ikarus Time: [{ikarus_time}]') # UTC
+async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAllocator, broker_client, ikarus_time_sec):
+    ikarus_time_ms = ikarus_time_sec * 1000 # Convert to ms
+    logger.info(f'Ikarus Time: [{ikarus_time_sec}]') # UTC
     
     meta_data_pool = []
     active_strategies = []
     strategy_period_mapping = {}
     # NOTE: Active Strategies is used to determine the strategies and gather the belonging LTOs
     for strategy_obj in strategy_list:
-        if ikarus_time % time_scale_to_second(strategy_obj.min_period) == 0:
+        if ikarus_time_sec % time_scale_to_second(strategy_obj.min_period) == 0:
             meta_data_pool.append(strategy_obj.meta_do)
             strategy_period_mapping[strategy_obj.name] = strategy_obj.min_period
             active_strategies.append(strategy_obj) # Create a copy of each strategy object
 
-    ikarus_time = ikarus_time * 1000 # Convert to ms
+    #ikarus_time = ikarus_time * 1000 # Convert to ms
     meta_data_pool = set(itertools.chain(*meta_data_pool))
 
     # Query to get all of the trades that has a strategy property that is contained in 'active_strategies'
@@ -56,7 +57,7 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
 
     df_balance, data_dict = await asyncio.gather(*[
         broker_client.get_current_balance(),
-        broker_client.get_data_dict(meta_data_pool, ikarus_time)
+        broker_client.get_data_dict(meta_data_pool, ikarus_time_ms)
         ]
     )
     logger.info(f'Current Balance: \n{df_balance.to_string()}')
@@ -80,7 +81,7 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
         strategy_tasks.append(asyncio.create_task(active_strategy.run(
             analysis_dict, 
             grouped_ltos.get(active_strategy.name, []), 
-            ikarus_time, 
+            ikarus_time_sec, 
             strategy_resources[active_strategy.name])))
 
     strategy_decisions = list(await asyncio.gather(*strategy_tasks))
@@ -101,16 +102,16 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
     df_balance = await broker_client.get_current_balance()
     logger.debug(f'Current Balance after execution: \n{df_balance.to_string()}')
 
-    obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time, data=strategy_res_allocator.strategy_capitals).to_dict()
+    obs_strategy_capitals = Observer('strategy_capitals', ts=ikarus_time_sec, data=strategy_res_allocator.strategy_capitals).to_dict()
 
     observer_item = list(df_balance.reset_index(level=0).T.to_dict().values())
-    obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time, data=observer_item).to_dict()
+    obs_balance = Observer(EObserverType.BALANCE, ts=ikarus_time_sec, data=observer_item).to_dict()
 
     observation_obj = {}
     observation_obj['free'] = df_balance.loc[config['broker']['quote_currency'],'free']
     observation_obj['in_trade'] = eval_total_capital_in_lto(live_trades+new_trades)
     observation_obj['total'] = observation_obj['free'] + observation_obj['in_trade']
-    obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time, data=observation_obj).to_dict()
+    obs_quote_asset = Observer(EObserverType.QUOTE_ASSET, ts=ikarus_time_sec, data=observation_obj).to_dict()
 
     '''
     # NOTE: capital_limit is not integrated to this leak evaluation 

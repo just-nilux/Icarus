@@ -241,7 +241,7 @@ class BinanceWrapper():
             trade.exit.stop_limit_orderId = response_stoploss['orderId']
             trade.status = EState.OPEN_EXIT
 
-            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit),['SELL_OCOOOOO',trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit),['SELL',trade.strategy], [trade._id])
 
             if ORDER_STATUS_FILLED not in [response_stoploss['status'], response_limit_maker['status']]:
                 return True
@@ -294,6 +294,7 @@ class BinanceWrapper():
                 fee=fee_sum,
                 cause=ECause.LIMIT)
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
+            TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
 
             return True
 
@@ -475,6 +476,7 @@ class BinanceWrapper():
                 fee=fee_sum,
                 cause=ECause.MARKET)
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
+            TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
 
             return True
 

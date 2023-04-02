@@ -1,4 +1,5 @@
 from exceptions import NotImplementedException
+from sshtunnel import SSHTunnelForwarder
 from pymongo import MongoClient, DESCENDING
 import logging
 import asyncio
@@ -24,7 +25,17 @@ class MongoClient():
             self.client.drop_database(database)
         self.db_bot = self.client[database]
 
+    '''
+    async def enable_ssh_tunnel(self, ssh_tunnel_config):
+        if not hasattr(self, 'tunnel_server'):
+            self.tunnel_server = SSHTunnelForwarder(**ssh_tunnel_config)
+        self.tunnel_server.start()
 
+    async def disable_ssh_tunnel(self):
+        if hasattr(self, 'tunnel_server'):
+            self.tunnel_server.stop()
+    '''
+    
     async def get_collection_names(self):
         return await self.db_bot.list_collection_names()
 
