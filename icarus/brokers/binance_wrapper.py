@@ -426,7 +426,7 @@ class BinanceWrapper():
                 if fill['commissionAsset'] == base_cur:
                     fee_sum += float(fill['commission'])
 
-            trade.set_result_enter( execution_time*1000, 
+            trade.set_result_enter(execution_time, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
                 fee=fee_sum)
@@ -542,8 +542,13 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
                 for fill in order['fills']:
                     if fill['commissionAsset'] == base_cur:
                         fee_sum += float(fill['commission'])
-                
-                trade.set_result_enter(int(order['transactTime']), 
+
+                strategy_cycle_period_in_sec = time_scale_to_second(strategy_min_scale)
+                time_value = int(order['updateTime']/1000)
+                # Get the start time of the current candle
+                execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
+
+                trade.set_result_exit(execution_time, #int(order['transactTime']),
                     price=avg_price,
                     quantity=float(order['executedQty']),
                     fee=fee_sum)
