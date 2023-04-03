@@ -8,7 +8,6 @@ from json import JSONEncoder
 import json
 import numpy as np
 import copy
-import bson
 from enum import Enum
 from safe_operators import safe_divide, safe_multiply, safe_substract, safe_sum
 import uuid
@@ -94,7 +93,7 @@ class Report:
 @dataclass
 class Observer:
     type: EObserverType
-    ts: bson.Int64
+    ts: int
     data: None
 
     def to_dict(self):
@@ -175,13 +174,13 @@ class Market(Order):
 
 @dataclass
 class Limit(Order):
-    expire: bson.Int64 = None
+    expire: int = None
 
 
 @dataclass
 class OCO(Order):
     # NOTE: When Selling, stop_price > stop_limit_price
-    expire: bson.Int64 = None
+    expire: int = None
     stop_price: float = None            # Price to trigger stop limit order
     stop_limit_price: float = None      # Price of stop limit order
     stop_limit_orderId: int = None
@@ -190,7 +189,7 @@ class OCO(Order):
 @dataclass
 class Result(Order):
     type: string = '' # type(trade.enter).__name__
-    time: bson.Int64 = None
+    time: int = None
     fee: float = 0.0
 
 
@@ -234,7 +233,7 @@ Fee Calculation is handled in the creation of the Result() objects:
 
 @dataclass
 class Trade():
-    decision_time: bson.Int64
+    decision_time: int
     strategy: string
     pair: string
     status: EState = EState.WAITING_ENTER
