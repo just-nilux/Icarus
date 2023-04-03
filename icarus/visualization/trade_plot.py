@@ -3,14 +3,18 @@ from objects import OCO, ECause, Limit, Market
 
 
 def plot_rectangle_frame(h1,h2,v1,v2):
-    fplt.add_line((v1, h1), (v2, h1),
-        color='#000000', width=3, interactive=False)
-    fplt.add_line((v1, h2), (v2, h2),
-        color='#000000', width=3, interactive=False)
-    fplt.add_line((v1, h2), (v1, h1),
-        color='#000000', width=3, interactive=False)
-    fplt.add_line((v2, h2), (v2, h1),
-        color='#000000', width=3, interactive=False)
+
+    try: 
+        fplt.add_line((v1, h1), (v2, h1),
+            color='#000000', width=3, interactive=False)
+        fplt.add_line((v1, h2), (v2, h2),
+            color='#000000', width=3, interactive=False)
+        fplt.add_line((v1, h2), (v1, h1),
+            color='#000000', width=3, interactive=False)
+        fplt.add_line((v2, h2), (v2, h1),
+            color='#000000', width=3, interactive=False)
+    except Exception as e:
+        print('Exception occured: {}'.format(e))
 
 
 def colorize_exit_order(trade):
@@ -27,7 +31,10 @@ def colorize_exit_order(trade):
 
     if trade.order_stash:
         # If there is stashed orders then use the "expire" of last stashed order
-        fplt.add_rect((trade.order_stash[-1].expire, rect_top), (trade.result.exit.time, rect_bot), color=color, interactive=False)
+        try:
+            fplt.add_rect((trade.order_stash[-1].expire, rect_top), (trade.result.exit.time, rect_bot), color=color, interactive=False)
+        except Exception as e:
+            print('Exception occured: {}'.format(e))
     else:
         # Else use the time that only exit order placed
         fplt.add_rect((trade.result.enter.time, rect_top), (trade.result.exit.time, rect_bot), color=color, interactive=False)
@@ -58,28 +65,31 @@ def plot_exit_order_frames(trade):
 
     left_vertical_bar = trade.result.enter.time
     for i in range(len(exit_orders)):
-        if i == len(exit_orders)-1:
-            right_vertical_bar = trade.result.exit.time
-        else:
-            right_vertical_bar = trade.order_stash[0].expire
+        try:
+            if i == len(exit_orders)-1:
+                right_vertical_bar = trade.result.exit.time
+            else:
+                right_vertical_bar = trade.order_stash[0].expire
 
-        # Plot the frames and bars for the order
-        if type(exit_orders[i]) == Market:
-            fplt.add_line((left_vertical_bar, trade.result.enter.price), 
-                (right_vertical_bar, trade.result.enter.price), color='#000000', width=3, interactive=False)                                    # Horizontal bar
-            fplt.add_line((right_vertical_bar, trade.result.enter.price), 
-                (right_vertical_bar, trade.order_stash[i].price), color='#000000', width=3, interactive=False)                                  # Vertical bar
+            # Plot the frames and bars for the order
+            if type(exit_orders[i]) == Market:
+                fplt.add_line((left_vertical_bar, trade.result.enter.price), 
+                    (right_vertical_bar, trade.result.enter.price), color='#000000', width=3, interactive=False)                                    # Horizontal bar
+                fplt.add_line((right_vertical_bar, trade.result.enter.price), 
+                    (right_vertical_bar, trade.order_stash[i].price), color='#000000', width=3, interactive=False)                                  # Vertical bar
 
-        elif type(exit_orders[i]) == Limit:
-            plot_rectangle_frame(trade.result.enter.price, trade.order_stash[i].price, left_vertical_bar, right_vertical_bar)                   # Single rectangle
+            elif type(exit_orders[i]) == Limit:
+                plot_rectangle_frame(trade.result.enter.price, trade.order_stash[i].price, left_vertical_bar, right_vertical_bar)                   # Single rectangle
 
-        elif type(exit_orders[i]) == OCO:
-            plot_rectangle_frame(trade.result.enter.price, trade.order_stash[i].price, left_vertical_bar, right_vertical_bar)                   # Above rectangle
-            plot_rectangle_frame(trade.result.enter.price, trade.order_stash[i].stop_limit_price, left_vertical_bar, right_vertical_bar)        # Below rectangle
+            elif type(exit_orders[i]) == OCO:
+                plot_rectangle_frame(trade.result.enter.price, trade.order_stash[i].price, left_vertical_bar, right_vertical_bar)                   # Above rectangle
+                plot_rectangle_frame(trade.result.enter.price, trade.order_stash[i].stop_limit_price, left_vertical_bar, right_vertical_bar)        # Below rectangle
 
-        if i != len(exit_orders)-1:
-            left_vertical_bar = trade.order_stash[i].expire
-        pass
+            if i != len(exit_orders)-1:
+                left_vertical_bar = trade.order_stash[i].expire
+            pass
+        except Exception as e:
+            print('Exception occured: {}'.format(e))
 
 
 def write_profits(trade_list):
