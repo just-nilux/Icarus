@@ -25,7 +25,7 @@ async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongoc
         dashboard_data_pack[pair]={}
     
     meta_data_pool = [(v,k) for k,v in pair_scale_mapping.items()]
-    await bwrapper.obtain_candlesticks(meta_data_pool, int(start_obs[0]['ts']), int(end_obs[0]['ts']))
+    await bwrapper.obtain_candlesticks(meta_data_pool, int(start_obs[0]['ts']*1000), int(end_obs[0]['ts']*1000))
 
     df_pair_list = [bwrapper.downloaded_data[pair][value] for pair, value in pair_scale_mapping.items()]
 
