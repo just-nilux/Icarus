@@ -188,20 +188,11 @@ async def main():
                 application(bwrapper, telbot),
             )
             '''
-        except SysStatDownException as e:
-            logger.error(str(e))
-            TelegramBot.send_formatted_message('error', [str(e)])
-            await asyncio.sleep(60)
-
-        except asyncio.TimeoutError as e:
-            logger.error(str(e))
-            TelegramBot.send_formatted_message('error', [str(e)])
-            await asyncio.sleep(60)
 
         except Exception as e:
-            logger.error(str(e))
-            #telbot.send_constructed_msg('error', str(e))
-            
+            logger.error(e, exc_info=True)
+            TelegramBot.send_formatted_message('error', [str(e)])
+            await asyncio.sleep(60)
             
     await broker_client.close_connection()
 
