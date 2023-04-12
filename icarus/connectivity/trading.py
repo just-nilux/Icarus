@@ -7,6 +7,8 @@ from telegram.ext.messagehandler import MessageHandler
 from telegram.ext.filters import Filters
 from telegram.ext.dispatcher import run_async
 import asyncio
+import mongo_utils
+from pymongo import ASCENDING, DESCENDING
 
 broker_client = None
 loop = None
@@ -17,7 +19,7 @@ def init_telegram_bot(token, chat_id):
     TelegramBot.add_handler(CommandHandler('kill', TelegramBot.kill), description="Killing the bot...")
     TelegramBot.add_handler(CommandHandler('help', TelegramBot.help), description="Print help message")
     TelegramBot.add_handler(CommandHandler('ping', TelegramBot.pong), description="Ping the bot")
-    #TelegramBot.add_handler(CommandHandler('balance', balance_message, run_async=True), description="Balance")
+    TelegramBot.add_handler(CommandHandler('balance', balance_message, run_async=True), description="Balance")
     #TelegramBot.updater.dispatcher.run_async(balance_message)
 
     #TelegramBot.add_handler(CommandHandler('async', async_command, run_async=True), description="async")
@@ -62,34 +64,14 @@ def unknown_command(update: Update, context: CallbackContext):
         "Sorry '%s' is not a valid command" % update.message.text)
 
 def aexec(func):
-    global loop
+    #global loop
     def wrapper(update: Update, context: CallbackContext):
-        
-        asyncio.set_event_loop(loop)
-        #loop.run_until_complete(func(update, context))
-        #loop.close()
         asyncio.run(func(update, context))
     return wrapper
 
 @aexec
 async def balance_message(update: Update, context: CallbackContext):
-    print('balanceeeee')
-    #df = await broker_client.get_current_balance()
-    #update.message.reply_text('{}'.format(df.to_string()))
-
-    #asyncio.set_event_loop(loop)
-    
-    broker = TelegramBot.broker_class(*TelegramBot.broker_args)
-    await async_command(update, context)
-    print('after async_command')
-
-    await broker.get_current_balance()
-
-    print('after get_current_balance')
-
-
-async def async_command(update: Update, context: CallbackContext):
-    print('async')
-    update.message.reply_text('async')
-
+    mongo_client = mongo_utils.MongoClient(**TelegramBot.client_config['mongodb'])
+    last_balance = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=DESCENDING) # pymongo.ASCENDING
+    update.message.reply_text(str(last_balance))
 

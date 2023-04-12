@@ -64,6 +64,7 @@ class TelegramBot():
     updater = None
     chatId = None
     help_message = None
+    client_config = None
     command_desc = {}
     telegram_formats = {}
 
@@ -74,6 +75,10 @@ class TelegramBot():
     @staticmethod
     def setChatId(chatId):
         TelegramBot.chatId = chatId
+
+    @staticmethod
+    def set_client_config(config):
+        TelegramBot.client_config = config
 
     @staticmethod
     def send_raw_message(message):

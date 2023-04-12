@@ -1,4 +1,5 @@
 from connectivity.telegram_wrapper import TelegramBot, TelegramMessageFormat, unknown_command, unknown_text
+from connectivity.trading import init_telegram_bot, start_telegram_bot, enable_broker_interface
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler
 from telegram.ext import filters
@@ -9,6 +10,7 @@ import time
 from objects import Trade, Limit, EState, ECommand, ECause, TradeResult, trade_to_dict
 from dataclasses import asdict
 import pandas as pd
+import asyncio
 
 def send_trade():
     # Send a whole trade
@@ -111,41 +113,23 @@ def send_balance():
     TelegramBot.send_formatted_message('balance', [df.to_string(index=False)])
 
 
-if __name__ == '__main__':
-
+async def db_demo():
     f = open(str(sys.argv[1]),'r')
     config = json.load(f)
-    TelegramBot.setToken(config['Telegram']['token'])
-    TelegramBot.setChatId(config['Telegram']['chat_id'])
-    TelegramBot.add_handler(CommandHandler('kill', TelegramBot.kill), description="Killing the bot...")
-    TelegramBot.add_handler(CommandHandler('help', TelegramBot.help), description="Print help message")
-    TelegramBot.add_handler(CommandHandler('ping', TelegramBot.pong), description="Ping the bot")
-    TelegramBot.add_handler(MessageHandler(filters.TEXT, unknown_command))
-    #TelegramBot.add_handler(MessageHandler(Filters.text(['hello','hi','hey']), unknown_text))
 
-    # Send a raw message
-    TelegramBot.send_raw_message("This is a raw message")
-    time.sleep(1)
-    #send_trade()
-    send_trade_order()
-    time.sleep(1)
-    send_trade_result()
-    time.sleep(1)
-    send_balance()
+    with open(config['credential_file'], 'r') as cred_file:
+        cred_info = json.load(cred_file)
 
-    # Send a help message
-    format = TelegramMessageFormat('Help Message header','\nHelp Message tailer','\n        ','/{}: {}')
-    TelegramBot.add_format('help', format, constant_data=TelegramBot.command_desc)
-    TelegramBot.send_formatted_message('help')
-
-
-
-
-
-    #commandss = [cmd_handler.command[0] for cmd_handler in TelegramBot.updater.dispatcher.handlers[0] if type(cmd_handler) == CommandHandler]
-    TelegramBot.updater.start_polling()
+    init_telegram_bot(cred_info['ConnectivityBot']['token'], cred_info['ConnectivityBot']['chat_id'])
+    TelegramBot.set_client_config(config)
+    start_telegram_bot()
 
     counter = 0
     while(True):
         print("in loop", str(counter))
         time.sleep(1)
+
+if __name__ == '__main__':
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(db_demo())
