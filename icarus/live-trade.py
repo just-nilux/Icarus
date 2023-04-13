@@ -196,21 +196,6 @@ async def main():
             
     await broker_client.close_connection()
 
-def aexec(func):
-    global loop
-    def wrapper(update, context):
-        
-        asyncio.set_event_loop(loop)
-        #loop.run_until_complete(func(update, context))
-        #loop.close()
-        asyncio.run(func(update, context))
-    return wrapper
-
-@aexec
-async def dummy_func(update, context):
-    global broker_client
-    print("dummy_func")
-    await broker_client.get_current_balance()
 
 if __name__ == "__main__":
     
