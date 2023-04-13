@@ -1,3 +1,6 @@
-[submodule ".\\src\\Ikarus\\connectivity"]
-	path = .\\src\\Ikarus\\connectivity
+[submodule "./icarus/connectivity"]
+	path = ./icarus/connectivity
+	url = https://github.com/bilkosem/connectivity-bot.git
+[submodule "icarus/connectivity"]
+	path = icarus/connectivity
 	url = https://github.com/bilkosem/connectivity-bot.git
