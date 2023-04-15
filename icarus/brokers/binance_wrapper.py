@@ -530,7 +530,6 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
         strategy_min_scale = strategy_period_mapping[trade.strategy]
         last_kline = data_dict[trade.pair][strategy_min_scale].tail(1)
         last_closed_candle_open_time = int(last_kline.index.values[0]/1000)
-        TelegramBot.send_raw_message(f'last_closed_candle_open_time: {last_closed_candle_open_time}')
 
         if trade.status == EState.OPEN_ENTER:
             # Check order
