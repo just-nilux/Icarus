@@ -209,10 +209,10 @@ if __name__ == "__main__":
     setup_logger(logger, config['log'])
 
     # Initialize telegram bot
+    telegram_interface.init_telegram_bot(cred_info['Telegram']['token'], cred_info['Telegram']['chat_id'])
     telegram_interface.enable_db_interface(config['mongodb'])
     telegram_interface.enable_binance_interface((cred_info['Binance']['Test']))
     telegram_interface.start_telegram_bot()
-    telegram_interface.init_telegram_bot(cred_info['Telegram']['token'], cred_info['Telegram']['chat_id'])
 
     # Setup initial objects
     analyzer = analyzers.Analyzer(config)
