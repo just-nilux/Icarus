@@ -15,8 +15,7 @@ import resource_allocator
 from resource_allocator import DiscreteStrategyAllocator
 
 from connectivity.telegram_wrapper import TelegramBot
-from connectivity.trading import init_telegram_bot, start_telegram_bot, enable_broker_interface
-
+import telegram_interface
 
 # Global Variables
 FLAG_SYSTEM_STATUS = True
@@ -139,9 +138,7 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
 async def main():
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
     broker_client = BinanceWrapper(client, config)
-    enable_broker_interface(BinanceWrapper, client, config)
-    start_telegram_bot()
-    print(await broker_client.get_current_balance())
+
     all_pairs = [strategy['pairs'] for strategy in config['strategy'].values()]
     all_pairs = list(set(itertools.chain(*all_pairs)))
     symbol_info = await broker_client.get_all_symbol_info(all_pairs)
@@ -212,7 +209,10 @@ if __name__ == "__main__":
     setup_logger(logger, config['log'])
 
     # Initialize telegram bot
-    init_telegram_bot(cred_info['Telegram']['token'], cred_info['Telegram']['chat_id'])
+    telegram_interface.enable_db_interface(config['mongodb'])
+    telegram_interface.enable_binance_interface((cred_info['Binance']['Test']))
+    telegram_interface.start_telegram_bot()
+    telegram_interface.init_telegram_bot(cred_info['Telegram']['token'], cred_info['Telegram']['chat_id'])
 
     # Setup initial objects
     analyzer = analyzers.Analyzer(config)

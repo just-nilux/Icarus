@@ -1,5 +1,5 @@
 from connectivity.telegram_wrapper import TelegramBot, TelegramMessageFormat, unknown_command, unknown_text
-from connectivity.trading import init_telegram_bot, start_telegram_bot, enable_broker_interface
+import telegram_interface
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler
 from telegram.ext import filters
@@ -120,9 +120,10 @@ async def db_demo():
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
 
-    init_telegram_bot(cred_info['ConnectivityBot']['token'], cred_info['ConnectivityBot']['chat_id'])
-    TelegramBot.set_client_config(config)
-    start_telegram_bot()
+    telegram_interface.init_telegram_bot(cred_info['ConnectivityBot']['token'], cred_info['ConnectivityBot']['chat_id'])
+    telegram_interface.enable_db_interface(config['mongodb'])
+    telegram_interface.enable_binance_interface((cred_info['Binance']['Test']))
+    telegram_interface.start_telegram_bot()
 
     counter = 0
     while(True):
