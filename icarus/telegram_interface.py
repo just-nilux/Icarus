@@ -146,9 +146,11 @@ async def binance_handler(update: Update, context: CallbackContext):
         else:
             print('No such command as {}'.format(command_arg))
             return
+        update.message.reply_text(str(result))
     except Exception as e:
-        print(e)
+        TelegramBot.send_formatted_message('error', [str(e)])
+
     await broker_client.close_connection()
-    update.message.reply_text(str(result))
+    
 
 
