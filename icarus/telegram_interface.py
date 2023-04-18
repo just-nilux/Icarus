@@ -9,7 +9,8 @@ from pymongo import ASCENDING, DESCENDING
 from brokers.binance_wrapper import BinanceWrapper
 from binance import AsyncClient
 import pandas as pd
-
+from dataclasses import asdict
+import datetime
 
 def init_telegram_bot(token, chat_id):
     desc_padding = '                '
@@ -41,6 +42,9 @@ def init_telegram_bot(token, chat_id):
     # Trade closed: StrategyName
     format = TelegramMessageFormat('Trade closed: {}','\nTrade ID: {}','\n        ','{}: {}')
     TelegramBot.add_format('trade_closed', format)
+
+    format = TelegramMessageFormat('Trade: {}','','\n        ','{}: {}')
+    TelegramBot.add_format('trade_basic', format)
 
     format = TelegramMessageFormat('Help:','\n','\n        ','/{}: {}')
     TelegramBot.add_format('help', format, constant_data=TelegramBot.command_desc)
@@ -89,13 +93,27 @@ async def db_handler(update: Update, context: CallbackContext):
         df_balance.set_index(['asset'], inplace=True)
         df_balance = df_balance.astype(float)
         df_balance['total'] = df_balance['free'] + df_balance['locked']
-        reply_text = df_balance
+        TelegramBot.send_table(df_balance.to_markdown())
+        return
+
 
     elif command_arg == 'gettrades':
-        reply_text = await mongo_client.do_aggregate('live-trades', [])
+        trades = await mongo_utils.do_aggregate_trades(mongo_client, 'live-trades', [])
+        reply_text = ''
+        for trade in trades:
+            trade_basic = {
+                'status':trade.status, 
+                'strategy':trade.strategy, 
+                'creation': datetime.datetime.fromtimestamp(trade.decision_time).strftime('%Y-%m-%d %H:%M')
+                }
+            reply_text += TelegramBot.telegram_formats['trade_basic'].build(trade_basic, [trade._id],[])
+            reply_text += '\n'
 
     elif command_arg == 'trade' and context.args[1] != '':
-        reply_text = await mongo_client.do_aggregate('live-trades',[{ '$match': { '_id': str(context.args[1])} }])
+        [trade] = await mongo_utils.do_aggregate_trades(mongo_client, 'live-trades', [{ '$match': { '_id': str(context.args[1])} }])
+        TelegramBot.send_formatted_message('trade_basic', asdict(trade), [trade._id], [])
+        return
+
 
     update.message.reply_text(str(reply_text))
 
@@ -116,7 +134,12 @@ async def binance_handler(update: Update, context: CallbackContext):
     broker_client = BinanceWrapper(client, mock_config)
 
     try:
-        if hasattr(broker_client, command_arg):
+        if command_arg == 'balance':
+            df_balance = await broker_client.get_current_balance()
+            TelegramBot.send_table(df_balance.to_markdown())
+            return
+
+        elif hasattr(broker_client, command_arg):
             result = await getattr(broker_client, command_arg)()
         elif hasattr(client, command_arg):
             result = await getattr(client, command_arg)()
