@@ -42,7 +42,7 @@
             "program": "icarus/generate_report.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-trade/FixedTarget/config_local.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config_remote.json"
             ]
         },
         {

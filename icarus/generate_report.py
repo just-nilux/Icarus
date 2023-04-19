@@ -25,8 +25,13 @@ def write_to_config_file(config_dict, filename="generated_config.json"):
 
 
 def replace_all(text, dic):
-    for i, j in dic.items():
-        text = text.replace(i, str(j))
+    for placeholder, value in dic.items():
+        value_literal = str(value)
+
+        if value_literal.isnumeric():
+            placeholder = '\'' + placeholder + '\''
+            
+        text = text.replace(placeholder, value_literal)
     return text
 
 

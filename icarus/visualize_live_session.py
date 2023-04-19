@@ -15,8 +15,6 @@ from datetime import datetime
 
 async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongocli, config):
 
-    start_obs = await mongocli.get_n_docs('observer', {'type':'quote_asset'}, order=ASCENDING) # pymongo.ASCENDING
-    end_obs = await mongocli.get_n_docs('observer', {'type':'quote_asset'}, order=DESCENDING) # pymongo.ASCENDING
 
     pair_scale_mapping = await get_pair_min_period_mapping(config)
 
@@ -25,14 +23,28 @@ async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongoc
         dashboard_data_pack[pair]={}
     
     meta_data_pool = [(v,k) for k,v in pair_scale_mapping.items()]
-    await bwrapper.obtain_candlesticks(meta_data_pool, int(start_obs[0]['ts']*1000), int(end_obs[0]['ts']*1000))
+    await bwrapper.obtain_candlesticks(
+        meta_data_pool, 
+        int(config['visualization']['start_time']*1000), 
+        int(config['visualization']['end_time']*1000))
 
     df_pair_list = [bwrapper.downloaded_data[pair][value] for pair, value in pair_scale_mapping.items()]
 
     # Get trade objects
     for idx, item in enumerate(pair_scale_mapping.items()):
-        canceled = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':ECause.ENTER_EXP, 'pair':item[0]})
-        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', {'result.cause':{'$in':[ECause.MARKET, ECause.STOP_LIMIT, ECause.LIMIT]}, 'pair':item[0]})
+        canceled_trades = {
+            'decision_time': { '$gte': config['visualization']['start_time']},
+            'enter.expire': { "$lte": config['visualization']['end_time']},
+            'result.cause':ECause.ENTER_EXP, 'pair':item[0]
+            }
+        
+        closed_trades = {
+            'decision_time': { '$gte': config['visualization']['start_time']},
+            'result.exit.time': { "$lte": config['visualization']['end_time']},
+            'result.cause':{'$in':[ECause.MARKET, ECause.STOP_LIMIT, ECause.LIMIT]}, 'pair':item[0]}
+
+        canceled = await mongo_utils.do_find_trades(mongocli, 'hist-trades', canceled_trades)
+        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', closed_trades)
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['canceled'] = canceled
@@ -40,14 +52,18 @@ async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongoc
 
     # Get observer objects
     for obs_type, obs_list in config['visualization']['observers'].items():
-        df_observers = pd.DataFrame(list(await mongocli.do_find('observer',{'type':obs_type})))
+        observer_query = {"ts": { "$gte": config['visualization']['start_time'], "$lte": config['visualization']['end_time'] }, 'type':obs_type}
+        df_observers = pd.DataFrame(list(await mongocli.do_find('observer',observer_query)))
         df_obs_data = pd.DataFrame(df_observers['data'].to_list())
         df_obs_data.set_index(df_observers['ts'])
         df_obs_data = df_obs_data[obs_list]
         dashboard_data_pack[obs_type] = df_obs_data
 
     fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, 
-                             title=f"Visualizing Time Frame: {str(datetime.fromtimestamp(int(start_obs[0]['ts']/1000)))} - {str(datetime.fromtimestamp(int(end_obs[0]['ts']/1000)))}")
+                             title="Visualizing Time Frame: {} - {}".format(
+                                                                    str(datetime.fromtimestamp(config['visualization']['start_time'])),
+                                                                    str(datetime.fromtimestamp(config['visualization']['end_time']))
+                             ))
 
 
 async def main():
