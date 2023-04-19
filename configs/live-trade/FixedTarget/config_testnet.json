@@ -1,0 +1,87 @@
+{
+    "tag": "bot",
+    "log":{
+        "level": "DEBUG",
+        "file": "log/icarus.log",
+        "clear": false
+    },
+    "credential_file": "test_credentials.json",
+    "mongodb":{
+        "database": "live-trade",
+        "host": "localhost",
+        "port": 27017,
+        "clean": false
+    },
+    "notification":{
+        "telegram": {
+            "hto": true,
+            "lto": true,
+            "app": true,
+            "error": true,
+            "daily": true,
+            "stat": true,
+            "market": false
+        },
+        "mail": false
+    },
+    "broker": {
+        "quote_currency": "USDT"
+    },
+    "strategy_allocation":{
+        "type": "DiscreteStrategyAllocator",
+        "kwargs": {
+            "distribution_config": [
+                "FixedLimitTargetAdaptive_XRP_24_24_03", "FixedOCOTargetAdaptive_TRX_24_12_03"
+            ],
+            "capital_coeff":0.9, 
+            "stop_capital":null,
+            "capital_limit": 150
+        }
+    },
+    "strategy": {
+        "FixedLimitTargetAdaptive_XRP_24_24_03": {
+            "strategy": "FixedLimitTargetAdaptive",
+            "pairs": ["XRPUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "stop_entry_counter":24
+            }
+        },
+        "FixedOCOTargetAdaptive_TRX_24_12_03": {
+            "strategy": "FixedOCOTargetAdaptive",
+            "pairs": ["TRXUSDT"],
+            "time_scales": ["1h"],
+            "max_live_trade": 1,
+            "kwargs":{
+                "target_profit_coeff":1.03,
+                "exit_duration":24,
+                "stop_entry_counter":12,
+                "max_loss_coeff": 0.05
+            }
+        }
+    },
+    "analysis": {
+        "close":{},
+        "aroon":{}
+    },
+    "time_scales": {
+        "1m": 3,
+        "15m": 3,
+        "1h": 3
+    },
+    "report_folder_name": "reports",
+    "report": [],
+    "grid_search_reporters":{},
+    "visualization":{
+        "observers":{
+            "quote_asset":["free", "total", "in_trade"]
+        },
+        "indicators": {
+            "close":{}
+        },
+        "patterns":[]
+    }
+}

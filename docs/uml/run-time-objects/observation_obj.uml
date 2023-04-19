@@ -1,8 +1,0 @@
-@startjson
-{
-  "equity": 4000,
-  "analysis":"reduced_analysis_object"
-}
-@endjson
-
-Observer class can benefit from Analyzer class to evaluate some values

@@ -42,7 +42,7 @@
             "program": "icarus/generate_report.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/research/daily_steady_profit/config.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config_local.json"
             ]
         },
         {
@@ -66,20 +66,20 @@
             "name": "visualize_backtest",
             "type": "python",
             "request": "launch",
-            "program": "icarus/visualize_backtest",
+            "program": "icarus/visualize_backtest.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-test/config.json"
+                "${workspaceFolder}/configs/test/LimitLimit/config.json"
             ]
         },
         {
             "name": "visualize_live_session",
             "type": "python",
             "request": "launch",
-            "program": "icarus/visualize_live_session",
+            "program": "icarus/visualize_live_session.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-test/config.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config.json"
             ]
         },
         {
@@ -89,17 +89,17 @@
             "program": "icarus/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/test/EnterExpire/config.json"
+                "${workspaceFolder}/configs/test/LimitLimit/config.json"
             ]
         },
         {
             "name": "live-trade",
             "type": "python",
             "request": "launch",
-            "program": "src/live-trade.py",
+            "program": "icarus/live-trade.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-test/config.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config.json"
             ]
         },
         {
@@ -130,6 +130,16 @@
             "type": "python",
             "request": "launch",
             "program": "icarus/connectivity/telegram_wrapper.py",
+            "console": "integratedTerminal",
+            "args": [
+                "test_credentials.json"
+            ]
+        },
+        {
+            "name": "remote_mongodb",
+            "type": "python",
+            "request": "launch",
+            "program": "icarus/remote_mongodb.py",
             "console": "integratedTerminal",
             "args": [
                 "test_credentials.json"

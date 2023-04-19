@@ -1,0 +1,94 @@
+{
+    "symbol": "BTCUSDT",
+    "orderId": 3311553,
+    "orderListId": -1,
+    "clientOrderId": "TbNBDLSngdOUPv8R46wfii",
+    "transactTime": 1675984402193,
+    "price": "0.00000000",
+    "origQty": "0.20612000",
+    "executedQty": "0.20612000",
+    "cummulativeQuoteQty": "4500.90039730",
+    "status": "FILLED",
+    "timeInForce": "GTC",
+    "type": "MARKET",
+    "side": "BUY",
+    "workingTime": 1675984402193,
+    "fills": [
+        {
+            "price": "21836.17000000",
+            "qty": "0.12868600",
+            "commission": "0.00000000",
+            "commissionAsset": "BTC",
+            "tradeId": 1300086
+        },
+        {
+            "price": "21836.50000000",
+            "qty": "0.03388800",
+            "commission": "0.00000000",
+            "commissionAsset": "BTC",
+            "tradeId": 1300087
+        },
+        {
+            "price": "21836.58000000",
+            "qty": "0.04354600",
+            "commission": "0.00000000",
+            "commissionAsset": "BTC",
+            "tradeId": 1300088
+        }
+    ],
+    "selfTradePreventionMode": "NONE"
+}
+
+{
+    "symbol": "BTCUSDT",
+    "orderId": 3750404,
+    "orderListId": -1,
+    "clientOrderId": "Oc5hfhg1KEwDKixiUB5exQ",
+    "transactTime": 1676069201647,
+    "price": "0.00000000",
+    "origQty": "0.11454500",
+    "executedQty": "0.11454500",
+    "cummulativeQuoteQty": "2473.90969195",
+    "status": "FILLED",
+    "timeInForce": "GTC",
+    "type": "MARKET",
+    "side": "BUY",
+    "workingTime": 1676069201647,
+    "fills": [
+        {
+            "price": "21597.71000000",
+            "qty": "0.11454500",
+            "commission": "0.00000000",
+            "commissionAsset": "BTC",
+            "tradeId": 1441984
+        }
+    ],
+    "selfTradePreventionMode": "NONE"
+}
+
+{
+    "symbol": "ETHUSDT",
+    "orderId": 3067130,
+    "orderListId": -1,
+    "clientOrderId": "o4XPPAnriW2f9GqRzSG5el",
+    "transactTime": 1676071191397,
+    "price": "0.00000000",
+    "origQty": "0.27244000",
+    "executedQty": "0.27244000",
+    "cummulativeQuoteQty": "412.64852160",
+    "status": "FILLED",
+    "timeInForce": "GTC",
+    "type": "MARKET",
+    "side": "BUY",
+    "workingTime": 1676071191397,
+    "fills": [
+        {
+            "price": "1514.64000000",
+            "qty": "0.27244000",
+            "commission": "0.00000000",
+            "commissionAsset": "ETH",
+            "tradeId": 410664
+        }
+    ],
+    "selfTradePreventionMode": "NONE"
+}
