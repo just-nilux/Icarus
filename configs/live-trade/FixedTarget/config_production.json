@@ -7,7 +7,7 @@
     },
     "credential_file": "test_credentials.json",
     "mongodb":{
-        "database": "live-trade",
+        "database": "production",
         "host": "localhost",
         "port": 27017,
         "clean": false
@@ -30,18 +30,16 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "distribution_config": [
-                "FixedLimitTargetAdaptive_LTC_24_24_03", "FixedOCOTargetAdaptive_DIA_24_12_03"
-            ],
+            "distribution_config": {"FixedLimitTargetAdaptive_24_24_03":0.66, "FixedOCOTargetAdaptive_24_12_03":0.33},
             "capital_coeff":0.9, 
             "stop_capital":null,
             "capital_limit": 150
         }
     },
     "strategy": {
-        "FixedLimitTargetAdaptive_LTC_24_24_03": {
+        "FixedLimitTargetAdaptive_24_24_03": {
             "strategy": "FixedLimitTargetAdaptive",
-            "pairs": ["LTCUSDT"],
+            "pairs": ["LTCUSDT", "XRPUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
@@ -50,7 +48,7 @@
                 "stop_entry_counter":24
             }
         },
-        "FixedOCOTargetAdaptive_DIA_24_12_03": {
+        "FixedOCOTargetAdaptive_24_12_03": {
             "strategy": "FixedOCOTargetAdaptive",
             "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],

@@ -2,20 +2,33 @@
 
 # Icarus
 Icarus is an all-in-one cryptocurrency trading bot for Binance. It enables you to
-- Backtest
-- Live-trade
-- Monitor
-- Create new strategies and analyzers
-- Create visualizations
+- backtest
+- live-trade
+- monitor
+  - boot diagnostics
+  - trade related events
+  - balance
+- create 
+  - custom strategies
+  - custom indicators
+- visualize
+  - trades on charts
+  - custom indicators
+  - technical research results
+- report
+  - backtest results
+  - strategy performances
+  - technical research results
 
-## Table of content
+
+# Table of content
 
 - [Installation](#installation)
-- [Capabilities](#capabilities)
-- [Backtest](#backtest)
+- [Philosophy](#philosophy)
+- [Applications](#applications)
 - [Live Trade](#live-trade)
 
-## Installation
+# Installation
 ```
 git clone https://github.com/bilkosem/Icarus.git
 cd Icarus
@@ -27,15 +40,33 @@ sudo chown -R mongodb:mongodb /var/lib/mongodb
 sudo chown mongodb:mongodb /tmp/mongodb-27017.sock
 sudo service mongod restart
 ```
-## Capabilities
-- Easy switching between backtest and live trading
-- Support for market, limit and oco orders
-- Support for running multiple strategies simultaneously
-- Support for data feeds that contain multiple pairs with multiple timescales, which enables to run short term and long term analysis simultaneously
-- Meaningful visualizations for trades and analysis objects which fastens custom analysis process
-- Asyncio module based architecture which enables faster operations
-- Monitor module that supports telegram bot to monitor certain configurable events
+# Philosophy
+Icarus tries to overcome downsides of traditional trading strategy creation process:
+<p align="center">
+  <img src="/docs/readme/strategy_dev_old.png?raw=true" alt="strategy_dev_old"/>
+</p>
 
+## Problems
+### Strategy Creation
+
+A hypothesis is not equal to a strategy. Strategies are compose of multiple hypothesis considering entry/exit rules, pozition sizing and risk management. When a hypothesis is converted to a strategy and tested, the results also contains the affect of other components. Thus the evaluation of the results might be misleading and does not reflect the real validity of hypothesis.
+
+### Evaluate Results
+
+As a result of the backtest, statistics are created. These statistics contains general metrics like, total profit, win rate, average return, average duration etc. These metrics may only measure the validity of the hypothesis indirectly.
+
+### Optimize
+
+Since the hypothesis itself is not the direct subject of the statistic evaluation, how to decide what to optimize.
+
+## Scientific Approach for Strategy Development
+Proposed solution:
+
+<p align="center">
+  <img src="/docs/readme/strategy_dev_new.png?raw=true" alt="strategy_dev_new"/>
+</p>
+
+# Applications
 ## Backtest
 ### 1. Configure 🛠
 Choose an existing configuration file (such as [configs/quick-start/config.json](configs/quick-start/config.json)) or just create a new one to experiment.
@@ -51,9 +82,9 @@ The statistics of the backtest session will be dumped to the file which is speci
 Checkout the output statistic file of the backtest session [stat.txt](docs/readme/stat.txt)
 
 ### 4. Visualize Trades 📈
-Run the `visualize_test_session` script and investigate the dashboard:
+Run the `visualize_backtest` script and investigate the dashboard:
 
-`python -m Ikarus.scripts.visualize_test_session configs/quick-start/config.json`
+`python visualize_backtest.py configs/quick-start/config.json`
 
 <p align="center">
   <img src="/docs/readme/backtest.PNG?raw=true" alt="Backtest Visualization"/>
@@ -62,7 +93,7 @@ Run the `visualize_test_session` script and investigate the dashboard:
 ### 5. Visualize Indicators 📉
 Run the `visualize_indicators` script and investigate the dashboard:
 
-`python -m Ikarus.scripts.visualize_indicators configs/quick-start/config.json`
+`python visualize_analyzers.py configs/quick-start/config.json`
 
 <p align="center">
   <img src="/docs/readme/indicators.PNG?raw=true" alt="Indicator Visualization"/>
@@ -82,3 +113,5 @@ Visualization works the same as the backtest mechanism (Combining the historical
 Based on the configured options, the messages are published to the target telegram channel. Below, you can see the messages regarding the state of a trade object (LTO: Live Trade Object, HTO: Historical Trade Object)
 
 <p align="center"><img src="/docs/readme/telegram-bot-messages.jpeg" width="225" height="400"></p>
+
+## Report
