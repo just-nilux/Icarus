@@ -1,8 +1,7 @@
 from distutils.core import setup
 
 setup(
-    name='Ikarus',
-    version='0.0.211016',
-    packages=['Ikarus','Ikarus.strategies','Ikarus.scripts'],
+    name='icarus',
+    version='1.0.0',
     author='bilkosem'
 )
