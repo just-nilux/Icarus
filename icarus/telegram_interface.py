@@ -49,8 +49,8 @@ def init_telegram_bot(token, chat_id):
     format = TelegramMessageFormat('Help:','\n','\n        ','/{}: {}')
     TelegramBot.add_format('help', format, constant_data=TelegramBot.command_desc)
 
-    format = TelegramMessageFormat('Error occured:','\n','\n        ','{}')
-    TelegramBot.add_format('error', format, constant_data=TelegramBot.command_desc)
+    format = TelegramMessageFormat('Error occured:','\n','','{}')
+    TelegramBot.add_format('error', format)
 
 
 def enable_db_interface(config):

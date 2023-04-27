@@ -136,6 +136,16 @@
             ]
         },
         {
+            "name": "telegram_demo",
+            "type": "python",
+            "request": "launch",
+            "program": "icarus/telegram_demo.py",
+            "console": "integratedTerminal",
+            "args": [
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config_testnet.json",
+            ]
+        },
+        {
             "name": "remote_mongodb",
             "type": "python",
             "request": "launch",
