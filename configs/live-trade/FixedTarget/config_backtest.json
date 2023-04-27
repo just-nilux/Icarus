@@ -2,30 +2,26 @@
     "tag": "bot",
     "log":{
         "level": "DEBUG",
-        "file": "log/icarus.log",
+        "file": "log/icarus-backtest.log",
         "clear": false
     },
     "credential_file": "test_credentials.json",
     "mongodb":{
-        "database": "production",
+        "database": "FixedTarget_backtest",
         "host": "localhost",
         "port": 27017,
-        "clean": false
+        "clean": true
     },
-    "notification":{
-        "telegram": {
-            "hto": true,
-            "lto": true,
-            "app": true,
-            "error": true,
-            "daily": true,
-            "stat": true,
-            "market": false
-        },
-        "mail": false
-    },
+    "balances": [
+        {
+            "asset": "USDT", 
+            "free": 40000, 
+            "locked": 0
+        }
+    ],
     "broker": {
-        "quote_currency": "USDT"
+        "quote_currency": "USDT",
+         "fee_rate": 0.001
     },
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
@@ -69,6 +65,12 @@
         "1m": 3,
         "15m": 3,
         "1h": 3
+    },
+    "backtest":{
+        "start_time": "2023-3-28 10:40:01",
+        "end_time": "2023-4-27 21:30:00",
+        "online": true,
+        "breakpoints": {}
     },
     "report_folder_name": "reports",
     "report": [],

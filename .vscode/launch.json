@@ -89,7 +89,7 @@
             "program": "icarus/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/test/LimitLimit/config.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config_backtest.json"
             ]
         },
         {
@@ -99,7 +99,7 @@
             "program": "icarus/live-trade.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-trade/FixedTarget/config.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config_production.json"
             ]
         },
         {
