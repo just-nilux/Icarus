@@ -137,6 +137,7 @@ async def binance_handler(update: Update, context: CallbackContext):
         if command_arg == 'balance':
             df_balance = await broker_client.get_current_balance()
             TelegramBot.send_table(df_balance.to_markdown())
+            await broker_client.close_connection()
             return
 
         elif hasattr(broker_client, command_arg):
@@ -145,6 +146,7 @@ async def binance_handler(update: Update, context: CallbackContext):
             result = await getattr(client, command_arg)()
         else:
             print('No such command as {}'.format(command_arg))
+            await broker_client.close_connection()
             return
         update.message.reply_text(str(result))
     except Exception as e:
