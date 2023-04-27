@@ -41,7 +41,7 @@
             "strategy": "FixedLimitTargetAdaptive",
             "pairs": ["LTCUSDT", "XRPUSDT"],
             "time_scales": ["1h"],
-            "max_live_trade": 1,
+            "max_live_trade": 2,
             "kwargs":{
                 "target_profit_coeff":1.03,
                 "exit_duration":24,
