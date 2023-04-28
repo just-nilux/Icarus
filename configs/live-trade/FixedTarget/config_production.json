@@ -30,7 +30,7 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "distribution_config": {"FixedLimitTargetAdaptive_24_24_03":0.5, "FixedOCOTargetAdaptive_24_12_03":0.5},
+            "distribution_config": {"FixedLimitTargetAdaptive_24_24_03":0.66, "FixedOCOTargetAdaptive_24_12_03":0.33},
             "capital_coeff":0.9, 
             "stop_capital":null,
             "capital_limit": 150
@@ -39,9 +39,9 @@
     "strategy": {
         "FixedLimitTargetAdaptive_24_24_03": {
             "strategy": "FixedLimitTargetAdaptive",
-            "pairs": ["XRPUSDT"],
+            "pairs": ["LTCUSDT", "XRPUSDT"],
             "time_scales": ["1h"],
-            "max_live_trade": 1,
+            "max_live_trade": 2,
             "kwargs":{
                 "target_profit_coeff":1.03,
                 "exit_duration":24,
@@ -50,7 +50,7 @@
         },
         "FixedOCOTargetAdaptive_24_12_03": {
             "strategy": "FixedOCOTargetAdaptive",
-            "pairs": ["LTCUSDT"],
+            "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{

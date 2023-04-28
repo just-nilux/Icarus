@@ -136,7 +136,7 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
     await mongocli.do_insert_many("observer", observer_list)
 
 async def main():
-    client = await AsyncClient.create(**cred_info['Binance']['Test'])
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
     broker_client = BinanceWrapper(client, config)
 
     all_pairs = [strategy['pairs'] for strategy in config['strategy'].values()]
