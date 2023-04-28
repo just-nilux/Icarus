@@ -11,6 +11,9 @@ from binance import AsyncClient
 import pandas as pd
 from dataclasses import asdict
 import datetime
+import logging
+
+logger = logging.getLogger('app')
 
 def init_telegram_bot(token, chat_id):
     desc_padding = '                '
@@ -74,48 +77,50 @@ def unknown_command(update: Update, context: CallbackContext):
 
 @asynchandler
 async def db_handler(update: Update, context: CallbackContext):
-    if len(context.args) < 1:
-        return
-    
-    command_arg = context.args[0]
+    try:
+        if len(context.args) < 1:
+            return
+        
+        command_arg = context.args[0]
 
-    if TelegramBot.database_config == None:
-        update.message.reply_text('Database interface is not enabled!')
-        return
-    
-    mongo_client = mongo_utils.MongoClient(**TelegramBot.database_config)
+        if TelegramBot.database_config == None:
+            update.message.reply_text('Database interface is not enabled!')
+            return
+        
+        mongo_client = mongo_utils.MongoClient(**TelegramBot.database_config)
 
-    # TODO: Generalize the logic
-    if command_arg == 'getbalance':
-        balance = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=DESCENDING) # pymongo.ASCENDING
+        # TODO: Generalize the logic
+        if command_arg == 'getbalance':
+            balance = await mongo_client.get_n_docs('observer', {'type':'balance'}, order=DESCENDING) # pymongo.ASCENDING
 
-        df_balance = pd.DataFrame(balance[0]['data'])
-        df_balance.set_index(['asset'], inplace=True)
-        df_balance = df_balance.astype(float)
-        df_balance['total'] = df_balance['free'] + df_balance['locked']
-        TelegramBot.send_table(df_balance.to_markdown())
-        return
-
-
-    elif command_arg == 'gettrades':
-        trades = await mongo_utils.do_aggregate_trades(mongo_client, 'live-trades', [])
-        reply_text = ''
-        for trade in trades:
-            trade_basic = {
-                'status':trade.status, 
-                'strategy':trade.strategy, 
-                'creation': datetime.datetime.fromtimestamp(trade.decision_time).strftime('%Y-%m-%d %H:%M')
-                }
-            reply_text += TelegramBot.telegram_formats['trade_basic'].build(trade_basic, [trade._id],[])
-            reply_text += '\n'
-
-    elif command_arg == 'trade' and context.args[1] != '':
-        [trade] = await mongo_utils.do_aggregate_trades(mongo_client, 'live-trades', [{ '$match': { '_id': str(context.args[1])} }])
-        TelegramBot.send_formatted_message('trade_basic', asdict(trade), [trade._id], [])
-        return
+            df_balance = pd.DataFrame(balance[0]['data'])
+            df_balance.set_index(['asset'], inplace=True)
+            df_balance = df_balance.astype(float)
+            df_balance['total'] = df_balance['free'] + df_balance['locked']
+            TelegramBot.send_table(df_balance.to_markdown())
+            return
 
 
-    update.message.reply_text(str(reply_text))
+        elif command_arg == 'gettrades':
+            trades = await mongo_utils.do_aggregate_trades(mongo_client, 'live-trades', [])
+            reply_text = ''
+            for trade in trades:
+                trade_basic = {
+                    'status':trade.status, 
+                    'strategy':trade.strategy, 
+                    'creation': datetime.datetime.fromtimestamp(trade.decision_time).strftime('%Y-%m-%d %H:%M')
+                    }
+                reply_text += TelegramBot.telegram_formats['trade_basic'].build(trade_basic, [trade._id],[])
+                reply_text += '\n'
+
+        elif command_arg == 'trade' and context.args[1] != '':
+            [trade] = await mongo_utils.do_aggregate_trades(mongo_client, 'live-trades', [{ '$match': { '_id': str(context.args[1])} }])
+            TelegramBot.send_formatted_message('trade_basic', asdict(trade), [trade._id], [])
+            return
+
+        update.message.reply_text(str(reply_text))
+    except Exception as e:
+        logger.error(e, exc_info=True)
 
 
 @asynchandler
@@ -129,11 +134,12 @@ async def binance_handler(update: Update, context: CallbackContext):
         update.message.reply_text('Binance interface is not enabled!')
         return
     
-    client = await AsyncClient.create(**TelegramBot.binance_credentials)
-    mock_config = {'broker':{'quote_currency': 'USDT'}}
-    broker_client = BinanceWrapper(client, mock_config)
-
     try:
+        client = await AsyncClient.create(**TelegramBot.binance_credentials)
+        mock_config = {'broker':{'quote_currency': 'USDT'}}
+        broker_client = BinanceWrapper(client, mock_config)
+
+   
         if command_arg == 'balance':
             df_balance = await broker_client.get_current_balance()
             TelegramBot.send_table(df_balance.to_markdown())
