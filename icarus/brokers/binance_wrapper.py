@@ -10,16 +10,22 @@ from utils import time_scale_to_second, get_min_scale, \
     safe_multiply, safe_divide, round_to_period
 from objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
 from utils import setup_logger
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from binance import AsyncClient
 from connectivity.telegram_wrapper import TelegramBot
 import itertools
+from typing import Dict, List
 
 
 logger = logging.getLogger('app')
 
 # This variable added as deus ex machina
 symbol_info = None
+
+@dataclass
+class OrderInfo():
+    order: dict
+    trade_list: list
 
 
 class BinanceWrapper():
@@ -159,33 +165,40 @@ class BinanceWrapper():
         return do_dict
 
 
-    async def get_trade_orders(self, trades):
+    async def get_order_info(self, trades: List[Trade]) -> Dict[str, OrderInfo]:
         
         if len(trades) == 0:
             return {}
 
         # Check the status of LTOs:
-        coroutines = []
+        order_coroutines = []
+        trade_coroutines = []
         for trade in trades:
             if trade.status in EState.OPEN_ENTER:
-                coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.enter.orderId))
+                order_coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.enter.orderId))
+                trade_coroutines.append(self.client.get_my_trades(symbol=trade.pair, orderId=trade.enter.orderId))
 
             elif trade.status in EState.OPEN_EXIT:
-                coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.orderId))
+                order_coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.orderId))
+                trade_coroutines.append(self.client.get_my_trades(symbol=trade.pair, orderId=trade.exit.orderId))
                     
                 if type(trade.exit) == OCO:
-                    coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.stop_limit_orderId))
+                    order_coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.stop_limit_orderId))
+                    trade_coroutines.append(self.client.get_my_trades(symbol=trade.pair, orderId=trade.exit.stop_limit_orderId))
+
             else: pass
 
-        if len(coroutines) == 0:
+        if len(order_coroutines) == 0:
             return {}
         
-        orders = {}
-        order_results = list(await asyncio.gather(*coroutines))
-        for order in order_results:
-            orders[order['orderId']] = order
+        order_results = list(await asyncio.gather(*order_coroutines))
+        trade_results = list(await asyncio.gather(*trade_coroutines))
 
-        return orders
+        order_info = {}
+        for order_result, trade_res in zip(order_results,trade_results):
+            order_info[order_result['orderId']] = OrderInfo(order_result, trade_res)
+
+        return order_info
 
 
     async def cancel_all_open_orders(self):
