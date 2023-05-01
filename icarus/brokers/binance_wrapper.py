@@ -7,7 +7,7 @@ import json
 import bson
 import sys
 from utils import time_scale_to_second, get_min_scale, \
-    safe_multiply, safe_divide, round_to_period
+    safe_multiply, safe_divide, round_to_period, safe_sum
 from objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
 from utils import setup_logger
 from dataclasses import asdict, dataclass
@@ -174,11 +174,11 @@ class BinanceWrapper():
         order_coroutines = []
         trade_coroutines = []
         for trade in trades:
-            if trade.status in EState.OPEN_ENTER:
+            if trade.status in [EState.OPEN_ENTER, EState.WAITING_EXIT]:
                 order_coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.enter.orderId))
                 trade_coroutines.append(self.client.get_my_trades(symbol=trade.pair, orderId=trade.enter.orderId))
 
-            elif trade.status in EState.OPEN_EXIT:
+            elif trade.status in [EState.OPEN_EXIT, EState.CLOSED]:
                 order_coroutines.append(self.client.get_order(symbol=trade.pair, orderId=trade.exit.orderId))
                 trade_coroutines.append(self.client.get_my_trades(symbol=trade.pair, orderId=trade.exit.orderId))
                     
@@ -535,10 +535,10 @@ class BinanceWrapper():
                     trade.reset_command()
 
 
-async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strategy_period_mapping: dict, order_mapping: dict):
-
+async def sync_trades_with_orders(trades: List[Trade], data_dict: dict, strategy_period_mapping: dict, order_info_mapping: Dict[int, OrderInfo]):
+    quote_cur = 'USDT'
     for trade in trades:
-        base_cur = trade.pair.replace('USDT','') # How to get this info?
+        base_cur = trade.pair.replace(quote_cur,'') # How to get this info?
 
         strategy_min_scale = strategy_period_mapping[trade.strategy]
         last_kline = data_dict[trade.pair][strategy_min_scale].tail(1)
@@ -546,51 +546,59 @@ async def sync_trades_with_orders(trades: 'list[Trade]', data_dict: dict, strate
 
         if trade.status == EState.OPEN_ENTER:
             # Check order
-            order = order_mapping[trade.enter.orderId]
-            if order['status'] == ORDER_STATUS_FILLED:
-                logger.debug(json.dumps(order, indent=4))
-                avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in order['fills']]), order['executedQty'])
-                
-                fee_sum = 0
-                for fill in order['fills']:
-                    if fill['commissionAsset'] == base_cur:
-                        fee_sum += float(fill['commission'])
+            order_info = order_info_mapping[trade.enter.orderId]
+            if order_info.order['status'] == ORDER_STATUS_FILLED:
+                logger.debug(json.dumps(order_info.order, indent=4))
+                logger.debug(json.dumps(order_info.trade_list, indent=4))
+
+                sum_fee = 0
+                for single_trade in order_info.trade_list:
+                    if single_trade['commissionAsset'] == base_cur:
+                        sum_fee = safe_sum(sum_fee, single_trade['commission'])
+                    else:
+                        logger.error('Commission asset is not base asset: "{}" != "{}"'.format(single_trade['commissionAsset'],base_cur))
+
+                avg_price = safe_divide(order_info.order['cummulativeQuoteQty'], order_info.order['executedQty'])
 
                 strategy_cycle_period_in_sec = time_scale_to_second(strategy_min_scale)
-                time_value = int(order['updateTime']/1000)
+                time_value = int(order_info.order['updateTime']/1000)
                 # Get the start time of the current candle
                 execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
                 trade.set_result_exit(execution_time, #int(order['transactTime']),
                     price=avg_price,
-                    quantity=float(order['executedQty']),
-                    fee=fee_sum)
-                TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter),[order["side"],trade.strategy], [trade._id])
+                    quantity=float(order_info.order['executedQty']),
+                    fee=sum_fee)
+                TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter),[order_info.order["side"],trade.strategy], [trade._id])
                 
             elif hasattr(trade.enter, 'expire') and trade.enter.expire <= last_closed_candle_open_time:
                 trade.status = EState.ENTER_EXP
 
         elif trade.status == EState.OPEN_EXIT:
-            order = order_mapping[trade.exit.orderId]
+            order_info = order_info_mapping[trade.exit.orderId]
 
-            if order['status'] == ORDER_STATUS_FILLED:
-                logger.debug(json.dumps(order, indent=4))
+            if order_info.order['status'] == ORDER_STATUS_FILLED:
+                logger.debug(json.dumps(order_info.order, indent=4))
+                logger.debug(json.dumps(order_info.trade_list, indent=4))
 
-                #avg_price = safe_divide(sum([safe_multiply(fill['price'],fill['qty']) for fill in order['fills']]), order['executedQty'])
-                fee_sum = 0
-                #for fill in order['fills']:
-                #    if fill['commissionAsset'] == base_cur:
-                #        fee_sum += float(fill['commission'])
+                sum_fee = 0
+                for single_trade in order_info.trade_list:
+                    if single_trade['commissionAsset'] == quote_cur:
+                        sum_fee = safe_sum(sum_fee, single_trade['commission'])
+                    else:
+                        logger.error('Commission asset is not quote asset: "{}" != "{}"'.format(single_trade['commissionAsset'], quote_cur))
+                
+                avg_price = safe_divide(order_info.order['cummulativeQuoteQty'], order_info.order['executedQty'])
 
                 strategy_cycle_period_in_sec = time_scale_to_second(strategy_min_scale)
-                time_value = int(order['updateTime']/1000)
+                time_value = int(order_info.order['updateTime']/1000)
                 # Get the start time of the current candle
                 execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
                 trade.set_result_exit(execution_time, #int(order['transactTime']),
-                    price=float(order['price']),
-                    quantity=float(order['executedQty']),
-                    fee=fee_sum,
+                    price=avg_price,
+                    quantity=float(order_info.order['executedQty']),
+                    fee=sum_fee,
                     cause=ECause.LIMIT)
                 TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
 
