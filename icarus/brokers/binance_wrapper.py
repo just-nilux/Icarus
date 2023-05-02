@@ -296,15 +296,17 @@ class BinanceWrapper():
             # Get the start time of the current candle
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
-            fee_sum = 0
+            sum_fee = 0
             for fill in response['fills']:
                 if fill['commissionAsset'] == self.quote_currency:
-                    fee_sum += float(fill['commission'])
+                    sum_fee = safe_sum(sum_fee, fill['commission'])
+                else:
+                    logger.error('Commission asset is not quote asset: "{}" != "{}"'.format(fill['commissionAsset'], self.quote_currency))
 
             trade.set_result_exit( execution_time, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
-                fee=fee_sum,
+                fee=sum_fee,
                 cause=ECause.LIMIT)
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
             TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
@@ -345,16 +347,18 @@ class BinanceWrapper():
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
             base_cur = trade.pair.replace(self.quote_currency,'')
-            fee_sum = 0
+            sum_fee = 0
             for fill in response['fills']:
                 if fill['commissionAsset'] == base_cur:
-                    fee_sum += float(fill['commission'])
+                    sum_fee = safe_sum(sum_fee, fill['commission'])
+                else:
+                    logger.error('Commission asset is not base asset: "{}" != "{}"'.format(fill['commissionAsset'],base_cur))
 
             trade.set_result_enter( execution_time*1000, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
-                fee=fee_sum)
-            
+                fee=sum_fee)
+            TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter), [response["side"], trade.strategy, trade.pair], [trade._id])
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
         return True
 
@@ -434,15 +438,17 @@ class BinanceWrapper():
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
             base_cur = trade.pair.replace(self.quote_currency,'')
-            fee_sum = 0
+            sum_fee = 0
             for fill in response['fills']:
                 if fill['commissionAsset'] == base_cur:
-                    fee_sum += float(fill['commission'])
+                    sum_fee = safe_sum(sum_fee, fill['commission'])
+                else:
+                    logger.error('Commission asset is not base asset: "{}" != "{}"'.format(fill['commissionAsset'],base_cur))
 
             trade.set_result_enter(execution_time, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
-                fee=fee_sum)
+                fee=sum_fee)
             TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter), [response["side"], trade.strategy, trade.pair], [trade._id])
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
         return True
@@ -478,15 +484,17 @@ class BinanceWrapper():
             # Get the start time of the current candle
             execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
-            fee_sum = 0
+            sum_fee = 0
             for fill in response['fills']:
                 if fill['commissionAsset'] == self.quote_currency:
-                    fee_sum += float(fill['commission'])
+                    sum_fee = safe_sum(sum_fee, fill['commission'])
+                else:
+                    logger.error('Commission asset is not quote asset: "{}" != "{}"'.format(fill['commissionAsset'], self.quote_currency))
 
             trade.set_result_exit( execution_time, 
                 price=avg_price,
                 quantity=float(response["executedQty"]),
-                fee=fee_sum,
+                fee=sum_fee,
                 cause=ECause.MARKET)
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
             TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
