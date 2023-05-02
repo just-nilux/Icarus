@@ -106,7 +106,7 @@
             "name": "binance_wrapper_demo",
             "type": "python",
             "request": "launch",
-            "module": "icarus.scripts.binance_wrapper_demo",
+            "program": "icarus/binance_wrapper_demo.py",
             "console": "integratedTerminal",
             "args": [
                 "${workspaceFolder}/configs/live-test/config.json"
@@ -122,7 +122,9 @@
                 "--config",
                 "${workspaceFolder}/configs/live-test/config.json",
                 "--command",
-                "cancel_all_open_orders"
+                "get_order",
+                "--kwargs",
+                 "{'symbol':'DIAUSDT','orderId':'174158378'}"
             ]
         },
         {

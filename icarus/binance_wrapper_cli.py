@@ -3,6 +3,8 @@
     '--command' 'get_current_balance'
     '--command' 'get_open_orders' '--kwargs' "{'symbol':'BTCUSDT'}"
     '--command' 'cancel_order' '--kwargs' "{'symbol':'BTCUSDT','orderId':'12638415'}"
+    '--command' 'get_order' '--kwargs' "{'symbol':'DIAUSDT','orderId':'87407643'}"
+    '--command' 'get_all_orders' '--kwargs' "{'symbol':'DIAUSDT'}"
 '''
 
 from binance.enums import *
@@ -22,7 +24,7 @@ async def run_command(args):
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
 
-    client = await AsyncClient.create(**cred_info['Binance']['Test'])
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
     broker_client = BinanceWrapper(client, config)
 
     command_args = ast.literal_eval(args.args)
@@ -33,7 +35,10 @@ async def run_command(args):
             print(result)
         elif hasattr(client, args.command):
             result = await getattr(client, args.command)(*command_args, **command_kwargs)
-            print(result)
+            if type(result) in [dict, list]:
+                print(json.dumps(result))
+            else:
+                print(result)  
         else:
             print('No such command as {}'.format(args.command))
     except Exception as e:

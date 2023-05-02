@@ -14,7 +14,7 @@
         "local_bind_address":["localhost", 10022]
     },
     "mongodb":{
-        "database": "live-trade",
+        "database": "production",
         "host": "localhost",
         "port": 10022,
         "clean": false
@@ -37,29 +37,27 @@
     "strategy_allocation":{
         "type": "DiscreteStrategyAllocator",
         "kwargs": {
-            "distribution_config": [
-                "FixedLimitTargetAdaptive_XRP_24_24_03", "FixedOCOTargetAdaptive_TRX_24_12_03"
-            ],
+            "distribution_config": {"FixedLimitTargetAdaptive_24_24_03":0.66, "FixedOCOTargetAdaptive_24_12_03":0.33},
             "capital_coeff":0.9, 
             "stop_capital":null,
             "capital_limit": 150
         }
     },
     "strategy": {
-        "FixedLimitTargetAdaptive_XRP_24_24_03": {
+        "FixedLimitTargetAdaptive_24_24_03": {
             "strategy": "FixedLimitTargetAdaptive",
-            "pairs": ["XRPUSDT"],
+            "pairs": ["LTCUSDT", "XRPUSDT"],
             "time_scales": ["1h"],
-            "max_live_trade": 1,
+            "max_live_trade": 2,
             "kwargs":{
                 "target_profit_coeff":1.03,
                 "exit_duration":24,
                 "stop_entry_counter":24
             }
         },
-        "FixedOCOTargetAdaptive_TRX_24_12_03": {
+        "FixedOCOTargetAdaptive_24_12_03": {
             "strategy": "FixedOCOTargetAdaptive",
-            "pairs": ["TRXUSDT"],
+            "pairs": ["DIAUSDT"],
             "time_scales": ["1h"],
             "max_live_trade": 1,
             "kwargs":{
@@ -79,13 +77,19 @@
         "15m": 3,
         "1h": 3
     },
+    "backtest":{
+        "start_time": "2023-4-25 10:40:01",
+        "end_time": "2023-4-30 21:00:00",
+        "online": true,
+        "breakpoints": {}
+    },
     "report_folder_name": "reports",
     "report": [],
     "grid_search_reporters": {
         "grid": {
             "<strategy>": ["FixedLimitTargetAdaptive_XRP_24_24_03", "FixedOCOTargetAdaptive_TRX_24_12_03"],
-            "<start_time>": [1681163414],
-            "<end_time>": [1681941062]
+            "<start_time>": [1680000000],
+            "<end_time>": [1682631000]
         },
         "reporters": [
             {
@@ -363,8 +367,6 @@
         ]
     },
     "visualization":{
-        "start_time": 1681163414,
-        "end_time": 1681941062,
         "observers":{
             "quote_asset":["free", "total", "in_trade"]
         },

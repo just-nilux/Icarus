@@ -1,15 +1,10 @@
-from exceptions import NotImplementedException
 from binance.enums import *
 import asyncio
 import pandas as pd
 import logging
 import json
-import bson
 import sys
-from utils import time_scale_to_second, get_min_scale, \
-    safe_multiply, safe_divide, round_to_period
-import more_itertools
-import binance_filters
+from utils import safe_multiply
 from objects import Trade, OCO, ECause, ECommand, EState, Limit, Market, TradeResult, Result, trade_to_dict
 from utils import setup_logger
 from dataclasses import asdict
@@ -22,7 +17,7 @@ async def demo():
         raise Exception('This function is only implemented for test purposes')
 
     client = await AsyncClient.create(**cred_info['Binance']['Test'])
-    broker_client = BinanceWrapper(client, config, None)
+    broker_client = BinanceWrapper(client, config)
 
     symbol_info = await broker_client.get_all_symbol_info(['BTCUSDT'])
     await test_limit_buy_instant_fill(broker_client, symbol_info)
@@ -38,8 +33,8 @@ async def demo():
     orders = await client.get_open_orders(symbol='BTCUSDT')
     logger.debug(f'client.get_open_orders: \n{orders}')
 
-    orders = await client.get_all_orders(symbol='BTCUSDT')
-    logger.debug(f'client.get_all_orders: \n{orders}')
+    #orders = await client.get_all_orders(symbol='BTCUSDT')
+    #logger.debug(f'client.get_all_orders: \n{orders}')
 
     try:
         #fees = await client.get_trade_fee()
@@ -94,10 +89,10 @@ async def test_market_buy(broker_client: BinanceWrapper):
     exec_status = await broker_client._execute_market_buy(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if len(orders):
-        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
-    
+    order_info_dict = await broker_client.get_order_info([trade])
+    if len(order_info_dict):
+        logger.debug('order:\n'+json.dumps(list(order_info_dict.values())[0].order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(list(order_info_dict.values())[0].trade_list, indent=4))
     return trade
 
 
@@ -110,10 +105,10 @@ async def test_market_sell(broker_client: BinanceWrapper):
     exec_status = await broker_client._execute_market_sell(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if len(orders):
-        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
-    
+    order_info_dict = await broker_client.get_order_info([trade])
+    if len(order_info_dict):
+        logger.debug('order:\n'+json.dumps(list(order_info_dict.values())[0].order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(list(order_info_dict.values())[0].trade_list, indent=4))    
     return trade
 
 
@@ -126,10 +121,10 @@ async def test_limit_buy(broker_client: BinanceWrapper):
     exec_status = await broker_client._execute_limit_buy(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if len(orders):
-        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
-    
+    order_info_dict = await broker_client.get_order_info([trade])
+    if len(order_info_dict):
+        logger.debug('order:\n'+json.dumps(list(order_info_dict.values())[0].order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(list(order_info_dict.values())[0].trade_list, indent=4))      
     return trade
 
 
@@ -142,10 +137,13 @@ async def test_limit_sell(broker_client: BinanceWrapper):
     exec_status = await broker_client._execute_limit_sell(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if len(orders):
-        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
+    order_info_dict = await broker_client.get_order_info([trade])
+    if len(order_info_dict):
+        logger.debug('order:\n'+json.dumps(list(order_info_dict.values())[0].order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(list(order_info_dict.values())[0].trade_list, indent=4))
     
+    # Stash the exit order to be able to cancel it
+    trade.stash_exit()
     return trade
 
 
@@ -166,13 +164,15 @@ async def test_oco_sell(broker_client: BinanceWrapper):
     exec_status = await broker_client._execute_oco_sell(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if not len(orders):
+    order_info_dict = await broker_client.get_order_info([trade])
+    if not len(order_info_dict):
         return trade
 
-    for order in orders.values():
-        logger.debug('order:\n'+json.dumps(order, indent=4))
-    
+    for order_info in order_info_dict.values():
+        logger.debug('order:\n'+json.dumps(order_info.order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(order_info.trade_list, indent=4))
+
+    trade.stash_exit()
     return trade
 
 
@@ -202,10 +202,10 @@ async def test_limit_buy_instant_fill(broker_client: BinanceWrapper, symbol_info
     exec_status = await broker_client._execute_limit_buy(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if len(orders):
-        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
-    
+    order_info_dict = await broker_client.get_order_info([trade])
+    if len(order_info_dict):
+        logger.debug('order:\n'+json.dumps(list(order_info_dict.values())[0].order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(list(order_info_dict.values())[0].trade_list, indent=4))      
     return trade
 
 
@@ -229,10 +229,10 @@ async def test_limit_sell_instant_fill(broker_client: BinanceWrapper, symbol_inf
     exec_status = await broker_client._execute_limit_sell(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if len(orders):
-        logger.debug('order:\n'+json.dumps(list(orders.values())[0], indent=4))
-    
+    order_info_dict = await broker_client.get_order_info([trade])
+    if len(order_info_dict):
+        logger.debug('order:\n'+json.dumps(list(order_info_dict.values())[0].order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(list(order_info_dict.values())[0].trade_list, indent=4))      
     return trade
 
 
@@ -267,13 +267,14 @@ async def test_oco_sell_instant_fill_limit_maker(broker_client: BinanceWrapper, 
     exec_status = await broker_client._execute_oco_sell(trade)
     assert exec_status == True
 
-    orders = await broker_client.get_trade_orders([trade])
-    if not len(orders):
+    order_info_dict = await broker_client.get_order_info([trade])
+    if not len(order_info_dict):
         return trade
 
-    for order in orders.values():
-        logger.debug('order:\n'+json.dumps(order, indent=4))
-    
+    for order_info in order_info_dict.values():
+        logger.debug('order:\n'+json.dumps(order_info.order, indent=4))
+        logger.debug('trade_list:\n'+json.dumps(order_info.trade_list, indent=4))
+
     return trade
 
 
@@ -285,8 +286,14 @@ if __name__ == '__main__':
     with open(config['credential_file'], 'r') as cred_file:
         cred_info = json.load(cred_file)
 
-    logger = logging.getLogger('app')
-    setup_logger(logger, config['log'])
+    logger_config = {
+        "logger_name": "binance_wrapper_demo",
+        "level": "DEBUG",
+        "file": "log/binance_wrapper_demo.log",
+        "clear": True
+    }
+    logger = logging.getLogger(logger_config['logger_name'])
+    setup_logger(logger, logger_config)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(demo())
