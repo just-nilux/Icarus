@@ -17,6 +17,7 @@ logger = logging.getLogger('app')
 
 def init_telegram_bot(token, chat_id):
     desc_padding = '                '
+    body_padding = '\n        '
 
     TelegramBot.setToken(token)
     TelegramBot.setChatId(chat_id)
@@ -31,25 +32,25 @@ def init_telegram_bot(token, chat_id):
     TelegramBot.add_handler(CommandHandler('binance', binance_handler, run_async=True), description=description)
     TelegramBot.add_handler(MessageHandler(Filters.text, unknown_command))
 
-    format = TelegramMessageFormat('Balance:','\n','\n        ','{}')
+    format = TelegramMessageFormat('Balance:','\n',body_padding,'{}')
     TelegramBot.add_format('balance', format)
 
     # Enter order executed: StrategyName
-    format = TelegramMessageFormat('{} order executed: {}','\nTrade ID: {}','\n        ','{}: {}')
+    format = TelegramMessageFormat('{} order executed: {}\n        pair: {}','\nTrade ID: {}',body_padding,'{}: {}')
     TelegramBot.add_format('order_executed', format)
 
     # Enter order filled: StrategyName
-    format = TelegramMessageFormat('{} order filled: {}','\nTrade ID: {}','\n        ','{}: {}')
+    format = TelegramMessageFormat('{} order filled: {}\n        pair: {}','\nTrade ID: {}',body_padding,'{}: {}')
     TelegramBot.add_format('order_filled', format)
 
     # Trade closed: StrategyName
-    format = TelegramMessageFormat('Trade closed: {}','\nTrade ID: {}','\n        ','{}: {}')
+    format = TelegramMessageFormat('Trade closed: {}\n        pair: {}','\nTrade ID: {}',body_padding,'{}: {}')
     TelegramBot.add_format('trade_closed', format)
 
-    format = TelegramMessageFormat('Trade: {}','','\n        ','{}: {}')
+    format = TelegramMessageFormat('Trade: {}','',body_padding,'{}: {}')
     TelegramBot.add_format('trade_basic', format)
 
-    format = TelegramMessageFormat('Help:','\n','\n        ','/{}: {}')
+    format = TelegramMessageFormat('Help:','\n',body_padding,'/{}: {}')
     TelegramBot.add_format('help', format, constant_data=TelegramBot.command_desc)
 
     format = TelegramMessageFormat('Error occured:','\n','','{}')

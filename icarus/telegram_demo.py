@@ -7,110 +7,71 @@ from telegram.ext import filters
 import json
 import sys
 import time
-from objects import Trade, Limit, EState, ECommand, ECause, TradeResult, trade_to_dict
+from objects import Trade, Limit, EState, ECommand, ECause, TradeResult, trade_to_dict, trade_from_dict
 from dataclasses import asdict
 import pandas as pd
 import asyncio
 
-def send_trade():
-    # Send a whole trade
-    format = TelegramMessageFormat('trade:','\n','\n        ','{}: {}')
-    TelegramBot.add_format('trade', format)
-    trade_sample = Trade(1557705600000, 'ObjectStrategy', 'XRPUSDT', EState.OPEN_ENTER, 
-        Limit(0.2906, 4749.5664, 16344.0, 1652629743339, 1559001600000),
-        Limit(0.3372, 5511.5102, 16344.9296, None, 1559001600000),
-        None, ECommand.NONE, [], _id="ObjectId('628120f012791ee7ba')")
-    TelegramBot.send_formatted_message('trade',trade_to_dict(trade_sample))
-
-
-def send_trade_order():
-    format = TelegramMessageFormat('trade_order:','\n','\n        ','{}: {}')
-    TelegramBot.add_format('trade_order', format)
-    enter_order = {
-        "price": 93.67,
-        "amount": 50.0047928,
-        "quantity": 0.53384,
-        "orderId": 3107228,
-        "type": "market",
-        "time": 1677627900000,
-        "price": {"xy":12},
-    }
-    TelegramBot.send_formatted_message('trade_order',enter_order)
-
-
-def send_trade_result():
-    format = TelegramMessageFormat('trade_result:','\n','\n        ','{}: {}')
-    TelegramBot.add_format('trade_result', format)
-
-    fee_rate = 0.001 
-    trade = Trade(123, "StrategyName", "XRPUSDT")
-    trade.set_enter(Limit(price=5,amount=100,quantity=20))
-    trade.result = TradeResult()
-    trade.set_result_enter(123456, fee_rate=fee_rate)
-    trade.set_result_exit(123456,
-        cause=ECause.STOP_LIMIT,
-        price=6,
-        quantity=trade.result.enter.quantity,
-        fee_rate=fee_rate,
-        orderId=9876)
-    TelegramBot.send_formatted_message('trade_result', asdict(trade.result))
-
-def send_balance():
-    format = TelegramMessageFormat('balance:','\n','\n        ','{}')
-    TelegramBot.add_format('balance', format)
-
-    balance_raw = [ 
+sample_trade = {
+    "_id" : "8ab65baf-3d90-4117-a4a5-5958e50dc181",
+    "decision_time" : 1682812800,
+    "strategy" : "FixedLimitTargetAdaptive_24_24_03",
+    "pair" : "XRPUSDT",
+    "status" : "closed",
+    "enter" : {
+        "price" : 0.478,
+        "amount" : 74.568,
+        "quantity" : 156.0,
+        "orderId" : 5158447835
+    },
+    "exit" : {
+        "price" : 0.4633,
+        "amount" : 71.8115,
+        "quantity" : 155.0,
+        "orderId" : 5159603156
+    },
+    "result" : {
+        "cause" : "market",
+        "enter" : {
+            "price" : 0.478,
+            "amount" : 74.493432,
+            "quantity" : 155.844,
+            "orderId" : 5158447835,
+            "type" : "market",
+            "time" : 1682812800,
+            "fee" : 0.156
+        },
+        "exit" : {
+            "price" : 0.4627,
+            "amount" : 71.6467815,
+            "quantity" : 155.0,
+            "orderId" : 5159603156,
+            "type" : "market",
+            "time" : 1682906400,
+            "fee" : 0.0717185
+        },
+        "profit" : -2.9212185,
+        "live_time" : 93600
+    },
+    "command" : "None",
+    "order_stash" : [ 
         {
-            "asset" : "BNB",
-            "free" : 1000.0,
-            "locked" : 0.0,
-            "total" : 1000.0
-        }, 
-        {
-            "asset" : "BTC",
-            "free" : 1.235676,
-            "locked" : 0.0,
-            "total" : 1.235676
-        }, 
-        {
-            "asset" : "BUSD",
-            "free" : 9891.21795,
-            "locked" : 0.0,
-            "total" : 9891.21795
-        }, 
-        {
-            "asset" : "ETH",
-            "free" : 100.33015,
-            "locked" : 0.0,
-            "total" : 100.33015
-        }, 
-        {
-            "asset" : "LTC",
-            "free" : 501.06411,
-            "locked" : 0.53441,
-            "total" : 501.59852
-        }, 
-        {
-            "asset" : "TRX",
-            "free" : 500000.0,
-            "locked" : 0.0,
-            "total" : 500000.0
-        }, 
-        {
-            "asset" : "USDT",
-            "free" : 4594.86836402,
-            "locked" : 0.0,
-            "total" : 4594.86836402
-        }, 
-        {
-            "asset" : "XRP",
-            "free" : 50000.0,
-            "locked" : 133.3,
-            "total" : 50133.3
+            "price" : 0.4923,
+            "amount" : 76.3065,
+            "quantity" : 155.0,
+            "orderId" : 5158484419,
+            "expire" : 1682902800
         }
     ]
-    df = pd.DataFrame(balance_raw)
-    TelegramBot.send_formatted_message('balance', [df.to_string(index=False)])
+}
+
+async def send_formatted_messages():
+    trade = trade_from_dict(sample_trade)
+    TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter), ['BUY', trade.strategy, trade.pair], [trade._id])
+    time.sleep(0.1)
+    TelegramBot.send_formatted_message('order_executed', asdict(trade.exit),['SELL',trade.strategy, trade.pair], [trade._id])
+    time.sleep(0.1)
+    TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
 
 
 async def db_demo():
@@ -124,6 +85,8 @@ async def db_demo():
     telegram_interface.enable_db_interface(config['mongodb'])
     telegram_interface.enable_binance_interface((cred_info['Binance']['Test']))
     telegram_interface.start_telegram_bot()
+
+    await send_formatted_messages()
 
     counter = 0
     while(True):
