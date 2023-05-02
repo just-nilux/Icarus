@@ -254,7 +254,7 @@ class BinanceWrapper():
             trade.exit.stop_limit_orderId = response_stoploss['orderId']
             trade.status = EState.OPEN_EXIT
 
-            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit),['SELL',trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit), ['SELL', trade.strategy, trade.pair], [trade._id])
 
             if ORDER_STATUS_FILLED not in [response_stoploss['status'], response_limit_maker['status']]:
                 return True
@@ -282,7 +282,7 @@ class BinanceWrapper():
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             trade.exit.orderId = response['orderId']
             trade.status = EState.OPEN_EXIT
-            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit),[response["side"],trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit), [response["side"], trade.strategy, trade.pair], [trade._id])
 
             if response['status'] != ORDER_STATUS_FILLED:
                 return True
@@ -307,7 +307,7 @@ class BinanceWrapper():
                 fee=fee_sum,
                 cause=ECause.LIMIT)
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
-            TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
 
             return True
 
@@ -330,7 +330,7 @@ class BinanceWrapper():
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             trade.enter.orderId = response['orderId']
             trade.status = EState.OPEN_ENTER
-            TelegramBot.send_formatted_message('order_executed', asdict(trade.enter),[response["side"],trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_executed', asdict(trade.enter), [response["side"], trade.strategy, trade.pair], [trade._id])
 
             if response['status'] != ORDER_STATUS_FILLED:
                 return True
@@ -419,7 +419,7 @@ class BinanceWrapper():
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             trade.enter.orderId = response['orderId']
             trade.status = EState.OPEN_ENTER
-            TelegramBot.send_formatted_message('order_executed', asdict(trade.enter),[response["side"],trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_executed', asdict(trade.enter), [response["side"], trade.strategy, trade.pair], [trade._id])
 
             if response['status'] != ORDER_STATUS_FILLED:
                 return True
@@ -443,7 +443,7 @@ class BinanceWrapper():
                 price=avg_price,
                 quantity=float(response["executedQty"]),
                 fee=fee_sum)
-            TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter),[response["side"],trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter), [response["side"], trade.strategy, trade.pair], [trade._id])
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
         return True
 
@@ -464,7 +464,7 @@ class BinanceWrapper():
             logger.info(f'LTO "_id": "{response["side"]}" "{response["type"]}" order placed: {response["orderId"]}')
             trade.exit.orderId = response['orderId']
             trade.status = EState.OPEN_EXIT
-            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit),[response["side"],trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('order_executed', asdict(trade.exit), [response["side"], trade.strategy, trade.pair], [trade._id])
 
             if response['status'] != ORDER_STATUS_FILLED:
                 return True
@@ -489,7 +489,7 @@ class BinanceWrapper():
                 fee=fee_sum,
                 cause=ECause.MARKET)
             logger.debug(f'trade.result: \n{json.dumps(asdict(trade.result), indent=4)}')
-            TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
+            TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
 
             return True
 
@@ -569,7 +569,7 @@ async def sync_trades_with_orders(trades: List[Trade], data_dict: dict, strategy
                     price=avg_price,
                     quantity=float(order_info.order['executedQty']),
                     fee=sum_fee)
-                TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter),[order_info.order["side"],trade.strategy], [trade._id])
+                TelegramBot.send_formatted_message('order_filled', asdict(trade.result.enter), [order_info.order["side"], trade.strategy, trade.pair], [trade._id])
                 
             elif hasattr(trade.enter, 'expire') and trade.enter.expire <= last_closed_candle_open_time:
                 trade.status = EState.ENTER_EXP
@@ -600,7 +600,7 @@ async def sync_trades_with_orders(trades: List[Trade], data_dict: dict, strategy
                     quantity=float(order_info.order['executedQty']),
                     fee=sum_fee,
                     cause=ECause.LIMIT)
-                TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
+                TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
 
                 
             elif order_info.order['status'] == ORDER_STATUS_EXPIRED:
@@ -626,7 +626,7 @@ async def sync_trades_with_orders(trades: List[Trade], data_dict: dict, strategy
                     quantity=float(stop_limit_info.order['executedQty']),
                     fee=sum_fee,
                     cause=ECause.STOP_LIMIT)
-                TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
+                TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy, trade.pair], [trade._id])
 
                 
             elif hasattr(trade.exit, 'expire') and trade.exit.expire <= last_closed_candle_open_time:
