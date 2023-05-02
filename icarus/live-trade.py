@@ -33,7 +33,7 @@ async def run_at(dt, coro):
     return await coro
 
 
-async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAllocator, broker_client, ikarus_time_sec):
+async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAllocator, broker_client: BinanceWrapper, ikarus_time_sec: int):
     ikarus_time_ms = ikarus_time_sec * 1000 # Convert to ms
     logger.info(f'Ikarus Time: [{ikarus_time_sec}]') # UTC
     
@@ -61,10 +61,10 @@ async def application(strategy_list, strategy_res_allocator: DiscreteStrategyAll
     )
     logger.info(f'Current Balance: \n{df_balance.to_string()}')
 
-    orders = await broker_client.get_trade_orders(live_trades)
+    order_info_mapping = await broker_client.get_order_info(live_trades)
 
     _, analysis_dict = await asyncio.gather(*[
-        sync_trades_with_orders(live_trades, data_dict, strategy_period_mapping, orders),
+        sync_trades_with_orders(live_trades, data_dict, strategy_period_mapping, order_info_mapping),
         analyzer.analyze(data_dict)]
     )
 

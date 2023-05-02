@@ -149,7 +149,7 @@ def setup_logger(logger, log_config):
         if log_config.get('clear',False) and os.path.isfile(log_config['file']) :
             os.remove(log_config['file'])
 
-    logger = logging.getLogger('app')
+    logger = logging.getLogger(log_config.get('logger_name','app'))
     logger.setLevel(logging.DEBUG)
 
     rfh = TimedRotatingFileHandler(filename=log_config['file'],

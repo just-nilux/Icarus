@@ -603,22 +603,28 @@ async def sync_trades_with_orders(trades: List[Trade], data_dict: dict, strategy
                 TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
 
                 
-            elif order['status'] == ORDER_STATUS_EXPIRED:
+            elif order_info.order['status'] == ORDER_STATUS_EXPIRED:
                 # NOTE: Here is OCO order
-                stop_limit_order = order_mapping[trade.exit.stop_limit_orderId]
-                logger.debug(json.dumps(order, indent=4))
-                logger.debug(json.dumps(stop_limit_order, indent=4))
+                stop_limit_info = order_info_mapping[trade.exit.stop_limit_orderId]
+                logger.debug(json.dumps(order_info.order, indent=4))
+                logger.debug(json.dumps(stop_limit_info.order, indent=4))
 
-                fee_sum = 0
+                sum_fee = 0
+                for single_trade in stop_limit_info.trade_list:
+                    if single_trade['commissionAsset'] == quote_cur:
+                        sum_fee = safe_sum(sum_fee, single_trade['commission'])
+                    else:
+                        logger.error('Commission asset is not quote asset: "{}" != "{}"'.format(single_trade['commissionAsset'], quote_cur))
+                
                 strategy_cycle_period_in_sec = time_scale_to_second(strategy_min_scale)
-                time_value = int(order['updateTime']/1000)
+                time_value = int(stop_limit_info.order['updateTime']/1000)
                 # Get the start time of the current candle
                 execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
                 trade.set_result_exit(execution_time,
-                    price=float(stop_limit_order['price']),
-                    quantity=float(stop_limit_order['executedQty']),
-                    fee=fee_sum,
+                    price=float(stop_limit_info.order['price']),            # Price cannot change
+                    quantity=float(stop_limit_info.order['executedQty']),
+                    fee=sum_fee,
                     cause=ECause.STOP_LIMIT)
                 TelegramBot.send_formatted_message('trade_closed', asdict(trade.result), [trade.strategy], [trade._id])
 
