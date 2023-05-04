@@ -462,7 +462,7 @@ async def sync_trades_with_orders(trades: List[Trade], data_dict: dict, strategy
                 # Get the start time of the current candle
                 execution_time = round_to_period(time_value, strategy_cycle_period_in_sec, direction='floor')
 
-                trade.set_result_exit(execution_time, #int(order['transactTime']),
+                trade.set_result_enter(execution_time, #int(order['transactTime']),
                     price=avg_price,
                     quantity=float(order_info.order['executedQty']),
                     fee=sum_fee)
