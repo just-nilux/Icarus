@@ -13,8 +13,19 @@ import json
 import sys
 from datetime import datetime
 
-async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongocli, config):
+async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongo_client: mongo_utils.MongoClient, config):
 
+    if 'start_time' in config['backtest'] and 'end_time' in config['backtest']:
+        start_time = datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
+        end_time = datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
+
+    start_timestamp_s = int(datetime.timestamp(start_time))
+    end_timestamp_s = int(datetime.timestamp(end_time))
+
+    #start_obs = await mongo_client.get_n_docs('observer', {'type':'quote_asset'}, order=ASCENDING) # pymongo.ASCENDING
+    #end_obs = await mongo_client.get_n_docs('observer', {'type':'quote_asset'}, order=DESCENDING) # pymongo.ASCENDING
+    #start_obs[0]['ts']
+    #end_obs[0]['ts']
 
     pair_scale_mapping = await get_pair_min_period_mapping(config)
 
@@ -25,26 +36,26 @@ async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongoc
     meta_data_pool = [(v,k) for k,v in pair_scale_mapping.items()]
     await bwrapper.obtain_candlesticks(
         meta_data_pool, 
-        int(config['visualization']['start_time']*1000), 
-        int(config['visualization']['end_time']*1000))
+        start_timestamp_s*1000, 
+        end_timestamp_s*1000)
 
     df_pair_list = [bwrapper.downloaded_data[pair][value] for pair, value in pair_scale_mapping.items()]
 
     # Get trade objects
     for idx, item in enumerate(pair_scale_mapping.items()):
         canceled_trades = {
-            'decision_time': { '$gte': config['visualization']['start_time']},
-            'enter.expire': { "$lte": config['visualization']['end_time']},
+            'decision_time': { '$gte': start_timestamp_s},
+            'enter.expire': { "$lte": end_timestamp_s},
             'result.cause':ECause.ENTER_EXP, 'pair':item[0]
             }
         
         closed_trades = {
-            'decision_time': { '$gte': config['visualization']['start_time']},
-            'result.exit.time': { "$lte": config['visualization']['end_time']},
+            'decision_time': { '$gte': start_timestamp_s},
+            'result.exit.time': { "$lte": end_timestamp_s},
             'result.cause':{'$in':[ECause.MARKET, ECause.STOP_LIMIT, ECause.LIMIT]}, 'pair':item[0]}
 
-        canceled = await mongo_utils.do_find_trades(mongocli, 'hist-trades', canceled_trades)
-        closed = await mongo_utils.do_find_trades(mongocli, 'hist-trades', closed_trades)
+        canceled = await mongo_utils.do_find_trades(mongo_client, 'hist-trades', canceled_trades)
+        closed = await mongo_utils.do_find_trades(mongo_client, 'hist-trades', closed_trades)
 
         dashboard_data_pack[item[0]]['df'] = df_pair_list[idx]
         dashboard_data_pack[item[0]]['canceled'] = canceled
@@ -52,18 +63,15 @@ async def visualize_dashboard(bwrapper: backtest_wrapper.BacktestWrapper, mongoc
 
     # Get observer objects
     for obs_type, obs_list in config['visualization']['observers'].items():
-        observer_query = {"ts": { "$gte": config['visualization']['start_time'], "$lte": config['visualization']['end_time'] }, 'type':obs_type}
-        df_observers = pd.DataFrame(list(await mongocli.do_find('observer',observer_query)))
+        observer_query = {"ts": { "$gte": start_timestamp_s, "$lte": end_timestamp_s }, 'type':obs_type}
+        df_observers = pd.DataFrame(list(await mongo_client.do_find('observer',observer_query)))
         df_obs_data = pd.DataFrame(df_observers['data'].to_list())
         df_obs_data.set_index(df_observers['ts'])
         df_obs_data = df_obs_data[obs_list]
         dashboard_data_pack[obs_type] = df_obs_data
 
     fplot.buy_sell_dashboard(dashboard_data_pack=dashboard_data_pack, 
-                             title="Visualizing Time Frame: {} - {}".format(
-                                                                    str(datetime.fromtimestamp(config['visualization']['start_time'])),
-                                                                    str(datetime.fromtimestamp(config['visualization']['end_time']))
-                             ))
+                             title="Visualizing Time Frame: {} - {}".format(str(start_time),str(end_time)))
 
 
 async def main():
