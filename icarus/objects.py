@@ -86,8 +86,8 @@ class ReportMeta:
 
 @dataclass
 class Report:
-    meta: ReportMeta
-    data: None
+    meta: ReportMeta = None
+    data: None = None
 
 
 @dataclass

@@ -237,6 +237,9 @@ async def strategy_statistics(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
 
+    if df.empty:
+        return Report()
+
     stats = {}
 
     # Count
@@ -358,6 +361,10 @@ async def strategy_statistics(index, reporter_input):
 async def balance_statistics(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
+
+    if df.empty:
+        return Report()
+    
     mdd_percentage = (df['total'].max() - df['total'].min() ) / df['total'].max() * 100
 
 
@@ -379,6 +386,9 @@ async def trade_cause(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
 
+    if df.empty:
+        return Report()
+
     count_cause = df['cause'].value_counts()
 
     report_meta = ReportMeta(
@@ -391,6 +401,10 @@ async def trade_cause(index, reporter_input):
 async def trade_perc_profit_duration_distribution(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
+
+    if df.empty:
+        return Report()
+
     df['duration'] = df['duration']/(60*60*1000)
     report_meta = ReportMeta(
         title='trade.result.percentage_profit: {}'.format(df['strategy'][0]),
@@ -402,6 +416,10 @@ async def trade_perc_profit_duration_distribution(index, reporter_input):
 async def trade_perc_profit(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
+
+    if df.empty:
+        return Report()
+
     df = df.set_index(df['decision_time'].astype('datetime64[ms]'))
     report_meta = ReportMeta(
         title='trade.result.percentage_profit: {}'.format(df['strategy'][0]),
@@ -413,6 +431,10 @@ async def trade_perc_profit(index, reporter_input):
 async def trade_profit_duration_distribution(index, reporter_input):
 
     df = pd.DataFrame(reporter_input[0])
+
+    if df.empty:
+        return Report()
+    
     df['duration'] = df['duration']/(60*60*1000)
     report_meta = ReportMeta(
         title='trade.result.profit: {}'.format(df['strategy'][0]),
@@ -452,10 +474,12 @@ async def strategy_capital_statistics(index, reporter_input):
 
 
 async def r_multiples(index, reporter_input):
-    if not reporter_input[0]:
-        return None
     
     df = pd.DataFrame(reporter_input[0])
+
+    if df.empty:
+        return Report()
+
     df.loc[df['cause'] == 'limit','r_value'] = (df['target_price'] - df['enter_price']) / (df['enter_price'] - df['stop_limit_price'])
     df.loc[df['cause'] == 'stop_limit','r_value'] = -1
 
