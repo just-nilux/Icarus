@@ -78,8 +78,8 @@
         "1h": 3
     },
     "backtest":{
-        "start_time": "2023-4-25 10:40:01",
-        "end_time": "2023-4-30 21:00:00",
+        "start_time": "2023-4-28 10:40:01",
+        "end_time": "2023-5-13 21:00:00",
         "online": true,
         "breakpoints": {}
     },
@@ -87,9 +87,10 @@
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<strategy>": ["FixedLimitTargetAdaptive_XRP_24_24_03", "FixedOCOTargetAdaptive_TRX_24_12_03"],
-            "<start_time>": [1680000000],
-            "<end_time>": [1682631000]
+            "<strategy>": ["FixedLimitTargetAdaptive_24_24_03", "FixedOCOTargetAdaptive_24_12_03"],
+            "<pair>": ["LTCUSDT", "XRPUSDT", "DIAUSDT"],
+            "<start_time>": [1682631000],
+            "<end_time>": [1684044000]
         },
         "reporters": [
             {
@@ -100,13 +101,14 @@
                         {
                             "$match":{
                                 "strategy": "<strategy>", 
+                                "pair": "<pair>",
                                 "decision_time": { "$gte": "<start_time>"},
                                 "result.exit.time": { "$lte": "<end_time>" }
                                 }
                             },
                         {
                             "$project": {
-                                "strategy":"$strategy",
+                                "strategy":"<strategy>-<pair>",
                                 "status": "$status",
                                 "cause": "$result.cause",
                                 "exit_type": "$result.exit.type",
@@ -144,13 +146,14 @@
                         {
                             "$match":{
                                 "strategy":"<strategy>",
+                                "pair": "<pair>",
                                 "decision_time": { "$gte": "<start_time>"},
                                 "result.exit.time": { "$lte": "<end_time>"}
                             }
                         },
                         {
                             "$project": {
-                                "strategy":"$strategy",
+                                "strategy":"<strategy>-<pair>",
                                 "cause": "$result.cause"
                             }
                         }
@@ -170,13 +173,14 @@
                         {
                             "$match":{
                                 "strategy":"<strategy>",
+                                "pair": "<pair>",
                                 "decision_time": { "$gte": "<start_time>"},
                                 "result.exit.time": { "$lte": "<end_time>"}
                             }
                         },
                         {
                             "$project": {
-                                "strategy":"$strategy",
+                                "strategy":"<strategy>-<pair>",
                                 "profit": "$result.profit",
                                 "duration":"$result.live_time"
                             }
@@ -310,12 +314,13 @@
                             "$match":{
                                 "result.exit.type":"oco", 
                                 "strategy":"<strategy>",
+                                "pair": "<pair>",
                                 "decision_time": { "$gte": "<start_time>"},
                                 "result.exit.time": { "$lte": "<end_time>"}
                             }
                         },
                         { "$project" : {
-                            "strategy":"<strategy>",
+                            "strategy":"<strategy>-<pair>",
                             "cause":"$result.cause",
                             "duration":"$result.live_time",
                             "enter_price":"$result.enter.price",
@@ -345,7 +350,7 @@
                         },
                         {
                             "$project": {
-                                "strategy":"$strategy",
+                                "strategy":"<strategy>-<pair>",
                                 "decision_time":"$decision_time",
                                 "percentage_profit":{"$divide":[ 
                                     "$result.profit", 

@@ -192,8 +192,8 @@ async def main():
     report_writer = ReportWriter(report_folder, mongo_client)
     report_writer_coroutines = []
     for report_config, report in zip(config['report'], report_tool_results):
-        #if report == None:
-        #    continue
+        if report.meta == None:
+            continue
         
         for writer_type in report_config.get('writers', []): #shitcode
             if not hasattr(report_writer, writer_type) or report == None:
