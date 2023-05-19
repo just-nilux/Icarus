@@ -491,3 +491,13 @@ async def r_multiples(index, reporter_input):
         filename='r_multiple_distribution_{}'.format(df['strategy'][0]),
         )
     return Report(report_meta, data=df[['duration','r_value']])
+
+
+async def symbol_price_change(index, reporter_input):
+    price_change = {}
+    for idx, rep in zip(index, reporter_input):
+        if idx[0] in price_change:
+            continue
+        price_change[idx[0]] = round((rep[-1]-rep[0])/rep[0]*100, 2)
+
+    return Report(ReportMeta(title='Symbol Price Change'), data=pd.DataFrame([price_change]).T)

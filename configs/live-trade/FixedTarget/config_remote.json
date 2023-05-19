@@ -73,8 +73,6 @@
         "aroon":{}
     },
     "time_scales": {
-        "1m": 3,
-        "15m": 3,
         "1h": 3
     },
     "backtest":{
@@ -93,6 +91,19 @@
             "<end_time>": [1684044000]
         },
         "reporters": [
+            {
+                "parameters": {
+                    "<pair-indice>": ["LTCUSDT", "XRPUSDT", "DIAUSDT"],
+                    "<timeframe>": ["1h"],
+                    "<analyzer>": ["close"]
+                },
+                "reporter": "symbol_price_change",
+                "source": "analyzer",
+                "indice_template": ["<pair-indice>", "<timeframe>", "<analyzer>"],
+                "writers": [
+                    "markdown_table"
+                ]
+            },
             {
                 "parameters": {},
                 "reporter": "strategy_statistics",

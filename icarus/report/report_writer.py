@@ -568,9 +568,15 @@ class TradeStatWriter():
 
     def json_file(self, indice, report, **kwargs):
 
+        dict_data = None
+        if type(report.data) == pd.DataFrame:
+            dict_data = report.data.to_dict()
+        else:
+            dict_data = report.data
+
         path = self.report_folder + '/' + report.meta.title + '.json'
         f = open(path,'w')
-        json.dump(report.data, f,  indent=4)
+        json.dump(dict_data, f,  indent=4)
         f.close()
 
         print(f'File created: {path}')
