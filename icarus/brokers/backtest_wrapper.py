@@ -39,6 +39,10 @@ class BacktestWrapper():
 
         # Set reference currencies
         self.quote_currency = _config['broker'].get('quote_currency','USDT')
+        self.candlestick_folder = _config['broker'].get('candlestick_folder','candlesticks')
+        if not os.path.exists('./' + self.candlestick_folder):
+            os.makedirs('./' + self.candlestick_folder)
+
         BacktestWrapper.fee_rate = _config['broker'].get('fee_rate',0)
 
         # TestBinanceWrapper: get df_tickers once
@@ -240,21 +244,21 @@ class BacktestWrapper():
     
     def save_candlesticks(self, meta_data_pool, downloaded_data, session_start_time, session_end_time):
 
-        filename_template = '{}-{}-{}-{}.csv'
+        filename_template = '{}/{}-{}-{}-{}.csv'
         for meta_data in meta_data_pool:
-            filename = filename_template.format(meta_data[1], meta_data[0], session_start_time, session_end_time)
+            filename = filename_template.format(self.candlestick_folder, meta_data[1], meta_data[0], session_start_time, session_end_time)
             downloaded_data[meta_data[1]][ meta_data[0]].to_csv(filename)
             logger.debug(f'File saved: {filename}')
 
 
     def load_candlesticks(self, meta_data_pool, session_start_time, session_end_time):
-        filename_template = '{}-{}-{}-{}.csv'
+        filename_template = '{}/{}-{}-{}-{}.csv'
         recursive_dict = lambda: defaultdict(recursive_dict)
         data_dict = recursive_dict()
         
         not_found_meta_data = []
         for meta_data in meta_data_pool:
-            filename = filename_template.format(meta_data[1], meta_data[0], session_start_time, session_end_time)
+            filename = filename_template.format(self.candlestick_folder, meta_data[1], meta_data[0], session_start_time, session_end_time)
 
             if not os.path.isfile(filename):
                 not_found_meta_data.append(meta_data)

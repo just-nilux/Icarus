@@ -22,11 +22,21 @@ async def ohlcv(indices, analysis):
 
 
 async def perc_pos_change_raw(indices, analysis):
-    return analysis[0].set_index(np.array(analysis[0].index).astype('datetime64[ms]'))
+    filename = 'perc_pos_change_raw_{}_{}'.format(indices[0][0], indices[0][1])
+    report_meta = ReportMeta(
+        title=filename,
+        filename=filename
+        )
+    return Report(meta=report_meta, data=analysis[0].set_index(np.array(analysis[0].index).astype('datetime64[ms]')))
 
 
 async def perc_pos_change_occurence(indices, analysis):
-    return pd.DataFrame([analysis[0]['pos_change'].value_counts(), analysis[0]['neg_change'].value_counts()]).T
+    filename = 'perc_pos_change_occurence_{}_{}'.format(indices[0][0], indices[0][1])
+    report_meta = ReportMeta(
+        title=filename,
+        filename=filename
+        )
+    return Report(meta=report_meta, data=pd.DataFrame([analysis[0]['pos_change'].value_counts(), analysis[0]['neg_change'].value_counts()]).T)
 
 
 async def perc_pos_change_stats(indices, analysis):
@@ -49,7 +59,7 @@ async def perc_pos_change_stats(indices, analysis):
     df_th = pd.DataFrame(table, columns=['pos_change','neg_change'], index=list(map(lambda x: str(x).replace('.','_'), pos_change_thresholds)))
     #statistic_dict['threshold_table'] = df_th.to_dict()
 
-    filename = evaluate_filename(indice=indices)
+    filename = 'perc_pos_change_stats_{}_{}'.format(indices[0][0], indices[0][1])
     report_meta = ReportMeta(
         title=filename,
         filename=filename
@@ -61,7 +71,12 @@ async def correlation_matrix(indices, analysis):
     df = pd.DataFrame(analysis, index=[indice[0] for indice in indices]).T
     #logretdf = np.log(df.pct_change() + 1)
     pct_changedf = df.pct_change()
-    return pct_changedf.corr()
+
+    report_meta = ReportMeta(
+        title='correlation_matrix',
+        filename='correlation_matrix'
+        )
+    return Report(meta=report_meta, data=pct_changedf.corr())
 
 # *ppc: price percentage change
 async def market_class_ppc(index, detected_market_regimes):

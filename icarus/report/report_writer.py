@@ -217,31 +217,22 @@ class ImageWriter():
             self.heatmap_plot(indice_report, report, **kwargs_reporter)
         pass
 
-    def heatmap_plot(self, indice, report_data, **kwargs):
-        filename = evaluate_filename(indice, kwargs['reporter'])
-        target_path = evaluate_target_path(self.report_folder,filename)
+    def heatmap_plot(self, indice, report, **kwargs):
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
 
-        if type(report_data) == dict:
-            df = pd.DataFrame(data=report_data)
-        elif type(report_data) == pd.DataFrame:
-            df = report_data
-        elif type(report_data) == Report:
-            df = report_data.data
+        df = report.data
 
         x_labels, y_labels = df.columns.to_list(), df.index.to_list()
         fig, ax = plt.subplots(figsize=evaluate_figsize(df.shape))
 
-        #title = get_reporter_name(indice)
-        #title = kwargs.get('reporter','heatmap_plot')
-
-        fig.suptitle(filename, fontsize=24)
+        fig.suptitle(report.meta.title, fontsize=24)
 
         ax.xaxis.tick_top()
         ax.set_xticks(np.arange(len(x_labels)), x_labels, rotation=90)
         ax.set_yticks(np.arange(len(y_labels)), y_labels)
 
         vmin, vmax = evaluate_min_max_limits(df)
-        im = ax.imshow(df.values, cmap='YlGn', vmin=vmin, vmax=vmax)
+        im = ax.imshow(df.values, cmap='bwr', vmin=vmin, vmax=vmax)
         fig.colorbar(im)
 
         fontsize = evaluate_value_fontsize(df.shape)
@@ -254,8 +245,6 @@ class ImageWriter():
                 #if not math.isnan(matrice[0, 0]):
                 text = ax.text(j, i, text_format % df.values[i, j],
                             ha="center", va="center", color="black", fontsize=fontsize)
-
-        #target_path = '{}/{}.png'.format(self.report_folder,title.replace(' ', '_'))
 
         # shitcode
         footnote = f"""
@@ -369,11 +358,9 @@ class ImageWriter():
         plt.close()
         print(f'File saved: {target_path}')
 
-    def double_sided_histogram_plot(self, indice, df, **kwargs):
-        symbol, timeframe, analyzer = indice[0]
-
-        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
-        target_path = '{}/{}'.format(self.report_folder,filename)
+    def double_sided_histogram_plot(self, indice, report: Report, **kwargs):
+        df = report.data
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
 
         fig = plt.figure(figsize=(16,8))
         ax = plt.subplot(111)
@@ -384,7 +371,7 @@ class ImageWriter():
         plt.gcf().autofmt_xdate()
 
         # Set title
-        fig.suptitle(filename, fontsize=24)
+        fig.suptitle(report.meta.title, fontsize=24)
 
         # shitcode
         footnote = f"""
@@ -401,11 +388,10 @@ class ImageWriter():
         print(f'File saved: {target_path}')
 
 
-    def double_sided_occurence_plot(self, indice, df, **kwargs):
+    def double_sided_occurence_plot(self, indice, report, **kwargs):
 
-        symbol, timeframe, analyzer = indice[0]
-        filename = '{}_{}_{}'.format(kwargs['reporter'],symbol,timeframe)
-        target_path = '{}/{}'.format(self.report_folder,filename)
+        df = report.data
+        target_path = '{}/{}.png'.format(self.report_folder,report.meta.filename)
 
         fig = plt.figure(figsize=(16,8))
         ax = plt.subplot(111)
@@ -414,7 +400,7 @@ class ImageWriter():
         ax.bar(df.index, df['neg_change'].values, width=0.001, color='r', alpha=0.5)
 
         # Set title
-        fig.suptitle(filename, fontsize=24)
+        fig.suptitle(report.meta.title, fontsize=24)
 
         # shitcode
         footnote = f"""

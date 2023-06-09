@@ -3,7 +3,7 @@ import sys
 import os
 import asyncio
 from binance import AsyncClient
-from brokers import binance_wrapper
+from brokers import backtest_wrapper
 import datetime
 from itertools import chain
 import itertools
@@ -19,9 +19,8 @@ def write_to_json(config_dict, filename):
 
 async def main():
 
-    client = await AsyncClient.create(api_key=cred_info['Binance']['Test']['PUBLIC-KEY'],
-                                    api_secret=cred_info['Binance']['Test']['SECRET-KEY'])
-    bwrapper = binance_wrapper.TestBinanceWrapper(client, config)
+    client = await AsyncClient.create(**cred_info['Binance']['Production'])
+    bwrapper = backtest_wrapper.BacktestWrapper(client, config)
     start_time = datetime.datetime.strptime(config['backtest']['start_time'], "%Y-%m-%d %H:%M:%S")
     start_timestamp = int(datetime.datetime.timestamp(start_time))*1000
     end_time = datetime.datetime.strptime(config['backtest']['end_time'], "%Y-%m-%d %H:%M:%S")
@@ -39,12 +38,12 @@ async def main():
 
     meta_data_pool = list(itertools.product(time_scale_pool, pair_pool))
 
-    data_dict = await bwrapper.download_all_data(meta_data_pool, start_timestamp, end_timestamp)
+    await bwrapper.obtain_candlesticks(meta_data_pool, start_timestamp, end_timestamp)
 
     volume_dict_list = []
-    for pair, data in data_dict.items():
+    for pair, data in bwrapper.downloaded_data.items():
         if not data['1M']['volume'].empty:
-            volume_dict_list.append({'pair':pair, 'num_of_trades':int(data['1M']['num_of_trades']), 'volume':float(data['1M']['volume'])})
+            volume_dict_list.append({'pair':pair, 'num_of_trades':int(data['1M']['num_of_trades'].sum()), 'volume':float(data['1M']['volume'].sum())})
 
     df = pd.DataFrame(volume_dict_list)
     df_sorted_numoftrades = df.sort_values(by=['num_of_trades'], ascending=False).reset_index(drop=True)
