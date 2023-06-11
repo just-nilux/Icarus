@@ -20,9 +20,9 @@
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
-            "module": "icarus.scripts.get_most_traded_pairs",
+            "program": "icarus/get_most_traded_pairs.py",
             "args": [
-                "${workspaceFolder}/configs/research/daily_steady_profit/config_get_most_traded_pairs.json"
+                "${workspaceFolder}/configs/research/correlated_symbols/config_get_most_traded_pairs.json"
             ]
         },
         {
@@ -42,7 +42,7 @@
             "program": "icarus/generate_report.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-trade/FixedTarget/config_remote.json"
+                "${workspaceFolder}/configs/backtest/FixedTargetv2/config_backtest.json"
             ]
         },
         {
@@ -79,7 +79,7 @@
             "program": "icarus/visualize_live_session.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-trade/FixedTarget/config.json"
+                "${workspaceFolder}/configs/live-trade/FixedTarget/config_remote.json"
             ]
         },
         {
@@ -89,7 +89,7 @@
             "program": "icarus/backtest.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/configs/live-trade/FixedTarget/config_backtest.json"
+                "${workspaceFolder}/configs/backtest/FixedTargetv2/config_backtest.json"
             ]
         },
         {

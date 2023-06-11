@@ -20,7 +20,7 @@
     },
     "strategy": {
         "MACDStrategy": {
-            "pairs": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"],
+            "pairs": ["SHIBUSDT", "BTTCUSDT", "XECUSDT", "SPELLUSDT", "EPXUSDT"],
             "time_scales": [
                 "1h"
             ]
@@ -33,7 +33,7 @@
     "report": [],
     "grid_search_reporters": {
         "grid": {
-            "<pair>": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "SOLUSDT", "CHZUSDT", "SHIBUSDT", "EURUSDT"],
+            "<pair>": ["SHIBUSDT", "BTTCUSDT", "XECUSDT", "SPELLUSDT", "EPXUSDT"],
             "<timeframe>": ["1h"]
         },
         "reporters": [
@@ -93,8 +93,8 @@
         "1M": 1
     },
     "backtest": {
-        "start_time": "2021-10-10 13:00:00",
-        "end_time": "2022-10-10 13:00:00",
+        "start_time": "2022-5-31 00:00:00",
+        "end_time": "2023-5-31 00:00:00",
         "online": true
     },
     "visualization": {

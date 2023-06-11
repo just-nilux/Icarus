@@ -339,9 +339,13 @@ async def strategy_statistics(index, reporter_input):
             sqn_coeff = len(df_oco)
         else:
             sqn_coeff = 100
-        stat_risk['SQN'] = stat_risk['expectancy']/df_r['r_value'].std() * np.sqrt(sqn_coeff)
-
-
+        
+        r_value_std = df_r['r_value'].std()
+        if r_value_std != 0:
+            stat_risk['SQN'] = stat_risk['expectancy']/df_r['r_value'].std() * np.sqrt(sqn_coeff)
+        else:
+            stat_risk['SQN'] = None
+    
     stat_others = {
         'total_fee': df['fee'].sum()
     }

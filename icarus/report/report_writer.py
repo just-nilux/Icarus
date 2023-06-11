@@ -515,7 +515,7 @@ class MarkdownWriter():
         #<img src="../../../../configs/research/aroon_classifies_market/reports_grid_search/PPC_Accuracy.png" /> 
         self.report_folder.split('configs')
         for png_file_name in png_file_names:
-            self.md_file.write(png_file_name, color='yellow', bold_italics_code='b')
+            self.md_file.write(png_file_name, color='black', bold_italics_code='b')
             self.md_file.new_paragraph(Html.image(path=png_file_name))
             self.md_file.write(" \n\n")
 
@@ -541,7 +541,7 @@ class MarkdownWriter():
 
         #title = evaluate_filename(kwargs['reporter'], indice, special_char=False)
         
-        self.md_file.write(report.meta.title, color='yellow', bold_italics_code='b')
+        self.md_file.write(report.meta.title, color='black', bold_italics_code='b')
         self.md_file.write('\n' + df.to_markdown() + '\n\n')
         print(f'Table created: {report.meta.title}')
         pass

@@ -136,3 +136,4 @@ test_credentials.json
 generated_config.json
 reports*/
 *.csv
+candlesticks/
